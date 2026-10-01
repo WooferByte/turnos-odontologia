@@ -1,0 +1,277 @@
+{
+  "version": 4,
+  "step": "kb",
+  "owner": "active-orchestrator",
+  "discovery": {
+    "created_by": "discovery-research",
+    "sources": [
+      "https://agendapro.com/es/dental/software-odontologico",
+      "https://bilog.com.ar/",
+      "https://www.clinia.com.ar/odontologia",
+      "https://www.clinicorp.com/",
+      "https://www.curvedental.com/",
+      "https://dentalcore.app/",
+      "https://www.softwaredentalink.com/",
+      "https://www.dentally.com/en-gb/",
+      "https://www.planetdds.com/denticon/",
+      "https://www.dentidesk.com/",
+      "https://dentrisoft.com/",
+      "https://www.dentrix.com/",
+      "https://www.doctocliq.com/",
+      "https://dtdental.co/",
+      "https://www.exactdental.com.au/",
+      "https://naclix.com/",
+      "https://www.neocita.com/",
+      "https://odontoapp.com.ar/",
+      "https://odontograma.com.ar/",
+      "https://informaticadental.com/odontonet/",
+      "https://gbsystems.com/os/",
+      "https://odontosoft.me/",
+      "https://odontosys.com/",
+      "https://www.opendental.com/",
+      "https://hiorbita.com/",
+      "https://sigo.com.ar/",
+      "https://simpleturno.com/rubros/odontologia",
+      "http://tab32.com/",
+      "https://turnito.app/",
+      "https://ulifeon.com/",
+      "https://www.getweave.com/"
+    ],
+    "competitors": [
+      {
+        "name": "AgendaPro (vertical Dental)",
+        "notes_file": "discovery/sources/agendapro.md"
+      },
+      {
+        "name": "Bilog",
+        "notes_file": "discovery/sources/bilog.md"
+      },
+      {
+        "name": "ClinIA (módulo Odontología)",
+        "notes_file": "discovery/sources/clinia.md"
+      },
+      {
+        "name": "Clinicorp (Brasil)",
+        "notes_file": "discovery/sources/clinicorp.md"
+      },
+      {
+        "name": "Curve Dental",
+        "notes_file": "discovery/sources/curve-dental.md"
+      },
+      {
+        "name": "DentalCore",
+        "notes_file": "discovery/sources/dentalcore.md"
+      },
+      {
+        "name": "Dentalink",
+        "notes_file": "discovery/sources/dentalink.md"
+      },
+      {
+        "name": "Dentally (Henry Schein One UK)",
+        "notes_file": "discovery/sources/dentally.md"
+      },
+      {
+        "name": "Denticon (Planet DDS)",
+        "notes_file": "discovery/sources/denticon-planet-dds.md"
+      },
+      {
+        "name": "Dentidesk",
+        "notes_file": "discovery/sources/dentidesk.md"
+      },
+      {
+        "name": "Dentrisoft",
+        "notes_file": "discovery/sources/dentrisoft.md"
+      },
+      {
+        "name": "Dentrix (Henry Schein One)",
+        "notes_file": "discovery/sources/dentrix.md"
+      },
+      {
+        "name": "Doctocliq",
+        "notes_file": "discovery/sources/doctocliq.md"
+      },
+      {
+        "name": "DtDental",
+        "notes_file": "discovery/sources/dtdental.md"
+      },
+      {
+        "name": "EXACT (Software of Excellence / Henry Schein One)",
+        "notes_file": "discovery/sources/exact-software-of-excellence.md"
+      },
+      {
+        "name": "Naclix",
+        "notes_file": "discovery/sources/naclix.md"
+      },
+      {
+        "name": "Neocita",
+        "notes_file": "discovery/sources/neocita.md"
+      },
+      {
+        "name": "OdontoApp",
+        "notes_file": "discovery/sources/odontoapp.md"
+      },
+      {
+        "name": "OdontoGRAMA (Solsoftware)",
+        "notes_file": "discovery/sources/odontograma-com-ar.md"
+      },
+      {
+        "name": "Odontonet (Informática Dental, España)",
+        "notes_file": "discovery/sources/odontonet.md"
+      },
+      {
+        "name": "OdontoSoft Millennium (GB Systems)",
+        "notes_file": "discovery/sources/odontosoft-millennium.md"
+      },
+      {
+        "name": "OdontoSoft (Perú)",
+        "notes_file": "discovery/sources/odontosoft-peru.md"
+      },
+      {
+        "name": "Odontosys (referencia regional, Uruguay)",
+        "notes_file": "discovery/sources/odontosys.md"
+      },
+      {
+        "name": "Open Dental",
+        "notes_file": "discovery/sources/open-dental.md"
+      },
+      {
+        "name": "Órbita (Hi Órbita / Órbita Global)",
+        "notes_file": "discovery/sources/orbita.md"
+      },
+      {
+        "name": "Sigo (Sistema Integral de Gestión Odontológica)",
+        "notes_file": "discovery/sources/sigo.md"
+      },
+      {
+        "name": "SimpleTurno (rubro Odontología)",
+        "notes_file": "discovery/sources/simpleturno.md"
+      },
+      {
+        "name": "tab32",
+        "notes_file": "discovery/sources/tab32.md"
+      },
+      {
+        "name": "Turnito",
+        "notes_file": "discovery/sources/turnito.md"
+      },
+      {
+        "name": "Ulifeon",
+        "notes_file": "discovery/sources/ulifeon.md"
+      },
+      {
+        "name": "Weave",
+        "notes_file": "discovery/sources/weave.md"
+      }
+    ],
+    "problema": "Los odontólogos independientes y consultorios chicos de Argentina gestionan turnos y fichas con papel, Excel y WhatsApp, lo que genera ausentismo evitable y datos sin trazabilidad, porque las soluciones existentes son caras o no se integran con WhatsApp ni con el cobro local.",
+    "usuarios": [
+      "Odontólogo independiente (segmento primario, 1 profesional y 1 sillón): atender",
+      "Recepcionista o el propio odontólogo: agendar y confirmar",
+      "Dueño del consultorio: controlar",
+      "Paciente: reservar y confirmar"
+    ],
+    "casos_de_uso": [
+      "Reserva online 24/7 desde el celular",
+      "Recordatorio y confirmación por WhatsApp",
+      "Ficha clínica mínima (el odontograma completo pasa a v1.1)",
+      "Seña con Mercado Pago (actor: paciente)",
+      "Cancelar o reprogramar por el paciente",
+      "Lista de espera",
+      "Consentimiento y privacidad de datos de salud",
+      "Agenda multi-profesional y multi-sillón (Fase 2)"
+    ],
+    "funcionalidades_necesarias": [
+      "Agenda con duraciones variables por prestación configurables",
+      "Horario recurrente configurable y bloqueos puntuales",
+      "Prevención de solapamientos por profesional y por sillón (sillón como recurso, default 1)",
+      "Reserva 24/7 por link con flujo cuando no hay horarios",
+      "Recordatorio y confirmación por WhatsApp",
+      "Cancelación y reprogramación por el paciente",
+      "Seña con Mercado Pago (Checkout Pro, cuenta única del odontólogo)",
+      "Trazabilidad de cambios de turno",
+      "Lista de espera",
+      "Ficha clínica mínima",
+      "Presupuestos simples y registro de pago simple"
+    ],
+    "funcionalidades_opcionales": [
+      "v1.1: odontograma completo",
+      "v1.1: configuración manual de códigos y valores de obras sociales",
+      "v2: imágenes y radiografías",
+      "v2: ARCA y facturación electrónica",
+      "v2: caja completa con arqueo",
+      "Posterior: Google Calendar, API pública, UI multi-profesional y multi-sillón, split 1:N de Mercado Pago"
+    ],
+    "reglas_de_negocio": [
+      "Reglas configurables por el odontólogo; los valores son defaults propuestos, no estándares verificados",
+      "Cancelar o reprogramar con 24 horas de antelación (configurable entre 24 y 48)",
+      "Reserva hasta 60 días hacia adelante y antelación mínima de reserva configurable",
+      "Duración, nombre y color de cada prestación definidos por el odontólogo",
+      "Un profesional no puede tener dos turnos superpuestos ni un sillón dos turnos a la vez",
+      "Paciente nuevo reserva directo; la aprobación manual es opcional",
+      "Seña retenida si cancela tarde y devuelta al 100% si cancela el odontólogo (sujeta a revisión legal)",
+      "Todo cambio de turno queda registrado"
+    ],
+    "integraciones": [
+      "WhatsApp Cloud API en modo prueba, con wa.me como alternativa",
+      "Mercado Pago Checkout Pro con cuenta única del odontólogo",
+      "Fuera de la v1: Google Calendar, ARCA, obras sociales, radiología y firma digital"
+    ],
+    "restricciones": [
+      "Trabajo individual; entrega aproximada a fin de año, sin fecha definida",
+      "La consigna evalúa un solo change implementado como API o módulo, sin interfaz gráfica, con tests por escenario",
+      "Datos ficticios; no se usan datos reales de pacientes",
+      "Presupuesto cero; no se contactan proveedores ni se crean cuentas con datos reales",
+      "Stack: Python, FastAPI, JWT, SQLAlchemy, PostgreSQL, Redis, Docker y Docker Compose; React, TypeScript y Vite",
+      "La competencia gratuita (Turnito, Ulifeon, Naclix, Bilog freemium) condiciona el precio",
+      "El repositorio debe poder clonarse y correr los tests solo con el README"
+    ],
+    "riesgos": [
+      "Impacto no probado del recordatorio por WhatsApp sobre el ausentismo (sin cifra con fuente)",
+      "Adopción del odontólogo independiente frente a opciones gratuitas",
+      "Seña no usada: el odontólogo no quiere cobrarla o el paciente la rechaza",
+      "Marco legal: Ley 25.326 aplica; Ley 24.240 excluye a profesionales liberales pero requiere revisión; la seña no se implementa con datos reales",
+      "Evidencia de mercado débil: casi todo es afirmación comercial leída con resúmenes automáticos",
+      "Dependencia de cambios de políticas y precios de Meta y Mercado Pago",
+      "Alcance: trabajo individual con un MVP mayor que lo implementable",
+      "Reproducibilidad de los tests con PostgreSQL y Redis",
+      "Encuestas de contexto pequeñas y no representativas"
+    ],
+    "preguntas_abiertas": [
+      "¿Es válida legalmente la retención de la seña? Requiere revisión legal",
+      "¿Es vigente el límite de 5 números verificados del número de prueba de Meta?",
+      "¿Qué obras sociales hay que soportar y cómo se liquidan?",
+      "¿Sigue vigente el trámite de inscripción en el Registro Nacional de Bases de Datos (AAIP)?",
+      "No evidenciado: anti-solapamiento (solo afirmación comercial), horarios recurrentes con excepciones, reprogramación por el paciente (comprobada solo en Dentally), historial de cambios de agenda y API oficial de WhatsApp en competidores",
+      "¿Qué decisiones de arquitectura concretas toma la KB sobre el stack?"
+    ],
+    "informe": "docs/discovery/informe-discovery.md",
+    "fecha": "2026-10-01"
+  },
+  "kb": {
+    "created_by": "kb-creator",
+    "source": "ingest",
+    "discovery": {
+      "problem": "Los odontólogos independientes y consultorios chicos de Argentina gestionan turnos y fichas con papel, Excel y WhatsApp, lo que genera ausentismo evitable y datos sin trazabilidad, porque las soluciones existentes son caras o no se integran con WhatsApp ni con el cobro local.",
+      "system_type": "web_app",
+      "domain": "healthcare_dental_scheduling (gestión de turnos y agenda de consultorios odontológicos, Argentina)",
+      "scale": "team (inferred, medium confidence: un consultorio con pocos usuarios internos + pacientes por link público sin cuenta)",
+      "stack": "Python + FastAPI + JWT + SQLAlchemy + PostgreSQL + Redis + Docker/Docker Compose; React + TypeScript + Vite (tests del change con SQLite en memoria)",
+      "needs_infra": true
+    },
+    "files": [
+      "knowledge-base/01_vision_y_objetivos.md",
+      "knowledge-base/02_descripcion_general.md",
+      "knowledge-base/03_actores_y_roles.md",
+      "knowledge-base/04_modelo_de_datos.md",
+      "knowledge-base/05_reglas_de_negocio.md",
+      "knowledge-base/06_funcionalidades.md",
+      "knowledge-base/07_flujos_principales.md",
+      "knowledge-base/08_arquitectura_propuesta.md",
+      "knowledge-base/09_decisiones_y_supuestos.md",
+      "knowledge-base/10_preguntas_abiertas.md",
+      "knowledge-base/11_integraciones_whatsapp_y_mercadopago.md",
+      "knowledge-base/12_contexto_de_mercado.md",
+      "knowledge-base/README.md"
+    ]
+  }
+}
