@@ -10,7 +10,7 @@
 2. API valida el JWT y el permiso (RN-AU-01).
 3. Caso de uso `CrearTurno` resuelve defaults: profesional único y **sillón por defecto** si no vienen (RN-AG-06); calcula `fin = inicio + duración` de la prestación (RN-AG-02).
 4. Dominio valida `inicio < fin` (RN-AG-10d).
-5. *(Opcional en el primer change)* Dominio valida horario recurrente y bloqueos (RN-AG-04, RN-AG-04b).
+5. *(Fuera del primer change, decisión del autor 2026-10-02, P-10)* Dominio valida horario recurrente y bloqueos (RN-AG-04, RN-AG-04b). El primer change solo cubre los solapamientos por profesional y por sillón con estados activos.
 6. Dentro de una transacción, el repositorio obtiene los turnos **activos** del profesional y del sillón que intersecan `[inicio, fin)` (RN-AG-10).
 7. Dominio aplica la función pura de solapamiento `a.inicio < b.fin and b.inicio < a.fin` (RN-AG-09) contra ambos conjuntos (RN-AG-05, RN-AG-08).
 8. Si no hay conflicto, persiste el turno en estado `reservado` (o `pendiente_sena`) e inserta `EventoTurno(creado)` (RN-AG-11). Commit.
@@ -44,7 +44,7 @@ Cliente → API → CrearTurno → Dominio(validar) → Repo(turnos activos ∩ 
 1. Frontend pide `GET /public/{slug}/prestaciones` y `GET /public/{slug}/disponibilidad?prestacion_id&desde&hasta`.
 2. API calcula huecos: franjas del horario recurrente − bloqueos − turnos activos, en pasos de la granularidad, dentro de [ahora + 2 h, hoy + 60 días] (RN-TD-01, RN-TD-02).
 3. **Si no hay huecos** → se ofrece anotarse en la lista de espera (Flujo 6) (RN-TD-07).
-4. El paciente elige hueco, carga datos de contacto y **acepta el consentimiento** (RN-PR-02).
+4. El paciente elige hueco, carga datos de contacto (**teléfono obligatorio, DNI opcional**; sin cuenta, SU-03) y **acepta el consentimiento** (RN-PR-02).
 5. `POST /public/{slug}/reservas` → ejecuta el mismo caso de uso que el Flujo 1 (revalida solapamientos de forma atómica).
 6. Estado inicial: `pendiente_aprobacion` (paciente nuevo + aprobación activa), `pendiente_sena` (si se exige seña → Flujo 4) o `reservado`.
 7. Se genera `token_gestion` y se envía (o se prepara con `wa.me`) el mensaje con el link del turno.

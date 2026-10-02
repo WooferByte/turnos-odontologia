@@ -1,6 +1,6 @@
 # Preguntas Abiertas
 
-> **Conclusión transversal del Discovery:** la evidencia de mercado es **mayormente afirmación comercial [AC]**. Solo Open Dental tiene confianza alta (manual y API documentados). Lo comprobado [C] se limita en general a precios, políticas de privacidad y algunas páginas de ayuda. Las notas se obtuvieron con `WebFetch`, que devuelve **resúmenes automáticos** y no texto literal. La matriz de puntuación es preliminar y está sujeta a demos y a la **verificación personal de fuentes, que figura como pendiente** en el informe.
+> **Conclusión transversal del Discovery:** la evidencia de mercado es **mayormente afirmación comercial [AC]**. Solo Open Dental tiene confianza alta (manual y API documentados). Lo comprobado [C] se limita en general a precios, políticas de privacidad y algunas páginas de ayuda. Las notas se obtuvieron con `WebFetch`, que devuelve **resúmenes automáticos** y no texto literal. La matriz de puntuación es preliminar y está sujeta a demos y a las demos. La **verificación personal de las 5 fuentes** del informe fue completada por el autor el 2026-10-02 (ver P-16); en el informe falta solo el nombre del autor.
 
 ## Inconsistencias detectadas
 
@@ -9,30 +9,36 @@
 **`discovery/discovery.md` (punto 4) dice**: 9 de Argentina, 8 de Latinoamérica, 8 internacionales y 6 regionales o con presencia local sin evidencia.
 **Impacto**: bajo; confunde al lector del entregable.
 **Resolución propuesta**: tomar el informe (segunda pasada, prevalece) y corregir `discovery.md`.
+**Resuelta (2026-10-02)**: prevalece el conteo del informe (31 = 13 argentinos + 9 latinoamericanos/hispanohablantes + 9 internacionales); se corrigió `discovery/discovery.md`.
 
 ### IN-02 — Historial de cambios de turno en competidores
 **Informe (C.3.3)**: la trazabilidad de cambios de turno "solo aparece en Naclix (auditoría [C])".
 **`discovery.md` (punto 11)**: "Historial de cambios de agenda: no evidenciado".
 **Impacto**: matiza el diferenciador "horario recurrente + trazabilidad".
 **Resolución propuesta**: la auditoría de Naclix está comprobada en su **política de privacidad** (auditoría e historial de versiones), no como historial de cambios de turno visible en la agenda. Redactar: "historial de cambios de turno: no evidenciado como función de agenda; Naclix declara auditoría en su política [C]". Confianza: **media-baja**.
+**Resuelta (2026-10-02)**: se aplicó la redacción propuesta en el informe (C.3.3) y en `discovery/discovery.md` (punto 11).
 
 ### IN-03 — Confianza de Naclix y DentalCore
 **Informe (A.1/B)**: Naclix y DentalCore con confianza **Medio**.
 **`discovery.md` (punto 4)**: Naclix "—", DentalCore "baja".
 **Resolución propuesta**: usar los valores del informe (más recientes y con criterio documentado).
+**Resuelta (2026-10-02)**: se usan los niveles del informe (Naclix y DentalCore: Medio); se corrigió `discovery/discovery.md`.
 
 ### IN-04 — Indicador de la encuesta RePEc
 **Informe**: "66% no usa software de **gestión**". **`discovery.md`**: "66% no usa software de **diagnóstico**".
 **Resolución propuesta**: verificar en la fuente original (https://ideas.repec.org/a/cwf/dentar/dent2025127.html) y unificar.
+**Resuelta (2026-10-02)**: el autor verificó la fuente. El 66% no usa software de **diagnóstico y diseño de tratamientos**; el informe y `discovery.md` ya dicen lo mismo.
 
 ### IN-05 — Ley 24.240 y la seña
 **Informe (D.4)**: la retención de la seña "podría tener implicancias según la Ley 24.240" (revocación, cláusulas abusivas).
 **`discovery.md` (riesgos)**: la Ley 24.240 **excluye** a los profesionales liberales con título y matrícula (su publicidad sí queda alcanzada), pero el análisis puede cambiar si el cliente es una clínica o se evalúa la relación con el proveedor del software.
 **Resolución propuesta**: no son contradictorias pero no están conciliadas → pregunta legal P-01. **No es asesoría legal.**
+**Sin resolver (2026-10-02)**: no se concilia aquí; queda derivada a la pregunta legal P-01 (revisión legal).
 
 ### IN-06 — Antelación mínima de reserva
 **Informe (D.4)**: "Configurable (sin valor de mercado de referencia)". **Discovery**: propuesta 2 h.
 **Resolución propuesta**: KB adopta 2 h como default **propuesto** (RN-TD-02); confirmar.
+**Resuelta (2026-10-02)**: el autor confirmó la antelación mínima de reserva de 2 horas como default propuesto (configurable).
 
 ## Funcionalidades "No evidenciado" en el Discovery
 
@@ -70,7 +76,24 @@ Metodología: lectura de sitio oficial, precios, ayuda y privacidad con `WebFetc
 | P-16 | Baja | Completar la **"Verificación de fuentes"** del informe (mínimo 5 fuentes de tipos distintos, comprobadas personalmente) y el nombre del integrante (hoy "[Nombre del autor]") | Entrega de la Etapa 2 | Autor |
 | P-17 | Baja | Versiones mínimas de Python, FastAPI, SQLAlchemy, PostgreSQL, Redis, React y Vite (no figuran en las fuentes; la KB supone Python 3.11+ y SQLAlchemy 2.x) | Change de infraestructura | Autor |
 
+### Decisiones del autor (2026-10-02)
+
+Las preguntas P-01 a P-08 y P-15 **siguen abiertas**. Las restantes quedaron así (se conservan en la tabla como registro):
+
+| ID | Estado | Decisión del autor |
+|---|---|---|
+| P-09 | **Resuelta (2026-10-02)** | Confirmada SU-04 con matiz: la recepcionista ve datos **administrativos** (identificación, contacto, turnos, pagos) pero no **clínicos** (anamnesis, evolución, odontograma). Ajustados RN-FC-02 y la matriz de `03_actores_y_roles.md` |
+| P-10 | **Resuelta (2026-10-02)** | El primer change cubre **solo** solapamientos por profesional y por sillón, con estados activos. No valida horario de atención ni bloqueos (RN-AG-04/04b quedan fuera) |
+| P-11 | **Resuelta (2026-10-02)** | Sobreturnos **prohibidos en la v1**; quedan como **Fase 2**. Bilog, Dentalink y Naclix hoy los ofrecen: es una decisión de alcance, no un desconocimiento del mercado |
+| P-12 | **Resuelta (2026-10-02)** | Sin cambios: la cancelación fuera de plazo queda **bloqueada online** (SU-06 confirmada) |
+| P-13 | **Resuelta (2026-10-02)** | Paciente sin cuenta, gestionado por token (DD-11, SU-03 confirmadas). **Teléfono obligatorio, DNI opcional** |
+| P-14 | **Resuelta (2026-10-02)** | Granularidad de huecos de **5 minutos**, como default propuesto (configurable) |
+| P-16 | **Parcial (2026-10-02)** | Las 5 fuentes del informe fueron verificadas por el autor el 2026-10-02. Falta solo el nombre del autor en el informe (hoy "[Nombre del autor]") |
+| P-17 | **Parcial (2026-10-02)** | Confirmadas Python 3.11+ y SQLAlchemy 2.x. Las versiones de FastAPI, PostgreSQL, Redis, React y Vite se fijan en el README cuando se implemente el change |
+
+Decisiones de diseño confirmadas sin pregunta propia: DD-03 (tests con SQLite en memoria; el README debe decirlo explícitamente), DD-04 (la restricción de exclusión sigue como Suposición a definir en el `design.md` del change), DD-05 (reprogramar modifica el mismo turno), DD-11 y SU-06/SU-07 (ver `09_decisiones_y_supuestos.md`).
+
 ## Discovery de la KB (`state.kb.discovery`)
 
 - `[DISCOVERY]` `system_type` inferido como `web_app` (API REST FastAPI + SPA React + rutas públicas). Confianza alta; el change de la consigna se entrega como API/módulo sin UI, lo que no cambia el tipo del producto.
-- `[DISCOVERY]` `scale` inferido como `team` (un consultorio con pocos usuarios internos, más pacientes que acceden por link público sin cuenta). **Confianza media**: podría leerse como `public_multi_user` por la reserva pública. Por favor confirmar.
+- `[DISCOVERY]` `scale` inferido como `team` (un consultorio con pocos usuarios internos, más pacientes que acceden por link público sin cuenta). **Confianza alta** (confirmada por el autor el 2026-10-02): un consultorio con pocos usuarios internos; los pacientes no tienen cuenta (acceden por token), por lo que no son usuarios del sistema y no corresponde `public_multi_user`.

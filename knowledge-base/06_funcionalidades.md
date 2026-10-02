@@ -46,7 +46,7 @@ Organizadas por **épica** y **historia de usuario** (US-NNN). Versión: **v1** 
 - [ ] CA-5 (borde): un solapamiento de un minuto se rechaza.
 - [ ] CA-6: un turno cancelado no bloquea el horario.
 - [ ] CA-7: la creación queda registrada en el historial.
-- [ ] CA-8 (opcional en el change): un turno fuera del horario o sobre un bloqueo se rechaza (RN-AG-04/04b); **puede quedar fuera del primer change para mantenerlo chico**.
+- [ ] CA-8 (fuera del primer change, decisión del autor 2026-10-02, P-10): un turno fuera del horario o sobre un bloqueo se rechaza (RN-AG-04/04b). **El primer change no lo cubre**: solo valida solapamientos por profesional y por sillón con estados activos.
 **Reglas**: RN-AG-02, RN-AG-05, RN-AG-06, RN-AG-08, RN-AG-09, RN-AG-10, RN-AG-10c, RN-AG-10d, RN-AG-11, RN-GL-02
 
 ### US-011 — Agenda del día
@@ -82,6 +82,7 @@ Organizadas por **épica** y **historia de usuario** (US-NNN). Versión: **v1** 
 **Como** paciente **quiero** elegir prestación y horario desde el celular **para** sacar turno en menos de 30 segundos sin depender del horario de atención.
 - [ ] CA-1: solo se muestran huecos que respetan horario, bloqueos, solapamientos, horizonte (60 días) y antelación mínima (2 h).
 - [ ] CA-2: debo aceptar el consentimiento de datos para confirmar.
+- [ ] CA-2b: no necesito cuenta; ingreso mi teléfono de WhatsApp (obligatorio) y, opcionalmente, DNI y email; gestiono el turno por token (DD-11, SU-03).
 - [ ] CA-3: si soy paciente nuevo y la aprobación manual está activa, el turno queda `pendiente_aprobacion`.
 - [ ] CA-4: si dos personas reservan el mismo hueco a la vez, solo una lo obtiene.
 **Reglas**: RN-TD-01, RN-TD-02, RN-TD-05, RN-TD-06, RN-AG-10c, RN-PR-02
@@ -167,6 +168,7 @@ Organizadas por **épica** y **historia de usuario** (US-NNN). Versión: **v1** 
 | ARCA / facturación electrónica | v2 |
 | Caja completa con arqueo | v2 |
 | Agenda multi-profesional y multi-sillón en UI (CU-08) | Fase 2 |
+| Sobreturnos (prohibidos en la v1, P-11) | Fase 2 |
 | Split de pagos 1:N en Mercado Pago | Fase 2 |
 | WhatsApp API oficial en producción | Posterior |
 | Google Calendar, API pública | Posterior |

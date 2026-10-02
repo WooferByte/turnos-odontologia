@@ -12,7 +12,7 @@ Dominios: **AG** agenda · **TD** turnos digitales (reserva, confirmación, canc
 - **RN-AG-03** (fija): el paciente que reserva por link no puede modificar la duración; solo elige prestación y horario.
 
 ### Horario recurrente y bloqueos
-- **RN-AG-04** (configurable): cada profesional tiene un **horario recurrente semanal** (días y franjas). Un turno solo puede crearse si `[inicio, fin)` cae **completo** dentro de una franja vigente de ese día. Desde el panel, crear un turno fuera de horario requiere una acción explícita de sobreturno/excepción (**Suposición:** se permite al odontólogo con confirmación; no se ofrece nunca al paciente).
+- **RN-AG-04** (configurable): cada profesional tiene un **horario recurrente semanal** (días y franjas). Un turno solo puede crearse si `[inicio, fin)` cae **completo** dentro de una franja vigente de ese día. **Nota (decisión del autor 2026-10-02):** la excepción de horario fue evaluada y descartada para la v1. Si el odontólogo necesita atender fuera de su horario habitual, debe modificar el horario recurrente para esa fecha (la Fase 2 puede evaluar una excepción puntual). **Alcance del primer change (P-10, decisión del autor 2026-10-02):** el primer change **no valida** esta regla ni RN-AG-04b; solo cubre solapamientos por profesional y por sillón con estados activos.
 - **RN-AG-04b** (configurable): los **bloqueos puntuales** (vacaciones, feriados, ausencias) prevalecen sobre el horario recurrente. Un turno no puede intersecar un bloqueo del profesional, de su sillón o de todo el consultorio. Crear un bloqueo sobre turnos activos existentes **no los cancela automáticamente**: el sistema lista los turnos afectados para que el odontólogo los reprograme o cancele (**Suposición**).
 
 ### Sillones / boxes (recurso)
@@ -20,6 +20,8 @@ Dominios: **AG** agenda · **TD** turnos digitales (reserva, confirmación, canc
 - **RN-AG-07** (fija): un sillón inactivo no admite turnos nuevos.
 
 ### Prevención de solapamientos
+> **Sobreturnos prohibidos en la v1 (P-11, decisión del autor 2026-10-02).** No existe acción de panel que permita superponer turnos intencionalmente. Queda como **Fase 2**. Es una decisión de alcance, no un desconocimiento del mercado: Bilog, Dentalink y Naclix hoy ofrecen sobreturnos (informe C.3).
+
 - **RN-AG-05** (fija): **un profesional no puede tener dos turnos activos superpuestos.**
 - **RN-AG-08** (fija): **un sillón no puede tener dos turnos activos a la vez.** RN-AG-05 y RN-AG-08 se evalúan **ambas e independientemente**: basta que falle una para rechazar el turno, y el error indica cuál recurso está ocupado (profesional, sillón o ambos).
 - **RN-AG-09** (fija) — **definición de solapamiento**: los turnos son intervalos **semiabiertos `[inicio, fin)`**. Dos turnos A y B se solapan si y solo si `A.inicio < B.fin` **y** `B.inicio < A.fin`. Casos borde:
@@ -40,13 +42,13 @@ Dominios: **AG** agenda · **TD** turnos digitales (reserva, confirmación, canc
 ## Dominio: Turnos digitales (RN-TD)
 
 - **RN-TD-01** (configurable, default **60 días**): el paciente puede reservar hasta 60 días hacia adelante.
-- **RN-TD-02** (configurable, default propuesto **2 horas**): antelación mínima para reservar online. El informe D.4 indica que no hay valor de mercado de referencia.
-- **RN-TD-03** (configurable, default **24 horas**, rango **24-48**): el paciente puede **cancelar o reprogramar** sin penalidad hasta 24 h antes del inicio del turno. Fuera de ese plazo, la acción online queda bloqueada y se indica contactar al consultorio (**Suposición:** el odontólogo sí puede cancelar/reprogramar en cualquier momento desde el panel).
+- **RN-TD-02** (configurable, default propuesto **2 horas**, confirmado por el autor el 2026-10-02): antelación mínima para reservar online. El informe D.4 indica que no hay valor de mercado de referencia.
+- **RN-TD-03** (configurable, default **24 horas**, rango **24-48**): el paciente puede **cancelar o reprogramar** sin penalidad hasta 24 h antes del inicio del turno. Fuera de ese plazo, la acción online queda bloqueada y se indica contactar al consultorio (confirmado por el autor el 2026-10-02, P-12; **Suposición:** el odontólogo sí puede cancelar/reprogramar en cualquier momento desde el panel).
 - **RN-TD-04** (fija): la reprogramación por el paciente aplica las mismas reglas que una reserva nueva (RN-AG-04 a RN-AG-10, RN-TD-01, RN-TD-02) y conserva la seña ya acreditada (**Suposición**).
 - **RN-TD-05** (configurable, default **reserva directa**): el **paciente nuevo reserva directo**; el odontólogo puede activar la **aprobación manual opcional**, en cuyo caso el turno queda `pendiente_aprobacion` (ocupando el horario) hasta que lo apruebe o rechace.
 - **RN-TD-06** (fija): la reserva pública solo ofrece prestaciones marcadas como `reservable_online` y huecos que cumplen horario, bloqueos y solapamientos.
 - **RN-TD-07** (fija): si **no hay horarios disponibles** en el rango pedido, la reserva pública ofrece anotarse en la **lista de espera** (informe D.3, punto 5).
-- **RN-TD-08** (fija): toda acción del paciente sobre su turno se hace con un **token de gestión firmado** enviado por WhatsApp; el token identifica un único turno.
+- **RN-TD-08** (fija): toda acción del paciente sobre su turno se hace con un **token de gestión firmado** enviado por WhatsApp; el token identifica un único turno. El paciente **no tiene cuenta** (DD-11). En la reserva pública el **teléfono de WhatsApp es obligatorio** y el **DNI es opcional** (decisión del autor 2026-10-02, SU-03).
 
 ### Subdominio WhatsApp (RN-WA)
 - **RN-WA-01** (configurable, default **24 h antes**): el sistema envía un recordatorio del turno.
@@ -68,14 +70,14 @@ Dominios: **AG** agenda · **TD** turnos digitales (reserva, confirmación, canc
 - **RN-SP-03** (**Suposición:** configurable; sin valor de fuente): si la seña no se acredita en el plazo de vencimiento, el turno pasa a `vencido` y libera el horario (dispara RN-LE-01).
 - **RN-SP-04** (configurable, **sujeta a revisión legal**): si el paciente cancela **fuera de plazo** (RN-TD-03), la seña **se retiene**.
 - **RN-SP-05** (configurable, **sujeta a revisión legal**): si **cancela el odontólogo**, la seña se **devuelve al 100%**.
-- **RN-SP-06** (**Suposición**): si el paciente cancela **dentro de plazo**, la seña se devuelve (la fuente no lo dice explícitamente; se infiere de "ventana de cancelación sin penalidad").
+- **RN-SP-06** (confirmada por el autor el 2026-10-02): si el paciente cancela **dentro de plazo**, la seña se devuelve (la fuente no lo dice explícitamente; se infiere de "ventana de cancelación sin penalidad"). Sigue sujeta a revisión legal (P-01).
 - **RN-SP-07** (fija): el **registro de pago simple** guarda pagado sí/no, monto y medio; no emite comprobante fiscal (ARCA es v2).
 - **RN-SP-08** (fija): los webhooks de Mercado Pago se procesan de forma **idempotente** (la misma notificación no acredita dos veces).
 
 ## Dominio: Ficha clínica (RN-FC)
 
 - **RN-FC-01** (fija): la ficha mínima contiene datos del paciente, **anamnesis** y **evolución en texto**. Odontograma completo = v1.1.
-- **RN-FC-02** (fija): solo el rol `odontologo` lee y escribe datos clínicos.
+- **RN-FC-02** (fija): solo el rol `odontologo` lee y escribe datos **clínicos** (anamnesis, evolución, odontograma). El rol `recepcionista` ve y gestiona los datos **administrativos** del paciente (identificación, contacto, turnos, pagos), pero **no** los clínicos (decisión del autor 2026-10-02, SU-04).
 - **RN-FC-03** (fija): la anamnesis se **versiona** y la evolución es **solo inserción**; no hay borrado físico de datos clínicos (Ley 26.529 como referencia; **no es asesoría legal**).
 - **RN-FC-04** (fija): los presupuestos son simples (ítems con descripción, cantidad y precio; total calculado). Sin códigos ni valores de obras sociales en v1.
 

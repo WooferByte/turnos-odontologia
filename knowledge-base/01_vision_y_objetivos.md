@@ -77,6 +77,7 @@ En el independiente, quien usa el sistema todos los días es el propio odontólo
 | v2 | ARCA y facturación electrónica |
 | v2 | Caja completa con arqueo |
 | Fase 2 | Split de pagos 1:N en Mercado Pago (varios profesionales cobrando) |
+| Fase 2 | Sobreturnos (turnos superpuestos intencionales). Prohibidos en la v1 por decisión de alcance del autor (P-11, 2026-10-02); hoy los ofrecen Bilog, Dentalink y Naclix |
 | Posterior | WhatsApp por API oficial **en producción** (verificación de empresa, plantillas aprobadas, costo por conversación) |
 | Posterior | Sincronización con Google Calendar |
 | Posterior | Interfaz multi-profesional y multi-sillón |

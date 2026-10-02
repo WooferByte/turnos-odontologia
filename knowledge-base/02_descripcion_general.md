@@ -6,22 +6,22 @@ Aplicación web con **API REST** (backend) y **SPA** (frontend), más rutas púb
 
 ## Stack tecnológico
 
-Stack definido por el autor en el Discovery (restricción, punto 9). Las versiones mínimas no figuran en las fuentes.
+Stack definido por el autor en el Discovery (restricción, punto 9). Las versiones mínimas no figuran en las fuentes. El autor confirmó (2026-10-02, P-17) Python 3.11+ y SQLAlchemy 2.x; las versiones de FastAPI, PostgreSQL, Redis, React y Vite se fijan en el README cuando se implemente el change.
 
 | Capa | Tecnologías | Versión mínima |
 |---|---|---|
-| Lenguaje backend | Python | **Suposición:** 3.11+ (a confirmar) |
-| Framework API | FastAPI (validación con Pydantic, incluido en FastAPI) | No fijada |
+| Lenguaje backend | Python | 3.11+ (confirmada por el autor, 2026-10-02) |
+| Framework API | FastAPI (validación con Pydantic, incluido en FastAPI) | No fijada (se fija en el README del change) |
 | Autenticación | JWT (access token firmado) | No fijada |
-| ORM / acceso a datos | SQLAlchemy | **Suposición:** 2.x (API declarativa tipada) |
-| Base de datos | PostgreSQL (producción / docker-compose) | No fijada |
+| ORM / acceso a datos | SQLAlchemy | 2.x, API declarativa tipada (confirmada por el autor, 2026-10-02) |
+| Base de datos | PostgreSQL (producción / docker-compose) | No fijada (se fija en el README del change) |
 | Base de datos de tests | SQLite en memoria (ver DD-03) | — |
-| Asincronía | Redis: colas de mensajes y tareas diferidas (recordatorios, ofertas de lista de espera, vencimiento de señas) | No fijada |
+| Asincronía | Redis: colas de mensajes y tareas diferidas (recordatorios, ofertas de lista de espera, vencimiento de señas) | No fijada (se fija en el README del change) |
 | Contenedores | Docker y Docker Compose | No fijada |
-| Frontend | React + TypeScript + Vite | No fijada |
+| Frontend | React + TypeScript + Vite | No fijada (React y Vite se fijan en el README del change) |
 | Tests backend | **Suposición:** pytest + cliente de pruebas de FastAPI | — |
 
-> **Alcance del change de la consigna.** El change que se implementa en la Etapa 6 solo necesita el **backend** (API o módulo de dominio). Sus tests deben correr **sin PostgreSQL ni Redis** (p. ej. SQLite en memoria y dobles de prueba para la cola), para que el repositorio se pueda clonar y testear siguiendo solo el README (restricción del Discovery). Ver DD-03 y R-08 en `09_decisiones_y_supuestos.md`.
+> **Alcance del change de la consigna.** El change que se implementa en la Etapa 6 solo necesita el **backend** (API o módulo de dominio). Sus tests deben correr **sin PostgreSQL ni Redis** (p. ej. SQLite en memoria y dobles de prueba para la cola), para que el repositorio se pueda clonar y testear siguiendo solo el README (restricción del Discovery). Ver DD-03 (confirmada por el autor el 2026-10-02: el README debe decir explícitamente que los tests corren con SQLite en memoria) y R-08 en `09_decisiones_y_supuestos.md`.
 
 ## Arquitectura general
 

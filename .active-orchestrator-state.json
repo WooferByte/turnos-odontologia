@@ -254,7 +254,7 @@
       "problem": "Los odontólogos independientes y consultorios chicos de Argentina gestionan turnos y fichas con papel, Excel y WhatsApp, lo que genera ausentismo evitable y datos sin trazabilidad, porque las soluciones existentes son caras o no se integran con WhatsApp ni con el cobro local.",
       "system_type": "web_app",
       "domain": "healthcare_dental_scheduling (gestión de turnos y agenda de consultorios odontológicos, Argentina)",
-      "scale": "team (inferred, medium confidence: un consultorio con pocos usuarios internos + pacientes por link público sin cuenta)",
+      "scale": "team (confirmed by the author 2026-10-02, high confidence: un consultorio con pocos usuarios internos; los pacientes no tienen cuenta, acceden por token, y no son usuarios del sistema)",
       "stack": "Python + FastAPI + JWT + SQLAlchemy + PostgreSQL + Redis + Docker/Docker Compose; React + TypeScript + Vite (tests del change con SQLite en memoria)",
       "needs_infra": true
     },

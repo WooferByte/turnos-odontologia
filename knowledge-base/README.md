@@ -28,7 +28,7 @@ Base de conocimiento generada (modo silencioso, `kb-creator`) a partir de `docs/
 5. Implementar → [07](07_flujos_principales.md), [06](06_funcionalidades.md)
 6. Antes de codificar → [10](10_preguntas_abiertas.md)
 
-**Change de la consigna (Etapa 6):** "Crear un turno evitando solapamientos por profesional y por sillón/box" → US-010, Flujo 1, RN-AG-05/08/09/10, DD-02/03/04. Tests sin PostgreSQL ni Redis.
+**Change de la consigna (Etapa 6):** "Crear un turno evitando solapamientos por profesional y por sillón/box" → US-010, Flujo 1, RN-AG-05/08/09/10, DD-02/03/04. Tests sin PostgreSQL ni Redis (SQLite en memoria, DD-03; el README del change debe decirlo explícitamente). Alcance (P-10): solo solapamientos por profesional y por sillón con estados activos; sin validar horario de atención ni bloqueos. Sobreturnos prohibidos en la v1 (P-11, Fase 2).
 
 ## Resumen Ejecutivo
 

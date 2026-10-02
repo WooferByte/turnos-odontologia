@@ -47,4 +47,4 @@ Alternativas: ClinIA, SimpleTurno, Neocita.
 - **Clinicorp** (link público + estados en tiempo real) → referente latinoamericano del canal.
 
 ## Limitaciones a tener presentes
-Resúmenes automáticos de `WebFetch`; mayormente páginas comerciales; sin demos; comparativas publicadas por competidores (sesgadas); verificación personal de fuentes **pendiente** (ver P-16).
+Resúmenes automáticos de `WebFetch`; mayormente páginas comerciales; sin demos; comparativas publicadas por competidores (sesgadas); verificación personal de 5 fuentes **completada por el autor el 2026-10-02** (ver P-16); el resto de las fuentes sigue siendo lectura automática.

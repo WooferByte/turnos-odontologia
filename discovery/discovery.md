@@ -46,8 +46,8 @@ Se relevaron **31 sistemas**: 13 con origen o presencia en Argentina, 9 latinoam
 
 | Ranking preliminar | Puntaje | Confianza | Nota |
 |---|---|---|---|
-| Naclix | 3,75 | — | Multi-rubro, no solo odontológico; proveedor unipersonal; datos alojados en São Paulo y EE. UU. |
-| DentalCore | 3,65 | baja | WhatsApp por QR, no API oficial; casi todo es afirmación comercial. |
+| Naclix | 3,75 | Medio | Multi-rubro, no solo odontológico; proveedor unipersonal; datos alojados en São Paulo y EE. UU. |
+| DentalCore | 3,65 | Medio | WhatsApp por QR, no API oficial; casi todo es afirmación comercial. |
 | Bilog | 3,15 | — | Recordatorios de WhatsApp manuales o semiautomáticos. |
 | ClinIA | 3,15 | baja | Agenda por sillón, PUCO y receta electrónica, solo como afirmación comercial. |
 | Órbita | 3,00 | baja | Capa de IA sobre WhatsApp; se integra con Dentalink y Bilog. |
@@ -132,6 +132,6 @@ Todas configurables por el odontólogo. Los valores son **defaults propuestos**,
   - **Anti-solapamiento:** solo como afirmación comercial (Órbita y EXACT); ninguno lo comprueba.
   - **Horarios recurrentes configurables con excepciones:** ningún sistema lo evidencia. Dentalink muestra "horario por dentista" y Dentidesk, intervalos y bloqueo de feriados.
   - **Reprogramación por el paciente:** comprobada solo en Dentally; Turnito, ClinIA y Clinicorp la declaran como afirmación comercial.
-  - **Historial de cambios de agenda:** no evidenciado.
+  - **Historial de cambios de turno:** no evidenciado como función de agenda; Naclix declara auditoría en su política [C] (confianza media-baja).
   - **API oficial de WhatsApp:** ningún competidor la documenta.
 - ¿Qué decisiones de arquitectura concretas tomará la KB sobre el stack? Se resuelve en `kb-creator`.

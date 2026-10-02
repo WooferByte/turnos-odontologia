@@ -7,7 +7,7 @@
 | Odontólogo | Profesional que atiende. En el segmento primario (independiente) es también recepcionista y dueño | Panel autenticado: agenda del día, ficha clínica, configuración | `odontologo` |
 | Recepcionista | Agenda y confirma turnos. En el independiente suele ser el propio odontólogo | Panel autenticado: turnos, lista de espera, señas y pagos | `recepcionista` |
 | Dueño del consultorio | Controla ocupación, ausentismo y cobros pendientes. En el independiente es el mismo odontólogo | Panel autenticado: reportes e historial (lectura) | `dueno` |
-| Paciente | Reserva, paga la seña, confirma, cancela o reprograma | Link público de reserva y link de gestión del turno; WhatsApp | Sin cuenta (ver SU-03) |
+| Paciente | Reserva, paga la seña, confirma, cancela o reprograma | Link público de reserva y link de gestión del turno; WhatsApp | Sin cuenta, gestionado por token (DD-11, SU-03) |
 | Sistema (worker) | Envía recordatorios, ofertas de lista de espera y vence señas impagas | Tareas en Redis | Actor técnico, registrado como `sistema` en el historial |
 | Mercado Pago / Meta | Servicios externos que notifican pagos y respuestas | Webhooks | Actor externo, registrado como `webhook_mp` / `webhook_wa` |
 
@@ -28,7 +28,7 @@ C = crear, R = leer, U = actualizar, D = eliminar/anular. "Propio" = solo sus tu
 | Confirmación de turno | U | U | — | U propio |
 | Historial de cambios de turno | R | R | R | — (**Suposición:** no se expone al paciente) |
 | Lista de espera | CRUD | CRUD | R | C propio |
-| Pacientes: datos de contacto | CRUD | CRU | R | R/U propio (**Suposición**) |
+| Pacientes: datos administrativos (identificación, contacto) | CRUD | CRU | R | R/U propio (**Suposición**) |
 | Ficha clínica (anamnesis, evolución) | CRU (sin borrado físico, ver RN-FC-03) | — | — | — |
 | Presupuestos | CRUD | R | R | — |
 | Registro de pagos y señas | CRU | CRU | R | C (pago de seña vía MP) |
@@ -36,7 +36,7 @@ C = crear, R = leer, U = actualizar, D = eliminar/anular. "Propio" = solo sus tu
 | Reportes (ocupación, ausentismo, cobros) | R | — | R | — |
 | Usuarios del consultorio | CRUD | — | R | — |
 
-**Suposición:** la recepcionista no accede a la ficha clínica (datos de salud) por minimización (Ley 25.326). Confirmar con el autor: en consultorios chicos la recepcionista podría necesitar ver anamnesis (pregunta en `10_preguntas_abiertas.md`).
+**Decisión del autor (2026-10-02, P-09 / SU-04):** la recepcionista ve los datos **administrativos** del paciente (identificación, contacto, turnos, pagos) pero **no** los datos **clínicos** (anamnesis, evolución, odontograma), por minimización de datos de salud (Ley 25.326). Ver RN-FC-02.
 
 ## Rutas públicas
 

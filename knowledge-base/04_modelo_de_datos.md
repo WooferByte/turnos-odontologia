@@ -54,11 +54,11 @@ Paciente 1──N RegistroPago
 Valores **por defecto propuestos por el autor** (no estándares de mercado), todos editables (ver `05_reglas_de_negocio.md`):
 - `antelacion_cancelacion_horas: int` = 24 (rango permitido 24-48) — RN-TD-03.
 - `horizonte_reserva_dias: int` = 60 — RN-TD-01.
-- `antelacion_minima_reserva_horas: int` = 2 — RN-TD-02.
+- `antelacion_minima_reserva_horas: int` = 2 — RN-TD-02 (confirmado por el autor el 2026-10-02).
 - `aprobacion_manual_pacientes_nuevos: bool` = false — RN-TD-05.
-- `requiere_sena: bool` = **Suposición:** false por defecto (la seña es opcional por riesgo R-03).
+- `requiere_sena: bool` = false por defecto (la seña es opcional por riesgo R-03; confirmado por el autor el 2026-10-02, SU-07).
 - `monto_sena: decimal | null`, `vencimiento_sena_minutos: int | null` (**Suposición**, ver pregunta abierta).
-- `granularidad_agenda_minutos: int` = **Suposición:** 5 (paso para calcular huecos).
+- `granularidad_agenda_minutos: int` = 5 (paso para calcular huecos; default propuesto confirmado por el autor el 2026-10-02, P-14; configurable).
 - `recordatorio_horas_antes: int` = 24 — RN-WA-01.
 - `canal_whatsapp: enum(cloud_api, wa_me)`.
 
@@ -88,9 +88,9 @@ Valores **por defecto propuestos por el autor** (no estándares de mercado), tod
 - Constraint: `inicio < fin`.
 
 ### Paciente
-- `id`, `consultorio_id`, `nombre: str`, `apellido: str`, `dni: str | null`, `telefono_whatsapp: str` (E.164), `email: str | null`, `fecha_nacimiento: date | null`, `es_nuevo: bool`, `creado_en`.
+- `id`, `consultorio_id`, `nombre: str`, `apellido: str`, `dni: str | null` (opcional), `telefono_whatsapp: str` (E.164, obligatorio), `email: str | null`, `fecha_nacimiento: date | null`, `es_nuevo: bool`, `creado_en`.
 - **Datos siempre ficticios en seeds, tests y ejemplos** (RN-PR-01).
-- **Suposición:** identificación del paciente en la reserva pública por teléfono + DNI (Bilog usa DNI + email [C] como referencia).
+- Identificación del paciente en la reserva pública (decisión del autor 2026-10-02, SU-03 / DD-11 / P-13): **teléfono de WhatsApp obligatorio, DNI opcional**, email opcional; el paciente no tiene cuenta y gestiona su turno por token (Bilog usa DNI + email [C] como referencia).
 
 ### Turno
 - `id`, `consultorio_id`, `paciente_id`, `profesional_id`, `sillon_id`, `prestacion_id`.
@@ -99,7 +99,7 @@ Valores **por defecto propuestos por el autor** (no estándares de mercado), tod
 - `origen: enum(panel, link_publico, lista_espera)`.
 - `token_gestion: str` (firmado, para el link del paciente), `creado_por`, `creado_en`, `actualizado_en`, `version: int` (bloqueo optimista).
 - Constraints: `inicio < fin`; índices `(profesional_id, inicio, fin)` y `(sillon_id, inicio, fin)` para la búsqueda de solapamientos.
-- **Suposición (producción):** en PostgreSQL se puede reforzar RN-AG-05/08 con una restricción de exclusión (`EXCLUDE USING gist` sobre `tstzrange(inicio, fin, '[)')` filtrada por estados activos). En SQLite (tests) la regla se valida en la capa de dominio. Ver DD-04.
+- DD-04 confirmada por el autor (2026-10-02). **Suposición (producción):** en PostgreSQL se puede reforzar RN-AG-05/08 con una restricción de exclusión (`EXCLUDE USING gist` sobre `tstzrange(inicio, fin, '[)')` filtrada por estados activos). En SQLite (tests) la regla se valida en la capa de dominio. Ver DD-04.
 
 #### Máquina de estados del turno
 

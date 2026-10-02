@@ -29,6 +29,7 @@
 **Alternativas consideradas**: Testcontainers / docker-compose obligatorio para tests.
 **Justificación**: README reproducible en cualquier máquina con Python.
 **Trade-offs aceptados**: diferencias de dialecto SQLite/PostgreSQL (zonas horarias, restricciones de exclusión). Mitigación: la regla vive en el dominio y se testea allí; las fechas se normalizan a UTC antes de persistir.
+**Confirmada por el autor (2026-10-02).** El README debe decir explícitamente que los tests del change corren con SQLite en memoria, sin PostgreSQL ni Redis.
 
 ### DD-04 — Atomicidad del anti-solapamiento
 **Decisión**: validar en dominio dentro de una transacción, y en PostgreSQL reforzar con restricción de exclusión sobre `tstzrange(inicio, fin, '[)')` por profesional y por sillón para estados activos (**Suposición:** la implementación exacta se decide en el design del change).
@@ -36,12 +37,14 @@
 **Alternativas consideradas**: bloqueo `SELECT ... FOR UPDATE` del recurso; solo validación en aplicación.
 **Justificación**: la base es la última línea de defensa; el intervalo `[)` coincide con RN-AG-09.
 **Trade-offs aceptados**: la restricción no existe en SQLite; la concurrencia real solo se prueba en el perfil con PostgreSQL.
+**Confirmada por el autor (2026-10-02).** La restricción de exclusión sigue siendo **Suposición** hasta que se defina en el `design.md` del change.
 
 ### DD-05 — Reprogramar modifica el mismo turno
 **Decisión**: reprogramar cambia `inicio/fin` del turno y registra `EventoTurno(reprogramado)` con antes/después.
 **Alternativas consideradas**: cancelar y crear uno nuevo.
 **Justificación**: conserva seña, token y trazabilidad en un solo registro.
 **Trade-offs aceptados**: reportes de ocupación deben leer el historial para conocer horarios previos.
+**Confirmada por el autor (2026-10-02)**, sin cambios.
 
 ### DD-06 — WhatsApp: Cloud API en modo prueba preferida, `wa.me` como alternativa
 **Decisión**: puerto de mensajería con dos adaptadores; el canal se elige por configuración.
@@ -63,12 +66,27 @@
 **Justificación**: un turno que empieza cuando termina otro es válido (caso borde exigido por la consigna).
 
 ### DD-10 — Reglas de negocio configurables con defaults propuestos
-**Decisión**: 24 h de cancelación (24-48), 60 días de horizonte, 2 h de antelación mínima, reserva directa de nuevos con aprobación opcional, seña retenida/devuelta (sujeta a revisión legal).
+**Decisión**: las reglas de negocio son configurables por el odontólogo y parten de los valores que siguen, separados según su estado.
 **Contexto**: informe D.4: "decisiones de diseño del autor, no hechos de mercado".
+
+**Decisiones de diseño confirmadas por el autor (2026-10-02)**:
+- Antelación mínima de reserva: 2 h (IN-06 / RN-TD-02).
+- Granularidad de huecos: 5 minutos (P-14).
+- Cancelación fuera de plazo: bloqueada online (P-12 / RN-TD-03).
+
+**Defaults propuestos (sin valor de mercado de referencia)**:
+- Ventana de cancelación: 24 h, configurable entre 24 y 48.
+- Horizonte de reserva: 60 días.
+- Paciente nuevo: reserva directa, con aprobación manual opcional.
+
+**Suposiciones sujetas a revisión legal (P-01)**:
+- Seña retenida si el paciente cancela fuera de plazo.
+- Seña devuelta al 100% si cancela el odontólogo o si el paciente cancela dentro de plazo (SU-06).
 
 ### DD-11 — Paciente sin cuenta, gestionado por token
 **Decisión**: el paciente reserva y gestiona su turno con un token firmado, sin crear cuenta.
 **Justificación**: objetivo de reserva en menos de 30 s (CU-01); menos datos personales almacenados.
+**Confirmada por el autor (2026-10-02).** En la reserva pública, el **teléfono es obligatorio y el DNI es opcional** (ver SU-03).
 
 ## Supuestos inferidos
 
@@ -85,15 +103,17 @@
 **Cómo validar**: preguntar a un odontólogo en la demo.
 
 ### SU-03 — Identificación del paciente sin cuenta
-**Supuesto**: alcanza con teléfono de WhatsApp + DNI (opcional email) y token por turno.
+**Supuesto**: alcanza con teléfono de WhatsApp (obligatorio) + DNI (opcional) y email (opcional), y token por turno.
 **Origen**: patrón de Bilog (DNI + email [C]) y Turnito ("reserva sin registro" [AC]).
 **Riesgo si es falso**: duplicados de pacientes; suplantación si el link se comparte.
 **Cómo validar**: definir en el change de reserva pública.
+**Confirmada por el autor (2026-10-02)** con ajuste: **teléfono obligatorio, DNI opcional**, email opcional; paciente sin cuenta gestionado por token (DD-11). Sin DNI, la detección de duplicados se apoya en el teléfono.
 
-### SU-04 — Recepcionista sin acceso a la ficha clínica
-**Supuesto**: por minimización de datos sensibles.
+### SU-04 — Recepcionista sin acceso a datos clínicos
+**Supuesto**: la recepcionista ve los datos **administrativos** del paciente (identificación, contacto, turnos, pagos) pero no los **clínicos** (anamnesis, evolución, odontograma), por minimización de datos sensibles.
 **Riesgo si es falso**: fricción operativa en consultorios con recepcionista.
 **Cómo validar**: confirmar con el autor.
+**Confirmada por el autor (2026-10-02)** con ese matiz: acceso a datos administrativos, no a clínicos.
 
 ### SU-05 — Plazos de vencimiento de seña y de oferta de lista de espera
 **Supuesto**: existen y son configurables; sin valor de referencia.
@@ -104,10 +124,12 @@
 **Supuesto**: si el paciente cancela dentro de plazo, la seña se devuelve.
 **Origen**: inferido de "ventana de cancelación sin penalidad" (informe D.4).
 **Cómo validar**: confirmar con el autor y revisión legal.
+**Confirmada por el autor (2026-10-02).** La retención por cancelación fuera de plazo (RN-SP-04) sigue sujeta a revisión legal (P-01).
 
 ### SU-07 — Monto y obligatoriedad de la seña
 **Supuesto**: la seña es opcional (desactivada por defecto) y su monto lo fija el odontólogo.
 **Origen**: riesgo "seña no usada" del Discovery.
+**Confirmada por el autor (2026-10-02).**
 
 ## Riesgos (del Discovery)
 
@@ -117,7 +139,7 @@
 | R-02 | Adopción frente a opciones gratuitas (Turnito, Naclix, Bilog freemium, Ulifeon) | Diferenciadores: lista de espera, horario + trazabilidad, precio en ARS |
 | R-03 | Seña no usada (odontólogo no la quiere, paciente la rechaza) | Seña opcional y configurable |
 | R-04 | Marco legal: Ley 25.326 aplica; Ley 24.240 excluye a profesionales liberales con título y matrícula pero requiere revisión (cambia si el cliente es una clínica o se evalúa la relación con el proveedor del software); Ley 26.529 como referencia | Datos ficticios; seña sin dinero real; revisión legal antes de uso real |
-| R-05 | Evidencia de mercado débil (mayormente afirmación comercial leída con resúmenes automáticos) | Verificación personal de fuentes y demos (pendiente en el informe) |
+| R-05 | Evidencia de mercado débil (mayormente afirmación comercial leída con resúmenes automáticos) | Verificación personal de fuentes (5 fuentes completadas el 2026-10-02, P-16) y demos (pendientes) |
 | R-06 | Dependencia de políticas y precios de Meta y Mercado Pago | Puertos/adaptadores; alternativa `wa.me` |
 | R-07 | Alcance: MVP mayor que lo implementable individualmente | La consigna exige un solo change; roadmap por changes chicos |
 | R-08 | Reproducibilidad de tests con PostgreSQL y Redis | DD-03: SQLite en memoria y doble de cola |

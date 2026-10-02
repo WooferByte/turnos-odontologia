@@ -96,5 +96,5 @@ Los nombres son **propuestos** (**Suposición**); se fijan en el change de infra
 - **Unit**: funciones puras de dominio (solapamiento, ventanas de cancelación, transiciones de estado). Sin I/O.
 - **Integration**: casos de uso con repositorios SQLAlchemy sobre **SQLite en memoria**; la cola se reemplaza por un doble en memoria.
 - **API**: `TestClient` de FastAPI con la misma base en memoria.
-- Comando único documentado en el README (p. ej. `pytest`), sin Docker ni servicios externos.
+- Comando único documentado en el README (p. ej. `pytest`), sin Docker ni servicios externos. El README debe decir explícitamente que los tests corren con SQLite en memoria (DD-03, confirmada por el autor el 2026-10-02) y fijar las versiones de FastAPI, PostgreSQL, Redis, React y Vite al implementar el change (P-17).
 - La restricción de exclusión de PostgreSQL (si se usa) se testea aparte en un perfil opcional con docker-compose; **no es requisito** para la suite del change.
