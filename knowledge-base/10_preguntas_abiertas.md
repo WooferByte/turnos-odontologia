@@ -1,6 +1,6 @@
 # Preguntas Abiertas
 
-> **Conclusión transversal del Discovery:** la evidencia de mercado es **mayormente afirmación comercial [AC]**. Solo Open Dental tiene confianza alta (manual y API documentados). Lo comprobado [C] se limita en general a precios, políticas de privacidad y algunas páginas de ayuda. Las notas se obtuvieron con `WebFetch`, que devuelve **resúmenes automáticos** y no texto literal. La matriz de puntuación es preliminar y está sujeta a demos y a las demos. La **verificación personal de las 5 fuentes** del informe fue completada por el autor el 2026-10-02 (ver P-16); en el informe falta solo el nombre del autor.
+> **Conclusión transversal del Discovery:** la evidencia de mercado es **mayormente afirmación comercial [AC]**. Solo Open Dental tiene confianza alta (manual y API documentados). Lo comprobado [C] se limita en general a precios, políticas de privacidad y algunas páginas de ayuda. Las notas se obtuvieron con `WebFetch`, que devuelve **resúmenes automáticos** y no texto literal. La matriz de puntuación es preliminar y está sujeta a demos. La **verificación personal de las 5 fuentes** del informe fue completada por el autor el 2026-10-02 (ver P-16).
 
 ## Inconsistencias detectadas
 
@@ -76,7 +76,7 @@ Metodología: lectura de sitio oficial, precios, ayuda y privacidad con `WebFetc
 | P-16 | Baja | Completar la **"Verificación de fuentes"** del informe (mínimo 5 fuentes de tipos distintos, comprobadas personalmente) y el nombre del integrante (hoy "[Nombre del autor]") | Entrega de la Etapa 2 | Autor |
 | P-17 | Baja | Versiones de Python, FastAPI, SQLAlchemy, PostgreSQL, Redis, React y Vite (no figuran en las fuentes; confirmados Python 3.11+ y SQLAlchemy 2.x). Política: un único archivo de dependencias con pins exactos, fijados en el `design.md` del primer change y verificados en clon limpio; toda dependencia de test declarada | Change de infraestructura | Autor |
 | P-18 | Media | Para el primer change: confirmar tipo de clave primaria, tabla `Consultorio` mínima, estado inicial `reservado`, forma del error y del cuerpo RFC 7807, y qué hace el caso de uso ante una referencia inexistente o inactiva (E12). **Resuelta el 2026-10-03** (ver decisiones); las elecciones que siguen siendo Suposición están en SU-08 | `design.md` del primer change | Autor |
-| P-19 | Baja | Confirmar la lista «A confirmar por el autor» de `04_modelo_de_datos.md` y las Suposiciones SU-08 (restantes) y SU-09 (tiempos de token, refresh, hash) | `design.md` de los changes correspondientes | Autor |
+| P-19 | Baja | **[CERRADA 2026-10-03, D28]** Confirmar las propuestas técnicas pendientes (SU-08 restante, SU-09, las elecciones del modelo de `04_modelo_de_datos.md`, Redis en la v1, `Mensaje.estado`, `RN-GL-04` con `422` y las dependencias agregadas por deducción). **Propuesta aceptada por el autor (2026-10-03); se revisa en el design del change** | `design.md` de cada change | Autor |
 
 ### Decisiones del autor (2026-10-02)
 
@@ -111,7 +111,7 @@ Al 2026-10-02, las preguntas P-01 a P-08 y P-15 seguían abiertas; **se cerraron
 | P-08 (plazos) | **Cerrada**: seña impaga vence a los 30 minutos y oferta de lista de espera a las 2 horas; configurables; valores de diseño del autor, no de mercado |
 | P-01, P-02, P-03 (legales) | **Cerradas como fuera del alcance académico; requieren revisión legal antes de uso real.** La seña solo con credenciales de prueba, datos siempre ficticios y el texto de consentimiento es un borrador marcado «no validado legalmente». No se afirma nada legal nuevo |
 | P-07 (obras sociales), P-15 (precio) | **Diferidas**, fuera de la v1 |
-| Modelo de datos | Todo el modelo de `04_modelo_de_datos.md` llevado al detalle del subconjunto del primer change; lo no respaldado está en «A confirmar por el autor» |
+| Modelo de datos | Todo el modelo de `04_modelo_de_datos.md` llevado al detalle del subconjunto del primer change; lo no respaldado está en «Propuestas aceptadas y Suposiciones pendientes» |
 | Migraciones | Alembic desde el change de infraestructura con PostgreSQL; el primer change usa `create_all` (DD-15) |
 | Orden de implementación (D10) | `Prioridad` pasa a ser `Orden` (1 a 9, orden de implementación, no importancia) en cada historia de `06_funcionalidades.md`; el change de la consigna (US-010) es el primero |
 | Dependencias (D11, D14, D18) | US-060 a US-062, US-070 y US-080 con sus dependencias; US-013, US-014 y US-031 escriben en el historial y dependen de US-015; US-020 tiene como dependencia técnica el change de infraestructura con PostgreSQL (concurrencia, RN-AG-10c / E11) |
@@ -119,6 +119,16 @@ Al 2026-10-02, las preguntas P-01 a P-08 y P-15 seguían abiertas; **se cerraron
 | Reportes (D16) | US-080 es una **extensión fuera del MVP de la sección D del informe**; queda en la v1 como último orden |
 | Datos ficticios (D17) | US-071 deja de ser historia: es una regla dura del proyecto (RN-PR-01), se registra en `CLAUDE.md`/`AGENTS.md` y no genera un change propio |
 | Rol `dueno` | Se mantienen los tres roles; en el odontólogo independiente la misma persona tiene `odontologo` y `dueno` |
+| US-014 (D19) | Pueden marcar `atendido` o `ausente` el odontólogo y la recepcionista. Marcar desde un estado no permitido se rechaza con la regla nueva `RN-AG-12`; la tabla de transiciones válidas está en `04_modelo_de_datos.md` |
+| US-021 (D20) | Anotarse en la lista de espera exige aceptar el consentimiento (RN-LE-05). Se sale de la lista de dos formas, ambas a `retirada`: el paciente desde su link o el consultorio desde el panel (RN-LE-06) |
+| US-051 (D21) | La seña se retiene, entera, en dos casos: el paciente queda `ausente`, o el consultorio carga desde el panel una cancelación del paciente fuera de plazo. Sin retención parcial. Resuelve la contradicción RN-SP-04 / RN-TD-03. Sigue sujeta a revisión legal y solo con credenciales de prueba |
+| US-060 (D22) | Anamnesis con campos simples y opcionales: alergias, medicación, enfermedades y observaciones (columnas de texto, no JSON) |
+| US-061 (D23) | El odontólogo cambia el estado del presupuesto: `borrador` → `entregado` → `aceptado` o `rechazado` (finales) |
+| US-062 (D24) | Pagos parciales como varios registros; un pago no se edita: se corrige con un registro nuevo que anula el anterior (`corrige_a_id`, agregada a `RegistroPago`) |
+| US-070 (D25) | Si cambia la versión del texto de consentimiento, se vuelve a pedir en la siguiente reserva del paciente |
+| US-080 (D26) | Ocupación = minutos con turno (estados activos y atendidos) sobre minutos de horario disponible (horario recurrente menos bloqueos); ausentismo = ausentes / (atendidos + ausentes); ambos con filtro por rango de fechas. La fórmula de ausentismo deja de ser Suposición |
+| ERD (D27) | Se quitó `Sena 1──N RegistroPago(origen=MP)`: el pago de la seña vive en `Sena` |
+| Propuestas técnicas (D28) | **Propuesta aceptada por el autor (2026-10-03); se revisa en el design del change:** SU-08 restante, SU-09, las elecciones del modelo, Redis en la v1, `Mensaje.estado`, `RN-GL-04` con `422` y las dependencias agregadas por deducción. P-19 cerrada |
 
 Decisiones de diseño confirmadas sin pregunta propia: DD-03 (tests con SQLite en memoria; el README debe decirlo explícitamente), DD-04 (la restricción de exclusión sigue como Suposición a definir en el `design.md` del change), DD-05 (reprogramar modifica el mismo turno), DD-11 y SU-06/SU-07 (ver `09_decisiones_y_supuestos.md`).
 

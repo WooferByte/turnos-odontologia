@@ -87,7 +87,7 @@ Verificación mecánica (**Suposición**): un test que recorra los imports de `a
 
 ## Contrato del primer change
 
-Contrato del change «crear turno sin solapamientos por profesional y por sillón». **Confirmados por el autor (2026-10-03):** el doble conflicto (E4), la forma del error y del cuerpo RFC 7807 con lista de códigos y conflictos, que el filtro de estados activos lo aplica el dominio, que el change **expone `POST /turnos` sin autenticación** y que E12 entra en el spec. Los **nombres exactos** de clases y funciones son propuestos por el agente y se confirman en el `design.md`. Los escenarios del primer change son E1..E7 y E12 de `06_funcionalidades.md` (US-010).
+Contrato del change «crear turno sin solapamientos por profesional y por sillón». **Confirmados por el autor (2026-10-03):** el doble conflicto (E4), la forma del error y del cuerpo RFC 7807 con lista de códigos y conflictos, que el filtro de estados activos lo aplica el dominio, que el change **expone `POST /turnos` sin autenticación** y que E12 entra en el spec. Los **nombres exactos** de clases y funciones son una propuesta aceptada por el autor 2026-10-03; se revisa en el design del change. Los escenarios del primer change son E1..E7 y E12 de `06_funcionalidades.md` (US-010).
 
 **Value object y función pura de dominio** (sin I/O, sin base de datos):
 
@@ -153,7 +153,7 @@ class RecursoNoEncontrado(ErrorDeDominio):   # codigo = "RN-GL-04" (E12)
 |---|---|---|
 | `ErrorDeSolapamiento` (E2, E3, E4, E7) | `409` | Cuerpo abajo |
 | Cuerpo inválido (formato, `inicio` naive) | `422` | Validación de Pydantic / RN-AG-10d |
-| `RecursoNoEncontrado` (E12) | `422` | La referencia viaja en el cuerpo, no en la URL. Status elegido por el agente (SU-08); un único status para inexistente e inactivo |
+| `RecursoNoEncontrado` (E12) | `422` | La referencia viaja en el cuerpo, no en la URL. Código `RN-GL-04` y status: propuesta aceptada por el autor 2026-10-03; se revisa en el design del change (SU-08); un único status para inexistente e inactivo |
 
 ```json
 {
@@ -170,13 +170,13 @@ class RecursoNoEncontrado(ErrorDeDominio):   # codigo = "RN-GL-04" (E12)
 }
 ```
 
-`codigos` es la lista de códigos RN (uno o dos); `conflictos` detalla recurso y turno en conflicto. El valor de `type` es **Suposición** (URI relativa). Los tests de dominio verifican la tupla de `Conflicto`; los de API, el estado y `codigos`.
+`codigos` es la lista de códigos RN (uno o dos); `conflictos` detalla recurso y turno en conflicto. El valor de `type` (URI relativa) es una propuesta aceptada por el autor 2026-10-03; se revisa en el design del change. Los tests de dominio verifican la tupla de `Conflicto`; los de API, el estado y `codigos`.
 
 Cuerpo para E12 (`422`): igual forma, con `"type": "/errores/recurso-no-encontrado"`, `"title": "Recurso no encontrado"`, `"codigos": ["RN-GL-04"]` y los campos `recurso`, `recurso_id` y `motivo`.
 
 ## Seguridad
 
-- **Autenticación** (change de usuarios y acceso, Épica 10; **el primer change no la tiene**, DD-14): JWT firmado (HS256 con secreto de entorno) para el panel. **Suposición** (SU-09): access token de 15 minutos y refresh token de 7 días, ambos JWT, sin revocación del refresh en la v1; contraseñas con hash **bcrypt**. Credenciales inválidas → `401` genérico (RN-AU-04).
+- **Autenticación** (change de usuarios y acceso, Épica 10; **el primer change no la tiene**, DD-14): JWT firmado (HS256 con secreto de entorno) para el panel. Propuesta aceptada por el autor 2026-10-03 (SU-09; se revisa en el design del change): access token de 15 minutos y refresh token de 7 días, ambos JWT, sin revocación del refresh en la v1; contraseñas con hash **bcrypt**. Credenciales inválidas → `401` genérico (RN-AU-04).
 - **Autorización**: RBAC por rol (`odontologo`, `recepcionista`, `dueno`) vía dependencies de FastAPI; unión de roles. Ficha clínica solo `odontologo`.
 - **Paciente**: sin cuenta; **token de gestión firmado** por turno y por oferta de lista de espera, con vencimiento. Nunca datos personales en la URL (RN-PR-06).
 - **Webhooks**: verificación de firma del webhook de Mercado Pago y consulta del pago a su API antes de acreditar. El webhook de WhatsApp (verificación de firma de Meta) es **Fase 2**.
@@ -207,7 +207,7 @@ Los nombres son **propuestos** (**Suposición**); se fijan en el change de infra
 
 - **Unit**: funciones puras de dominio (solapamiento, ventanas de cancelación, transiciones de estado). Sin I/O y **sin base de datos**.
 - **Integration**: caso de uso con repositorio SQLAlchemy **síncrono** sobre **SQLite en memoria** (`sqlite+pysqlite:///:memory:` con `StaticPool`); la cola se reemplaza por un doble en memoria. **Sin mocks de sesión ni de repositorio** (decisión del autor 2026-10-03, DD-12).
-- **API**: `TestClient` de FastAPI con la misma base en memoria (se sustituye la dependencia de sesión por la del test). **El primer change expone `POST /turnos`**, por lo que estos tests son parte del change: verifican el estado HTTP y `codigos` de E1, E4 y E12 como mínimo (**Suposición** sobre el alcance exacto). La dependencia de test del cliente HTTP se declara en el archivo de dependencias.
+- **API**: `TestClient` de FastAPI con la misma base en memoria (se sustituye la dependencia de sesión por la del test). **El primer change expone `POST /turnos`**, por lo que estos tests son parte del change: verifican el estado HTTP y `codigos` de E1, E4 y E12 como mínimo (propuesta aceptada por el autor 2026-10-03; se revisa en el design del change). La dependencia de test del cliente HTTP se declara en el archivo de dependencias.
 - **Sin `aiosqlite` ni `pytest-asyncio`**: el backend del primer change es síncrono (DD-12).
 - Comando único documentado en el README (p. ej. `pytest`), sin Docker ni servicios externos. El README debe decir explícitamente que los tests corren con SQLite en memoria (DD-03, confirmada por el autor el 2026-10-02) y fijar las versiones (ver «Versiones y dependencias»).
 - La restricción de exclusión de PostgreSQL (si se usa) se testea aparte en un perfil opcional con docker-compose; **no es requisito** para la suite del change.

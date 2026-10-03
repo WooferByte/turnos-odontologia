@@ -32,7 +32,7 @@ Paciente 1──N Turno N──1 Profesional
                 Turno N──1 Sillon
                 Turno N──1 Prestacion
 Turno 1──N EventoTurno                 (historial inmutable)
-Turno 1──0..1 Sena 1──N RegistroPago(origen=MP)
+Turno 1──0..1 Sena                    (el pago de la seña vive en Sena)
 Turno 1──N Mensaje
 
 Paciente 1──N EntradaListaEspera N──0..1 Prestacion
@@ -47,7 +47,7 @@ Paciente 1──N RegistroPago
 
 ## Convenciones comunes
 
-Todas las entidades se describen con el mismo nivel de detalle: tabla de campos con tipo, nullability (**NN** = no nulo), restricciones y claves foráneas, más los índices. Los tipos son lógicos y se mapean a SQLAlchemy 2.x. El signo **(†)** marca una elección sin respaldo en la KB: está en la lista «A confirmar por el autor» al final del archivo.
+Todas las entidades se describen con el mismo nivel de detalle: tabla de campos con tipo, nullability (**NN** = no nulo), restricciones y claves foráneas, más los índices. Los tipos son lógicos y se mapean a SQLAlchemy 2.x. El signo **(†)** marca una elección sin respaldo en la KB que el autor aceptó como **propuesta vigente** (2026-10-03, D28) y que se revisa en el `design.md` del change; el signo **(‡)** marca una Suposición nueva del agente (2026-10-03) todavía sin confirmar. Ambas están en la lista del final del archivo.
 
 - **Clave primaria:** `id` entero autoincremental en todas las tablas (decisión del autor 2026-10-03). Excepción: las tablas de unión con clave compuesta (`UsuarioRol`).
 - **Fechas-hora:** `fecha-hora` = fecha-hora **aware en UTC**, con zona (`DateTime(timezone=True)`; RN-GL-01, DD-13). Los valores «ahora» los pone la aplicación con `utc_now()`, no el motor.
@@ -239,6 +239,23 @@ DD-04 confirmada por el autor (2026-10-02). **Suposición (producción):** en Po
 - **Estados terminales (liberan el horario):** `cancelado_paciente`, `cancelado_profesional`, `vencido`, `atendido`, `ausente`.
 - **Reprogramar** no es un estado: cambia `inicio/fin` del mismo turno y registra un `EventoTurno` de tipo `reprogramado` (DD-05).
 
+**Tabla de transiciones válidas** (decisión del autor 2026-10-03, D19; derivada del diagrama anterior). Cualquier otro cambio de estado se rechaza con el error de dominio `RN-AG-12` (ver `05_reglas_de_negocio.md`):
+
+| Desde | Hacia | Cuándo |
+|---|---|---|
+| (reserva) | `reservado` | Caso normal |
+| (reserva) | `pendiente_sena` | Se exige seña (RN-SP-02) |
+| (reserva) | `pendiente_aprobacion` | Paciente nuevo con aprobación manual activa (RN-TD-05) |
+| `pendiente_aprobacion` | `reservado` | El odontólogo aprueba |
+| `pendiente_sena` | `reservado` | Pago de la seña acreditado (RN-SP-02) |
+| `pendiente_sena` | `vencido` | La seña no se acredita a tiempo (RN-SP-03) |
+| `reservado` | `confirmado` | El paciente o el consultorio confirman |
+| `reservado`, `confirmado` | `atendido` | Se atiende (RN-AG-13) |
+| `reservado`, `confirmado` | `ausente` | El paciente no asiste (RN-AG-13) |
+| cualquier estado activo | `cancelado_paciente`, `cancelado_profesional` | Cancelación |
+
+Los estados terminales no tienen transiciones de salida. **No definido:** a qué estado pasa un turno `pendiente_aprobacion` cuando el odontólogo lo **rechaza** (RN-TD-05); se decide en el change de reserva pública.
+
 ### EventoTurno (historial de cambios)
 **Change que la crea:** historial de cambios de turno (US-015); **no entra en el primer change** (decisión del autor 2026-10-03). **Inmutable**: solo inserción (RN-AG-11).
 
@@ -268,8 +285,9 @@ DD-04 confirmada por el autor (2026-10-02). **Suposición (producción):** en Po
 | `preferencias` | json | null | Días y franjas preferidas |
 | `estado` | texto | NN | Default `activa`. Valores: `activa`, `ofertada`, `asignada`, `retirada`, `vencida` |
 | `creada_en` | fecha-hora | NN | Define la prioridad FIFO (RN-LE-02) |
+| `token` | texto | NN | `UNIQUE`; firmado, para que el paciente se retire desde su link (RN-LE-06) (‡) |
 
-Índice: `(estado, creada_en)` (†).
+Índice: `(estado, creada_en)` (†). Se llega a `retirada` de **dos formas** (decisión del autor 2026-10-03, D20): el paciente se retira desde su link, o el consultorio lo retira desde el panel (RN-LE-06). Al anotarse se exige el consentimiento de datos (RN-LE-05).
 
 ### OfertaHueco
 **Change que la crea:** oferta de huecos (US-040).
@@ -324,7 +342,7 @@ DD-04 confirmada por el autor (2026-10-02). **Suposición (producción):** en Po
 | `vence_en` | fecha-hora | NN | `creada_en` + `vencimiento_sena_minutos` (30 min por defecto, RN-SP-03) |
 
 ### RegistroPago
-**Change que la crea:** registro de pago simple (US-062). Registro **simple** (no es caja; la caja completa es v2). **Decisión del autor 2026-10-03:** el pago se asocia al paciente y, opcionalmente, a un presupuesto o a un turno; US-061 (presupuesto) **no es dependencia** de US-062. Por eso, si US-062 se implementa antes que US-061, la columna `presupuesto_id` se agrega con el change de US-061, que es quien crea la tabla `Presupuesto`.
+**Change que la crea:** registro de pago simple (US-062). Registro **simple** (no es caja; la caja completa es v2). **Pagos parciales = varios registros. Un registro no se edita**: se corrige con un registro nuevo que lo anula mediante `corrige_a_id`, y el anulado no cuenta en los totales (RN-SP-09; decisión del autor 2026-10-03, D24). Anular sin reemplazar: registro nuevo con `corrige_a_id` y `pagado` falso (‡). El pago de la seña vive en `Sena`, no en esta tabla (D27). **Decisión del autor 2026-10-03:** el pago se asocia al paciente y, opcionalmente, a un presupuesto o a un turno; US-061 (presupuesto) **no es dependencia** de US-062. Por eso, si US-062 se implementa antes que US-061, la columna `presupuesto_id` se agrega con el change de US-061, que es quien crea la tabla `Presupuesto`.
 
 | Campo | Tipo | Null | Restricciones / FK / nota |
 |---|---|---|---|
@@ -337,9 +355,10 @@ DD-04 confirmada por el autor (2026-10-02). **Suposición (producción):** en Po
 | `pagado` | bool | NN | — |
 | `fecha` | fecha-hora | NN | — |
 | `registrado_por` | entero | null | FK → Usuario; nulo si lo registra el sistema (webhook) (†) |
+| `corrige_a_id` | entero | null | FK → RegistroPago; el registro que este anula (decisión del autor 2026-10-03, D24; no estaba en el modelo anterior de esta tabla, sí en `Evolucion`) |
 
 ### Consentimiento
-**Change que la crea:** consentimiento de datos (US-070). El texto de consentimiento es un **borrador, no validado legalmente** (decisión del autor 2026-10-03, ver P-03).
+**Change que la crea:** consentimiento de datos (US-070). El texto de consentimiento es un **borrador, no validado legalmente** (decisión del autor 2026-10-03, ver P-03). Si cambia la versión del texto, se vuelve a pedir en la siguiente reserva del paciente (RN-PR-02; decisión del autor 2026-10-03, D25); la versión vigente es una constante de la aplicación (‡).
 
 | Campo | Tipo | Null | Restricciones / FK / nota |
 |---|---|---|---|
@@ -351,13 +370,16 @@ DD-04 confirmada por el autor (2026-10-02). **Suposición (producción):** en Po
 | `ip` | texto | null | **Suposición** |
 
 ### Anamnesis
-**Change que la crea:** ficha clínica (US-060). Se versiona, no se sobrescribe (RN-FC-03).
+**Change que la crea:** ficha clínica (US-060). Se versiona, no se sobrescribe (RN-FC-03). **Campos simples y opcionales** (decisión del autor 2026-10-03, D22): se eligieron **columnas de texto** en lugar de un JSON genérico por ser lo más simple y portable entre SQLite y PostgreSQL (elección del agente, †).
 
 | Campo | Tipo | Null | Restricciones / FK / nota |
 |---|---|---|---|
 | `id` | entero | NN | PK |
 | `paciente_id` | entero | NN | FK → Paciente |
-| `contenido` | json | NN | Antecedentes, alergias, medicación (formato †) |
+| `alergias` | texto | null | Opcional (decisión del autor 2026-10-03, D22) |
+| `medicacion` | texto | null | Opcional |
+| `enfermedades` | texto | null | Opcional |
+| `observaciones` | texto | null | Opcional |
 | `version` | entero | NN | `UNIQUE(paciente_id, version)` |
 | `registrada_por` | entero | NN | FK → Usuario |
 | `registrada_en` | fecha-hora | NN | — |
@@ -385,7 +407,7 @@ DD-04 confirmada por el autor (2026-10-02). **Suposición (producción):** en Po
 | `id` | entero | NN | PK |
 | `paciente_id` | entero | NN | FK → Paciente |
 | `fecha` | fecha | NN | — |
-| `estado` | texto | NN | Default `borrador`. Valores: `borrador`, `entregado`, `aceptado`, `rechazado` |
+| `estado` | texto | NN | Default `borrador`. Valores: `borrador`, `entregado`, `aceptado`, `rechazado`. Transiciones: `borrador` → `entregado` → `aceptado` o `rechazado`; `aceptado` y `rechazado` son finales; solo el odontólogo cambia el estado (RN-FC-05; decisión del autor 2026-10-03, D23) |
 | `total` | decimal | NN | Calculado desde los ítems (RN-FC-04) |
 | `observaciones` | texto | null | — |
 
@@ -427,18 +449,26 @@ Todos los datos son **ficticios** (RN-PR-01). El seed del primer change incluye 
 - Horario recurrente de ejemplo: lunes a viernes 09:00-13:00 y 15:00-19:00 (**Suposición**).
 - 2-3 pacientes ficticios (nombres inventados, teléfonos con prefijo de prueba, sin DNI real).
 
-## A confirmar por el autor
+## Propuestas aceptadas y Suposiciones pendientes
 
-Elecciones de este archivo sin respaldo en la KB (marcadas con † en las tablas); **Suposiciones** del agente del 2026-10-03:
+**Propuestas aceptadas por el autor (2026-10-03, D28); se revisan en el `design.md` del change** (marcadas con † en las tablas):
 
-1. `decimal(12,2)` para dinero y columna `JSON` genérica para `antes`/`despues`, `preferencias` y `contenido`.
-2. Claves foráneas con `ON DELETE RESTRICT` y enums de texto para todos los enums (la decisión del autor cubre solo `estado` del turno).
+1. `decimal(12,2)` para dinero y columna `JSON` genérica para `antes`/`despues` y `preferencias`.
+2. Claves foráneas con `ON DELETE RESTRICT` y enums de texto para todos los enums.
 3. `UsuarioRol` con el rol como texto (sin tabla `Rol`).
 4. `Prestacion.reservable_online` con default `false`; formato `#RRGGBB` de `color` y E.164 del teléfono validados en la API.
 5. Nombre del campo `vencimiento_oferta_horas` y de `Evolucion.corrige_a_id`.
 6. Índices no pedidos por una regla: Paciente `(consultorio_id, telefono_whatsapp)` sin `UNIQUE`, `Bloqueo`, `EntradaListaEspera` `(estado, creada_en)`, `Mensaje` `(estado, programado_para)`.
 7. `CHECK` adicionales: `vigente_hasta >= vigente_desde`, `Mensaje` con `turno_id` u `oferta_id` no nulo, y `monto_sena` obligatorio si `requiere_sena` (esto último en el dominio).
 8. Columnas `creado_por` y `registrado_por` nulas hasta que exista `Usuario`; `Consultorio.creado_en` fuera del primer change.
-9. `Anamnesis.contenido` como JSON no nulo.
-10. `Consentimiento.ip` (ya era Suposición).
-11. Los nombres de changes de la columna «Change que la crea» (descriptivos; los fija el roadmap).
+9. `Consentimiento.ip`.
+10. Los nombres de changes de la columna «Change que la crea» (descriptivos; los fija el roadmap).
+11. Anamnesis como cuatro columnas de texto en lugar de un JSON (D22).
+
+**Suposiciones nuevas de esta tanda (‡), todavía sin confirmar:**
+
+1. `EntradaListaEspera.token` y la ruta pública para retirarse desde el link.
+2. La versión vigente del texto de consentimiento como constante de la aplicación.
+3. Anular un pago sin reemplazo con un registro nuevo (`corrige_a_id`, `pagado` falso).
+4. La tabla de transiciones válidas del turno se derivó del diagrama; queda sin definir el destino del rechazo de la aprobación manual.
+5. Los IDs nuevos de regla: RN-AG-12, RN-AG-13, RN-LE-05, RN-LE-06, RN-SP-09, RN-FC-05 y RN-RP-01 a RN-RP-03.

@@ -11,9 +11,9 @@ Resumen del orden: **1** US-010 · **2** US-015, US-001, US-004 · **3** Épica 
 
 **Notas del orden (decisión del autor 2026-10-03):**
 - US-010 depende conceptualmente de US-001 y US-004, pero va **primero** porque el primer change crea el subconjunto mínimo (prestación y sillón por seed); US-001 y US-004 agregan después la gestión (alta, edición, desactivación).
-- Las historias de orden 1 y 2 (US-010, US-015, US-001, US-004) crean endpoints antes de la Épica 10 (orden 3): van **sin autenticación** hasta que US-092 los proteja (ver US-092 CA-2) (**Suposición** del agente, derivada de DD-14).
-- Las historias que leen reglas configurables (RN-GL-03) dependen de US-005, que crea `ConfiguracionReglas` (`04_modelo_de_datos.md`): US-020, US-022, US-030, US-040 y US-050 (**Suposición** del agente por deducción del modelo).
-- US-013 CA-2 se completa con US-040 (orden 6) y CA-3 con US-051 (orden 7): son referencias hacia adelante, no dependencias.
+- Las historias de orden 1 y 2 (US-010, US-015, US-001, US-004) crean endpoints antes de la Épica 10 (orden 3): van **sin autenticación** hasta que US-092 los proteja (ver US-092 CA-2) (propuesta aceptada por el autor 2026-10-03, derivada de DD-14; se revisa en el design del change).
+- Las historias que leen reglas configurables (RN-GL-03) dependen de US-005, que crea `ConfiguracionReglas` (`04_modelo_de_datos.md`): US-020, US-022, US-030, US-040 y US-050 (propuesta aceptada por el autor 2026-10-03; se revisa en el design del change).
+- US-013 CA-2 se completa con US-040 (orden 6) y CA-3 con US-051 (orden 7); US-014 CA-5 se completa con US-051 (orden 7): son referencias hacia adelante, no dependencias.
 
 Los criterios de US-010 usan IDs estables `E1..E12` (compartidos con `07_flujos_principales.md` y con el spec y los tests del change). El autor implementará el proyecto completo antes de fin de año, change por change (decisión 2026-10-03); US-010 es el primero y el hito de entrega de la consigna.
 
@@ -76,10 +76,10 @@ Los criterios de US-010 usan IDs estables `E1..E12` (compartidos con `07_flujos_
 | E5 | **Borde contiguo**: un turno que empieza exactamente cuando termina otro se acepta (RN-AG-09) | **Sí** |
 | E6 | **Estado no activo**: un turno cancelado, vencido, atendido o ausente no bloquea el horario (RN-AG-10) | **Sí** |
 | E7 | **Borde de un minuto**: un solapamiento de un minuto se rechaza | **Sí** |
-| E8 | Intervalo inválido (`inicio >= fin`, naive o fuera de UTC) se rechaza (RN-AG-10d, RN-GL-01) | **No como escenario del spec**: lo cubre un test unitario del value object `Intervalo` (**Suposición**) |
+| E8 | Intervalo inválido (`inicio >= fin`, naive o fuera de UTC) se rechaza (RN-AG-10d, RN-GL-01) | **No como escenario del spec**: lo cubre un test unitario del value object `Intervalo` (decisión del autor 2026-10-03) |
 | E9 | La creación queda registrada en el historial (antes CA-7; RN-AG-11) | **No: fuera del primer change; change siguiente** (decisión del autor 2026-10-03) |
 | E10 | Un turno fuera del horario o sobre un bloqueo se rechaza (RN-AG-04/04b; antes CA-8) | **No** (decisión del autor 2026-10-02, P-10) |
-| E11 | Dos reservas concurrentes del mismo hueco: solo una gana (RN-AG-10c) | **No** (no verificable con SQLite; perfil PostgreSQL posterior, **Suposición**) |
+| E11 | Dos reservas concurrentes del mismo hueco: solo una gana (RN-AG-10c) | **No** (no verificable con SQLite; perfil PostgreSQL posterior, decisión del autor 2026-10-03) |
 | E12 | **Recurso no encontrado**: prestación, paciente, profesional o sillón inexistente o inactivo se rechaza con `RN-GL-04` (RN-AG-07); en HTTP, `422` | **Sí** (decisión del autor 2026-10-03; código y status propuestos por el agente, SU-08) |
 
 - **Nota del orden**: US-010 es el change de la consigna y el hito de entrega. Depende conceptualmente de US-001 y US-004, pero va primero porque este change crea el subconjunto mínimo (prestación y sillón por seed); US-001 y US-004 agregan después la gestión (decisión del autor 2026-10-03).
@@ -114,15 +114,16 @@ Los criterios de US-010 usan IDs estables `E1..E12` (compartidos con `07_flujos_
 **Reglas**: RN-AG-10, RN-LE-01, RN-SP-05
 
 ### US-014 — Marcar atendido / ausente
-**Como** odontólogo **quiero** marcar si el paciente asistió **para** medir el ausentismo.
+**Como** odontólogo o recepcionista **quiero** marcar si el paciente asistió **para** medir el ausentismo.
 *(Criterios propuestos por el agente, 2026-10-03; a revisar por el autor.)*
-- [ ] CA-1: un turno `reservado` o `confirmado` puede pasar a `atendido` (se atiende) o a `ausente` (no asiste) (máquina de estados de `04_modelo_de_datos.md`).
-- [ ] CA-2: al pasar a `atendido` o `ausente`, el turno deja de ser activo y libera el horario (RN-AG-10).
-- [ ] CA-3 (error): un turno en cualquier otro estado (`pendiente_aprobacion`, `pendiente_sena`, `cancelado_paciente`, `cancelado_profesional`, `vencido`, `atendido` o `ausente`) no admite este cambio y se rechaza con un error de dominio (RN-GL-02; la KB no define un código RN para este rechazo).
+- [ ] CA-1: el odontólogo y la recepcionista pueden marcar un turno como `atendido` o `ausente` (RN-AG-13, decisión del autor 2026-10-03).
+- [ ] CA-2: solo desde `reservado` o `confirmado`; al marcarlo, el turno deja de ser activo y libera el horario (RN-AG-12, RN-AG-10).
+- [ ] CA-3 (error): si el turno está en otro estado (por ejemplo `cancelado_paciente`, `vencido` o `pendiente_sena`), se rechaza con el error de dominio `RN-AG-12` y el turno no cambia.
 - [ ] CA-4: el cambio queda en el historial con quién lo hizo y cuándo (RN-AG-11).
+- [ ] CA-5: si el turno queda `ausente` y tiene seña acreditada, la seña pasa a `retenida` (RN-SP-04 (a)); este criterio se completa con US-051.
 **Orden**: 4
 **Depende de**: US-010, US-015, US-092
-**Reglas**: RN-AG-10, RN-AG-11, RN-GL-02
+**Reglas**: RN-AG-10, RN-AG-11, RN-AG-12, RN-AG-13, RN-SP-04
 
 ### US-015 — Historial de cambios
 **Como** dueño **quiero** ver quién cambió qué y cuándo en cada turno **para** tener trazabilidad.
@@ -148,11 +149,13 @@ Los criterios de US-010 usan IDs estables `E1..E12` (compartidos con `07_flujos_
 **Como** paciente **quiero** anotarme en lista de espera cuando no hay horarios **para** que me avisen si se libera uno.
 *(Criterios propuestos por el agente, 2026-10-03; a revisar por el autor.)*
 - [ ] CA-1: cuando la disponibilidad no devuelve huecos en el rango pedido, la reserva pública ofrece anotarse en la lista de espera (RN-TD-07, Flujo 2).
-- [ ] CA-2: la entrada se crea en estado `activa` con el paciente (teléfono de WhatsApp obligatorio, DNI opcional, SU-03), la prestación (opcional) y las preferencias de días y franjas; su `creada_en` define el orden FIFO (RN-LE-02, `04_modelo_de_datos.md`).
-- [ ] CA-3: no requiere cuenta ni autenticación: se hace por la ruta pública `POST /public/{slug}/lista-espera` (DD-11, `03_actores_y_roles.md`).
+- [ ] CA-2 (error): para anotarse el paciente debe aceptar el consentimiento de datos; sin aceptarlo no se crea la entrada (RN-LE-05, RN-PR-02).
+- [ ] CA-3: la entrada se crea en estado `activa` con el paciente (teléfono de WhatsApp obligatorio, DNI opcional, SU-03), la prestación (opcional) y las preferencias de días y franjas; su `creada_en` define el orden FIFO (RN-LE-02). No requiere cuenta ni autenticación (`POST /public/{slug}/lista-espera`).
+- [ ] CA-4: el paciente puede retirarse desde su link y la entrada pasa a `retirada` (RN-LE-06 (a)).
+- [ ] CA-5: el consultorio puede retirar la entrada desde el panel y pasa a `retirada` (RN-LE-06 (b)).
 **Orden**: 6
-**Depende de**: US-020
-**Reglas**: RN-TD-07, RN-LE-01, RN-LE-02
+**Depende de**: US-020, US-070, US-092
+**Reglas**: RN-TD-07, RN-LE-01, RN-LE-02, RN-LE-05, RN-LE-06
 
 ### US-022 — Cancelar o reprogramar por el paciente (CU-05)
 **Como** paciente **quiero** cancelar o reprogramar desde el link del turno **para** liberar el horario con anticipación.
@@ -205,12 +208,13 @@ Los criterios de US-010 usan IDs estables `E1..E12` (compartidos con `07_flujos_
 ### US-051 — Retención / devolución de seña (**sujeta a revisión legal**)
 **Como** odontólogo **quiero** que la seña quede retenida o devuelta según quién cancela y cuándo **para** que el prototipo refleje las reglas de seña del consultorio.
 *(Criterios propuestos por el agente, 2026-10-03; a revisar por el autor.)* Describen el comportamiento del **prototipo con credenciales de prueba de Mercado Pago**; no afirman validez legal (P-01, fuera del alcance académico).
-- [ ] CA-1: si el paciente cancela fuera de plazo (RN-TD-03), la seña pasa a `retenida` (RN-SP-04).
-- [ ] CA-2: si el paciente cancela dentro de plazo, la seña se devuelve y pasa a `devuelta` (RN-SP-06).
-- [ ] CA-3: si cancela el odontólogo (`cancelado_profesional`), la seña se devuelve al 100% y pasa a `devuelta` (RN-SP-05).
-- [ ] CA-4: en el prototipo la devolución solo se registra con el estado `devuelta`; no se ejecuta una devolución real por la API de Mercado Pago (`11_integraciones_whatsapp_y_mercadopago.md`).
+- [ ] CA-1: si el paciente queda `ausente`, la seña acreditada pasa a `retenida` (RN-SP-04 (a), decisión del autor 2026-10-03).
+- [ ] CA-2: si el consultorio carga desde el panel una cancelación como cancelación del paciente fuera de plazo (`ahora > inicio − antelacion_cancelacion_horas`), la seña pasa a `retenida` (RN-SP-04 (b), RN-TD-03).
+- [ ] CA-3: si el paciente cancela dentro de plazo, o cancela el odontólogo, la seña se devuelve y pasa a `devuelta` (RN-SP-06, RN-SP-05).
+- [ ] CA-4 (borde): no hay retención parcial: la seña se retiene entera o se devuelve entera (RN-SP-04).
+- [ ] CA-5: en el prototipo la devolución solo se registra con el estado `devuelta`; no se ejecuta una devolución real por la API de Mercado Pago (`11_integraciones_whatsapp_y_mercadopago.md`).
 **Orden**: 7
-**Depende de**: US-013, US-022, US-050
+**Depende de**: US-013, US-014, US-022, US-050
 **Reglas**: RN-SP-04, RN-SP-05, RN-SP-06
 
 ## Épica 7: Ficha clínica mínima, presupuestos y pagos (CU-03)
@@ -218,11 +222,11 @@ Los criterios de US-010 usan IDs estables `E1..E12` (compartidos con `07_flujos_
 ### US-060 — Ficha del paciente
 **Como** odontólogo **quiero** abrir la ficha en la consulta y registrar anamnesis y evolución **para** no depender de la carpeta de papel.
 *(Criterios propuestos por el agente, 2026-10-03; a revisar por el autor.)*
-- [ ] CA-1: la ficha contiene los datos del paciente, la anamnesis y la evolución en texto (RN-FC-01).
+- [ ] CA-1: la ficha contiene los datos del paciente, la anamnesis y la evolución en texto (RN-FC-01); una evolución puede vincularse a un turno (Flujo 7).
 - [ ] CA-2 (error): solo el rol `odontologo` lee y escribe los datos clínicos; la recepcionista que los pide recibe `403` (RN-FC-02, RN-AU-05).
-- [ ] CA-3: la anamnesis se versiona: cada cambio crea una versión nueva (`version` + 1) sin sobrescribir la anterior (RN-FC-03).
-- [ ] CA-4: la evolución es solo inserción; una corrección es una entrada nueva que referencia a la anterior y no hay borrado físico (RN-FC-03, `Evolucion.corrige_a_id` en `04_modelo_de_datos.md`).
-- [ ] CA-5: una evolución puede vincularse a un turno (Flujo 7).
+- [ ] CA-3 (borde): la anamnesis tiene los campos `alergias`, `medicacion`, `enfermedades` y `observaciones`, todos opcionales; se puede guardar con todos vacíos (RN-FC-01, decisión del autor 2026-10-03).
+- [ ] CA-4: la anamnesis se versiona: cada cambio crea una versión nueva (`version` + 1) sin sobrescribir la anterior (RN-FC-03).
+- [ ] CA-5: la evolución es solo inserción; una corrección es una entrada nueva que referencia a la anterior y no hay borrado físico (RN-FC-03, `Evolucion.corrige_a_id`).
 **Orden**: 8
 **Depende de**: US-010, US-091, US-092 (roles: la recepcionista no ve datos clínicos, RN-FC-02)
 **Reglas**: RN-FC-01, RN-FC-02, RN-FC-03
@@ -230,25 +234,26 @@ Los criterios de US-010 usan IDs estables `E1..E12` (compartidos con `07_flujos_
 ### US-061 — Presupuesto simple
 **Como** odontólogo **quiero** armar un presupuesto simple para un paciente **para** informarle el costo de los tratamientos.
 *(Criterios propuestos por el agente, 2026-10-03; a revisar por el autor.)*
-- [ ] CA-1: el presupuesto tiene ítems con descripción, cantidad y precio unitario, y su total se calcula a partir de los ítems (RN-FC-04).
-- [ ] CA-2: el presupuesto nace en estado `borrador` y puede pasar por `entregado`, `aceptado` y `rechazado` (`04_modelo_de_datos.md`).
-- [ ] CA-3: un ítem puede referenciar una prestación, pero no es obligatorio (`ItemPresupuesto.prestacion_id` nulo, `04_modelo_de_datos.md`).
-- [ ] CA-4 (error): se rechaza un ítem con cantidad menor o igual a 0 o con precio unitario negativo (`CHECK` de `04_modelo_de_datos.md`).
-- [ ] CA-5 (borde): el presupuesto no lleva códigos ni valores de obras sociales (RN-FC-04).
+- [ ] CA-1: el presupuesto tiene ítems con descripción, cantidad y precio unitario, y su total se calcula a partir de los ítems; sin códigos ni valores de obras sociales (RN-FC-04).
+- [ ] CA-2: el presupuesto nace `borrador`; el odontólogo lo pasa a `entregado` y luego a `aceptado` o `rechazado` (RN-FC-05).
+- [ ] CA-3 (error): `aceptado` y `rechazado` son finales; cualquier cambio posterior, o un salto no previsto (por ejemplo, de `borrador` a `aceptado`), se rechaza con el error de dominio `RN-FC-05`.
+- [ ] CA-4 (error): solo el odontólogo cambia el estado (RN-FC-05).
+- [ ] CA-5 (error): se rechaza un ítem con cantidad menor o igual a 0 o con precio unitario negativo (`CHECK` de `04_modelo_de_datos.md`).
 **Orden**: 8
 **Depende de**: US-001, US-060
-**Reglas**: RN-FC-04
+**Reglas**: RN-FC-04, RN-FC-05
 
 ### US-062 — Registro de pago simple
 **Como** odontólogo o recepcionista **quiero** registrar un pago (pagado sí o no, monto y medio) **para** llevar el control de cobros sin una caja completa.
 *(Criterios propuestos por el agente, 2026-10-03; a revisar por el autor.)*
-- [ ] CA-1: el registro guarda pagado sí o no, monto y medio (`efectivo`, `transferencia`, `mercado_pago`, `tarjeta` u `otro`) (RN-SP-07, `04_modelo_de_datos.md`).
+- [ ] CA-1: el registro guarda pagado sí o no, monto y medio (`efectivo`, `transferencia`, `mercado_pago`, `tarjeta` u `otro`); no emite comprobante fiscal (RN-SP-07).
 - [ ] CA-2: el pago se asocia al paciente y, opcionalmente, a un presupuesto o a un turno (decisión del autor 2026-10-03).
-- [ ] CA-3: no emite comprobante fiscal (ARCA es v2) (RN-SP-07).
-- [ ] CA-4 (error): se rechaza un monto menor o igual a 0 (`CHECK` de `04_modelo_de_datos.md`).
+- [ ] CA-3: se admiten pagos parciales: un cobro en cuotas son varios registros (RN-SP-09).
+- [ ] CA-4: un registro no se edita; se corrige con un registro nuevo que referencia al anterior (`corrige_a_id`) y lo anula, y el anulado no cuenta en los totales (RN-SP-09).
+- [ ] CA-5 (error): se rechaza un monto menor o igual a 0 (`CHECK` de `04_modelo_de_datos.md`).
 **Orden**: 8
 **Depende de**: US-060 (US-061 y US-010 no son dependencia: el pago puede asociarse a un presupuesto o a un turno, opcionalmente)
-**Reglas**: RN-SP-07
+**Reglas**: RN-SP-07, RN-SP-09
 
 ## Épica 8: Privacidad y consentimiento (CU-07)
 
@@ -258,9 +263,11 @@ Los criterios de US-010 usan IDs estables `E1..E12` (compartidos con `07_flujos_
 - [ ] CA-1 (error): para reservar, el paciente debe aceptar el texto de consentimiento; sin aceptarlo, la reserva no se confirma (RN-PR-02, Flujo 2).
 - [ ] CA-2: al aceptar se registra la versión del texto, la fecha-hora de aceptación y el origen (`link_publico` o `panel`) (RN-PR-02, `04_modelo_de_datos.md`).
 - [ ] CA-3: el texto es un borrador marcado «no validado legalmente» (RN-PR-02, P-03 cerrada como fuera del alcance académico).
+- [ ] CA-4 (borde): si cambia la versión del texto, se vuelve a pedir en la siguiente reserva del paciente (RN-PR-02, decisión del autor 2026-10-03).
+- [ ] CA-5: el consentimiento también se exige para anotarse en la lista de espera (RN-LE-05).
 **Orden**: 5
 **Depende de**: Ninguna
-**Reglas**: RN-PR-02, RN-PR-03
+**Reglas**: RN-PR-02, RN-PR-03, RN-LE-05
 
 ### Regla permanente: datos ficticios (RN-PR-01)
 Esto **no es una historia implementable**: es una **regla dura del proyecto**, aplicable **desde el primer change**. Se registra en las reglas del agente (`CLAUDE.md`/`AGENTS.md`) y **no genera un change propio** (decisión del autor 2026-10-03). Seeds, tests, ejemplos y demos usan solo datos inventados (RN-PR-01 en `05_reglas_de_negocio.md`).
@@ -271,24 +278,25 @@ Esto **no es una historia implementable**: es una **regla dura del proyecto**, a
 **Como** dueño **quiero** ver ocupación, ausentismo y señas/pagos pendientes **para** controlar el consultorio.
 **Alcance**: **extensión fuera del MVP de la sección D del informe** (el informe, D.3, no la lista entre los imprescindibles). Queda en la v1 como **último orden** (decisión del autor 2026-10-03). El roadmap debe marcarla como extensión.
 *(Criterios propuestos por el agente, 2026-10-03; a revisar por el autor.)*
-- [ ] CA-1: el reporte de ausentismo muestra la proporción de turnos `ausente` sobre `atendido` más `ausente` (métrica de `01_vision_y_objetivos.md`, Suposición).
-- [ ] CA-2: el reporte de cobros pendientes lista las señas en estado `pendiente` y los registros de pago con `pagado` falso (`04_modelo_de_datos.md`).
-- [ ] CA-3: los reportes no incluyen datos clínicos (anamnesis ni evolución) (RN-FC-02, RN-PR-03).
-- [ ] CA-4: los reportes son de solo lectura y los ven los roles `dueno` y `odontologo` (`03_actores_y_roles.md`).
+- [ ] CA-1: la ocupación es los minutos con turno (estados activos y `atendido`) sobre los minutos de horario disponible (horario recurrente menos bloqueos) (RN-RP-01).
+- [ ] CA-2: el ausentismo es los turnos `ausente` sobre los turnos `atendido` más `ausente` (RN-RP-02).
+- [ ] CA-3: ambos reportes se calculan con filtro por rango de fechas (RN-RP-03).
+- [ ] CA-4: el reporte de cobros pendientes lista las señas en estado `pendiente` y los registros de pago con `pagado` falso, sin contar los registros anulados (`04_modelo_de_datos.md`, RN-SP-09).
+- [ ] CA-5: los reportes son de solo lectura, los ven los roles `dueno` y `odontologo` (`03_actores_y_roles.md`) y no incluyen datos clínicos (RN-FC-02, RN-PR-03).
 **Orden**: 9
-**Depende de**: US-010, US-014, US-050, US-062, US-092
-**Reglas**: RN-FC-02, RN-PR-03
+**Depende de**: US-002, US-003, US-010, US-014, US-050, US-062, US-092
+**Reglas**: RN-RP-01, RN-RP-02, RN-RP-03, RN-FC-02, RN-PR-03
 
 ## Épica 10: Usuarios y acceso
 
-Decisión del autor 2026-10-03 (D1/D2): el panel se protege con JWT en esta épica (orden 3); hasta entonces `POST /turnos` del primer change y los endpoints de orden 1 y 2 van sin autenticación. Roles (`odontologo`, `recepcionista`, `dueno`) y matriz de permisos en `03_actores_y_roles.md`. Los detalles no decididos (duración de tokens, refresh, hash) son **Suposición** (SU-09).
+Decisión del autor 2026-10-03 (D1/D2): el panel se protege con JWT en esta épica (orden 3); hasta entonces `POST /turnos` del primer change y los endpoints de orden 1 y 2 van sin autenticación. Roles (`odontologo`, `recepcionista`, `dueno`) y matriz de permisos en `03_actores_y_roles.md`. Los detalles (duración de tokens, refresh, hash) son una propuesta aceptada por el autor (2026-10-03, SU-09), que se revisa en el design del change.
 
 ### US-090 — Iniciar sesión
 **Como** odontólogo o recepcionista **quiero** iniciar sesión con email y contraseña **para** acceder al panel.
 - [ ] CA-1: con credenciales válidas, `POST /auth/login` devuelve un access token JWT y un refresh token.
 - [ ] CA-2: con email inexistente o contraseña incorrecta, responde `401` con el mismo mensaje genérico en ambos casos (RN-AU-04).
 - [ ] CA-3: un usuario inactivo no puede iniciar sesión.
-- [ ] CA-4 (**Suposición**, SU-09): el access token dura 15 minutos y el refresh token 7 días.
+- [ ] CA-4 (propuesta aceptada por el autor 2026-10-03, SU-09): el access token dura 15 minutos y el refresh token 7 días.
 **Orden**: 3
 **Depende de**: Ninguna
 **Reglas**: RN-AU-01, RN-AU-03, RN-AU-04
@@ -320,7 +328,7 @@ Decisión del autor 2026-10-03 (D1/D2): el panel se protege con JWT en esta épi
 **Depende de**: US-090, US-091
 **Reglas**: RN-AU-02, RN-AU-05
 
-### US-094 — Renovar la sesión (**Suposición**)
+### US-094 — Renovar la sesión (propuesta aceptada por el autor 2026-10-03)
 **Como** usuario del panel **quiero** renovar mi sesión sin volver a ingresar la contraseña **para** no ser interrumpido durante la jornada.
 - [ ] CA-1: `POST /auth/refresh` con un refresh token válido devuelve un nuevo access token.
 - [ ] CA-2: un refresh token vencido o inválido responde `401`.

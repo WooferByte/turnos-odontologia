@@ -26,12 +26,13 @@ C = crear, R = leer, U = actualizar, D = eliminar/anular. "Propio" = solo sus tu
 | Horario recurrente y bloqueos | CRUD | R | R | — |
 | Disponibilidad | R | R | R | R |
 | Turnos | CRUD | CRU + cancelar | R | C (reserva), R/U/cancelar propio |
+| Marcar turno atendido / ausente (RN-AG-13) | U | U | — | — |
 | Confirmación de turno | U | U | — | U propio |
 | Historial de cambios de turno | R | R | R | — (**Suposición:** no se expone al paciente) |
-| Lista de espera | CRUD | CRUD | R | C propio |
+| Lista de espera | CRUD | CRUD | R | C propio (con consentimiento, RN-LE-05); retirarse desde su link (RN-LE-06) |
 | Pacientes: datos administrativos (identificación, contacto) | CRUD | CRU | R | R/U propio (**Suposición**) |
 | Ficha clínica (anamnesis, evolución) | CRU (sin borrado físico, ver RN-FC-03) | — | — | — |
-| Presupuestos | CRUD | R | R | — |
+| Presupuestos (el estado lo cambia solo el odontólogo, RN-FC-05) | CRUD | R | R | — |
 | Registro de pagos y señas | CRU | CRU | R | C (pago de seña vía MP) |
 | Consentimiento de datos | R | R | R | C propio |
 | Reportes (ocupación, ausentismo, cobros) | R | — | R | — |
@@ -49,6 +50,7 @@ Accesibles sin autenticación (protegidas por slug del consultorio, token de ges
 - `POST /public/{slug}/lista-espera` — anotarse cuando no hay horarios.
 - `GET /public/turnos/{token}` y `POST /public/turnos/{token}/{confirmar|cancelar|reprogramar}` — gestión del turno por el paciente (CU-05).
 - `POST /public/ofertas/{token}/{aceptar|rechazar}` — respuesta a una oferta de lista de espera.
+- `POST /public/lista-espera/{token}/retirar` — el paciente se retira de la lista de espera desde su link (RN-LE-06; ruta propuesta por el agente, Suposición).
 - `POST /webhooks/mercadopago` — notificación de pago. `GET/POST /webhooks/whatsapp` — **Fase 2** (Cloud API).
 - `POST /auth/login`.
 

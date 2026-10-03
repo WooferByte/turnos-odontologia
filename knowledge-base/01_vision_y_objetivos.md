@@ -95,6 +95,6 @@ En el independiente, quien usa el sistema todos los días es el propio odontólo
 - Tiempo de reserva del paciente por link (objetivo declarado en CU-01: menos de 30 segundos).
 - Proporción de turnos confirmados por WhatsApp sobre turnos con recordatorio enviado.
 - Proporción de huecos liberados que se vuelven a ocupar vía lista de espera.
-- Ausentismo (turnos `ausente` sobre turnos atendidos + ausentes). **El impacto del recordatorio sobre el ausentismo no está probado** (riesgo en `09_decisiones_y_supuestos.md`).
+- Ausentismo (turnos `ausente` sobre turnos atendidos + ausentes; fórmula confirmada por el autor 2026-10-03, RN-RP-02). **El impacto del recordatorio sobre el ausentismo no está probado** (riesgo en `09_decisiones_y_supuestos.md`).
 
 Para el trabajo académico, el criterio de éxito verificable es: el change elegido implementado con tests automatizados que cubren cada escenario del spec (feliz, error de negocio y borde), ejecutables con solo seguir el README, y el endpoint `POST /turnos` demostrable desde `/docs`.

@@ -52,7 +52,7 @@
 **Contexto**: ningún competidor documenta la API oficial (informe C.3); DentalCore usa sesión por QR (riesgo de bloqueo), Bilog envía manual/semiautomático, Neocita usa enlace en el plan gratis.
 **Justificación**: `wa.me` está a la par del mercado, no requiere cuenta ni webhook público, y reduce el riesgo del trabajo individual.
 **Trade-offs aceptados**: no hay envío automático ni respuesta por el chat en la v1; en producción la Cloud API requeriría verificación de empresa, plantillas aprobadas y costo por conversación (sin fuente verificada; P-04, P-05 y P-06 diferidas a Fase 2). **Descartado**: sesión por QR/no oficial.
-**Qué queda para Redis en la v1 (Suposición del agente; el autor pidió definirlo, no lo decidió)**: preparar el recordatorio a `inicio − 24 h` (estado `generado_link`), vencer señas impagas (30 min) y vencer ofertas de lista de espera (2 h). No se necesita para enviar mensajes.
+**Qué queda para Redis en la v1 (propuesta aceptada por el autor 2026-10-03; se revisa en el design del change)**: preparar el recordatorio a `inicio − 24 h` (estado `generado_link`), vencer señas impagas (30 min) y vencer ofertas de lista de espera (2 h). No se necesita para enviar mensajes.
 **Origen**: decisión del autor 2026-10-03.
 
 ### DD-07 — Mercado Pago Checkout Pro con cuenta única del odontólogo
@@ -125,6 +125,19 @@
 **Trade-offs aceptados**: las columnas que el primer change no crea se agregan después con migraciones (`04_modelo_de_datos.md`).
 **Origen**: decisión del autor 2026-10-03.
 
+### DD-16 — Estados del turno: transiciones válidas y marcación de atendido o ausente
+**Decisión**: el turno solo cambia de estado según la tabla de transiciones válidas de `04_modelo_de_datos.md`; un cambio no previsto se rechaza con `RN-AG-12`. El odontólogo **y la recepcionista** pueden marcar `atendido` o `ausente` (RN-AG-13), solo desde `reservado` o `confirmado`.
+**Contexto**: US-014; la tabla se derivó del diagrama de estados que ya existía.
+**Trade-offs aceptados**: desde `pendiente_sena` o `pendiente_aprobacion` tampoco se puede marcar atendido o ausente (el autor habló de «estado no activo»; la tabla es más estricta porque esos estados no tienen esa transición).
+**Origen**: decisión del autor 2026-10-03 (D19).
+
+### DD-17 — Retención de la seña: dos casos, sin retención parcial
+**Decisión**: la seña acreditada se retiene, entera, en dos casos: (a) el paciente queda `ausente`; (b) el consultorio carga desde el panel una cancelación como cancelación del paciente fuera de plazo (RN-SP-04). Sin retención parcial. Sigue sujeta a revisión legal y solo con credenciales de prueba.
+**Contexto**: contradicción entre RN-SP-04 (retener si el paciente cancela fuera de plazo) y RN-TD-03 (online, fuera de plazo, la acción está bloqueada). Se resuelve así: la única cancelación del paciente fuera de plazo es la que carga el consultorio desde el panel.
+**Alternativas consideradas**: retención parcial (descartada).
+**Trade-offs aceptados**: no se afirma validez legal (P-01, fuera del alcance académico).
+**Origen**: decisión del autor 2026-10-03 (D21).
+
 ## Supuestos inferidos
 
 ### SU-01 — Impacto del recordatorio sobre el ausentismo
@@ -180,18 +193,20 @@
 8. El primer change **expone `POST /turnos`** sin autenticación (DD-14).
 9. Alembic desde el change de infraestructura con PostgreSQL (DD-15).
 
-**Siguen como Suposición (propuestas del agente, a confirmar en el `design.md` del change):**
-- El código `RN-GL-04` y el status `422` para E12 (un único status para inexistente e inactivo; el autor delegó la elección).
+**Propuestas aceptadas por el autor (2026-10-03, D28); se revisan en el `design.md` de cada change:**
+- El código `RN-GL-04` y el status `422` para E12 (un único status para inexistente e inactivo).
 - El valor del campo `type` del cuerpo RFC 7807 (URI relativa) y los nombres exactos de clases y funciones del contrato.
-- El alcance exacto de los tests de API (E1, E4 y E12 como mínimo).
-- Los nombres de columnas y demás elecciones del modelo completo, listadas en «A confirmar por el autor» de `04_modelo_de_datos.md`.
-**Cómo validar**: confirmar con el autor al redactar el `design.md` del primer change.
+- El alcance de los tests de API (E1, E4 y E12 como mínimo).
+- Las elecciones del modelo completo de `04_modelo_de_datos.md` (lista «Propuestas aceptadas»).
+- Qué queda para Redis en la v1 (DD-06) y los estados de `Mensaje` en la v1 (`programado`, `generado_link`, `enviado`).
+- Las dependencias que el agente agregó por deducción en `06_funcionalidades.md` (US-005 en las historias que leen reglas configurables, y las demás indicadas en su nota de orden).
+**Cómo validar**: revisarlas en el `design.md` de cada change; P-19 cerrada con este texto.
 
 ### SU-09 — Autenticación: tiempos de token, refresh y hash (propuesta simple)
-**Supuesto** (propuesta concreta del agente, 2026-10-03; el autor no la decidió): access token JWT de **15 minutos**; refresh token JWT de **7 días**, sin revocación en la v1 (sin tabla de tokens); hash de contraseña **bcrypt**; firma HS256 con secreto de entorno.
+**Propuesta aceptada por el autor (2026-10-03, D28); se revisa en el design del change** (propuesta concreta del agente): access token JWT de **15 minutos**; refresh token JWT de **7 días**, sin revocación en la v1 (sin tabla de tokens); hash de contraseña **bcrypt**; firma HS256 con secreto de entorno.
 **Origen**: valores de ejemplo ya presentes en la variable de entorno `JWT_ACCESS_MINUTES`/`JWT_REFRESH_DAYS` de `08_arquitectura_propuesta.md`; sin fuente de mercado.
 **Riesgo si es falso**: ninguno funcional; son configurables por variable de entorno.
-**Cómo validar**: confirmar con el autor al implementar el change de usuarios y acceso.
+**Cómo validar**: revisar en el design del change de usuarios y acceso.
 
 ## Riesgos (del Discovery)
 
