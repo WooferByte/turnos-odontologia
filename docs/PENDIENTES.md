@@ -66,7 +66,6 @@ Agregadas en la última pasada; ninguna bloquea el roadmap.
 
 ## 4. Entregables de la consigna a cargo del autor
 
-- [ ] Bitácora y **reflexión escrita** (1 a 2 páginas), que es un entregable aparte del informe. Material del 2026-10-03: comparación con la documentación de un proyecto anterior y los ajustes que salieron de ahí.
 - [ ] Capturas para el **video de defensa**: instalador de Active Stack, revisión del spec en Propose, tests en verde, endpoint en Swagger, consulta a Engram.
 - [ ] `README.md` con los pasos para clonar, instalar y correr los tests.
 - [ ] Regenerar el PDF del informe si cambia: `node docs/discovery/generar-pdf.mjs`.
