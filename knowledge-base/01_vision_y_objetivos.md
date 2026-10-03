@@ -15,7 +15,7 @@ Evidencia de contexto (indiciaria, no probabilística; ver `12_contexto_de_merca
 
 ## Contexto académico
 
-Trabajo integrador individual de Metodología I (Tecnicatura Universitaria en Programación). La KB documenta el **producto completo y el MVP recomendado**, pero la consigna solo exige implementar **un único change** del MVP como API o módulo sin interfaz gráfica, con tests automatizados por escenario (Etapa 6 de la consigna). El change recomendado por la consigna y alineado con esta KB es **"Crear un turno evitando solapamientos por profesional y por sillón/box"** (ver `05_reglas_de_negocio.md`, RN-AG-05 a RN-AG-09, y `07_flujos_principales.md`, Flujo 1).
+Trabajo integrador individual de Metodología I (Tecnicatura Universitaria en Programación). La KB documenta el **producto completo y el MVP recomendado**. La consigna solo exige implementar **un único change** del MVP como API o módulo sin interfaz gráfica, con tests automatizados por escenario (Etapa 6 de la consigna); **el autor implementará el proyecto completo antes de fin de año, change por change** (decisión 2026-10-03), y el change de la consigna es el primero. Ese primer change expone el endpoint `POST /turnos` (sin autenticación, límite conocido, DD-14) para mostrarlo desde Swagger, pero sigue sin interfaz gráfica. El change recomendado por la consigna y alineado con esta KB es **"Crear un turno evitando solapamientos por profesional y por sillón/box"** (ver `05_reglas_de_negocio.md`, RN-AG-05 a RN-AG-09, y `07_flujos_principales.md`, Flujo 1).
 
 ## Segmento primario
 
@@ -37,7 +37,7 @@ En el independiente, quien usa el sistema todos los días es el propio odontólo
 | Código | Caso de uso | Actor principal | Versión |
 |---|---|---|---|
 | CU-01 | Reserva online 24/7 desde el celular (objetivo: menos de 30 segundos) | Paciente | v1 |
-| CU-02 | Recordatorio 24 h antes y confirmación por WhatsApp | Sistema / Odontólogo | v1 |
+| CU-02 | Recordatorio 24 h antes por enlace `wa.me` y confirmación por el link de gestión | Sistema / Odontólogo | v1 |
 | CU-03 | Ficha clínica mínima (datos, anamnesis, evolución en texto) | Odontólogo | v1 |
 | CU-04 | Seña con Mercado Pago al reservar (la cobra la cuenta del odontólogo) | Paciente | v1 |
 | CU-05 | Cancelar o reprogramar el turno con anticipación | Paciente | v1 |
@@ -52,13 +52,15 @@ En el independiente, quien usa el sistema todos los días es el propio odontólo
 3. **Bloqueos puntuales** (vacaciones, feriados, ausencias).
 4. **Prevención de solapamientos por profesional y por sillón.**
 5. **Reserva 24/7 por link**, con flujo definido cuando no hay horarios (ofrecer la lista de espera).
-6. **Recordatorio y confirmación por WhatsApp**: WhatsApp Cloud API en modo prueba (preferida) o enlace `wa.me` semiautomático (alternativa).
+6. **Recordatorio y confirmación por WhatsApp** con enlace `wa.me` semiautomático (decisión del autor 2026-10-03, DD-06); la confirmación llega por el link de gestión. La Cloud API oficial es Fase 2.
 7. **Cancelación y reprogramación por el paciente** dentro de las reglas configuradas.
 8. **Seña con Mercado Pago** (Checkout Pro, cuenta única del odontólogo).
 9. **Trazabilidad de cambios de turno** (quién, cuándo, qué cambió).
 10. **Lista de espera.**
 11. **Ficha clínica mínima**: datos del paciente, anamnesis y evolución en texto.
 12. **Presupuestos simples** y **registro de pago simple** (sí o no, monto, medio).
+
+> **Extensión fuera del MVP de la sección D (decisión del autor 2026-10-03):** los reportes del dueño (ocupación, ausentismo, cobros pendientes; US-080) **no** figuran entre los imprescindibles del informe D.3. Quedan en la v1 como la última historia en orden de implementación.
 
 ### Diferenciadores (informe D.3)
 
@@ -78,6 +80,7 @@ En el independiente, quien usa el sistema todos los días es el propio odontólo
 | v2 | Caja completa con arqueo |
 | Fase 2 | Split de pagos 1:N en Mercado Pago (varios profesionales cobrando) |
 | Fase 2 | Sobreturnos (turnos superpuestos intencionales). Prohibidos en la v1 por decisión de alcance del autor (P-11, 2026-10-02); hoy los ofrecen Bilog, Dentalink y Naclix |
+| Fase 2 | WhatsApp Cloud API oficial (adaptador sobre el puerto de mensajería; respuesta del paciente por el chat) |
 | Posterior | WhatsApp por API oficial **en producción** (verificación de empresa, plantillas aprobadas, costo por conversación) |
 | Posterior | Sincronización con Google Calendar |
 | Posterior | Interfaz multi-profesional y multi-sillón |
@@ -94,4 +97,4 @@ En el independiente, quien usa el sistema todos los días es el propio odontólo
 - Proporción de huecos liberados que se vuelven a ocupar vía lista de espera.
 - Ausentismo (turnos `ausente` sobre turnos atendidos + ausentes). **El impacto del recordatorio sobre el ausentismo no está probado** (riesgo en `09_decisiones_y_supuestos.md`).
 
-Para el trabajo académico, el criterio de éxito verificable es: el change elegido implementado con tests automatizados que cubren cada escenario del spec (feliz, error de negocio y borde), ejecutables con solo seguir el README.
+Para el trabajo académico, el criterio de éxito verificable es: el change elegido implementado con tests automatizados que cubren cada escenario del spec (feliz, error de negocio y borde), ejecutables con solo seguir el README, y el endpoint `POST /turnos` demostrable desde `/docs`.

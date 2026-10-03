@@ -25,7 +25,7 @@ Agenda multiprofesional (a menudo por sillón), recordatorios por WhatsApp o ema
 
 | Vacío | Respuesta en la KB |
 |---|---|
-| WhatsApp sin API oficial documentada | DD-06: Cloud API en modo prueba + `wa.me` (a la par del mercado) |
+| WhatsApp sin API oficial documentada | DD-06: `wa.me` en la v1 (a la par del mercado); Cloud API oficial en Fase 2 |
 | Lista de espera existe [AC] pero sin flujo documentado | Flujo 6 y RN-LE con estados, prioridad y vencimiento |
 | Reglas finas de agenda: horario recurrente con excepciones, anti-solapamiento solo [AC], reprogramación por el paciente solo [C] en Dentally, trazabilidad solo en Naclix | RN-AG-01 a RN-AG-11, RN-TD-03/04 |
 | Seña + clínica en un mismo producto | RN-SP + ficha mínima (RN-FC) |

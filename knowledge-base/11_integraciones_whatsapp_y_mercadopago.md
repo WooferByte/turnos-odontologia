@@ -19,16 +19,21 @@
 
 **Conclusión:** un enlace `wa.me` semiautomático está **a la par del mercado**, no por debajo.
 
-### Opción A (preferida): WhatsApp Cloud API en modo prueba
-- Meta crea un **número de pruebas** al empezar. El límite de **5 destinatarios verificados proviene de fuentes de terceros: a verificar** (P-04).
-- Uso: mensajes de plantilla para recordatorio (RN-WA-01) y oferta de huecos (RN-LE); webhook entrante para respuestas (RN-WA-02).
-- Requisitos técnicos: token, `phone_number_id`, webhook HTTPS público con verificación (`hub.verify_token`) y validación de firma. **Suposición:** en desarrollo local se necesita un túnel HTTPS para recibir el webhook.
-- **Producción (etapa posterior):** verificación de empresa, plantillas aprobadas y costo por conversación (**sin fuente verificada**, P-06).
+### Decisión del autor (2026-10-03): `wa.me` en la v1, Cloud API en Fase 2
 
-### Opción B (alternativa): enlace `wa.me` semiautomático
+La v1 usa el **enlace `wa.me`** (semiautomático). La **Cloud API oficial pasa a Fase 2**. Esto **invierte** la preferencia anterior de esta KB (DD-06). Se conserva el **puerto de mensajería** con un adaptador por canal para sumar la Cloud API después.
+
+### Opción A (v1): enlace `wa.me` semiautomático
 - El sistema arma el texto (paciente ficticio, fecha, prestación, link de gestión) y genera `https://wa.me/<numero>?text=<texto-codificado>`.
-- El odontólogo lo abre y envía desde su WhatsApp. La confirmación vuelve por el **link de gestión**, no por respuesta al chat.
+- El odontólogo lo abre y envía desde su WhatsApp, y marca el mensaje como `enviado`. La confirmación del paciente vuelve por el **link de gestión** del turno, no por respuesta al chat (RN-WA-02).
 - Sin cuenta, sin costo, sin webhook. Precaución: el texto no debe incluir datos clínicos (RN-PR-06).
+- **Redis en la v1:** prepara el recordatorio a `inicio − 24 h` (estado `generado_link`); no envía nada.
+
+### Opción B (Fase 2): WhatsApp Cloud API
+- Se implementa como un `CloudApiAdapter` sobre el puerto de mensajería; no cambia el dominio. Incluye la respuesta del paciente por el chat (confirmar / cancelar) vía webhook.
+- Meta crea un **número de pruebas** al empezar. El límite de **5 destinatarios verificados proviene de fuentes de terceros: a verificar** (P-04, diferida a Fase 2).
+- Requisitos técnicos: token, `phone_number_id`, webhook HTTPS público con verificación (`hub.verify_token`) y validación de firma. **Suposición:** en desarrollo local se necesita un túnel HTTPS para recibir el webhook. Viabilidad en modo prueba: P-05, diferida a Fase 2.
+- **Producción (etapa posterior):** verificación de empresa, plantillas aprobadas y costo por conversación (**sin fuente verificada**, P-06, diferida a Fase 2).
 
 ### Descartado
 - Sesiones no oficiales por QR (modelo de DentalCore): riesgo de bloqueo del número y fuera de los términos de Meta.
@@ -51,7 +56,7 @@
 
 ### Restricciones
 - Solo **credenciales de prueba** (`TEST-...`) y usuarios de prueba de Mercado Pago.
-- **La regla de retención de seña está sujeta a revisión legal (P-01)** y no se aplica con dinero real.
+- **La regla de retención de seña está sujeta a revisión legal** (P-01, cerrada el 2026-10-03 como fuera del alcance académico; requiere revisión legal antes de uso real) y no se aplica con dinero real.
 - Comisiones de Mercado Pago para el odontólogo: **no relevadas** en las fuentes.
 
 ## Integraciones fuera de la v1

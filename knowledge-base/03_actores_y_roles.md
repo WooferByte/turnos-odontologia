@@ -8,10 +8,11 @@
 | Recepcionista | Agenda y confirma turnos. En el independiente suele ser el propio odontólogo | Panel autenticado: turnos, lista de espera, señas y pagos | `recepcionista` |
 | Dueño del consultorio | Controla ocupación, ausentismo y cobros pendientes. En el independiente es el mismo odontólogo | Panel autenticado: reportes e historial (lectura) | `dueno` |
 | Paciente | Reserva, paga la seña, confirma, cancela o reprograma | Link público de reserva y link de gestión del turno; WhatsApp | Sin cuenta, gestionado por token (DD-11, SU-03) |
-| Sistema (worker) | Envía recordatorios, ofertas de lista de espera y vence señas impagas | Tareas en Redis | Actor técnico, registrado como `sistema` en el historial |
-| Mercado Pago / Meta | Servicios externos que notifican pagos y respuestas | Webhooks | Actor externo, registrado como `webhook_mp` / `webhook_wa` |
+| Sistema (worker) | Prepara los recordatorios `wa.me` y las ofertas de lista de espera, y vence señas y ofertas impagas | Tareas en Redis | Actor técnico, registrado como `sistema` en el historial |
+| Mercado Pago | Servicio externo que notifica pagos | Webhook | Actor externo, registrado como `webhook_mp` |
+| Meta (WhatsApp Cloud API) | **Fase 2**: respuestas del paciente por el chat | Webhook | Actor externo, registrado como `webhook_wa` (Fase 2) |
 
-**Nota de modelado.** Un mismo usuario puede tener varios roles (el odontólogo independiente tiene `odontologo` + `dueno` y opera como recepcionista). Los permisos se calculan como unión de roles.
+**Nota de modelado.** Un mismo usuario puede tener varios roles (el odontólogo independiente tiene `odontologo` + `dueno` y opera como recepcionista). Los permisos se calculan como unión de roles. **En el segmento primario (odontólogo independiente), la misma persona tiene los roles `odontologo` y `dueno`** (y opera como recepcionista); se mantienen los tres roles separados porque la matriz de permisos los distingue y la Fase 2 (consultorio compartido) los separa (decisión del autor 2026-10-03). Los roles válidos son `odontologo`, `recepcionista` y `dueno` (RN-AU-05); las historias están en la Épica 10 de `06_funcionalidades.md` (US-090 a US-094).
 
 ## RBAC — Matriz de permisos
 
@@ -48,7 +49,7 @@ Accesibles sin autenticación (protegidas por slug del consultorio, token de ges
 - `POST /public/{slug}/lista-espera` — anotarse cuando no hay horarios.
 - `GET /public/turnos/{token}` y `POST /public/turnos/{token}/{confirmar|cancelar|reprogramar}` — gestión del turno por el paciente (CU-05).
 - `POST /public/ofertas/{token}/{aceptar|rechazar}` — respuesta a una oferta de lista de espera.
-- `POST /webhooks/mercadopago`, `GET/POST /webhooks/whatsapp` — notificaciones externas.
+- `POST /webhooks/mercadopago` — notificación de pago. `GET/POST /webhooks/whatsapp` — **Fase 2** (Cloud API).
 - `POST /auth/login`.
 
-Todas las demás rutas requieren JWT.
+Todas las demás rutas requieren JWT. **Excepción conocida:** en el primer change, `POST /turnos` va **sin autenticación** (decisión del autor 2026-10-03, DD-14); desde el change de usuarios y acceso exige JWT con rol `odontologo` o `recepcionista` (US-092).
