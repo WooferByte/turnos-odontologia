@@ -28,7 +28,8 @@ C = crear, R = leer, U = actualizar, D = eliminar/anular. "Propio" = solo sus tu
 | Turnos | CRUD | CRU + cancelar | R | C (reserva), R/U/cancelar propio, según el estado del turno (RN-TD-08, D77) |
 | Marcar turno atendido / ausente (RN-AG-13) | U | U | — | — |
 | Corregir el marcado atendido ↔ ausente (≤ 24 h, RN-AG-13) y devolver o retener la seña manualmente (RN-SP-10) | U | — | — | — |
-| Confirmación de turno | U | U | — | U propio |
+| Confirmación de turno (desde el panel, en la agenda del día: US-031 CA-4, D113) | U | U | — | U propio |
+| Aprobar o rechazar el turno de un paciente nuevo (`pendiente_aprobacion`, RN-TD-05; acción en la agenda del día, D112; solo el odontólogo, justificación en RN-TD-05, D118) | U | — | — | — |
 | Mensajes `wa.me` (ver los listos para enviar y marcarlos como enviados, US-030) | R/U | R/U | — | — |
 | Historial de cambios de turno | R | R | R | — (el historial no se expone al paciente; confirmado por el autor 2026-10-05, D68) |
 | Lista de espera (el alta desde el panel no exige el consentimiento: se registra con origen `panel` cuando el paciente lo da en persona, RN-LE-05; solo la tarea periódica ofrece huecos, RN-LE-01) | CRUD | CRUD | R | C propio (con consentimiento, RN-LE-05); retirarse desde su link (RN-LE-06) |

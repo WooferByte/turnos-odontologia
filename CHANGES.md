@@ -23,7 +23,7 @@
 - **API primero:** las fases 1 y 2 se implementan y se prueban como API (tests de dominio y de API). La interfaz empieza en la fase 3 con el inicio de sesión; desde ahí la interfaz de cada historia va en su change, sin pantallas que ningún criterio pide.
 - Intervalos `[inicio, fin)`; fechas aware en UTC con la medianoche del consultorio para RN-AG-10d; SQLAlchemy 2.x sincrónico; suite por defecto en SQLite en memoria, sin PostgreSQL ni Redis; sin mocks de sesión ni de repositorio; TDD estricto.
 - Los vencimientos se evalúan al consultar y solo la tarea periódica dispara efectos (RN-GL-05). WhatsApp en la v1 es el enlace `wa.me`. Sin sobreturnos ni excepción de horario. El paciente no tiene cuenta: usa un token.
-- Las versiones de las dependencias se fijan en el `design.md` de cada change; este índice no las nombra.
+- El archivo único de dependencias y sus versiones exactas se fijan en el `design.md` de C-01; cada change siguiente agrega sus dependencias a ese mismo archivo, con versión exacta, en su design (D116). Este índice no nombra versiones.
 - **IDs de escenario:** `E#` y `US-NNN: CA-n` son los de `knowledge-base/06_funcionalidades.md`. Un ID con otro prefijo (`INF`, `TP`, `HIS`, `HOR`, `REP`, `CAN`, `CFG`, `DIS`, `VEN`, `APR`, `PUB`, `LNK`, `RPL`, `MSG`, `CNF`, `LEP`, `WHK`) lo define este índice donde la KB no da uno; `CA-a+CA-b` cuenta como un solo escenario.
 
 ---
@@ -76,7 +76,7 @@ C-24 disponibilidad-de-turnos                    (C-04, C-12, C-13, C-22)
 BLOQUE 6 (orden 6) — mensajes y lista de espera
 C-31 tarea-periodica-con-redis                   (C-02)
   └── C-32 recordatorios-por-wa-me               (C-20, C-22, C-25)
-        └── C-33 confirmar-turno-por-link        (C-29)
+        └── C-33 confirmar-turno-por-link        (C-14, C-29)
 C-34 lista-de-espera-publica                     (C-23, C-25, C-28)
   └── C-35 lista-de-espera-desde-el-panel        (C-20)
         └── C-36 oferta-de-huecos-liberados      (C-17, C-32)
@@ -216,7 +216,7 @@ Cada historia tiene un change titular. Cuando una historia se partió, la tercer
 | US-015 | C-03 | C-15 | — |
 | US-016 | C-20 | C-21 | CA-7 en C-23 |
 | US-020 | C-25 | C-24, C-26, C-27, C-28 | CA-10 en C-37; CA-3 en C-38 |
-| US-021 | C-34 | C-35 | CA-4 en C-37 |
+| US-021 | C-34 | C-35 | CA-4, CA-5 en C-37 |
 | US-022 | C-29 | C-30 | CA-2 en C-40 |
 | US-030 | C-32 | — | — |
 | US-031 | C-33 | — | — |
@@ -287,13 +287,13 @@ Primer change: `/opsx:propose crear-turno-sin-solapamientos`.
 ### [C-01] `crear-turno-sin-solapamientos`
 - **Estado**: `[ ]` pendiente · **Orden**: 1 · **Gobernanza**: MEDIO
 - **Objetivo** (US-010): crear un turno `reservado` para un paciente, una prestación, un profesional y un sillón, rechazando el solapamiento con turnos activos del profesional (RN-AG-05) y del sillón (RN-AG-08). Es el change de la consigna y el hito de entrega: al archivarlo se pone la etiqueta Git.
-- **Alcance — dentro**: `Intervalo` semiabierto, `detectar_conflictos` y errores de dominio con código RN; caso de uso `crear_turno` con reloj inyectable; `POST /turnos` sin autenticación (DD-14) con cuerpo RFC 7807; tablas `Consultorio`, `Profesional`, `Sillon`, `Prestacion`, `Paciente` y `Turno` con `create_all` sobre SQLite en memoria; test unitario de `Intervalo` (E8, RN-AG-10d), test de ida y vuelta de zonas horarias, test de imports de `app/domain` y test guard de fechas; README con el límite conocido.
+- **Alcance — dentro**: `Intervalo` semiabierto, `detectar_conflictos` y errores de dominio con código RN; caso de uso `crear_turno` con reloj inyectable; `POST /turnos` sin autenticación (DD-14) con cuerpo RFC 7807; tablas `Consultorio`, `Profesional`, `Sillon`, `Prestacion`, `Paciente` y `Turno` con `create_all` sobre SQLite en memoria; test unitario de `Intervalo` (E8, RN-AG-10d), test de ida y vuelta de zonas horarias, test de imports de `app/domain` y test guard de fechas; archivo único de dependencias con versiones exactas (D116); README con el límite conocido.
 - **Alcance — fuera**: historial `EventoTurno` (E9), horario y bloqueos (E10), concurrencia (E11), autenticación, interfaz gráfica, Alembic, PostgreSQL y Redis.
 - **Depende de**: ninguna
 - **Escenarios mínimos**: E1; E2; E3; E4; E5; E6; E7; E12
 - **Leer antes**:
   - `knowledge-base/06_funcionalidades.md` §US-010 (tabla E1..E12 y nota del orden) · `knowledge-base/07_flujos_principales.md` Flujo 1
-  - `knowledge-base/08_arquitectura_propuesta.md` §«Contrato del primer change», «Regla de capas», «Estrategia de tests», «Fixtures de test», «Reloj y zonas horarias», «Definition of Done del primer change»
+  - `knowledge-base/08_arquitectura_propuesta.md` §«Contrato del primer change», «Regla de capas», «Estrategia de tests», «Fixtures de test», «Reloj y zonas horarias», «Versiones y dependencias», «Definition of Done del primer change»
   - `knowledge-base/05_reglas_de_negocio.md` RN-AG-02, RN-AG-05, RN-AG-06, RN-AG-08, RN-AG-09, RN-AG-10, RN-AG-10d, RN-GL-01, RN-GL-02, RN-GL-04
   - `knowledge-base/04_modelo_de_datos.md` §«Subconjunto del primer change» · `knowledge-base/09_decisiones_y_supuestos.md` DD-02, DD-03, DD-12, DD-13, DD-14, SU-08
 
@@ -306,7 +306,7 @@ Primer change: `/opsx:propose crear-turno-sin-solapamientos`.
 ### [C-02] `infraestructura-postgresql`
 - **Estado**: `[ ]` pendiente · **Orden**: 2 · **Gobernanza**: ALTO
 - **Objetivo** (change técnico, sin historia): dejar el esquema bajo migraciones y PostgreSQL como base de ejecución, con la restricción de exclusión que hace atómico el anti-solapamiento (RN-AG-10c; E11 de US-010).
-- **Alcance — dentro**: Docker Compose con los servicios `api` y `postgres`; Alembic con una migración inicial equivalente al esquema de C-01; restricción de exclusión por profesional y por sillón sobre `[inicio, fin)` y solo estados activos (DD-04); marcador de pytest del perfil opcional con PostgreSQL y su comando en el README; nombres definitivos de las variables de entorno y `.env.example`; carga del seed ficticio.
+- **Alcance — dentro**: Docker Compose con los servicios `api` y `postgres`; Alembic con una migración inicial equivalente al esquema de C-01; restricción de exclusión por profesional y por sillón sobre `[inicio, fin)` y solo estados activos (DD-04); marcador de pytest del perfil opcional con PostgreSQL y su comando en el README; nombres definitivos de las variables de entorno y `.env.example`; carga del seed ficticio; sus dependencias se agregan al archivo único de C-01 (D116).
 - **Alcance — fuera**: cambios en la suite por defecto, que sigue en SQLite en memoria (DD-03); Redis y worker (C-31); frontend; tablas nuevas.
 - **Depende de**: C-01
 - **Escenarios mínimos**: E11; INF-1 (una base vacía migrada queda con el esquema de C-01); INF-2 (la restricción rechaza E2 y E3 en la base); INF-3 (la restricción acepta E5 y E6); INF-4 (la suite por defecto corre sin PostgreSQL)
@@ -314,7 +314,7 @@ Primer change: `/opsx:propose crear-turno-sin-solapamientos`.
   - `knowledge-base/06_funcionalidades.md` nota «Changes técnicos y frontend» y §US-010 (E11)
   - `knowledge-base/09_decisiones_y_supuestos.md` DD-03, DD-04, DD-15 · `knowledge-base/10_preguntas_abiertas.md` D75, D85, D105
   - `knowledge-base/05_reglas_de_negocio.md` RN-AG-09, RN-AG-10, RN-AG-10c · `knowledge-base/04_modelo_de_datos.md` §Turno (nota de DD-04) y «Seed data inicial»
-  - `knowledge-base/08_arquitectura_propuesta.md` §«Estrategia de tests» (perfil opcional con PostgreSQL), «Variables de entorno», «Estructura de directorios»
+  - `knowledge-base/08_arquitectura_propuesta.md` §«Estrategia de tests» (perfil opcional con PostgreSQL), «Variables de entorno», «Versiones y dependencias», «Estructura de directorios»
 
 ### [C-03] `historial-de-turnos`
 - **Estado**: `[ ]` pendiente · **Orden**: 2 · **Gobernanza**: CRITICO
@@ -475,7 +475,7 @@ Primer change: `/opsx:propose crear-turno-sin-solapamientos`.
 - **Estado**: `[ ]` pendiente · **Orden**: 4 · **Gobernanza**: BAJO
 - **Objetivo** (US-011): ver los turnos del día y crear un turno desde la agenda.
 - **Alcance — dentro**: `GET /turnos` filtrado por fecha y `GET /turnos/{id}`; pantalla de agenda ordenada por inicio, con paciente, prestación, estado y color; formulario que crea el turno con `POST /turnos` y muestra los errores de dominio de US-010.
-- **Alcance — fuera**: reprogramar, cancelar y marcar (C-16 a C-19); alta de pacientes (C-20); agenda multi-profesional y multi-sillón (Fase 2).
+- **Alcance — fuera**: las acciones sobre un turno, que cada change suma a esta agenda sin pantalla nueva: reprogramar, cancelar y marcar (C-16 a C-19), aprobar o rechazar (C-27, D112) y confirmar (C-33, D113); alta de pacientes (C-20); agenda multi-profesional y multi-sillón (Fase 2).
 - **Depende de**: C-07, C-08
 - **Escenarios mínimos**: US-011: CA-1, CA-2; E4 (el formulario muestra los dos códigos); E12 (el formulario muestra RN-GL-04)
 - **Leer antes**:
@@ -649,15 +649,15 @@ Primer change: `/opsx:propose crear-turno-sin-solapamientos`.
 ### [C-27] `aprobacion-manual-de-pacientes-nuevos`
 - **Estado**: `[ ]` pendiente · **Orden**: 5 · **Gobernanza**: MEDIO
 - **Objetivo** (US-020): que el odontólogo apruebe o rechace el turno de un paciente nuevo cuando la aprobación manual está activa (parte de aprobación).
-- **Alcance — dentro**: con la regla activa, la reserva pública de un paciente con `es_nuevo` nace `pendiente_aprobacion` y ocupa el horario; `POST /turnos/{id}/aprobar` (pasa a `reservado`) y `POST /turnos/{id}/rechazar` (pasa a `cancelado_profesional`), solo el odontólogo; eventos en el historial; acciones sobre el turno en la agenda.
+- **Alcance — dentro**: con la regla activa, la reserva pública de un paciente con `es_nuevo` nace `pendiente_aprobacion` y ocupa el horario; `POST /turnos/{id}/aprobar` (pasa a `reservado`) y `POST /turnos/{id}/rechazar` (pasa a `cancelado_profesional`), solo el odontólogo; eventos en el historial; los turnos `pendiente_aprobacion` se ven en la agenda del día de C-14 con las acciones aprobar y rechazar, sin pantalla nueva (D112).
 - **Alcance — fuera**: aprobar con seña exigida, que lleva a `pendiente_sena` (C-38); ofrecer el hueco rechazado a la lista de espera (C-36).
 - **Depende de**: C-14, C-18, C-25
-- **Escenarios mínimos**: US-020: CA-3; APR-1 (el rechazo deja el turno `cancelado_profesional` y libera el horario); APR-2 (un paciente que ya no es nuevo reserva directo); APR-3 (la recepcionista recibe `403` al aprobar)
+- **Escenarios mínimos**: US-020: CA-3, CA-12; APR-1 (el rechazo deja el turno `cancelado_profesional` y libera el horario); APR-2 (un paciente que ya no es nuevo reserva directo)
 - **Leer antes**:
   - `knowledge-base/05_reglas_de_negocio.md` RN-TD-05, RN-AG-12, RN-AU-05
   - `knowledge-base/04_modelo_de_datos.md` §«Máquina de estados del turno» y §Paciente (`es_nuevo`)
-  - `knowledge-base/06_funcionalidades.md` §US-020 (CA-3) · `knowledge-base/07_flujos_principales.md` Flujo 2 (paso 6)
-  - `knowledge-base/02_descripcion_general.md` §«API REST (resumen)», fila Turnos · `knowledge-base/10_preguntas_abiertas.md` D52, D76
+  - `knowledge-base/06_funcionalidades.md` §US-020 (CA-3, CA-12) · `knowledge-base/07_flujos_principales.md` Flujo 2 (paso 6)
+  - `knowledge-base/03_actores_y_roles.md` matriz, fila «Aprobar o rechazar el turno de un paciente nuevo» · `knowledge-base/10_preguntas_abiertas.md` D52, D76, D112
 
 ### [C-28] `pagina-publica-de-reserva`
 - **Estado**: `[ ]` pendiente · **Orden**: 5 · **Gobernanza**: ALTO
@@ -732,16 +732,16 @@ Primer change: `/opsx:propose crear-turno-sin-solapamientos`.
 
 ### [C-33] `confirmar-turno-por-link`
 - **Estado**: `[ ]` pendiente · **Orden**: 6 · **Gobernanza**: MEDIO
-- **Objetivo** (US-031): que el paciente confirme su turno desde el link de gestión y quede registrado.
-- **Alcance — dentro**: `POST /public/turnos/{token}/confirmar` (de `reservado` a `confirmado`, con evento `confirmado` y el paciente como actor); `POST /turnos/{id}/confirmar` para el consultorio, según la matriz; rechazo con RN-TD-11; botón de confirmar en la página del turno.
+- **Objetivo** (US-031): que el paciente confirme su turno desde el link de gestión, o el consultorio desde la agenda, y quede registrado. **Nota de alcance:** el nombre dice «por link» porque es inmutable, pero el change cubre las dos vías; desde el panel no se exige `ahora < inicio` (D117).
+- **Alcance — dentro**: `POST /public/turnos/{token}/confirmar` (de `reservado` a `confirmado`, con evento `confirmado` y el paciente como actor); rechazo con RN-TD-11; botón de confirmar en la página del turno; `POST /turnos/{id}/confirmar` para el odontólogo y la recepcionista, con el usuario como actor y rechazo con RN-AG-12 desde otro estado; acción de confirmar en la agenda del día de C-14, sin pantalla nueva (D113).
 - **Alcance — fuera**: confirmar o cancelar respondiendo por el chat (US-031 CA-2, Fase 2).
-- **Depende de**: C-29, C-32
-- **Escenarios mínimos**: US-031: CA-1, CA-3; CNF-1 (confirmar un turno ya empezado se rechaza con RN-TD-11); CNF-2 (en un estado terminal el link solo muestra el estado)
+- **Depende de**: C-14, C-29, C-32
+- **Escenarios mínimos**: US-031: CA-1, CA-3, CA-4, CA-5; CNF-1 (confirmar un turno ya empezado se rechaza con RN-TD-11); CNF-2 (en un estado terminal el link solo muestra el estado)
 - **Leer antes**:
   - `knowledge-base/06_funcionalidades.md` §US-031
-  - `knowledge-base/05_reglas_de_negocio.md` RN-WA-02, RN-TD-08, RN-TD-11, RN-AG-11
+  - `knowledge-base/05_reglas_de_negocio.md` RN-WA-02, RN-TD-08, RN-TD-11, RN-AG-11, RN-AG-12, RN-AU-05
   - `knowledge-base/04_modelo_de_datos.md` §«Máquina de estados del turno» · `knowledge-base/07_flujos_principales.md` Flujo 3 (paso 4)
-  - `knowledge-base/03_actores_y_roles.md` matriz, fila «Confirmación de turno», y §«Rutas públicas»
+  - `knowledge-base/03_actores_y_roles.md` matriz, fila «Confirmación de turno», y §«Rutas públicas» · `knowledge-base/10_preguntas_abiertas.md` D113
 
 ### [C-34] `lista-de-espera-publica`
 - **Estado**: `[ ]` pendiente · **Orden**: 6 · **Gobernanza**: ALTO
@@ -760,7 +760,7 @@ Primer change: `/opsx:propose crear-turno-sin-solapamientos`.
 - **Estado**: `[ ]` pendiente · **Orden**: 6 · **Gobernanza**: MEDIO
 - **Objetivo** (US-021): que el consultorio anote y retire pacientes de la lista de espera desde el panel (parte de panel).
 - **Alcance — dentro**: `GET/POST /lista-espera` y `POST /lista-espera/{id}/retirar`; el alta no exige el consentimiento (se registra con origen `panel` cuando el paciente lo da); mismas reglas de prestación obligatoria y entrada única; pantalla de lista de espera.
-- **Alcance — fuera**: ofertar a mano (no existe en la v1, D96); indicador de 7 días sin oferta (C-36).
+- **Alcance — fuera**: ofertar a mano (no existe en la v1, D96); indicador de 7 días sin oferta (C-36); retiro de una entrada `ofertada` (C-37).
 - **Depende de**: C-20, C-34
 - **Escenarios mínimos**: US-021: CA-5, CA-8; LEP-1 (un segundo alta del mismo paciente y prestación devuelve la entrada existente); LEP-2 (el dueño recibe `403` al anotar)
 - **Leer antes**:
@@ -785,7 +785,7 @@ Primer change: `/opsx:propose crear-turno-sin-solapamientos`.
 ### [C-37] `respuesta-a-ofertas-de-hueco`
 - **Estado**: `[ ]` pendiente · **Orden**: 6 · **Gobernanza**: MEDIO
 - **Objetivo** (US-040): que el paciente acepte o rechace una oferta y que una oferta sin respuesta venza (parte de respuesta).
-- **Alcance — dentro**: `POST /public/ofertas/{token}/aceptar` y `POST /public/ofertas/{token}/rechazar`; aceptar revalida el solapamiento y crea el turno con origen `lista_espera`; aceptación explícita de RN-TD-10 dentro de la ventana (US-020 CA-10); la oferta vencida se persiste y se rechaza; rechazo o vencimiento devuelven la entrada a `activa` sin perder su lugar; retiro de una entrada `ofertada` (US-021 CA-4); página de la oferta.
+- **Alcance — dentro**: `POST /public/ofertas/{token}/aceptar` y `POST /public/ofertas/{token}/rechazar`; aceptar revalida el solapamiento y crea el turno con origen `lista_espera`; aceptación explícita de RN-TD-10 dentro de la ventana (US-020 CA-10); la oferta vencida se persiste y se rechaza; rechazo o vencimiento devuelven la entrada a `activa` sin perder su lugar; retiro de una entrada `ofertada` desde el link o desde el panel (US-021 CA-4 y CA-5); página de la oferta.
 - **Alcance — fuera**: persistir el vencimiento de una seña al aceptar (RN-GL-05, caso (a), en C-40).
 - **Depende de**: C-26, C-36
 - **Escenarios mínimos**: US-040: CA-2, CA-2b, CA-3; US-020: CA-10
@@ -875,14 +875,14 @@ Primer change: `/opsx:propose crear-turno-sin-solapamientos`.
 ### [C-43] `ficha-clinica`
 - **Estado**: `[ ]` pendiente · **Orden**: 8 · **Gobernanza**: ALTO
 - **Objetivo** (US-060): abrir la ficha del paciente en la consulta y registrar la anamnesis y la evolución.
-- **Alcance — dentro**: tablas `Anamnesis` (versionada) y `Evolucion` (solo inserción, con `corrige_a_id`); `POST /pacientes/{id}/anamnesis` y `POST /pacientes/{id}/evoluciones`; lectura de la ficha (su ruta se fija en el design); `registrada_por` es el usuario de la sesión; solo el rol `odontologo` lee y escribe (completa US-091 CA-2); evolución vinculable a un turno; pantalla de ficha; logs sin datos clínicos.
+- **Alcance — dentro**: tablas `Anamnesis` (versionada) y `Evolucion` (solo inserción, con `corrige_a_id`); `POST /pacientes/{id}/anamnesis` y `POST /pacientes/{id}/evoluciones`; lectura con `GET /pacientes/{id}/ficha` (ruta propuesta, D114), que devuelve la anamnesis vigente y las evoluciones; `registrada_por` es el usuario de la sesión; solo el rol `odontologo` lee y escribe (completa US-091 CA-2); evolución vinculable a un turno; pantalla de ficha; logs sin datos clínicos.
 - **Alcance — fuera**: odontograma (v1.1); imágenes y radiografías (v2); borrado físico de datos clínicos.
 - **Depende de**: C-14, C-20
 - **Escenarios mínimos**: US-060: CA-1, CA-2, CA-3, CA-4, CA-5, CA-6
 - **Leer antes**:
   - `knowledge-base/06_funcionalidades.md` §US-060 · `knowledge-base/07_flujos_principales.md` Flujo 7
   - `knowledge-base/05_reglas_de_negocio.md` RN-FC-01, RN-FC-02, RN-FC-03, RN-PR-03, RN-AU-05
-  - `knowledge-base/04_modelo_de_datos.md` §Anamnesis y §Evolucion
+  - `knowledge-base/04_modelo_de_datos.md` §Anamnesis y §Evolucion · `knowledge-base/02_descripcion_general.md` §«API REST (resumen)», fila «Pacientes y ficha»
   - `knowledge-base/03_actores_y_roles.md` matriz, fila «Ficha clínica» · `knowledge-base/08_arquitectura_propuesta.md` §Seguridad (datos sensibles)
 
 ### [C-44] `presupuesto-simple`
@@ -960,32 +960,27 @@ Primer change: `/opsx:propose crear-turno-sin-solapamientos`.
 
 ## Verificación cruzada
 
-**Fecha de la verificación: 2026-10-05.** Se hizo con un script que lee este archivo y la knowledge-base tal como estaban ese día y compara los identificadores uno por uno; el script no modifica nada y no forma parte del repositorio. **Hay que repetirla cada vez que se edite este archivo o los archivos 02 a 06, 09 o 10 de la knowledge-base**: el resultado vale solo para el contenido verificado.
+**Fecha de la verificación: 2026-10-05** (segunda corrida, posterior a las decisiones D112 a D116 de la knowledge-base). Se hizo con un script que lee este archivo y la knowledge-base tal como estaban ese día y compara los identificadores uno por uno; el script no modifica nada y no forma parte del repositorio. **Hay que repetirla cada vez que se edite este archivo o los archivos 02 a 06, 09 o 10 de la knowledge-base**: el resultado vale solo para el contenido verificado.
 
 Qué compara cada fila: las cinco primeras son las verificaciones pedidas por el autor (la tercera se muestra separada en reglas, decisiones y escenarios); las marcadas «Adicional» se agregaron para cubrir el resto del índice.
 
 | # | Verificación | Elementos revisados | Resultado |
 |---|---|---|---|
-| 1 | Dependencias: cada dependencia citada en una entrada es un change que existe en este archivo, y ningún change depende de uno de orden posterior | 103 dependencias en 48 changes | sin diferencias |
+| 1 | Dependencias: cada dependencia citada en una entrada es un change que existe en este archivo, y ningún change depende de uno de orden posterior | 104 dependencias en 48 changes | sin diferencias |
 | 2 | Historias: cada US-NNN de `06_funcionalidades.md` (v1) tiene exactamente una fila y un change titular en «Mapeo historia → change»; las historias del Objetivo de cada entrada coinciden con ese mapeo; toda US citada existe en 06 | 30 historias de 06; 30 citadas | sin diferencias |
 | 3a | Reglas: cada RN-XX-NN citada está definida en `05_reglas_de_negocio.md` | 77 reglas distintas (05 define 79) | sin diferencias |
 | 3b | Decisiones: cada DD-NN citada existe en `09_decisiones_y_supuestos.md` | 17 decisiones distintas (09 define 19) | sin diferencias |
 | 3c | Escenarios: cada E# citado existe en la tabla de US-010 de 06 | 12 escenarios distintos (06 define 12) | sin diferencias |
-| 4 | Rutas: cada ruta HTTP citada (método y ruta) existe en `02_descripcion_general.md` o en `03_actores_y_roles.md` | 66 rutas citadas (02 y 03 listan 68, dos de ellas de Fase 2) | sin diferencias |
+| 4 | Rutas: cada ruta HTTP citada (método y ruta) existe en `02_descripcion_general.md` o en `03_actores_y_roles.md` | 67 rutas citadas (02 y 03 listan 69, dos de ellas de Fase 2) | sin diferencias |
 | 5 | Tablas: cada entidad de `04_modelo_de_datos.md` tiene un change que la crea en «Tablas del modelo → change que las crea», ese change implementa la historia que nombra la columna «Change que la crea» de 04 y su entrada nombra la tabla | 23 tablas | sin diferencias |
-| 6 | Adicional: cada criterio CA-n citado como escenario, o como criterio que se completa en otro change, existe en su historia de 06 | 175 criterios | sin diferencias |
-| 7 | Adicional: cada decisión D-NN citada figura en el registro de `10_preguntas_abiertas.md`, cada SU-NN en 09 y cada P-NN en 10 | 42 D, 3 SU y 2 P | sin diferencias |
-| 8 | Adicional: cada ruta de la v1 listada en 02 y 03 está citada en alguna entrada (ninguna ruta queda sin change) | 66 rutas de la v1 | sin diferencias |
-| 9 | Adicional: cada sección («…», §), flujo e ID de «Leer antes» aparece en el archivo de la KB que la entrada indica, y el archivo existe | 493 referencias | sin diferencias |
+| 6 | Adicional: cada criterio CA-n citado como escenario, o como criterio que se completa en otro change, existe en su historia de 06 | 178 criterios | sin diferencias |
+| 7 | Adicional: cada decisión D-NN citada figura en el registro de `10_preguntas_abiertas.md`, cada SU-NN en 09 y cada P-NN en 10 | 47 D, 3 SU y 2 P | sin diferencias |
+| 8 | Adicional: cada ruta de la v1 listada en 02 y 03 está citada en alguna entrada (ninguna ruta queda sin change) | 67 rutas de la v1 | sin diferencias |
+| 9 | Adicional: cada sección («…», §), flujo e ID de «Leer antes» aparece en el archivo de la KB que la entrada indica, y el archivo existe | 501 referencias | sin diferencias |
 | 10 | Adicional: el árbol por bloques muestra el mismo nombre, bloque y dependencias que cada entrada, y las puertas nombran los 48 changes | 48 nodos | sin diferencias |
 | 11 | Adicional: el camino crítico es una cadena de dependencias directas y es la más larga hasta un change del MVP | 15 changes | sin diferencias |
 | 12 | Adicional, formato: códigos consecutivos, nombres kebab-case únicos, 12 líneas como máximo por entrada, 3 a 6 escenarios (8 en C-01), 3 o 4 líneas de «Leer antes», sin emoji | 48 entradas | sin diferencias |
 
 **Qué no cubre.** La verificación compara identificadores, no significados: confirma que una regla, una ruta o una tabla citada existe y está asignada, no que la entrada la interprete bien. Los IDs de escenario propios de este índice (`INF`, `TP`, `HIS` y los demás de la leyenda) no existen en la KB y por eso no se comparan. Las páginas de la interfaz no son rutas HTTP y quedan fuera de la fila 4.
 
-**Observaciones sobre la KB encontradas al leerla** (no son diferencias de la verificación; la KB no se modificó y este índice dice cómo las trató):
-- El mapa historia → interfaz de 06 ubica US-020 solo en las páginas públicas, pero su CA-3, el Flujo 2 y las rutas `POST /turnos/{id}/aprobar` y `POST /turnos/{id}/rechazar` de 02 piden que el odontólogo apruebe o rechace desde el panel. C-27 pone esas dos acciones sobre el turno en la agenda, sin pantalla nueva.
-- `POST /turnos/{id}/confirmar` figura en 02 y la matriz de 03 permite confirmar al odontólogo y a la recepcionista, pero ningún criterio de aceptación cubre la confirmación desde el panel. C-33 incluye la ruta y no agrega pantalla.
-- 02 no lista una ruta de lectura de la ficha clínica (solo las de alta de anamnesis y de evoluciones), aunque US-060 CA-1 y el Flujo 7 la necesitan. C-43 la deja para su design.
-- Tres criterios dependen de una historia de orden posterior y la nota de orden de 06 no los declara como referencia hacia adelante: US-091 CA-2 (necesita la ficha, US-060), US-021 CA-4 y CA-5 para una entrada `ofertada` (necesitan US-040) y US-020 CA-10 (necesita US-040). El mapeo los asigna a C-43 y C-37.
-- 08 («Versiones y dependencias») dice que el archivo único de dependencias lo elige el change de infraestructura, y también que los pins se fijan en el design del primer change, que ya necesita ese archivo. Este índice deja la elección en el design de C-01.
+**Observaciones sobre la KB.** Las cinco de la primera corrida quedaron resueltas en la knowledge-base el mismo día y este índice ya las refleja: dónde se aprueba un turno de paciente nuevo (D112; US-020 CA-12, en C-27), la confirmación desde el panel (D113; US-031 CA-4 y CA-5, en C-33), la ruta de lectura de la ficha clínica (D114; en C-43), las referencias hacia adelante que faltaba declarar (D115; ya estaban asignadas en el mapeo) y quién elige el archivo único de dependencias (D116; C-01 lo crea y los demás changes agregan las suyas). No queda ninguna observación abierta.

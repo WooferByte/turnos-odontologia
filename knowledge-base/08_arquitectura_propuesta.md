@@ -251,8 +251,8 @@ Los nombres son **propuestos** y se toman como requisito (confirmado por el auto
 
 Política (decisión del autor 2026-10-03; **no se inventan números de versión**): 
 - **Confirmadas por el autor:** Python 3.11+ y SQLAlchemy 2.x. Las versiones exactas de FastAPI, Pydantic, pytest, PostgreSQL, Redis, React y Vite **no están decididas**.
-- **Un único archivo de dependencias** (el que elija el change de infraestructura: `pyproject.toml` o `requirements`), con **versiones exactas** (pins), sin duplicar la lista en otro archivo (criterio fijado por el autor el 2026-10-05, D72).
-- Los pins se **fijan en el `design.md` del primer change** (las versiones se consultan ese día; hoy solo se fija el criterio) y se **verifican en un clon limpio** (crear entorno, instalar solo desde ese archivo, correr los tests).
+- **Un único archivo de dependencias** (`pyproject.toml` o `requirements`: **lo elige el design del primer change**, que es el primero que lo necesita), con **versiones exactas** (pins), sin duplicar la lista en otro archivo (criterio fijado por el autor el 2026-10-05, D72; quién lo elige, D116).
+- Los pins se **fijan en el `design.md` del primer change** (las versiones se consultan ese día; hoy solo se fija el criterio) y se **verifican en un clon limpio** (crear entorno, instalar solo desde ese archivo, correr los tests). **Los changes siguientes (incluido el de infraestructura con PostgreSQL) agregan sus dependencias a ese mismo archivo, con versión exacta**, cada uno en su design (D116).
 - **Toda dependencia de test está declarada** en ese archivo (pytest y cualquier plugin que use la configuración). Ninguna dependencia queda implícita ni instalada solo en la máquina del autor.
 - Sin dependencias del lado async (ver DD-12). Alembic no entra en el primer change.
 

@@ -10,7 +10,7 @@
 **Trade-offs aceptados**: compite con opciones gratuitas (Turnito, Naclix, Bilog freemium, Ulifeon).
 
 ### DD-01 — Stack: Python + FastAPI + JWT + SQLAlchemy + PostgreSQL + Redis + Docker; React + TS + Vite
-**Decisión**: stack definido por el autor (Discovery, punto 9). Redis para la tarea periódica: en la v1, preparar los recordatorios `wa.me` y persistir el vencimiento de señas impagas y de ofertas de lista de espera (Redis no envía mensajes; ver DD-06 y DD-18). Monolito modular + un worker. **Versiones** (decisión del autor 2026-10-05, D72): exactas, en un único archivo de dependencias; se consultan el día del `design.md` del primer change (P-17).
+**Decisión**: stack definido por el autor (Discovery, punto 9). Redis para la tarea periódica: en la v1, preparar los recordatorios `wa.me` y persistir el vencimiento de señas impagas y de ofertas de lista de espera (Redis no envía mensajes; ver DD-06 y DD-18). Monolito modular + un worker. **Versiones** (decisión del autor 2026-10-05, D72): exactas, en un único archivo de dependencias; el archivo y los pins se fijan en el `design.md` del primer change (las versiones se consultan ese día, P-17) y los changes siguientes agregan las suyas a ese mismo archivo (D116).
 **Contexto**: restricción del trabajo; no se reabre.
 **Alternativas consideradas**: no aplica (decisión tomada).
 **Justificación**: decisión del autor.
