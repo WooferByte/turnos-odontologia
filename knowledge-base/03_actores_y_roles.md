@@ -31,8 +31,8 @@ C = crear, R = leer, U = actualizar, D = eliminar/anular. "Propio" = solo sus tu
 | Confirmación de turno | U | U | — | U propio |
 | Mensajes `wa.me` (ver los listos para enviar y marcarlos como enviados, US-030) | R/U | R/U | — | — |
 | Historial de cambios de turno | R | R | R | — (el historial no se expone al paciente; confirmado por el autor 2026-10-05, D68) |
-| Lista de espera (el alta desde el panel registra el consentimiento con origen `panel`, RN-LE-05; solo la tarea periódica ofrece huecos, RN-LE-01) | CRUD | CRUD | R | C propio (con consentimiento, RN-LE-05); retirarse desde su link (RN-LE-06) |
-| Pacientes: datos administrativos (identificación, contacto; US-016) | CRU | CRU | R | R propio (solo lectura; sin edición por token, RN-TD-09; decisión del autor 2026-10-05, D69) |
+| Lista de espera (el alta desde el panel no exige el consentimiento: se registra con origen `panel` cuando el paciente lo da en persona, RN-LE-05; solo la tarea periódica ofrece huecos, RN-LE-01) | CRUD | CRUD | R | C propio (con consentimiento, RN-LE-05); retirarse desde su link (RN-LE-06) |
+| Pacientes: datos administrativos (identificación, contacto; US-016; el alta avisa de posibles duplicados, RN-TD-12) | CRU | CRU | R | R propio (solo lectura; sin edición por token, RN-TD-09; decisión del autor 2026-10-05, D69) |
 | Pacientes: aceptar o no ser contactado (`acepta_contacto`, RN-PR-07; el paciente lo pide al consultorio) | U | U | R | — |
 | Ficha clínica (anamnesis, evolución) | CRU (sin borrado físico, ver RN-FC-03) | — | — | — |
 | Presupuestos (el estado lo cambia solo el odontólogo, RN-FC-05) | CRUD | R | R | — |

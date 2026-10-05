@@ -57,7 +57,9 @@ proyecto/
 └── README.md                    # cómo correr tests sin Postgres ni Redis, y el perfil opcional con PostgreSQL (E11)
 ```
 
-**Migraciones:** Alembic **no se usa en el primer change**; los tests crean el esquema con `create_all`. **Alembic se usa a partir del change de infraestructura con PostgreSQL** (decisión del autor 2026-10-03, DD-15). Las columnas que el primer change no crea se agregan con migraciones (`04_modelo_de_datos.md`).
+**Migraciones:** Alembic **no se usa en el primer change**; los tests crean el esquema con `create_all`. **Alembic se usa a partir del change de infraestructura con PostgreSQL** (decisión del autor 2026-10-03, DD-15), que va en el **orden 2, justo después del primer change** (decisión del autor 2026-10-05, D105). Las columnas que el primer change no crea se agregan con migraciones (`04_modelo_de_datos.md`).
+
+**Interfaz (decisión del autor 2026-10-05, D106):** las historias de orden 1 y 2 y el change de infraestructura con PostgreSQL se implementan y se prueban como API (tests de dominio y de API; sin interfaz gráfica). El `frontend/` empieza en el **orden 3**, con el inicio de sesión (Épica 10); la interfaz de las historias de orden 1 y 2 se construye a partir de ahí.
 
 ## Regla de capas
 

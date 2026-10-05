@@ -13,7 +13,7 @@
 | Lista de espera | EntradaListaEspera, OfertaHueco | v1 |
 | Mensajería | Mensaje (recordatorio / confirmación / oferta) | v1 |
 | Seña y pagos | Sena, RegistroPago | v1 |
-| Pacientes y ficha clínica | Paciente, Consentimiento, Anamnesis, Evolucion | v1 |
+| Pacientes y ficha clínica | Paciente, EventoPaciente (**Propuesta**, D108), Consentimiento, Anamnesis, Evolucion | v1 |
 | Presupuestos | Presupuesto, ItemPresupuesto | v1 |
 | Clínica ampliada | Odontograma, ObraSocial, CodigoPrestacionOS | v1.1 (no modelar en v1) |
 
@@ -39,6 +39,7 @@ Paciente 1──N EntradaListaEspera N──1 Prestacion
 EntradaListaEspera 1──N OfertaHueco N──0..1 Turno (el turno creado al aceptar)
 
 Paciente 1──N Consentimiento
+Paciente 1──N EventoPaciente N──0..1 Usuario   (auditoría inmutable de pacientes; Propuesta, D108)
 Paciente 1──N Anamnesis (versionada) N──1 Usuario   (registrada_por)
 Paciente 1──N Evolucion N──0..1 Turno ; Evolucion N──1 Usuario   (registrada_por)
 Paciente 1──N Presupuesto 1──N ItemPresupuesto N──0..1 Prestacion
@@ -197,9 +198,30 @@ Los plazos de seña y de oferta son **valores de diseño del autor, no de mercad
 
 Índice: `(consultorio_id, telefono_whatsapp)` para buscar al paciente, **sin `UNIQUE`** (†; SU-03: sin DNI, la búsqueda se apoya en el teléfono). Motivo de no hacerlo único: una madre o un padre puede reservar para sus hijos con el mismo número, por lo que varios pacientes distintos pueden compartir teléfono (decisión del autor 2026-10-05, D48).
 
-**Reutilización en la reserva pública** (RN-TD-09; D48): la reserva pública y el alta en lista de espera **reutilizan un `Paciente` existente solo si coinciden los tres: teléfono, nombre y apellido normalizados**; si difiere cualquiera, crean un paciente nuevo. **Normalizado:** teléfono en E.164; nombre y apellido sin distinguir mayúsculas, sin acentos y sin espacios de más. El formulario público **no pisa datos ya cargados**: los opcionales (DNI, email) solo se completan si estaban vacíos (RN-PR-06). **Limitación conocida:** un error de tipeo («Gonzalez» / «Gonzales») crea un paciente duplicado, que vuelve a dar el consentimiento y puede tener su propia entrada en la lista de espera; la fusión manual de duplicados es **Fase 2**.
+**Reutilización en la reserva pública** (RN-TD-09; D48): la reserva pública y el alta en lista de espera **reutilizan un `Paciente` existente solo si coinciden los tres: teléfono, nombre y apellido normalizados**; si difiere cualquiera, crean un paciente nuevo. **Normalizado:** teléfono en E.164; nombre y apellido sin distinguir mayúsculas, sin acentos y sin espacios de más. El formulario público **no pisa datos ya cargados**: los opcionales (DNI, email) solo se completan si estaban vacíos (RN-PR-06). **Limitación conocida:** un error de tipeo («Gonzalez» / «Gonzales») crea un paciente duplicado, que vuelve a dar el consentimiento y puede tener su propia entrada en la lista de espera; la fusión manual de duplicados es **Fase 2**. **Desde el panel**, el alta de un paciente avisa de los posibles duplicados y, si se crea igual, registra un `EventoPaciente` (RN-TD-12, D108).
 
 Identificación del paciente en la reserva pública (decisión del autor 2026-10-02, SU-03 / DD-11 / P-13): **teléfono de WhatsApp obligatorio, DNI opcional**, email opcional; el paciente no tiene cuenta y gestiona su turno por token (Bilog usa DNI + email [C] como referencia).
+
+### EventoPaciente (auditoría de pacientes) — **Propuesta**
+**Change que la crea:** pacientes desde el panel (US-016) (decisión del autor 2026-10-05, D108). **Entidad nueva, propuesta por el agente, a revisar en el design de ese change**: el modelo no tenía nada para auditar pacientes (`EventoTurno` es solo por turno). Mismo estilo que `EventoTurno`; **inmutable**: solo inserción. **No es historial clínico** y no tiene más alcance que el de auditar el alta desde el panel y la edición administrativa de pacientes (RN-FC-02, RN-FC-03). **Qué se registra acá y qué en `EventoTurno`:** ver la «Regla de reparto» debajo de la tabla.
+
+| Campo | Tipo | Null | Restricciones / FK / nota |
+|---|---|---|---|
+| `id` | entero | NN | PK |
+| `paciente_id` | entero | NN | FK → Paciente |
+| `tipo` | texto | NN | Valores (decisión del autor 2026-10-05, D111): `creado` (alta desde el panel), `editado` (edición de datos administrativos), `contacto_cambiado` (cambio de `acepta_contacto`), `posible_duplicado` (RN-TD-12). No hay otros tipos |
+| `actor_id` | entero | null | FK → Usuario (quien hizo el cambio) |
+| `ocurrido_en` | fecha-hora | NN | — |
+| `detalle` | json | null | En `posible_duplicado`, los ids de los pacientes coincidentes **con su motivo** (`telefono_y_nombre` o `solo_telefono`, RN-TD-12, D109; nombres propuestos, forma exacta en el design) |
+
+Índice: `(paciente_id, ocurrido_en)`. Ni la aplicación ni la base exponen `UPDATE` ni `DELETE` sobre esta tabla. En `posible_duplicado`, `paciente_id` es el paciente recién creado y `detalle` referencia a los coincidentes con su motivo (RN-TD-12).
+
+**Regla de reparto entre `EventoTurno` y `EventoPaciente`** (decisión del autor 2026-10-05, D111; la referencian RN-AG-11 y RN-TD-12). **Cada hecho se registra en una sola de las dos tablas, nunca en ambas.**
+- **`EventoTurno`:** todo lo que le pasa a **un turno**: creación (incluida la aceptación de RN-TD-10), reprogramación, confirmación, cancelación, cambio de estado, marcado y corrección de atendido/ausente, acreditación, retención y devolución de la seña, y notas. **Si el hecho tiene un turno, va en `EventoTurno`.**
+- **`EventoPaciente`:** lo que le pasa al **registro del paciente y no pertenece a un turno**: alta desde el panel, edición de datos administrativos, cambio de `acepta_contacto` y posible duplicado.
+- **No son eventos** (ya tienen su propio registro): el consentimiento (`Consentimiento`), los datos clínicos (`Anamnesis` versionada, `Evolucion` de solo inserción) y los pagos (`RegistroPago`).
+- **Las consecuencias sobre el paciente de un hecho de turno no generan un `EventoPaciente`:** se derivan del `EventoTurno`. Ejemplo: `es_nuevo` pasa a `false` con el primer `atendido` y queda explicado por el `EventoTurno` de ese marcado.
+- **Paciente creado por la reserva pública o por la lista de espera** *(interpretación del agente, coherente con la KB)*: **no se registra `creado` en `EventoPaciente`**. `creado` es solo el alta **desde el panel**. En la reserva pública el hecho queda en el `EventoTurno(creado)` del turno; en la lista de espera, en la `EntradaListaEspera` y el `Consentimiento`. Tampoco hay `posible_duplicado` en esos caminos (RN-TD-12 no aplica).
 
 ### Turno
 **Change que la crea:** primer change (sin `origen`, `token_gestion`, `creado_por`, `actualizado_en` ni `version`, que se agregan cuando el change correspondiente los necesite).
@@ -270,7 +292,7 @@ DD-04 confirmada por el autor (2026-10-02). **Decidido el qué (2026-10-05, D75)
 Los estados terminales no tienen transiciones de salida, **salvo la corrección entre `atendido` y `ausente`** (dos últimas filas con condición). El momento del marcado original sale del historial `EventoTurno`; la seña no acompaña la corrección (RN-SP-10). Marcar `atendido` o `ausente` solo es posible si `ahora >= inicio` del turno (RN-AG-13). El rechazo de la aprobación manual (RN-TD-05) lleva a `cancelado_profesional`, sin estado nuevo (decisión del autor 2026-10-05, D76). Los vencimientos se evalúan al consultar y los persiste la tarea periódica o, antes, la escritura que depende de ellos (RN-GL-05, D92).
 
 ### EventoTurno (historial de cambios)
-**Change que la crea:** historial de cambios de turno (US-015); **no entra en el primer change** (decisión del autor 2026-10-03). **Inmutable**: solo inserción (RN-AG-11).
+**Change que la crea:** historial de cambios de turno (US-015); **no entra en el primer change** (decisión del autor 2026-10-03). **Inmutable**: solo inserción (RN-AG-11). Registra todo hecho que tiene un turno; lo que le pasa al paciente sin un turno va en `EventoPaciente` (regla de reparto en esa entidad, D111).
 
 | Campo | Tipo | Null | Restricciones / FK / nota |
 |---|---|---|---|
@@ -300,7 +322,7 @@ Los estados terminales no tienen transiciones de salida, **salvo la corrección 
 | `creada_en` | fecha-hora | NN | Define la prioridad FIFO (RN-LE-02) |
 | `token` | texto | NN | `UNIQUE`; firmado, para que el paciente se retire desde su link (RN-LE-06). Es propio de la entrada porque el token de gestión identifica un único turno (RN-TD-08) y en la lista de espera todavía no hay turno (D29) |
 
-Índice: `(estado, creada_en)` (†). Se llega a `retirada` de **dos formas** (decisión del autor 2026-10-03, D20): el paciente se retira desde su link, o el consultorio lo retira desde el panel (RN-LE-06). Al anotarse se exige el consentimiento de datos (RN-LE-05). **Oferta rechazada o vencida:** la entrada vuelve a `activa` **conservando su lugar** (su `creada_en` no cambia) (RN-LE-03; decisión del autor 2026-10-05, D53). **Retiro con oferta en curso:** una entrada `ofertada` también puede pasar a `retirada` (el paciente desde su link o el consultorio desde el panel); su oferta se da por rechazada y el hueco pasa al siguiente (RN-LE-06; decisión del autor 2026-10-05, D60). **Unicidad:** hay una sola entrada **en curso** (`activa` u `ofertada`) por paciente y prestación (RN-LE-07); se valida en el dominio (D35, D60); como la prestación es obligatoria, no existe una entrada «cualquier prestación» (D78). El paciente se reconoce según RN-TD-09 (D48). **Aviso al odontólogo (RN-LE-08, D78):** una entrada en curso con más de 7 días sin una oferta compatible (desde `creada_en` o desde su última `OfertaHueco`, lo más reciente) se señala en el panel; se calcula al consultar y no requiere un campo. **Alta desde el panel (D103):** el consultorio también puede anotar a un paciente; el consentimiento se registra con origen `panel` (RN-LE-05).
+Índice: `(estado, creada_en)` (†). Se llega a `retirada` de **dos formas** (decisión del autor 2026-10-03, D20): el paciente se retira desde su link, o el consultorio lo retira desde el panel (RN-LE-06). Al anotarse por el link público se exige el consentimiento de datos (RN-LE-05). **Oferta rechazada o vencida:** la entrada vuelve a `activa` **conservando su lugar** (su `creada_en` no cambia) (RN-LE-03; decisión del autor 2026-10-05, D53). **Retiro con oferta en curso:** una entrada `ofertada` también puede pasar a `retirada` (el paciente desde su link o el consultorio desde el panel); su oferta se da por rechazada y el hueco pasa al siguiente (RN-LE-06; decisión del autor 2026-10-05, D60). **Unicidad:** hay una sola entrada **en curso** (`activa` u `ofertada`) por paciente y prestación (RN-LE-07); se valida en el dominio (D35, D60); como la prestación es obligatoria, no existe una entrada «cualquier prestación» (D78). El paciente se reconoce según RN-TD-09 (D48). **Aviso al odontólogo (RN-LE-08, D78):** una entrada en curso con más de 7 días sin una oferta compatible (desde `creada_en` o desde su última `OfertaHueco`, lo más reciente) se señala en el panel; se calcula al consultar y no requiere un campo. **Alta desde el panel (D103, D107):** el consultorio también puede anotar a un paciente; ahí el consentimiento no bloquea el alta y se registra con origen `panel` cuando el paciente lo da en persona (RN-LE-05).
 
 ### OfertaHueco
 **Change que la crea:** oferta de huecos (US-040).

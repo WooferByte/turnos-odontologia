@@ -126,10 +126,10 @@
 **Origen**: decisión del autor 2026-10-03.
 
 ### DD-15 — Migraciones con Alembic desde el change de infraestructura con PostgreSQL
-**Decisión**: Alembic se usa **a partir del change de infraestructura con PostgreSQL**. El primer change **no lo usa**: los tests crean el esquema con `create_all`.
-**Justificación**: el primer change debe correr sin servicios externos; las migraciones solo agregan valor cuando hay un esquema persistente en PostgreSQL.
+**Decisión**: Alembic se usa **a partir del change de infraestructura con PostgreSQL**. El primer change **no lo usa**: los tests crean el esquema con `create_all`. Ese change va en el **orden 2, justo después del primer change** (decisión del autor 2026-10-05, D105).
+**Justificación**: el primer change debe correr sin servicios externos; las migraciones solo agregan valor cuando hay un esquema persistente en PostgreSQL. **Motivo del orden 2 (D105):** empezar con migraciones temprano evita rehacerlas sobre muchas tablas.
 **Trade-offs aceptados**: las columnas que el primer change no crea se agregan después con migraciones (`04_modelo_de_datos.md`).
-**Origen**: decisión del autor 2026-10-03.
+**Origen**: decisión del autor 2026-10-03; orden 2 confirmado el 2026-10-05 (D105).
 
 ### DD-16 — Estados del turno: transiciones válidas y marcación de atendido o ausente
 **Decisión**: el turno solo cambia de estado según la tabla de transiciones válidas de `04_modelo_de_datos.md`; un cambio no previsto se rechaza con `RN-AG-12`. El odontólogo **y la recepcionista** pueden marcar `atendido` o `ausente` (RN-AG-13), solo desde `reservado` o `confirmado`.
