@@ -30,7 +30,7 @@ En el independiente, quien usa el sistema todos los días es el propio odontólo
 | Odontólogo | Atender: ver la agenda del día, abrir la ficha y registrar la evolución | Configurar prestaciones, horario y reglas; no tener turnos superpuestos |
 | Recepcionista (o el propio odontólogo) | Agendar y confirmar: dar turnos, reprogramar, gestionar la lista de espera | Cobrar señas; enviar recordatorios; registrar pagos |
 | Dueño del consultorio (en el independiente, el mismo odontólogo) | Controlar: ocupación, ausentismo, cobros pendientes | Ver el historial de cambios de turno |
-| Paciente | Reservar y confirmar: sacar turno online 24/7 desde el celular | Pagar la seña, cancelar o reprogramar dentro de las reglas, anotarse en lista de espera, conocer y aceptar el tratamiento de sus datos |
+| Paciente | Reservar y confirmar: sacar turno online 24/7 desde el celular | Pagar la seña, cancelar o reprogramar dentro de las reglas, anotarse en lista de espera, conocer y aceptar el tratamiento de sus datos, y poder pedir acceso, corrección o no ser contactado |
 
 ## Casos de uso (CU)
 
@@ -67,7 +67,7 @@ En el independiente, quien usa el sistema todos los días es el propio odontólo
 - Lista de espera que **ofrece los huecos liberados por WhatsApp** (semiautomática). En el mercado local solo hay afirmaciones comerciales sin flujo documentado (Naclix, DentalCore).
 - **Horario recurrente + trazabilidad** de cada cambio de agenda: no está evidenciado en conjunto en ningún sistema relevado.
 - **Precio publicado en ARS**, frente a sistemas clínicos que cotizan a pedido (Bilog, ClinIA, Órbita, Dentalink) o cobran en USD (DentalCore).
-- **Confianza**: política que cite las Leyes 25.326 y 26.529 y exportación de datos documentada (hoy solo Naclix lo hace de forma comprobada).
+- **Confianza**: el diferenciador de la v1 es el **consentimiento explícito, con acceso, corrección y opción de no ser contactado** (RN-PR-02, RN-PR-07). La **exportación de datos** que el informe cita como diferenciador (hoy solo Naclix la documenta de forma comprobada) **pasó a Posterior** (RN-PR-05, decisión del autor 2026-10-05, D67): ninguna historia de la v1 la implementa. El texto de consentimiento es un borrador no validado legalmente (P-03).
 
 ## Fuera de alcance
 
@@ -81,15 +81,17 @@ En el independiente, quien usa el sistema todos los días es el propio odontólo
 | Fase 2 | Split de pagos 1:N en Mercado Pago (varios profesionales cobrando) |
 | Fase 2 | Sobreturnos (turnos superpuestos intencionales). Prohibidos en la v1 por decisión de alcance del autor (P-11, 2026-10-02); hoy los ofrecen Bilog, Dentalink y Naclix |
 | Fase 2 | WhatsApp Cloud API oficial (adaptador sobre el puerto de mensajería; respuesta del paciente por el chat) |
+| Fase 2 | Interfaz multi-profesional y multi-sillón (CU-08) |
+| Fase 2 | Excepción de horario puntual (RN-AG-04), fusión manual de pacientes duplicados (RN-TD-09), corrección de un marcado pasadas las 24 horas (RN-AG-13) y congelar la ventana de cancelación por turno (RN-TD-03) |
 | Posterior | WhatsApp por API oficial **en producción** (verificación de empresa, plantillas aprobadas, costo por conversación) |
 | Posterior | Sincronización con Google Calendar |
-| Posterior | Interfaz multi-profesional y multi-sillón |
 | Posterior | API pública |
+| Posterior | Devolución real por la API de Mercado Pago (el prototipo solo registra `devuelta`) y exportación de datos a pedido del paciente (RN-PR-05) |
 | Nunca en el prototipo | Datos reales de pacientes; cuentas reales en Meta o Mercado Pago creadas con datos reales; cobro real de señas |
 
 ## Métricas de éxito
 
-**Suposición:** ninguna fuente fija metas numéricas de producto. Se proponen métricas observables, sin valores objetivo, hasta tener datos propios:
+**Propuesta:** ninguna fuente fija metas numéricas de producto. Se proponen métricas observables, sin valores objetivo, hasta tener datos propios:
 
 - Cero turnos superpuestos por profesional o por sillón (verificable por tests y por consulta a la base).
 - Tiempo de reserva del paciente por link (objetivo declarado en CU-01: menos de 30 segundos).

@@ -11,7 +11,7 @@
 1. Frontend/cliente envía `POST /turnos` con `paciente_id`, `prestacion_id`, `inicio`, y opcionalmente `profesional_id` y `sillon_id`.
 2. *(Fuera del primer change, DD-14)* API valida el JWT y el permiso (RN-AU-01, US-092). En el primer change este paso no existe: el caso de uso no depende de la autenticación.
 3. Caso de uso `CrearTurno` resuelve defaults: profesional único y **sillón por defecto** si no vienen (RN-AG-06); verifica que prestación, paciente, profesional y sillón **existan y estén activos** (si no, `RN-GL-04`, E12); calcula `fin = inicio + duración` de la prestación (RN-AG-02).
-4. Dominio valida `inicio < fin` y que las fechas sean aware en UTC (RN-AG-10d, RN-GL-01) al construir el `Intervalo`.
+4. Dominio valida `inicio < fin`, que las fechas sean aware en UTC (RN-GL-01) y que `inicio` y `fin` caigan en la misma fecha local del consultorio, sin cruzar su medianoche (RN-AG-10d, D63) al construir el `Intervalo`.
 5. *(Fuera del primer change, decisión del autor 2026-10-02, P-10)* Dominio valida horario recurrente y bloqueos (RN-AG-04, RN-AG-04b). El primer change solo cubre los solapamientos por profesional y por sillón con estados activos.
 6. Dentro de una transacción, el repositorio obtiene los turnos del profesional y del sillón que intersecan `[inicio, fin)`. El **filtro por estado activo** (RN-AG-10) lo aplica el dominio con la constante `ESTADOS_ACTIVOS` (decisión del autor 2026-10-03; así E6 se prueba como función pura).
 7. Dominio aplica la función pura de solapamiento `a.inicio < b.fin and b.inicio < a.fin` (RN-AG-09) contra ambos conjuntos (RN-AG-05, RN-AG-08) y devuelve **todos** los conflictos encontrados.
@@ -28,7 +28,7 @@ Cliente → API → CrearTurno → Dominio(validar) → Repo(turnos del recurso 
 - Profesional ocupado → `409` con `RN-AG-05`.
 - Sillón ocupado → `409` con `RN-AG-08`.
 - Ambos ocupados → `409` con **los dos códigos** (`RN-AG-05` y `RN-AG-08`) (decisión del autor 2026-10-03).
-- Prestación, paciente, profesional o sillón inexistente o inactivo → `422` con `RN-GL-04` («recurso no encontrado»; E12). Se rechaza antes de evaluar solapamientos y no persiste nada.
+- Prestación, paciente, profesional o sillón inexistente o inactivo → `422` con `RN-GL-04` («recurso no encontrado»; E12), porque la referencia viaja en el cuerpo (un recurso inexistente identificado en la URL daría `404`; D73). Se rechaza antes de evaluar solapamientos y no persiste nada.
 - Fuera de horario o sobre bloqueo → `422` con `RN-AG-04` / `RN-AG-04b` (fuera del primer change).
 - Carrera concurrente → la segunda transacción falla (restricción de exclusión o bloqueo) y se responde `409` (RN-AG-10c; fuera del primer change, E11).
 
@@ -50,64 +50,67 @@ Cliente → API → CrearTurno → Dominio(validar) → Repo(turnos del recurso 
 1. Frontend pide `GET /public/{slug}/prestaciones` y `GET /public/{slug}/disponibilidad?prestacion_id&desde&hasta`.
 2. API calcula huecos: franjas del horario recurrente − bloqueos − turnos activos, en pasos de la granularidad, dentro de [ahora + 2 h, hoy + 60 días] (RN-TD-01, RN-TD-02).
 3. **Si no hay huecos** → se ofrece anotarse en la lista de espera (Flujo 6) (RN-TD-07).
-4. El paciente elige hueco, carga datos de contacto (**teléfono obligatorio, DNI opcional**; sin cuenta, SU-03) y **acepta el consentimiento** (RN-PR-02); si cambió la versión del texto desde la última vez, se vuelve a pedir (D25).
-5. `POST /public/{slug}/reservas` → ejecuta el mismo caso de uso que el Flujo 1 (revalida solapamientos de forma atómica).
-6. Estado inicial: `pendiente_aprobacion` (paciente nuevo + aprobación activa), `pendiente_sena` (si se exige seña → Flujo 4) o `reservado`.
-7. Se genera `token_gestion` y se **prepara con `wa.me`** el mensaje con el link del turno (el odontólogo lo envía; la Cloud API es Fase 2).
+4. El paciente elige hueco, carga datos de contacto (**teléfono obligatorio, DNI opcional**; sin cuenta, SU-03) y **acepta el consentimiento** (RN-PR-02, texto `v1-borrador`); si cambió la versión del texto desde la última vez, se vuelve a pedir (D25). El sistema **reutiliza un paciente existente solo si coinciden teléfono, nombre y apellido normalizados**; si no, crea uno nuevo (RN-TD-09). La respuesta es la misma en ambos casos y no se pisan datos ya cargados (RN-PR-06).
+5. **Aviso de reserva fuera de plazo (RN-TD-10, D87):** si `inicio − ahora < antelacion_cancelacion_horas` (valor vigente), antes de confirmar se avisa que el turno **no va a poder cancelarse ni reprogramarse online** (y, si aplica seña, que **la seña no se devuelve** si el paciente cancela o no asiste, RN-SP-04) y el botón dice **«Confirmar sin derecho a cancelación»**.
+   `POST /public/{slug}/reservas` → ejecuta el mismo caso de uso que el Flujo 1 (revalida solapamientos de forma atómica). En esa condición la petición debe traer la **aceptación explícita**; si no, se rechaza con `RN-TD-10` y no se crea el turno. La aceptación queda en el historial (evento de creación).
+6. Estado inicial: `pendiente_aprobacion` (paciente nuevo + aprobación activa), `pendiente_sena` (si se exige seña → Flujo 4) o `reservado`. **Aprobación manual:** el odontólogo aprueba o rechaza desde el panel. Si **rechaza**, el turno pasa a `cancelado_profesional`, libera el horario y dispara el Flujo 6. Si **aprueba**, pasa a `reservado` o, si se exige seña, a `pendiente_sena` (la `Sena` se crea en ese momento y su plazo empieza ahí; Flujo 4) (RN-TD-05, D76).
+7. Se genera `token_gestion` y **la respuesta de la reserva devuelve el link de gestión**, que la pantalla de confirmación muestra (RN-TD-08, D93). Desde US-030, la tarea periódica prepara además el mensaje `wa.me` con ese link (el odontólogo lo envía; la Cloud API es Fase 2); antes de US-030 no se prepara ningún mensaje.
 
-**Casos de error**: hueco tomado entre la consulta y la reserva → `409` y se recargan los huecos; fuera de horizonte/antelación → `422`.
+**Casos de error**: hueco tomado entre la consulta y la reserva → `409` y se recargan los huecos; fuera de horizonte/antelación → `422`; reserva dentro de la ventana de cancelación sin la aceptación explícita → error de dominio `RN-TD-10`, sin crear el turno.
 
 ## Flujo 3: Recordatorio y confirmación por WhatsApp (CU-02)
 
 **Canal v1: enlace `wa.me` (semiautomático)** (decisión del autor 2026-10-03, DD-06). La Cloud API oficial es Fase 2; el puerto de mensajería queda preparado para sumarla.
-**Disparador**: al crear el turno se programa una tarea en Redis para `inicio − 24 h` (RN-WA-01).
+**Disparador**: al crear el turno se programa el recordatorio para `inicio − 24 h` (`Mensaje` en estado `programado`; RN-WA-01), junto con el mensaje que lleva el link de gestión (tipo `confirmacion`, D93). Lo prepara la **tarea periódica con Redis**, la única que dispara efectos (RN-GL-05).
 
-1. El worker toma la tarea; si el turno ya no está activo, la descarta.
-2. El worker crea el `Mensaje` con estado `generado_link` y el enlace `https://wa.me/<telefono>?text=<mensaje>` (sin datos clínicos, RN-PR-06), con el link de gestión del turno.
+1. La tarea periódica toma el recordatorio; si el turno ya no está activo, el mensaje queda `descartado`. **Justo antes de prepararlo verifica `Paciente.acepta_contacto`**: si es `false`, el mensaje no se genera y queda `descartado` (RN-PR-07, D81).
+2. La tarea pasa el `Mensaje` de `programado` a `generado_link` y arma el enlace `https://wa.me/<telefono>?text=<mensaje>` (sin datos clínicos, RN-PR-06), con el link de gestión del turno.
 3. El panel muestra «Recordatorios de hoy» con el enlace listo; el odontólogo lo abre, lo envía desde su WhatsApp y marca el mensaje como `enviado`.
 4. El paciente **confirma desde el link de gestión**: la API valida el token, pasa el turno a `confirmado` e inserta `EventoTurno` (RN-WA-02). Cancelar sigue el Flujo 5.
 
-**Casos de error**: link de gestión con token inválido o vencido → `401`/`404` sin revelar datos del turno.
+**Casos de error**: link de gestión con token inválido → `401`/`404` sin revelar datos del turno. El token no vence por sí mismo: según el estado del turno el link permite ciertas acciones (confirmar solo desde `reservado`) o solo muestra el estado (RN-TD-08, D77); una acción no permitida se rechaza con `RN-TD-11` (D89).
 **Fase 2 (no implementada):** envío por Cloud API con plantilla y respuesta del paciente por `POST /webhooks/whatsapp` (verificación de firma, reintentos y estado `fallido`).
 
 ## Flujo 4: Seña con Mercado Pago (CU-04)
 
-1. Al reservar con seña requerida, el turno queda `pendiente_sena` (ocupa el horario) y se crea `Sena(pendiente, vence_en)`.
-2. API crea una **preferencia de Checkout Pro** con las credenciales de prueba del odontólogo y `external_reference = turno_id`; devuelve la URL de pago.
+1. Al reservar con seña requerida, el turno queda `pendiente_sena` (ocupa el horario) y se crea `Sena(pendiente, vence_en)`. Si además está activa la aprobación manual, el turno nace `pendiente_aprobacion` y **recién al aprobarlo** pasa a `pendiente_sena`: la `Sena` se crea en ese momento y `vence_en` cuenta desde ahí (RN-SP-02, D76).
+2. API crea una **preferencia de Checkout Pro** con las credenciales de prueba del odontólogo y `external_reference = turno_id`; devuelve la URL de pago. Si el paciente no paga en ese momento, puede hacerlo después desde su link de gestión (`POST /public/turnos/{token}/pagar-sena`, **ruta propuesta**, que devuelve la URL de la preferencia; solo con el turno en `pendiente_sena`, RN-TD-08; en otro estado, `RN-TD-11`; D89). Si la reserva cae dentro de la ventana de cancelación, el aviso previo suma que la seña no se devuelve (RN-TD-10, D87).
 3. El paciente paga en Mercado Pago y vuelve a la URL de retorno (informativa; **no** acredita).
-4. Mercado Pago notifica `POST /webhooks/mercadopago`; la API consulta el pago, y si está aprobado marca `Sena(acreditada)`, pasa el turno a `reservado` e inserta `EventoTurno(sena_acreditada)`. Idempotente por `mp_payment_id` (RN-SP-08).
-5. Si vence sin pago (30 minutos por defecto, configurable) → worker pasa el turno a `vencido`, libera el horario y dispara Flujo 6 (RN-SP-03).
-6. **Retención y devolución** (prototipo con credenciales de prueba; **sujeto a revisión legal**, RN-SP-04/05/06): la seña acreditada pasa a `retenida` si el paciente queda `ausente` o si el consultorio carga desde el panel una cancelación del paciente fuera de plazo; pasa a `devuelta` si el paciente cancela dentro de plazo o cancela el odontólogo. No hay retención parcial y la devolución solo se registra, sin devolución real por API (decisión del autor 2026-10-03).
+4. Mercado Pago notifica `POST /webhooks/mercadopago`; la API consulta el pago, y si está aprobado marca `Sena(acreditada)`, pasa el turno a `reservado` e inserta `EventoTurno(sena_acreditada)`. Idempotente por `mp_payment_id` (RN-SP-08). **Pago acreditado tarde:** si el webhook llega con el turno **ya no activo** (`vencido` o cancelado), el turno no cambia y la seña (pasada a `vencida`) se registra `devuelta` (solo registro en el prototipo; RN-SP-11, D38, D59). Si la seña estaba **efectivamente vencida** y la tarea todavía no lo había persistido, el webhook persiste en su transacción `pendiente` → `vencida` → `devuelta` y el turno a `vencido`, sin disparar efectos (RN-GL-05 (b), D92). Si se cancela un turno `pendiente_sena`, su seña `pendiente` pasa a `vencida` (D59). Cualquier otra transición de la seña se rechaza con `RN-SP-12` (D61).
+5. Si vence sin pago (30 minutos por defecto, configurable): el vencimiento se **evalúa al consultar** (`vence_en` contra `utc_now()`), por lo que el turno deja de ocupar el horario aunque no haya corrido ninguna tarea; la **tarea periódica** pasa el turno a `vencido` y la seña a `vencida`, y es la única que dispara el Flujo 6 (RN-SP-03, RN-GL-05, D80). Si antes una escritura necesita ese horario (crear o reprogramar un turno, aceptar una oferta), persiste ella el vencimiento en su misma transacción, sin disparar efectos, para que la restricción de exclusión de PostgreSQL no rechace lo que el dominio aceptó (RN-GL-05 (a), D92). Las transiciones de la seña están en `04_modelo_de_datos.md`.
+6. **Retención y devolución** (prototipo con credenciales de prueba; **sujeto a revisión legal**, RN-SP-04/05/06): la seña acreditada pasa a `retenida` si el paciente queda `ausente` o si el consultorio carga desde el panel una cancelación del paciente fuera de plazo; pasa a `devuelta` si el paciente cancela dentro de plazo o cancela el odontólogo. La retención o devolución **manual** (RN-SP-10) exige que el turno esté `ausente` o `atendido`, respectivamente (D101). No hay retención parcial y la devolución solo se registra, sin devolución real por API (decisión del autor 2026-10-03).
 
 ## Flujo 5: Cancelación o reprogramación por el paciente (CU-05)
 
 1. El paciente abre `/turno/{token}` (link de gestión).
-2. API valida el token y verifica la ventana: `ahora ≤ inicio − antelacion_cancelacion_horas` (RN-TD-03).
+2. API valida el token y el **estado del turno** (qué acciones permite, RN-TD-08, D77: en un estado terminal el link solo muestra el estado), verifica que el turno no haya empezado (`ahora < inicio`) y la ventana: `ahora ≤ inicio − antelacion_cancelacion_horas`, con el valor **vigente al momento de la cancelación** (RN-TD-03, RN-GL-03). Una acción no permitida por el estado, o con el turno ya empezado, se rechaza con `RN-TD-11` (estado actual y acciones permitidas en el mensaje; sin modificar turno ni historial; D89); estar **fuera de plazo** sigue siendo RN-TD-03 (paso 5).
 3. **Cancelar**: turno → `cancelado_paciente`; seña según RN-SP-06 (devuelta, dentro de plazo) (**sujeto a revisión legal**); evento en historial; dispara Flujo 6.
-4. **Reprogramar**: el paciente elige un nuevo hueco; se ejecuta la validación del Flujo 1 excluyendo el propio turno (RN-AG-10b); se actualizan `inicio/fin`, se registra `EventoTurno(reprogramado)` con antes/después, se reprograma el recordatorio y el hueco anterior dispara Flujo 6.
+4. **Reprogramar**: el paciente elige un nuevo hueco (el turno conserva la seña ya acreditada, RN-TD-04, D66); se ejecuta la validación del Flujo 1 excluyendo el propio turno (RN-AG-10b); se actualizan `inicio/fin`, se registra `EventoTurno(reprogramado)` con antes/después, se reprograma el recordatorio y el hueco anterior dispara Flujo 6.
 5. Fuera de plazo → el link muestra que debe contactar al consultorio. Si el consultorio carga desde el panel la cancelación como cancelación del paciente, el turno pasa a `cancelado_paciente` y la seña se retiene (RN-SP-04 (b); decisión del autor 2026-10-03, D21).
 
 ## Flujo 6: Lista de espera y oferta de huecos (CU-06) — diferenciador
 
-1. Disparador: un horario se libera (cancelación, vencimiento, reprogramación).
-2. Worker busca entradas `activas` compatibles (duración de la prestación ≤ hueco, preferencias) en orden de alta (RN-LE-02).
-3. Crea `OfertaHueco(enviada, vence_en)` (vence a las 2 horas por defecto, configurable, RN-LE-03) y deja el mensaje listo con `wa.me` en el panel; el odontólogo lo envía.
-4. El paciente acepta desde el link → se revalida el solapamiento (RN-LE-04) → se crea el turno con `origen = lista_espera`, la entrada pasa a `asignada`.
-5. Rechazo o vencimiento (el worker vence la oferta) → se ofrece a la siguiente entrada compatible.
-6. **Alta y baja de la lista:** anotarse exige aceptar el consentimiento de datos (RN-LE-05). Se sale de la lista de dos formas, ambas a `retirada`: el paciente se retira desde su link, o el consultorio la retira desde el panel (RN-LE-06) (decisión del autor 2026-10-03, D20).
+1. Disparador: un horario se libera (cancelación, rechazo de una aprobación manual, vencimiento, reprogramación). El **hueco** es el tramo libre contiguo, dentro del horario del profesional y sin bloqueos, que queda al liberarse el turno (el intervalo liberado más el tiempo libre adyacente); solo se ofrece desde `ahora + antelacion_minima_reserva_horas` y nunca un tramo pasado (RN-LE-01, RN-TD-02; D97).
+2. La tarea periódica busca entradas `activa` compatibles en orden de llegada, FIFO por `creada_en` (RN-LE-02): el **tramo común** entre el hueco y alguna franja preferida alcanza para la duración de la prestación (o la lista de preferencias está vacía y el hueco alcanza); no se exige que el hueco entre entero en la franja (RN-LE-01, D78, D88). Ejemplo: hueco de 9:00 a 13:00, preferencia de 10:00 a 12:00 y prestación de 30 minutos → compatible; se ofrece dentro del tramo común (a las 10:00). Hueco de 9:00 a 10:15 con la misma preferencia → no compatible. **Salta a los pacientes con `acepta_contacto = false`**, que verifica justo antes de preparar la oferta (RN-PR-07, D81).
+3. Crea `OfertaHueco(enviada, vence_en)` con `inicio` = el primer inicio posible dentro del tramo común (respetando la granularidad de la agenda) y `fin` = `inicio` + duración de la prestación (RN-LE-01, D88); vence a las 2 horas por defecto, configurable (RN-LE-03) y deja el mensaje listo con `wa.me` en el panel; el odontólogo lo envía. La entrada pasa a `ofertada`. Si el hueco es más largo que la prestación, el **resto se ofrece en la misma corrida a la siguiente entrada compatible** y lo que no se ofrezca queda libre para la reserva normal; una oferta enviada **no bloquea** el horario (D97).
+4. El paciente acepta desde el link (si el turno resultante empieza a menos de `antelacion_cancelacion_horas`, la aceptación exige la aceptación explícita de RN-TD-10, D87) → se revalida el solapamiento (RN-LE-04) → se crea el turno con `origen = lista_espera`, la entrada pasa a `asignada`.
+5. **Rechazo o vencimiento** (el vencimiento se evalúa al consultar y lo persiste la tarea periódica, o la aceptación tardía, que se rechaza; RN-GL-05) → la oferta pasa a `rechazada` o `vencida`, la entrada **vuelve a `activa` conservando su lugar** (su `creada_en` no cambia; D53) y el hueco se ofrece a la siguiente entrada compatible. **Retiro de una entrada `ofertada`** (RN-LE-06) → la oferta se da por `rechazada`, la entrada pasa a **`retirada`** (no vuelve a `activa`) y el hueco se ofrece a la siguiente.
+6. **Alta y baja de la lista:** anotarse exige aceptar el consentimiento de datos (RN-LE-05); el paciente se reconoce según RN-TD-09 y hay una sola entrada en curso (`activa` u `ofertada`) por paciente y prestación, con la prestación obligatoria (RN-LE-07, D78). El consultorio también puede anotar a un paciente desde el panel, con el consentimiento registrado con origen `panel` (D103). Se sale de la lista de dos formas, ambas a `retirada`: el paciente se retira desde su link, o el consultorio la retira desde el panel (RN-LE-06) (decisión del autor 2026-10-03, D20).
+7. **Aviso en el panel:** una entrada en curso con más de 7 días sin recibir una oferta compatible (desde `creada_en` o desde su última oferta) se señala en el panel para que el consultorio la gestione a mano; es un indicador del panel, no un mensaje, y se calcula al consultar (RN-LE-08, D78).
 
 ## Flujo 7: Atención y ficha clínica (CU-03)
 
 1. El odontólogo abre la agenda del día y selecciona el turno.
 2. Abre la ficha del paciente: datos, última versión de la anamnesis, evoluciones previas.
-3. Registra la evolución en texto (vinculada al turno) y marca el turno `atendido` (o `ausente`); también puede marcarlo la recepcionista (RN-AG-13). Solo se puede desde `reservado` o `confirmado`; en otro estado se rechaza con `RN-AG-12`. Si queda `ausente` con seña acreditada, la seña se retiene (RN-SP-04 (a)).
+3. Registra la evolución en texto (vinculada al turno; queda firmada por el usuario que inició sesión, `registrada_por`, D50) y marca el turno `atendido` (o `ausente`); también puede marcarlo la recepcionista (RN-AG-13). Solo se puede desde `reservado` o `confirmado`; en otro estado se rechaza con `RN-AG-12`. Solo si `ahora >= inicio` del turno (si no, `RN-AG-13`). Cuando es el primer turno `atendido` del paciente, `Paciente.es_nuevo` pasa a `false` (RN-TD-05). Si queda `ausente` con seña acreditada, la seña se retiene (RN-SP-04 (a)). **Corrección del marcado:** dentro de las 24 horas del marcado original, solo el odontólogo puede pasar `atendido` ↔ `ausente` (pasado el plazo, `RN-AG-12`); la seña no acompaña el cambio y el odontólogo la devuelve o retiene manualmente, con registro (RN-AG-13, RN-SP-10; decisión del autor 2026-10-05, D34).
 4. Opcional: crea un presupuesto simple y/o un registro de pago.
 
 ## Flujo 8: Autenticación del panel
 
 *(Change de usuarios y acceso, Épica 10. El primer change no lo usa: `POST /turnos` va sin autenticación, DD-14.)*
 
-1. `POST /auth/login` con email y contraseña → valida el hash → emite access token JWT (15 minutos, propuesta aceptada por el autor 2026-10-03, SU-09) y refresh token (7 días, propuesta aceptada).
-2. Cada request al panel envía `Authorization: Bearer <jwt>`; un dependency de FastAPI valida firma, expiración y roles.
-3. `POST /auth/refresh` renueva el access token.
-**Errores**: credenciales inválidas → `401` genérico; token ausente o vencido → `401`; rol insuficiente → `403`.
+1. `POST /auth/login` con email y contraseña → valida el hash → emite access token JWT (15 minutos, decisión del autor 2026-10-05, D74, SU-09) y refresh token (7 días, decisión del autor), ambos con el claim `token_version` del usuario.
+2. Cada request al panel envía `Authorization: Bearer <jwt>`; un dependency de FastAPI valida firma y expiración, lee los roles del usuario de la base en cada petición (RN-AU-02, D102), y verifica que el usuario siga `activo` y que `token_version` coincida con el del usuario (RN-AU-03, RN-AU-04; D43).
+3. `POST /auth/refresh` renueva el access token, con las mismas verificaciones de `activo` y `token_version`.
+4. Al desactivar al usuario, o al cambiar o restablecer su contraseña, `token_version` se incrementa y todos sus tokens anteriores dejan de valer (RN-AU-07).
+**Errores**: credenciales inválidas → `401` genérico; token ausente, vencido, de un usuario inactivo o con `token_version` viejo → `401`; rol insuficiente → `403`.

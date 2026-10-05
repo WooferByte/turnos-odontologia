@@ -32,7 +32,7 @@ La v1 usa el **enlace `wa.me`** (semiautomático). La **Cloud API oficial pasa a
 ### Opción B (Fase 2): WhatsApp Cloud API
 - Se implementa como un `CloudApiAdapter` sobre el puerto de mensajería; no cambia el dominio. Incluye la respuesta del paciente por el chat (confirmar / cancelar) vía webhook.
 - Meta crea un **número de pruebas** al empezar. El límite de **5 destinatarios verificados proviene de fuentes de terceros: a verificar** (P-04, diferida a Fase 2).
-- Requisitos técnicos: token, `phone_number_id`, webhook HTTPS público con verificación (`hub.verify_token`) y validación de firma. **Suposición:** en desarrollo local se necesita un túnel HTTPS para recibir el webhook. Viabilidad en modo prueba: P-05, diferida a Fase 2.
+- Requisitos técnicos: token, `phone_number_id`, webhook HTTPS público con verificación (`hub.verify_token`) y validación de firma. En desarrollo local se necesita un túnel HTTPS para recibir el webhook real (confirmado por el autor 2026-10-05, D71). Viabilidad en modo prueba: P-05, diferida a Fase 2.
 - **Producción (etapa posterior):** verificación de empresa, plantillas aprobadas y costo por conversación (**sin fuente verificada**, P-06, diferida a Fase 2).
 
 ### Descartado
@@ -49,7 +49,8 @@ La v1 usa el **enlace `wa.me`** (semiautomático). La **Cloud API oficial pasa a
 2. Redirigir al paciente al `init_point`.
 3. Acreditar **solo** por webhook + consulta del pago (no por la URL de retorno).
 4. Idempotencia por `payment_id` (RN-SP-08).
-5. Devolución (RN-SP-05) en el prototipo: se **registra** el estado `devuelta`; **Suposición:** la devolución real por API queda para cuando haya revisión legal.
+5. Devolución (RN-SP-05) en el prototipo: se **registra** el estado `devuelta`; la devolución real por la API de Mercado Pago queda **diferida** hasta que haya revisión legal (confirmado por el autor 2026-10-05, D71).
+6. **Webhook en desarrollo local y en tests** (D71): recibir un webhook real de Mercado Pago en desarrollo local requiere un túnel HTTPS. **Los tests usan notificaciones simuladas y no necesitan túnel ni credenciales**: el repositorio tiene que poder clonarse y correr los tests solo con el README.
 
 ### Fase 2: split 1:N
 - Varios profesionales cobrando en un mismo consultorio (marketplace / split). Documentado, no implementado.

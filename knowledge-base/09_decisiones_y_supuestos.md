@@ -10,7 +10,7 @@
 **Trade-offs aceptados**: compite con opciones gratuitas (Turnito, Naclix, Bilog freemium, Ulifeon).
 
 ### DD-01 — Stack: Python + FastAPI + JWT + SQLAlchemy + PostgreSQL + Redis + Docker; React + TS + Vite
-**Decisión**: stack definido por el autor (Discovery, punto 9). Redis para tareas diferidas: en la v1, preparar los recordatorios `wa.me`, vencer señas impagas y vencer ofertas de lista de espera (Redis no envía mensajes; ver DD-06). Monolito modular + un worker.
+**Decisión**: stack definido por el autor (Discovery, punto 9). Redis para la tarea periódica: en la v1, preparar los recordatorios `wa.me` y persistir el vencimiento de señas impagas y de ofertas de lista de espera (Redis no envía mensajes; ver DD-06 y DD-18). Monolito modular + un worker. **Versiones** (decisión del autor 2026-10-05, D72): exactas, en un único archivo de dependencias; se consultan el día del `design.md` del primer change (P-17).
 **Contexto**: restricción del trabajo; no se reabre.
 **Alternativas consideradas**: no aplica (decisión tomada).
 **Justificación**: decisión del autor.
@@ -24,7 +24,7 @@
 **Trade-offs aceptados**: la atomicidad se garantiza aparte (DD-04).
 
 ### DD-03 — Tests del change sin PostgreSQL ni Redis
-**Decisión**: la suite del change corre con **SQLite en memoria** y un doble de la cola; PostgreSQL y Redis solo en docker-compose.
+**Decisión**: la suite del change corre con **SQLite en memoria** y sin Redis (los vencimientos se evalúan al consultar, DD-18); PostgreSQL y Redis solo en docker-compose.
 **Contexto**: restricción "el repositorio debe poder clonarse y correr los tests solo con el README"; riesgo de reproducibilidad identificado en el Discovery.
 **Alternativas consideradas**: Testcontainers / docker-compose obligatorio para tests.
 **Justificación**: README reproducible en cualquier máquina con Python.
@@ -32,12 +32,15 @@
 **Confirmada por el autor (2026-10-02).** El README debe decir explícitamente que los tests del change corren con SQLite en memoria, sin PostgreSQL ni Redis.
 
 ### DD-04 — Atomicidad del anti-solapamiento
-**Decisión**: validar en dominio dentro de una transacción, y en PostgreSQL reforzar con restricción de exclusión sobre `tstzrange(inicio, fin, '[)')` por profesional y por sillón para estados activos (**Suposición:** la implementación exacta se decide en el design del change).
+**Decisión**: validar en dominio dentro de una transacción, y en PostgreSQL **agregar** una restricción de exclusión sobre `tstzrange(inicio, fin, '[)')` por profesional y por sillón para estados activos, **además** de la validación de dominio (decisión del autor 2026-10-05, D75). El **cómo** exacto (el SQL, la extensión `btree_gist`) se define en el design del change de infraestructura con PostgreSQL.
 **Contexto**: RN-AG-10c (reservas concurrentes).
 **Alternativas consideradas**: bloqueo `SELECT ... FOR UPDATE` del recurso; solo validación en aplicación.
 **Justificación**: la base es la última línea de defensa; el intervalo `[)` coincide con RN-AG-09.
 **Trade-offs aceptados**: la restricción no existe en SQLite; la concurrencia real solo se prueba en el perfil con PostgreSQL.
-**Confirmada por el autor (2026-10-02).** La restricción de exclusión sigue siendo **Suposición** hasta que se defina en el `design.md` del change.
+**Confirmada por el autor (2026-10-02); el qué quedó decidido el 2026-10-05 (D75).**
+**Estado efectivo y estado persistido (decisión del autor 2026-10-05, D92):** la restricción mira el estado **persistido** y RN-AG-10 cuenta el estado **efectivo**. Para que no diverjan, la escritura que ocupa un horario con un turno `pendiente_sena` de seña vencida persiste ese vencimiento (turno a `vencido`, seña a `vencida`) en su misma transacción, antes de insertar y sin disparar efectos (RN-GL-05 (a)).
+**Cómo se corre E11:** la prueba de reservas simultáneas (E11) corre **solo en un perfil opcional con PostgreSQL, fuera de la suite por defecto** (que usa SQLite en memoria, DD-03). Los tests de E11 llevan un marcador de pytest (por ejemplo, `postgres`) que la suite por defecto excluye; se corren levantando PostgreSQL con Docker Compose y ejecutando pytest con ese marcador. Es un requisito firme que el perfil opcional exista y que el README lo documente; el comando exacto se fija en el change de infraestructura. Alembic rige desde ese mismo change (DD-15).
+**A verificar en el change:** que la restricción de exclusión funcione con los estados activos y con `[inicio, fin)`; verificar **en el change de infraestructura con PostgreSQL, antes del change de reserva online**. La concurrencia (RN-AG-10c, E11) se verifica **antes del change de reserva online**.
 
 ### DD-05 — Reprogramar modifica el mismo turno
 **Decisión**: reprogramar cambia `inicio/fin` del turno y registra `EventoTurno(reprogramado)` con antes/después.
@@ -52,7 +55,7 @@
 **Contexto**: ningún competidor documenta la API oficial (informe C.3); DentalCore usa sesión por QR (riesgo de bloqueo), Bilog envía manual/semiautomático, Neocita usa enlace en el plan gratis.
 **Justificación**: `wa.me` está a la par del mercado, no requiere cuenta ni webhook público, y reduce el riesgo del trabajo individual.
 **Trade-offs aceptados**: no hay envío automático ni respuesta por el chat en la v1; en producción la Cloud API requeriría verificación de empresa, plantillas aprobadas y costo por conversación (sin fuente verificada; P-04, P-05 y P-06 diferidas a Fase 2). **Descartado**: sesión por QR/no oficial.
-**Qué queda para Redis en la v1 (propuesta aceptada por el autor 2026-10-03; se revisa en el design del change)**: preparar el recordatorio a `inicio − 24 h` (estado `generado_link`), vencer señas impagas (30 min) y vencer ofertas de lista de espera (2 h). No se necesita para enviar mensajes.
+**Qué queda para Redis en la v1 (propuesta aceptada por el autor 2026-10-03; confirmada el 2026-10-05, D80)**: una tarea periódica prepara el recordatorio a `inicio − 24 h` (estado `generado_link`) y persiste el vencimiento de las señas impagas (30 min) y de las ofertas de lista de espera (2 h). No se necesita para enviar mensajes ni para evaluar vencimientos (DD-18).
 **Origen**: decisión del autor 2026-10-03.
 
 ### DD-07 — Mercado Pago Checkout Pro con cuenta única del odontólogo
@@ -82,18 +85,20 @@
 - Oferta de lista de espera: vence a las **2 horas** (RN-LE-03).
 
 **Defaults propuestos (sin valor de mercado de referencia)**:
-- Ventana de cancelación: 24 h, configurable entre 24 y 48.
+- Ventana de cancelación: 24 h, configurable entre 24 y 48. Se evalúa con el valor vigente al momento de cancelar, no el de la creación del turno (RN-TD-03, RN-GL-03; decisión del autor 2026-10-05, D33).
 - Horizonte de reserva: 60 días.
 - Paciente nuevo: reserva directa, con aprobación manual opcional.
 
 **Suposiciones sujetas a revisión legal (P-01)**:
-- Seña retenida si el paciente cancela fuera de plazo.
+- Seña retenida si el paciente queda `ausente` o si el consultorio carga desde el panel su cancelación fuera de plazo (DD-17).
 - Seña devuelta al 100% si cancela el odontólogo o si el paciente cancela dentro de plazo (SU-06).
 
 ### DD-11 — Paciente sin cuenta, gestionado por token
 **Decisión**: el paciente reserva y gestiona su turno con un token firmado, sin crear cuenta.
 **Justificación**: objetivo de reserva en menos de 30 s (CU-01); menos datos personales almacenados.
 **Confirmada por el autor (2026-10-02).** En la reserva pública, el **teléfono es obligatorio y el DNI es opcional** (ver SU-03).
+**Token y link (decisión del autor 2026-10-05, D93 y D94):** todo turno tiene token de gestión, también el cargado desde el panel, y sirve para el mismo flujo de gestión; la reserva pública devuelve el link en su respuesta y, desde US-030, va además en los mensajes `wa.me` (RN-TD-08).
+**Reconocimiento del paciente (decisión del autor 2026-10-05, D48):** sin cuenta, el paciente se reconoce por coincidencia de teléfono, nombre y apellido normalizados (RN-TD-09); la respuesta de la reserva es idéntica se reutilice o no el paciente, para que el link no revele quién es paciente del consultorio (RN-PR-06). **Limitación conocida:** un error de tipeo crea un paciente duplicado; la fusión manual es Fase 2.
 
 ### DD-12 — Backend síncrono y tests sin mocks de sesión
 **Decisión**: el primer change usa **SQLAlchemy 2.x síncrono**. Los tests corren sobre SQLite en memoria (`sqlite+pysqlite:///:memory:` con `StaticPool`), **sin `aiosqlite` ni `pytest-asyncio`**. El dominio se testea **sin base de datos**. **No se usan mocks de sesión ni de repositorio.**
@@ -106,11 +111,12 @@
 ### DD-13 — Reloj único `utc_now()` y datetimes aware en UTC
 **Decisión**: la hora actual sale de un único `utc_now()` **inyectable**; el **dominio recibe solo datetimes aware en UTC**; el **adaptador de persistencia normaliza** lo que lee; un **test guard** exige que toda columna de fecha-hora tenga zona.
 **Contexto**: DD-09 y RN-GL-01 ya fijan UTC y `[inicio, fin)`; esta decisión define cómo se garantiza en el código.
+**Excepción para RN-AG-10d** (decisión del autor 2026-10-05, D63): la medianoche que un turno no puede cruzar es la del consultorio, no la de UTC; para esa comprobación `Intervalo` recibe la zona del consultorio como dato y convierte `inicio` y `fin` solo para verificar que caigan en la misma fecha local (un turno que termina a las 00:00 locales es válido, por los intervalos semiabiertos). El instante sigue guardándose en UTC.
 **Alternativas consideradas**: dejar la conversión repartida por el código; usar datetimes naive en UTC.
 **Justificación**: un datetime naive es ambiguo y su mezcla con uno aware falla o produce desfasajes; el reloj inyectable hace deterministas los tests.
 **Trade-offs aceptados**: costo de normalizar en el adaptador.
 **Origen**: decisión del autor 2026-10-03 (aprobación de las propuestas de ajuste de la KB).
-**Suposición a verificar en el change**: SQLite no conserva la zona horaria y puede devolver datetimes naive aunque la columna sea con zona (relacionada con R-10). Se verifica con un test de ida y vuelta en el change.
+**A verificar en el change** (verificar antes de cerrar el primer change; decisión del autor 2026-10-05, D85): SQLite no conserva la zona horaria y puede devolver datetimes naive aunque la columna sea con zona (relacionada con R-10). Se verifica con un test de ida y vuelta, que forma parte del primer change.
 
 ### DD-14 — El primer change expone `POST /turnos` sin autenticación (límite conocido)
 **Decisión**: el primer change expone `POST /turnos` (FastAPI) para poder mostrarlo desde Swagger (`/docs`) en el video, **sin autenticación**. Es un **límite conocido**: el endpoint se protege con JWT cuando se implemente el change de usuarios y acceso (Épica 10, US-092). El README del change lo declara.
@@ -128,8 +134,8 @@
 ### DD-16 — Estados del turno: transiciones válidas y marcación de atendido o ausente
 **Decisión**: el turno solo cambia de estado según la tabla de transiciones válidas de `04_modelo_de_datos.md`; un cambio no previsto se rechaza con `RN-AG-12`. El odontólogo **y la recepcionista** pueden marcar `atendido` o `ausente` (RN-AG-13), solo desde `reservado` o `confirmado`.
 **Contexto**: US-014; la tabla se derivó del diagrama de estados que ya existía.
-**Trade-offs aceptados**: desde `pendiente_sena` o `pendiente_aprobacion` tampoco se puede marcar atendido o ausente (el autor habló de «estado no activo»; la tabla es más estricta porque esos estados no tienen esa transición).
-**Origen**: decisión del autor 2026-10-03 (D19).
+**Trade-offs aceptados**: desde `pendiente_sena` o `pendiente_aprobacion` tampoco se puede marcar atendido o ausente (el autor habló de «estado no activo»; la tabla es más estricta porque esos estados no tienen esa transición; confirmado el 2026-10-05, D32). Solo se puede marcar si `ahora >= inicio`. Se admite la **corrección** `atendido` ↔ `ausente` dentro de las 24 horas del marcado, solo por el odontólogo y sin que la seña acompañe el cambio (RN-AG-13, RN-SP-10).
+**Origen**: decisión del autor 2026-10-03 (D19); corrección del marcado, 2026-10-05 (D34).
 
 ### DD-17 — Retención de la seña: dos casos, sin retención parcial
 **Decisión**: la seña acreditada se retiene, entera, en dos casos: (a) el paciente queda `ausente`; (b) el consultorio carga desde el panel una cancelación como cancelación del paciente fuera de plazo (RN-SP-04). Sin retención parcial. Sigue sujeta a revisión legal y solo con credenciales de prueba.
@@ -137,6 +143,14 @@
 **Alternativas consideradas**: retención parcial (descartada).
 **Trade-offs aceptados**: no se afirma validez legal (P-01, fuera del alcance académico).
 **Origen**: decisión del autor 2026-10-03 (D21).
+
+### DD-18 — Vencimientos evaluados al consultar; tarea periódica con Redis
+**Decisión**: los vencimientos (seña, RN-SP-03; oferta de lista de espera, RN-LE-03) se **evalúan al consultar**, comparando `vence_en` con `utc_now()`: el estado **efectivo** no depende de que haya corrido ninguna tarea. Una **tarea periódica con Redis persiste** el estado (turno `vencido`, seña `vencida`, oferta `vencida`) y **es la única que dispara las notificaciones y los efectos en cadena** (ofrecer el hueco al siguiente de la lista de espera, preparar los recordatorios `wa.me`). **Consultar nunca dispara notificaciones ni efectos** (RN-GL-05).
+**Quién persiste (decisión del autor 2026-10-05, D92):** las lecturas nunca persisten. Una escritura cuyo resultado depende del estado efectivo persiste el vencimiento en su misma transacción, sin disparar efectos: (a) crear o reprogramar un turno, o aceptar una oferta, sobre un horario ocupado por un turno `pendiente_sena` con la seña vencida (para que la restricción de exclusión de DD-04 no rechace lo que el dominio aceptó); (b) el webhook de pago con la seña efectivamente vencida (RN-SP-11); (c) aceptar una oferta efectivamente vencida. La tarea persiste el resto, detecta esos vencimientos y dispara los efectos; el mecanismo de detección se fija en el design del change que crea la tarea.
+**Contexto**: Redis en la v1 (DD-01, DD-06) y la restricción de que los tests no dependan de servicios externos (DD-03).
+**Justificación**: los tests no necesitan Redis; un horario vencido se libera aunque la tarea esté atrasada.
+**Trade-offs aceptados**: la tarea y la consulta deben aplicar el mismo criterio de vencimiento.
+**Origen**: decisión del autor 2026-10-05 (D80, precisada en D92).
 
 ## Supuestos inferidos
 
@@ -149,6 +163,7 @@
 ### SU-02 — Duraciones y horario del seed
 **Supuesto**: prestaciones (30-60 min) y horario (L-V 9-13 y 15-19) del seed son ilustrativos.
 **Origen**: inferido; no hay fuente.
+**Confirmado por el autor (2026-10-05, D56):** son datos ilustrativos confirmados, sin fuente de mercado; dejan de ser Suposición.
 **Riesgo si es falso**: ninguno funcional (son configurables).
 **Cómo validar**: preguntar a un odontólogo en la demo.
 
@@ -157,7 +172,7 @@
 **Origen**: patrón de Bilog (DNI + email [C]) y Turnito ("reserva sin registro" [AC]).
 **Riesgo si es falso**: duplicados de pacientes; suplantación si el link se comparte.
 **Cómo validar**: definir en el change de reserva pública.
-**Confirmada por el autor (2026-10-02)** con ajuste: **teléfono obligatorio, DNI opcional**, email opcional; paciente sin cuenta gestionado por token (DD-11). Sin DNI, la detección de duplicados se apoya en el teléfono.
+**Confirmada por el autor (2026-10-02)** con ajuste: **teléfono obligatorio, DNI opcional**, email opcional; paciente sin cuenta gestionado por token (DD-11). Sin DNI, el reconocimiento del paciente se apoya en el teléfono. **Precisada el 2026-10-05 (D48):** se reutiliza un paciente existente solo si coinciden teléfono, nombre y apellido normalizados (RN-TD-09); el índice del teléfono no es `UNIQUE` porque una madre puede reservar para sus hijos con el mismo número. Limitación conocida: un error de tipeo («Gonzalez» / «Gonzales») crea un duplicado.
 
 ### SU-04 — Recepcionista sin acceso a datos clínicos
 **Supuesto**: la recepcionista ve los datos **administrativos** del paciente (identificación, contacto, turnos, pagos) pero no los **clínicos** (anamnesis, evolución, odontograma), por minimización de datos sensibles.
@@ -193,20 +208,22 @@
 8. El primer change **expone `POST /turnos`** sin autenticación (DD-14).
 9. Alembic desde el change de infraestructura con PostgreSQL (DD-15).
 
+**Confirmadas por el autor (2026-10-05):**
+10. El código `RN-GL-04` y el status **`422`** para E12, cuando la referencia viaja en el cuerpo de la petición (un único status para inexistente e inactivo). **`404` es para un recurso inexistente identificado en la URL** (por ejemplo, `GET /turnos/{id}` con un id que no existe); `422` es para una referencia inválida dentro del cuerpo (por ejemplo, `prestacion_id` inexistente en `POST /turnos`). Los nombres de los campos del cuerpo y del error siguen para el design (D73).
+11. Qué queda para Redis en la v1 (DD-06, DD-18) y los estados de `Mensaje` en la v1: `programado`, `generado_link` y `enviado`, más `descartado` (D80, D81).
+
 **Propuestas aceptadas por el autor (2026-10-03, D28); se revisan en el `design.md` de cada change:**
-- El código `RN-GL-04` y el status `422` para E12 (un único status para inexistente e inactivo).
 - El valor del campo `type` del cuerpo RFC 7807 (URI relativa) y los nombres exactos de clases y funciones del contrato.
 - El alcance de los tests de API (E1, E4 y E12 como mínimo).
 - Las elecciones del modelo completo de `04_modelo_de_datos.md` (lista «Propuestas aceptadas»).
-- Qué queda para Redis en la v1 (DD-06) y los estados de `Mensaje` en la v1 (`programado`, `generado_link`, `enviado`).
 - Las dependencias que el agente agregó por deducción en `06_funcionalidades.md` (US-005 en las historias que leen reglas configurables, y las demás indicadas en su nota de orden).
 **Cómo validar**: revisarlas en el `design.md` de cada change; P-19 cerrada con este texto.
 
-### SU-09 — Autenticación: tiempos de token, refresh y hash (propuesta simple)
-**Propuesta aceptada por el autor (2026-10-03, D28); se revisa en el design del change** (propuesta concreta del agente): access token JWT de **15 minutos**; refresh token JWT de **7 días**, sin revocación en la v1 (sin tabla de tokens); hash de contraseña **bcrypt**; firma HS256 con secreto de entorno.
-**Origen**: valores de ejemplo ya presentes en la variable de entorno `JWT_ACCESS_MINUTES`/`JWT_REFRESH_DAYS` de `08_arquitectura_propuesta.md`; sin fuente de mercado.
-**Riesgo si es falso**: ninguno funcional; son configurables por variable de entorno.
-**Cómo validar**: revisar en el design del change de usuarios y acceso.
+### SU-09 — Autenticación: tiempos de token, refresh, hash y contraseñas
+**Decisión del autor (2026-10-05, D74), que cierra la propuesta aceptada el 2026-10-03 (D28):** access token JWT de **15 minutos**; refresh token JWT de **7 días**, firmados con **HS256** (secreto de entorno), sin revocación de a uno (sin tabla de tokens) pero con **invalidación en bloque por usuario** mediante `Usuario.token_version` (claim en ambos tokens, comparado en cada petición y en el refresh; se incrementa al desactivar al usuario y al cambiar o restablecer su contraseña; D43); `activo` se verifica en cada petición y en el refresh; hash de contraseña **bcrypt**; la contraseña tiene **mínimo 10 caracteres y máximo 72 bytes** (el tope de bcrypt) y fuera de ese rango se rechaza (RN-AU-07).
+**Origen**: valores presentes en la variable de entorno `JWT_ACCESS_MINUTES`/`JWT_REFRESH_DAYS` de `08_arquitectura_propuesta.md`; sin fuente de mercado: son valores de diseño del autor.
+**Riesgo si es falso**: ninguno funcional; los tiempos son configurables por variable de entorno.
+**Cómo validar**: el design del change de usuarios y acceso define solo la implementación, no los valores.
 
 ## Riesgos (del Discovery)
 
@@ -219,7 +236,7 @@
 | R-05 | Evidencia de mercado débil (mayormente afirmación comercial leída con resúmenes automáticos) | Verificación personal de fuentes (5 fuentes completadas el 2026-10-02, P-16) y demos (pendientes) |
 | R-06 | Dependencia de políticas y precios de Meta y Mercado Pago | Puertos/adaptadores; en la v1 `wa.me` (sin dependencia de Meta); Cloud API en Fase 2 |
 | R-07 | Alcance: MVP mayor que lo implementable individualmente | La consigna exige un solo change; roadmap por changes chicos |
-| R-08 | Reproducibilidad de tests con PostgreSQL y Redis | DD-03: SQLite en memoria y doble de cola |
+| R-08 | Reproducibilidad de tests con PostgreSQL y Redis | DD-03: SQLite en memoria; sin Redis en los tests (DD-18) |
 | R-09 | Encuestas de contexto pequeñas y no representativas | No usarlas como hecho de diseño |
 | R-10 | Diferencias SQLite vs PostgreSQL (zonas horarias, exclusión) | Regla en dominio; UTC; perfil opcional con PostgreSQL |
 

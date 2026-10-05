@@ -2,7 +2,8 @@ schema: spec-driven
 
 # Project context
 # Restricciones que guían los artefactos y que un agente no puede inferir leyendo el código.
-# Fuente: knowledge-base/ (decisiones del autor 2026-10-02 y 2026-10-03).
+# Fuente: knowledge-base/ (decisiones del autor 2026-10-02, 2026-10-03 y 2026-10-05; registro en
+# knowledge-base/10_preguntas_abiertas.md).
 context: |
   Proyecto: sistema de turnos y agenda para consultorios odontológicos (Argentina). Trabajo universitario.
   Todos los artefactos (proposal, specs, design, tasks) se escriben en español.
@@ -10,10 +11,14 @@ context: |
   Las versiones exactas no están decididas: se fijan con pins en el design del change; no inventar números.
   Tests: SQLite en memoria (sqlite+pysqlite:///:memory:, StaticPool), engine por test, sin mocks de sesión
   ni de repositorio. El dominio se testea sin base de datos. El repo debe poder clonarse y correr los tests
-  solo con el README, sin Docker, PostgreSQL ni Redis.
+  solo con el README, sin Docker, PostgreSQL ni Redis. La prueba de reservas simultáneas (E11) queda fuera
+  de la suite por defecto: corre en un perfil opcional con PostgreSQL, documentado en el README.
   Reglas de agenda: funciones puras de dominio. Intervalos semiabiertos [inicio, fin): un turno que empieza
   justo cuando termina otro es válido. Fechas siempre aware en UTC; el reloj es un único utc_now() inyectable.
-  Estados activos (ocupan horario): pendiente_aprobacion, pendiente_sena, reservado, confirmado.
+  Única excepción al trabajo en UTC: un turno no puede cruzar la medianoche DEL CONSULTORIO (RN-AG-10d);
+  esa regla convierte inicio y fin a Consultorio.zona_horaria, que Intervalo recibe como dato.
+  Estados activos (ocupan horario): pendiente_aprobacion, pendiente_sena, reservado, confirmado. Desde que
+  exista la seña cuenta el estado efectivo evaluado al consultar (RN-GL-05); en el primer change no aplica.
   Fuera de la v1: sobreturnos y excepción de horario. El paciente no tiene cuenta (gestiona su turno con token).
   El autor implementará el proyecto completo antes de fin de año, change por change. El PRIMER change es:
   crear turno sin solapamientos por profesional y por sillón, solo con estados activos; no valida horario ni
@@ -24,7 +29,10 @@ context: |
   Alembic no se usa en el primer change (create_all en tests); se usa desde el change de infraestructura
   con PostgreSQL. WhatsApp en la v1 = enlace wa.me (Cloud API en Fase 2).
   Los errores de regla de negocio llevan el código RN (p. ej. RN-AG-05, RN-AG-08, RN-GL-04); si fallan varias
-  reglas a la vez se informan todos los códigos.
+  reglas a la vez se informan todos los códigos. Un recurso inexistente o inactivo referido en el CUERPO
+  de la petición devuelve 422 (RN-GL-04); uno identificado en la URL devuelve 404.
+  El primer change incluye un test de ida y vuelta de zonas horarias con SQLite (escribir aware UTC, leer
+  aware UTC) y un test que falla si app/domain importa un módulo prohibido.
   Datos de pacientes siempre ficticios. Nunca versionar secretos ni .env.
 
 # Per-artifact rules
@@ -41,7 +49,8 @@ rules:
   design:
     - Incluir una sección "Non-goals" (qué no se resuelve en este change).
     - Fijar las versiones exactas de las dependencias (pins) y el archivo único donde viven.
-    - Marcar cada elección no confirmada por el autor como "Suposición".
+    - Marcar cada elección no confirmada por el autor como "Propuesta".
+    - Marcar cada comprobación técnica pendiente como "A verificar en el change", indicando antes de qué se verifica.
   tasks:
     - Ordenar las tareas por escenario en el ciclo RED, GREEN, TRIANGULATE, REFACTOR; el test que falla va antes que el código.
     - Cada tarea de test cita el escenario (E#) y la regla (RN) que verifica.
