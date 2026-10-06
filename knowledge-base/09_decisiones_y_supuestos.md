@@ -106,6 +106,7 @@
 **Alternativas consideradas**: pila asíncrona (SQLAlchemy async con aiosqlite); mocks de `Session` y de repositorio.
 **Justificación**: menos dependencias, menos puntos de falla en un clon limpio, y los tests ejercen consultas reales.
 **Trade-offs aceptados**: si más adelante se necesita asincronía (por ejemplo, el worker), se evalúa en el change que la requiera. La concurrencia real no se prueba con SQLite (DD-04).
+**Ampliación (decisión del autor 2026-10-06, D119):** el backend sincrónico vale para **todos los changes**, no solo para el primero. Un change ya no puede adoptar asincronía por su cuenta: hace falta una decisión nueva del autor, registrada en `10_preguntas_abiertas.md`.
 **Origen**: decisión del autor 2026-10-03. Detalle de fixtures en `08_arquitectura_propuesta.md` («Fixtures de test»).
 
 ### DD-13 — Reloj único `utc_now()` y datetimes aware en UTC

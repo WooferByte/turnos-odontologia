@@ -1,6 +1,6 @@
 {
   "version": 4,
-  "step": "roadmap",
+  "step": "done",
   "owner": "active-orchestrator",
   "discovery": {
     "created_by": "discovery-research",
@@ -328,5 +328,84 @@
       "C-47",
       "C-48"
     ]
+  },
+  "skills": {
+    "created_by": "find-skill",
+    "recommended": [
+      {
+        "name": "fastapi-templates",
+        "repo": "wshobson/agents",
+        "installs": 25000,
+        "why": "Estructura de proyecto FastAPI, dependencias, routers y patrones de API para el change crear-turno-sin-solapamientos."
+      },
+      {
+        "name": "python-testing-patterns",
+        "repo": "wshobson/agents",
+        "installs": 34500,
+        "why": "Patrones pytest (fixtures, parametrizacion, SQLite en memoria) para el TDD estricto sin mocks de sesion."
+      },
+      {
+        "name": "python-error-handling",
+        "repo": "wshobson/agents",
+        "installs": 13300,
+        "why": "Excepciones de dominio y mapeo a HTTP para conflictos de solapamiento y validaciones."
+      },
+      {
+        "name": "python-design-patterns",
+        "repo": "wshobson/agents",
+        "installs": 21800,
+        "why": "Separacion servicio/repositorio y diseño de capas del backend."
+      },
+      {
+        "name": "auth-implementation-patterns",
+        "repo": "wshobson/agents",
+        "installs": 17400,
+        "why": "Patrones JWT/autenticacion y roles para la fase de auth."
+      },
+      {
+        "name": "database-migration",
+        "repo": "wshobson/agents",
+        "installs": 16900,
+        "why": "Migraciones de esquema (Alembic) para PostgreSQL."
+      },
+      {
+        "name": "supabase-postgres-best-practices",
+        "repo": "supabase/agent-skills",
+        "installs": 432000,
+        "why": "Buenas practicas PostgreSQL: indices, constraints, consultas de rango para turnos."
+      },
+      {
+        "name": "vercel-react-best-practices",
+        "repo": "vercel-labs/agent-skills",
+        "installs": 771600,
+        "why": "Buenas practicas React para el frontend desde la fase 3."
+      },
+      {
+        "name": "multi-stage-dockerfile",
+        "repo": "github/awesome-copilot",
+        "installs": 28300,
+        "why": "Dockerfiles multi-stage para API y frontend en Docker Compose."
+      }
+    ],
+    "installed": [
+      "fastapi-templates",
+      "python-testing-patterns",
+      "python-error-handling",
+      "python-design-patterns",
+      "auth-implementation-patterns",
+      "database-migration",
+      "supabase-postgres-best-practices",
+      "vercel-react-best-practices",
+      "multi-stage-dockerfile"
+    ]
+  },
+  "registry": {
+    "created_by": "skill-registry",
+    "file": ".atl/skill-registry.md"
+  },
+  "agents": {
+    "created_by": "agent-instruction",
+    "files": ["CLAUDE.md", "AGENTS.md"],
+    "reglas_applied": ["datos-ficticios", "utc-intervalos-semiabiertos", "dominio-puro", "codigos-rn", "sincrono-sin-async", "sqlite-sin-mocks", "dependencias-unico-archivo-versiones-exactas", "ts-sin-any", "kb-manda-sobre-skills", "commit-solo-con-ok-sin-squash", "espanol-conventional-commits-coauthor", "un-change-una-capability"]
   }
 }
