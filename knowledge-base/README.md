@@ -15,7 +15,7 @@ Base de conocimiento generada (modo silencioso, `kb-creator`) a partir de `docs/
 | [07_flujos_principales.md](07_flujos_principales.md) | Crear turno sin solapamientos, reserva, WhatsApp, seña, cancelar/reprogramar, lista de espera, ficha, auth |
 | [08_arquitectura_propuesta.md](08_arquitectura_propuesta.md) | Patrones, directorios, regla de capas, contrato del primer change, seguridad, variables de entorno, estrategia y fixtures de tests, reloj/UTC, versiones, Definition of Done |
 | [09_decisiones_y_supuestos.md](09_decisiones_y_supuestos.md) | DD-00..18, supuestos SU-01..09, riesgos R-01..10 |
-| [10_preguntas_abiertas.md](10_preguntas_abiertas.md) | Inconsistencias, puntos "No evidenciado", preguntas priorizadas (legales, Meta, obras sociales, AAIP) y registro de decisiones del autor (D1..D138) |
+| [10_preguntas_abiertas.md](10_preguntas_abiertas.md) | Inconsistencias, puntos "No evidenciado", preguntas priorizadas (legales, Meta, obras sociales, AAIP) y registro de decisiones del autor (D1..D139) |
 | [11_integraciones_whatsapp_y_mercadopago.md](11_integraciones_whatsapp_y_mercadopago.md) | Cloud API vs `wa.me`, Checkout Pro, restricciones de prueba |
 | [12_contexto_de_mercado.md](12_contexto_de_mercado.md) | Competidores, ranking, vacíos del mercado y cómo los toma la KB |
 

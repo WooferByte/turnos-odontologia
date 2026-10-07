@@ -228,15 +228,15 @@
 22. `tzdata` se declara en el archivo único y se menciona en el README; el dominio importa solo la biblioteca estándar (D132).
 
 **Confirmadas por el autor (2026-10-07, segunda ronda, D133 a D138), tras revisar la propuesta del primer change:**
-23. Pins: SQLAlchemy de la serie 2.0.x, FastAPI de la serie 0.115.x, Pydantic compatible con ese FastAPI, y ninguna versión publicada en la última semana, para ningún paquete (D133).
+23. Pins: SQLAlchemy de la serie 2.0.x, FastAPI de la serie 0.115.x, Pydantic compatible con ese FastAPI, y ninguna versión publicada en la última semana, para ningún paquete (D133). Con esos pins el proyecto se instala en Python 3.11 a 3.13, con `pydantic 2.11.10` (confirmado por el autor, 2026-10-07, D139).
 24. Las tareas de C-01 (53), agrupadas por tema, son la segunda excepción registrada, al «alrededor de 20» de `CHANGES.md` (D134).
-25. Errores (RN-GL-02 reescrita, D135): la validación de entrada se informa toda junta en un único `422`; las reglas de negocio, solo con la entrada válida y de a una. **A confirmar por el autor:** el solapamiento cuenta como una sola regla que mira dos recursos (E4 conserva sus dos códigos) y RN-AG-10d es regla de negocio.
+25. Errores (RN-GL-02 reescrita, D135): la validación de entrada se informa toda junta en un único `422`; las reglas de negocio, solo con la entrada válida y de a una. **Confirmado por el autor (2026-10-07, D139):** el solapamiento cuenta como una sola regla que mira dos recursos (E4 conserva sus dos códigos) y RN-AG-10d es regla de negocio.
 26. Un paciente solo puede ser `inexistente`; el «paciente inactivo» queda para la Fase 2 (D136). Corrige la redacción del punto 10 («inexistente e inactivo» vale para prestación, profesional y sillón).
 27. El archivo único de dependencias es `backend/pyproject.toml`, con la configuración de pytest adentro y sin empaquetado (D137).
 28. La entrada C-05 de `CHANGES.md` sigue a RN-AG-14: sin sillón explícito, el único activo; con más de uno, hay que indicarlo (D138).
 
 **Propuestas aceptadas por el autor (2026-10-03, D28); se revisan en el `design.md` de cada change:**
-- El valor del campo `type` del cuerpo RFC 7807 (URI relativa) y los nombres exactos de clases y funciones del contrato (incluido el error `EntradaInvalida` que agrupa la validación de entrada y su `type`, D135).
+- El valor del campo `type` del cuerpo RFC 7807 (URI relativa) y los nombres exactos de clases y funciones del contrato (incluido el error `EntradaInvalida` que agrupa la validación de entrada, D135; su `type` único, `/errores/entrada-invalida`, lo confirmó el autor el 2026-10-07, D139).
 - El alcance de los tests de API (E1, E4 y E12 como mínimo).
 - Las elecciones del modelo completo de `04_modelo_de_datos.md` (lista «Propuestas aceptadas»).
 - Las dependencias que el agente agregó por deducción en `06_funcionalidades.md` (US-005 en las historias que leen reglas configurables, y las demás indicadas en su nota de orden).

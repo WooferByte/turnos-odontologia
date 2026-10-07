@@ -3,7 +3,7 @@ schema: spec-driven
 # Project context
 # Restricciones que guían los artefactos y que un agente no puede inferir leyendo el código.
 # Fuente: knowledge-base/ (decisiones del autor 2026-10-02, 2026-10-03, 2026-10-05 y 2026-10-07; registro en
-# knowledge-base/10_preguntas_abiertas.md, D1..D138).
+# knowledge-base/10_preguntas_abiertas.md, D1..D139).
 context: |
   Proyecto: sistema de turnos y agenda para consultorios odontológicos (Argentina). Trabajo universitario.
   Todos los artefactos (proposal, specs, design, tasks) se escriben en español.
@@ -50,7 +50,7 @@ context: |
   todos los códigos; lo que no se puede evaluar porque otro dato es inválido no se informa. REGLA DE NEGOCIO
   (la petición está bien formada pero la agenda no la admite): se evalúa solo con la entrada válida y DE A
   UNA; la primera que falla es la única que se informa. El solapamiento es UNA regla que mira dos recursos:
-  el doble conflicto (E4) informa RN-AG-05 y RN-AG-08 en un mismo 409 (lectura a confirmar por el autor).
+  el doble conflicto (E4) informa RN-AG-05 y RN-AG-08 en un mismo 409 (lectura confirmada por el autor, D139).
   Orden en el primer change: validación de entrada, RN-AG-10d, solapamiento.
   Un recurso inexistente o inactivo referido en el CUERPO de la petición devuelve 422 (RN-GL-04); uno
   identificado en la URL devuelve 404. Un paciente solo puede ser inexistente: el paciente inactivo no existe
