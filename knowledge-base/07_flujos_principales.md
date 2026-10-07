@@ -10,16 +10,18 @@
 **Pasos**:
 1. Frontend/cliente envía `POST /turnos` con `paciente_id`, `prestacion_id`, `inicio`, y opcionalmente `profesional_id` y `sillon_id`.
 2. *(Fuera del primer change, DD-14)* API valida el JWT y el permiso (RN-AU-01, US-092). En el primer change este paso no existe: el caso de uso no depende de la autenticación.
-3. Caso de uso `CrearTurno` resuelve defaults: profesional único y **sillón por defecto** si no vienen (RN-AG-06); verifica que prestación, paciente, profesional y sillón **existan y estén activos** (si no, `RN-GL-04`, E12); calcula `fin = inicio + duración` de la prestación (RN-AG-02).
-4. Dominio valida `inicio < fin`, que las fechas sean aware en UTC (RN-GL-01) y que `inicio` y `fin` caigan en la misma fecha local del consultorio, sin cruzar su medianoche (RN-AG-10d, D63) al construir el `Intervalo`.
+3. Caso de uso `CrearTurno`, **validación de entrada** (RN-GL-02, D135; se junta todo lo que falle y se informa en un único `422`): verifica que `inicio` sea aware en UTC (RN-GL-01, D128); resuelve defaults: si no vienen, el **único profesional activo** y el **único sillón activo** del consultorio (RN-AG-06, RN-AG-14; si no hay uno solo, `RN-GL-04`); verifica que prestación, profesional y sillón **existan, estén activos y sean del consultorio del profesional**, y que el paciente **exista y sea de ese consultorio** (si no, `RN-GL-04`, E12, informando **todas** las referencias inválidas; D126, D127, D136). Si hubo algún problema, termina acá con los códigos que correspondan (`RN-GL-01`, `RN-GL-04` o los dos) y no evalúa ninguna regla de negocio.
+4. **Reglas de negocio, de a una** (RN-GL-02, D135), solo con la entrada válida. Primera: calcula `fin = inicio + duración` de la prestación (RN-AG-02) y el dominio, al construir el `Intervalo`, exige que `inicio` y `fin` caigan en la misma fecha local del consultorio, sin cruzar su medianoche (RN-AG-10d, D63); si falla, se rechaza solo con `RN-AG-10d`. `inicio < fin` se cumple siempre acá, porque la duración es positiva.
 5. *(Fuera del primer change, decisión del autor 2026-10-02, P-10)* Dominio valida horario recurrente y bloqueos (RN-AG-04, RN-AG-04b). El primer change solo cubre los solapamientos por profesional y por sillón con estados activos.
 6. Dentro de una transacción, el repositorio obtiene los turnos del profesional y del sillón que intersecan `[inicio, fin)`. El **filtro por estado activo** (RN-AG-10) lo aplica el dominio con la constante `ESTADOS_ACTIVOS` (decisión del autor 2026-10-03; así E6 se prueba como función pura).
-7. Dominio aplica la función pura de solapamiento `a.inicio < b.fin and b.inicio < a.fin` (RN-AG-09) contra ambos conjuntos (RN-AG-05, RN-AG-08) y devuelve **todos** los conflictos encontrados.
+7. Segunda regla de negocio: el dominio aplica la función pura de solapamiento `a.inicio < b.fin and b.inicio < a.fin` (RN-AG-09) contra ambos conjuntos (RN-AG-05, RN-AG-08) y devuelve **todos** los conflictos encontrados. Es **una sola regla que mira dos recursos**: puede informar uno o dos códigos (E4; RN-GL-02, D135).
 8. Si no hay conflicto, persiste el turno en estado `reservado` y hace commit. *(El `EventoTurno(creado)` de RN-AG-11 queda fuera del primer change: change siguiente, decisión del autor 2026-10-03.)*
 9. Responde `201` con el turno.
 
 ```
-Cliente → API → CrearTurno → Dominio(validar) → Repo(turnos del recurso ∩ rango) → DB
+Cliente → API → CrearTurno → validar entrada ── falla → 422 {codigos: [RN-GL-01 y/o RN-GL-04]}
+                            → Dominio(Intervalo) ── cruza la medianoche → 422 {codigos: [RN-AG-10d]}
+                            → Repo(turnos del recurso ∩ rango) → DB
                                       ← conflictos? ── sí → 409 {codigos: [RN-AG-05 y/o RN-AG-08]}
                                       ← no → INSERT turno → 201
 ```
@@ -27,8 +29,11 @@ Cliente → API → CrearTurno → Dominio(validar) → Repo(turnos del recurso 
 **Casos de error**:
 - Profesional ocupado → `409` con `RN-AG-05`.
 - Sillón ocupado → `409` con `RN-AG-08`.
-- Ambos ocupados → `409` con **los dos códigos** (`RN-AG-05` y `RN-AG-08`) (decisión del autor 2026-10-03).
-- Prestación, paciente, profesional o sillón inexistente o inactivo → `422` con `RN-GL-04` («recurso no encontrado»; E12), porque la referencia viaja en el cuerpo (un recurso inexistente identificado en la URL daría `404`; D73). Se rechaza antes de evaluar solapamientos y no persiste nada.
+- Ambos ocupados → `409` con **los dos códigos** (`RN-AG-05` y `RN-AG-08`) (decisión del autor 2026-10-03); un `Conflicto` por recurso, con el turno existente que empieza primero (D129).
+- Fecha sin zona o con desfase distinto de UTC → `422` con `RN-GL-01` (D128).
+- Fecha inválida **y** referencias inválidas en la misma petición → **un** `422` con los dos códigos, `RN-GL-01` y `RN-GL-04` (validación de entrada, todo junto; RN-GL-02, D135).
+- El turno cruza la medianoche del consultorio → `422` solo con `RN-AG-10d` (regla de negocio; no se evalúa el solapamiento).
+- Prestación, profesional o sillón inexistente, inactivo o de otro consultorio, paciente inexistente o de otro consultorio (D136), o sillón / profesional omitido sin un único activo (RN-AG-14) → `422` con `RN-GL-04` («recurso no encontrado»; E12; el error lista **todas** las referencias inválidas, D127), porque la referencia viaja en el cuerpo (un recurso inexistente identificado en la URL daría `404`; D73). Se rechaza antes de evaluar cualquier regla de negocio y no persiste nada.
 - Fuera de horario o sobre bloqueo → `422` con `RN-AG-04` / `RN-AG-04b` (fuera del primer change).
 - Carrera concurrente → la segunda transacción falla (restricción de exclusión o bloqueo) y se responde `409` (RN-AG-10c; fuera del primer change, E11).
 
@@ -40,7 +45,7 @@ Cliente → API → CrearTurno → Dominio(validar) → Repo(turnos del recurso 
 - **E5 Borde contiguo**: dado un turno 10:00-10:30, cuando creo otro a las 10:30, entonces se acepta (y lo mismo si el nuevo termina justo a las 10:00).
 - **E6 Estado no activo**: dado un turno cancelado 10:00-10:30 (o vencido, atendido o ausente), cuando creo otro a las 10:00, entonces se acepta.
 - **E7 Borde de un minuto**: dado un turno activo 10:00-10:30 del profesional en otro sillón, cuando creo otro con ese profesional a las 10:29, entonces se rechaza con `RN-AG-05` (un solapamiento de un minuto es solapamiento).
-- **E12 Recurso no encontrado**: dado que no existe la prestación 999 (o el paciente, el profesional o el sillón; o está inactivo), cuando creo un turno con esa referencia, entonces se rechaza con `RN-GL-04` indicando el recurso y el motivo, y no se crea ningún turno.
+- **E12 Recurso no encontrado**: dado que no existe la prestación 999 (o el paciente, el profesional o el sillón; o la prestación, el profesional o el sillón está inactivo: el paciente solo puede ser inexistente, D136), cuando creo un turno con esa referencia, entonces se rechaza con `RN-GL-04` indicando el recurso y el motivo, y no se crea ningún turno.
 
 ## Flujo 2: Reserva online 24/7 por link (CU-01)
 

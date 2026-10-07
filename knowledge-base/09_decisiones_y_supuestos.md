@@ -101,7 +101,7 @@
 **Reconocimiento del paciente (decisión del autor 2026-10-05, D48):** sin cuenta, el paciente se reconoce por coincidencia de teléfono, nombre y apellido normalizados (RN-TD-09); la respuesta de la reserva es idéntica se reutilice o no el paciente, para que el link no revele quién es paciente del consultorio (RN-PR-06). **Limitación conocida:** un error de tipeo crea un paciente duplicado; la fusión manual es Fase 2.
 
 ### DD-12 — Backend síncrono y tests sin mocks de sesión
-**Decisión**: el primer change usa **SQLAlchemy 2.x síncrono**. Los tests corren sobre SQLite en memoria (`sqlite+pysqlite:///:memory:` con `StaticPool`), **sin `aiosqlite` ni `pytest-asyncio`**. El dominio se testea **sin base de datos**. **No se usan mocks de sesión ni de repositorio.**
+**Decisión**: el primer change usa **SQLAlchemy 2.x síncrono** (serie 2.0.x, no la 2.1: decisión del autor 2026-10-07, D133). Los tests corren sobre SQLite en memoria (`sqlite+pysqlite:///:memory:` con `StaticPool`), **sin `aiosqlite` ni `pytest-asyncio`**. El dominio se testea **sin base de datos**. **No se usan mocks de sesión ni de repositorio.**
 **Contexto**: DD-03 (tests sin PostgreSQL ni Redis) y la restricción de reproducibilidad con solo el README. Los mocks de sesión pueden divergir del comportamiento real de la base, y las dependencias de test no declaradas rompen el clon limpio.
 **Alternativas consideradas**: pila asíncrona (SQLAlchemy async con aiosqlite); mocks de `Session` y de repositorio.
 **Justificación**: menos dependencias, menos puntos de falla en un clon limpio, y los tests ejercen consultas reales.
@@ -118,6 +118,7 @@
 **Trade-offs aceptados**: costo de normalizar en el adaptador.
 **Origen**: decisión del autor 2026-10-03 (aprobación de las propuestas de ajuste de la KB).
 **A verificar en el change** (verificar antes de cerrar el primer change; decisión del autor 2026-10-05, D85): SQLite no conserva la zona horaria y puede devolver datetimes naive aunque la columna sea con zona (relacionada con R-10). Se verifica con un test de ida y vuelta, que forma parte del primer change.
+**Rechazo con código y zonas en Windows** (decisión del autor 2026-10-07, D128 y D132): un datetime naive o con un desfase distinto de UTC se rechaza con el código `RN-GL-01` (`422`). En Windows `zoneinfo` no trae base de zonas: se declara el paquete `tzdata` en el archivo único de dependencias (sin que el dominio lo importe) y se menciona en el README.
 
 ### DD-14 — El primer change expone `POST /turnos` sin autenticación (límite conocido)
 **Decisión**: el primer change expone `POST /turnos` (FastAPI) para poder mostrarlo desde Swagger (`/docs`) en el video, **sin autenticación**. Es un **límite conocido**: el endpoint se protege con JWT cuando se implemente el change de usuarios y acceso (Épica 10, US-092). El README del change lo declara.
@@ -213,8 +214,29 @@
 10. El código `RN-GL-04` y el status **`422`** para E12, cuando la referencia viaja en el cuerpo de la petición (un único status para inexistente e inactivo). **`404` es para un recurso inexistente identificado en la URL** (por ejemplo, `GET /turnos/{id}` con un id que no existe); `422` es para una referencia inválida dentro del cuerpo (por ejemplo, `prestacion_id` inexistente en `POST /turnos`). Los nombres de los campos del cuerpo y del error siguen para el design (D73).
 11. Qué queda para Redis en la v1 (DD-06, DD-18) y los estados de `Mensaje` en la v1: `programado`, `generado_link` y `enviado`, más `descartado` (D80, D81).
 
+**Confirmadas por el autor (2026-10-07, D122 a D132), tras el Explore del primer change:**
+12. Código en `backend/app` y tests en `backend/tests`; archivo único de dependencias dentro de `backend/`; `README.md` en la raíz (D122).
+13. El primer change conserva sus 8 escenarios como excepción al «3 a 6» de `CHANGES.md` (D123).
+14. La demo de Swagger usa SQLite en memoria con datos ficticios cargados al arrancar e identificadores fijos documentados en el README (D124).
+15. Recursos por defecto: el único activo del consultorio; si no hay uno solo, `RN-GL-04` (regla nueva RN-AG-14, D125).
+16. Un profesional pertenece a un consultorio; el consultorio del turno sale del profesional; una referencia de otro consultorio es inexistente (D126).
+17. `RN-GL-04` lista todas las referencias inválidas (D127).
+18. Fecha sin zona o con desfase distinto de UTC: código `RN-GL-01`, `422` (D128).
+19. Un `Conflicto` por recurso, con el turno que empieza primero (D129).
+20. `Consultorio.creado_en`, `Paciente.creado_en` y las demás columnas de la lista del subconjunto se omiten (D130).
+21. El primer change no valida el múltiplo de 5 de la duración de la prestación (D131).
+22. `tzdata` se declara en el archivo único y se menciona en el README; el dominio importa solo la biblioteca estándar (D132).
+
+**Confirmadas por el autor (2026-10-07, segunda ronda, D133 a D138), tras revisar la propuesta del primer change:**
+23. Pins: SQLAlchemy de la serie 2.0.x, FastAPI de la serie 0.115.x, Pydantic compatible con ese FastAPI, y ninguna versión publicada en la última semana, para ningún paquete (D133).
+24. Las tareas de C-01 (53), agrupadas por tema, son la segunda excepción registrada, al «alrededor de 20» de `CHANGES.md` (D134).
+25. Errores (RN-GL-02 reescrita, D135): la validación de entrada se informa toda junta en un único `422`; las reglas de negocio, solo con la entrada válida y de a una. **A confirmar por el autor:** el solapamiento cuenta como una sola regla que mira dos recursos (E4 conserva sus dos códigos) y RN-AG-10d es regla de negocio.
+26. Un paciente solo puede ser `inexistente`; el «paciente inactivo» queda para la Fase 2 (D136). Corrige la redacción del punto 10 («inexistente e inactivo» vale para prestación, profesional y sillón).
+27. El archivo único de dependencias es `backend/pyproject.toml`, con la configuración de pytest adentro y sin empaquetado (D137).
+28. La entrada C-05 de `CHANGES.md` sigue a RN-AG-14: sin sillón explícito, el único activo; con más de uno, hay que indicarlo (D138).
+
 **Propuestas aceptadas por el autor (2026-10-03, D28); se revisan en el `design.md` de cada change:**
-- El valor del campo `type` del cuerpo RFC 7807 (URI relativa) y los nombres exactos de clases y funciones del contrato.
+- El valor del campo `type` del cuerpo RFC 7807 (URI relativa) y los nombres exactos de clases y funciones del contrato (incluido el error `EntradaInvalida` que agrupa la validación de entrada y su `type`, D135).
 - El alcance de los tests de API (E1, E4 y E12 como mínimo).
 - Las elecciones del modelo completo de `04_modelo_de_datos.md` (lista «Propuestas aceptadas»).
 - Las dependencias que el agente agregó por deducción en `06_funcionalidades.md` (US-005 en las historias que leen reglas configurables, y las demás indicadas en su nota de orden).

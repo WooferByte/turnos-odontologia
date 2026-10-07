@@ -9,14 +9,14 @@
 
 ## Stack Tecnológico
 
-Las versiones exactas **no están decididas a propósito**: el criterio es versiones exactas en un único archivo de dependencias, que se fija en el `design.md` del primer change y se amplía en el de cada change siguiente (D72, D116). **No inventes números de versión.**
+Las versiones exactas **no están decididas a propósito**: el criterio es versiones exactas en un único archivo de dependencias (`backend/pyproject.toml`, D137), que se fija en el `design.md` del primer change y se amplía en el de cada change siguiente (D72, D116), sin tomar ninguna versión publicada en la última semana (D133). **No inventes números de versión.**
 
 | Capa | Tecnologías | Versión mínima |
 |------|-------------|----------------|
 | Lenguaje backend | Python | 3.11+ (confirmada por el autor) |
-| Framework API | FastAPI (validación con Pydantic, incluido en FastAPI) | No fijada (pin en el `design.md` del primer change) |
+| Framework API | FastAPI (validación con Pydantic, incluido en FastAPI) | Serie 0.115.x (D133); pin exacto en el `design.md` del primer change |
 | Autenticación | JWT (access y refresh token, HS256) y hash bcrypt | No fijada |
-| ORM / acceso a datos | SQLAlchemy, **modo síncrono** en todos los changes (DD-12, D119) | 2.x, API declarativa tipada |
+| ORM / acceso a datos | SQLAlchemy, **modo síncrono** en todos los changes (DD-12, D119) | Serie 2.0.x (no la 2.1; D133), API declarativa tipada |
 | Base de datos | PostgreSQL (producción / docker-compose) | No fijada (pin en el `design.md` del change que la use) |
 | Base de datos de tests | SQLite en memoria, `sqlite+pysqlite:///:memory:` con `StaticPool` (DD-03, DD-12); sin `aiosqlite` | — |
 | Asincronía | Redis: tarea periódica que persiste vencimientos y dispara efectos (RN-GL-05); no interviene en el primer change | No fijada (pin en el `design.md` del change que la use) |
@@ -44,7 +44,7 @@ La fuente de verdad del dominio vive en `knowledge-base/`. **Leé el archivo rel
 | [07_flujos_principales.md](knowledge-base/07_flujos_principales.md) | Flujos E2E (crear turno, reserva, WhatsApp, seña, cancelar, lista de espera, ficha, auth) |
 | [08_arquitectura_propuesta.md](knowledge-base/08_arquitectura_propuesta.md) | Patrones, directorios, regla de capas, reloj/UTC, estrategia de tests, versiones, Definition of Done |
 | [09_decisiones_y_supuestos.md](knowledge-base/09_decisiones_y_supuestos.md) | Decisiones DD, supuestos SU y riesgos R: por qué se eligió cada cosa |
-| [10_preguntas_abiertas.md](knowledge-base/10_preguntas_abiertas.md) | Inconsistencias, preguntas priorizadas y registro de decisiones del autor (D1..D121) |
+| [10_preguntas_abiertas.md](knowledge-base/10_preguntas_abiertas.md) | Inconsistencias, preguntas priorizadas y registro de decisiones del autor (D1..D138) |
 | [11_integraciones_whatsapp_y_mercadopago.md](knowledge-base/11_integraciones_whatsapp_y_mercadopago.md) | Implementar o diseñar recordatorios (`wa.me` / Cloud API) o la seña con Checkout Pro |
 | [12_contexto_de_mercado.md](knowledge-base/12_contexto_de_mercado.md) | Entender competidores y vacíos del mercado; justificar una decisión de producto |
 
@@ -92,8 +92,8 @@ El plan de implementación completo está en [CHANGES.md](CHANGES.md). Resumen:
 
 1. **NUNCA** datos reales de pacientes en seeds, tests, ejemplos o demos (RN-PR-01), ni secretos o `.env` en el repo → datos ficticios siempre.
 2. **NUNCA** fechas naive ni `datetime.now()` directo → fechas aware en UTC con un único `utc_now()` inyectable; intervalos semiabiertos `[inicio, fin)`. Única excepción: RN-AG-10d (medianoche del consultorio, usa `Consultorio.zona_horaria`).
-3. **NUNCA** importar FastAPI ni SQLAlchemy desde `app/domain` → las reglas de agenda son funciones puras de dominio, testeadas sin base de datos.
-4. **NUNCA** un error de regla de negocio sin su código RN → se informan todos los códigos que fallen; referencia inválida en el cuerpo = 422 (RN-GL-04), recurso inexistente en la URL = 404.
+3. **NUNCA** importar FastAPI ni SQLAlchemy desde `backend/app/domain` → las reglas de agenda son funciones puras de dominio, testeadas sin base de datos.
+4. **NUNCA** un error de regla de negocio sin su código RN → la validación de entrada se informa toda junta en un único 422 y las reglas de negocio de a una, solo con la entrada válida (RN-GL-02, D135; el solapamiento es una regla y puede llevar dos códigos, E4); referencia inválida en el cuerpo = 422 (RN-GL-04), recurso inexistente en la URL = 404.
 
 ### Stack y tests
 

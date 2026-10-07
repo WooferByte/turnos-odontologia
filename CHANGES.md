@@ -287,14 +287,14 @@ Primer change: `/opsx:propose crear-turno-sin-solapamientos`.
 ### [C-01] `crear-turno-sin-solapamientos`
 - **Estado**: `[ ]` pendiente · **Orden**: 1 · **Gobernanza**: MEDIO
 - **Objetivo** (US-010): crear un turno `reservado` para un paciente, una prestación, un profesional y un sillón, rechazando el solapamiento con turnos activos del profesional (RN-AG-05) y del sillón (RN-AG-08). Es el change de la consigna y el hito de entrega: al archivarlo se pone la etiqueta Git.
-- **Alcance — dentro**: `Intervalo` semiabierto, `detectar_conflictos` y errores de dominio con código RN; caso de uso `crear_turno` con reloj inyectable; `POST /turnos` sin autenticación (DD-14) con cuerpo RFC 7807; tablas `Consultorio`, `Profesional`, `Sillon`, `Prestacion`, `Paciente` y `Turno` con `create_all` sobre SQLite en memoria; test unitario de `Intervalo` (E8, RN-AG-10d), test de ida y vuelta de zonas horarias, test de imports de `app/domain` y test guard de fechas; archivo único de dependencias con versiones exactas (D116); README con el límite conocido.
+- **Alcance — dentro**: `Intervalo` semiabierto, `detectar_conflictos` y errores de dominio con código RN; caso de uso `crear_turno` con reloj inyectable y recursos por defecto (RN-AG-14); `POST /turnos` sin autenticación (DD-14) con cuerpo RFC 7807; tablas `Consultorio`, `Profesional`, `Sillon`, `Prestacion`, `Paciente` y `Turno` con `create_all` sobre SQLite en memoria; test unitario de `Intervalo` (E8, RN-AG-10d), test de ida y vuelta de zonas horarias, test de imports de `backend/app/domain` y test guard de fechas; archivo único de dependencias con versiones exactas (D116); README con el límite conocido.
 - **Alcance — fuera**: historial `EventoTurno` (E9), horario y bloqueos (E10), concurrencia (E11), autenticación, interfaz gráfica, Alembic, PostgreSQL y Redis.
 - **Depende de**: ninguna
-- **Escenarios mínimos**: E1; E2; E3; E4; E5; E6; E7; E12
+- **Escenarios mínimos**: E1; E2; E3; E4; E5; E6; E7; E12 (8 escenarios: excepción registrada al «3 a 6», D123; sus tareas, agrupadas por tema, son la segunda excepción, al «alrededor de 20», D134)
 - **Leer antes**:
   - `knowledge-base/06_funcionalidades.md` §US-010 (tabla E1..E12 y nota del orden) · `knowledge-base/07_flujos_principales.md` Flujo 1
   - `knowledge-base/08_arquitectura_propuesta.md` §«Contrato del primer change», «Regla de capas», «Estrategia de tests», «Fixtures de test», «Reloj y zonas horarias», «Versiones y dependencias», «Definition of Done del primer change»
-  - `knowledge-base/05_reglas_de_negocio.md` RN-AG-02, RN-AG-05, RN-AG-06, RN-AG-08, RN-AG-09, RN-AG-10, RN-AG-10d, RN-GL-01, RN-GL-02, RN-GL-04
+  - `knowledge-base/05_reglas_de_negocio.md` RN-AG-02, RN-AG-05, RN-AG-06, RN-AG-08, RN-AG-09, RN-AG-10, RN-AG-10d, RN-AG-14, RN-GL-01, RN-GL-02, RN-GL-04
   - `knowledge-base/04_modelo_de_datos.md` §«Subconjunto del primer change» · `knowledge-base/09_decisiones_y_supuestos.md` DD-02, DD-03, DD-12, DD-13, DD-14, SU-08
 
 ---
@@ -344,14 +344,14 @@ Primer change: `/opsx:propose crear-turno-sin-solapamientos`.
 
 ### [C-05] `gestion-de-sillones`
 - **Estado**: `[ ]` pendiente · **Orden**: 2 · **Gobernanza**: BAJO
-- **Objetivo** (US-004): gestionar el sillón como recurso, con alta y desactivación, manteniendo «Sillón 1» como recurso por defecto.
-- **Alcance — dentro**: `GET/POST /sillones` y `PATCH /sillones/{id}` (desactivar); un sillón inactivo rechaza turnos nuevos con RN-GL-04 y motivo `inactivo` (RN-AG-07); el turno sin sillón explícito sigue yendo al sillón por defecto; sin autenticación hasta C-07.
+- **Objetivo** (US-004): gestionar el sillón como recurso, con alta y desactivación; el sillón por defecto es el único activo (RN-AG-14), no un sillón fijo.
+- **Alcance — dentro**: `GET/POST /sillones` y `PATCH /sillones/{id}` (desactivar); un sillón inactivo rechaza turnos nuevos con RN-GL-04 y motivo `inactivo` (RN-AG-07); el turno sin sillón explícito usa el único sillón activo y, con más de uno activo, la petición debe indicarlo o se rechaza con RN-GL-04 (RN-AG-14, D138); sin autenticación hasta C-07.
 - **Alcance — fuera**: interfaz (US-004 no tiene; la agenda multi-sillón es Fase 2); cambios de esquema (la tabla `Sillon` ya existe).
 - **Depende de**: C-02
 - **Escenarios mínimos**: US-004: CA-1, CA-2, CA-3
 - **Leer antes**:
   - `knowledge-base/06_funcionalidades.md` §US-004
-  - `knowledge-base/05_reglas_de_negocio.md` RN-AG-06, RN-AG-07, RN-GL-04
+  - `knowledge-base/05_reglas_de_negocio.md` RN-AG-06, RN-AG-07, RN-AG-14, RN-GL-04
   - `knowledge-base/04_modelo_de_datos.md` §Sillon · `knowledge-base/09_decisiones_y_supuestos.md` DD-08
   - `knowledge-base/02_descripcion_general.md` §«API REST (resumen)», fila Sillones
 

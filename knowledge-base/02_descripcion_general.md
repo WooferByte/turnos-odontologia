@@ -6,14 +6,14 @@ Aplicación web con **API REST** (backend) y **SPA** (frontend), más rutas púb
 
 ## Stack tecnológico
 
-Stack definido por el autor en el Discovery (restricción, punto 9). Las versiones no figuran en las fuentes. El autor confirmó (2026-10-02, P-17) Python 3.11+ y SQLAlchemy 2.x. **Las demás versiones no se inventan**: el criterio es **versiones exactas, en un único archivo de dependencias** (decisión del autor 2026-10-05, D72); el archivo y los pins se consultan y fijan en el `design.md` del primer change, que es el primero que los necesita, y se verifican en un clon limpio; los changes siguientes agregan sus dependencias a ese mismo archivo, con versión exacta (D116) (política de 2026-10-03; ver «Versiones y dependencias» en `08_arquitectura_propuesta.md`).
+Stack definido por el autor en el Discovery (restricción, punto 9). Las versiones no figuran en las fuentes. El autor confirmó (2026-10-02, P-17) Python 3.11+ y SQLAlchemy 2.x, y precisó (2026-10-07, D133) que «2.x» es la **serie 2.0.x** (no la 2.1), que FastAPI es de la **serie 0.115.x** y que ningún pin puede haberse publicado en la última semana. **Las demás versiones no se inventan**: el criterio es **versiones exactas, en un único archivo de dependencias**, `backend/pyproject.toml` (decisiones del autor 2026-10-05, D72, y 2026-10-07, D137); los pins se consultan y fijan en el `design.md` del primer change, que es el primero que los necesita, y se verifican en un clon limpio; los changes siguientes agregan sus dependencias a ese mismo archivo, con versión exacta (D116) (política de 2026-10-03; ver «Versiones y dependencias» en `08_arquitectura_propuesta.md`).
 
 | Capa | Tecnologías | Versión mínima |
 |---|---|---|
 | Lenguaje backend | Python | 3.11+ (confirmada por el autor, 2026-10-02) |
-| Framework API | FastAPI (validación con Pydantic, incluido en FastAPI) | No fijada (pin en el `design.md` del primer change) |
+| Framework API | FastAPI (validación con Pydantic, incluido en FastAPI) | Serie 0.115.x (D133); pin exacto en el `design.md` del primer change |
 | Autenticación | JWT (access y refresh token, HS256) y hash bcrypt (decisión del autor 2026-10-05, D74) | No fijada |
-| ORM / acceso a datos | SQLAlchemy, **modo síncrono** en el primer change (DD-12) | 2.x, API declarativa tipada (confirmada por el autor, 2026-10-02) |
+| ORM / acceso a datos | SQLAlchemy, **modo síncrono** en el primer change (DD-12) | Serie 2.0.x (no la 2.1; D133), API declarativa tipada (confirmada por el autor, 2026-10-02) |
 | Base de datos | PostgreSQL (producción / docker-compose) | No fijada (pin en el `design.md` del change que la use) |
 | Base de datos de tests | SQLite en memoria, `sqlite+pysqlite:///:memory:` con `StaticPool` (DD-03, DD-12); sin `aiosqlite` | — |
 | Asincronía | Redis: tarea periódica que persiste los vencimientos (señas y ofertas) y dispara los efectos (recordatorios, ofertas de lista de espera); el vencimiento se evalúa al consultar, por lo que los tests no la necesitan (RN-GL-05, D80). No interviene en el primer change | No fijada (pin en el `design.md` del change que la use) |

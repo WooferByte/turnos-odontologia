@@ -2,19 +2,31 @@ schema: spec-driven
 
 # Project context
 # Restricciones que guían los artefactos y que un agente no puede inferir leyendo el código.
-# Fuente: knowledge-base/ (decisiones del autor 2026-10-02, 2026-10-03 y 2026-10-05; registro en
-# knowledge-base/10_preguntas_abiertas.md).
+# Fuente: knowledge-base/ (decisiones del autor 2026-10-02, 2026-10-03, 2026-10-05 y 2026-10-07; registro en
+# knowledge-base/10_preguntas_abiertas.md, D1..D138).
 context: |
   Proyecto: sistema de turnos y agenda para consultorios odontológicos (Argentina). Trabajo universitario.
   Todos los artefactos (proposal, specs, design, tasks) se escriben en español.
-  Stack: Python 3.11+, SQLAlchemy 2.x SINCRÓNICO, FastAPI, pytest. No se usan aiosqlite ni pytest-asyncio.
-  Las versiones exactas no están decididas: se fijan con pins en el design del change; no inventar números.
+  Stack: Python 3.11+, SQLAlchemy de la serie 2.0.x (no la 2.1) SINCRÓNICO, FastAPI de la serie 0.115.x,
+  Pydantic compatible con ese FastAPI, pytest. No se usan aiosqlite ni pytest-asyncio.
+  Estructura: código en backend/app y tests en backend/tests; el archivo único de dependencias es
+  backend/pyproject.toml (dependencias de ejecución, de test y configuración de pytest; sin requirements.txt
+  ni pytest.ini, y sin empaquetado) y el README.md va en la raíz, indicando desde qué directorio se instala
+  y se corre pytest. Toda
+  mención de app/domain significa backend/app/domain. Zonas horarias en Windows: el paquete de datos de zonas
+  (tzdata) se declara en el archivo único y se menciona en el README; el dominio importa solo la biblioteca
+  estándar (zoneinfo lo es).
+  Las versiones exactas se fijan con pins en el design del change; no inventar números. Política de pins
+  (D133): ninguna versión publicada en la semana anterior al día del design, para ningún paquete; si la más
+  nueva es tan reciente, la más nueva anterior dentro de la serie permitida. Cada pin lleva versión, fecha de
+  publicación, fuente y fecha de consulta; la compatibilidad se comprueba con los metadatos, no se supone.
   Tests: SQLite en memoria (sqlite+pysqlite:///:memory:, StaticPool), engine por test, sin mocks de sesión
   ni de repositorio. El dominio se testea sin base de datos. El repo debe poder clonarse y correr los tests
   solo con el README, sin Docker, PostgreSQL ni Redis. La prueba de reservas simultáneas (E11) queda fuera
   de la suite por defecto: corre en un perfil opcional con PostgreSQL, documentado en el README.
   Reglas de agenda: funciones puras de dominio. Intervalos semiabiertos [inicio, fin): un turno que empieza
   justo cuando termina otro es válido. Fechas siempre aware en UTC; el reloj es un único utc_now() inyectable.
+  Una fecha sin zona o con desfase distinto de UTC se rechaza con el código RN-GL-01 (422).
   Única excepción al trabajo en UTC: un turno no puede cruzar la medianoche DEL CONSULTORIO (RN-AG-10d);
   esa regla convierte inicio y fin a Consultorio.zona_horaria, que Intervalo recibe como dato.
   Estados activos (ocupan horario): pendiente_aprobacion, pendiente_sena, reservado, confirmado. Desde que
@@ -24,15 +36,32 @@ context: |
   crear turno sin solapamientos por profesional y por sillón, solo con estados activos; no valida horario ni
   bloqueos; no registra historial (EventoTurno es del change siguiente); no incluye lista de espera, seña
   ni WhatsApp. Expone el endpoint POST /turnos (FastAPI), SIN autenticación (límite conocido: se protege con
-  JWT en el change de usuarios y acceso) y SIN interfaz gráfica; se prueba desde Swagger (/docs).
-  Escenarios del primer change: E1..E7 y E12 (knowledge-base/06_funcionalidades.md, US-010).
+  JWT en el change de usuarios y acceso) y SIN interfaz gráfica; se prueba desde Swagger (/docs), con SQLite
+  en memoria y datos ficticios cargados al arrancar, con identificadores fijos documentados en el README.
+  Escenarios del primer change: E1..E7 y E12 (knowledge-base/06_funcionalidades.md, US-010): son 8, excepción
+  registrada al "3 a 6" de CHANGES.md (D123). Segunda excepción, solo de ese change (D134): sus tareas superan
+  el "alrededor de 20" de CHANGES.md, con la condición de que vayan agrupadas por tema.
+  No valida el múltiplo de 5 de la duración de la prestación (RN-AG-01).
   Alembic no se usa en el primer change (create_all en tests); se usa desde el change de infraestructura
   con PostgreSQL. WhatsApp en la v1 = enlace wa.me (Cloud API en Fase 2).
-  Los errores de regla de negocio llevan el código RN (p. ej. RN-AG-05, RN-AG-08, RN-GL-04); si fallan varias
-  reglas a la vez se informan todos los códigos. Un recurso inexistente o inactivo referido en el CUERPO
-  de la petición devuelve 422 (RN-GL-04); uno identificado en la URL devuelve 404.
+  Todo rechazo lleva el código RN (p. ej. RN-AG-05, RN-AG-08, RN-GL-04). Hay dos clases (RN-GL-02, D135).
+  VALIDACIÓN DE ENTRADA (referencias inválidas, RN-GL-04; fecha sin zona o con desfase distinto de UTC,
+  RN-GL-01; cuerpo mal formado): todos los problemas de la petición se informan JUNTOS en un único 422, con
+  todos los códigos; lo que no se puede evaluar porque otro dato es inválido no se informa. REGLA DE NEGOCIO
+  (la petición está bien formada pero la agenda no la admite): se evalúa solo con la entrada válida y DE A
+  UNA; la primera que falla es la única que se informa. El solapamiento es UNA regla que mira dos recursos:
+  el doble conflicto (E4) informa RN-AG-05 y RN-AG-08 en un mismo 409 (lectura a confirmar por el autor).
+  Orden en el primer change: validación de entrada, RN-AG-10d, solapamiento.
+  Un recurso inexistente o inactivo referido en el CUERPO de la petición devuelve 422 (RN-GL-04); uno
+  identificado en la URL devuelve 404. Un paciente solo puede ser inexistente: el paciente inactivo no existe
+  en la v1 (Fase 2, D136); prestación, profesional y sillón sí pueden estar inactivos.
+  RN-GL-04 lista TODAS las referencias inválidas de la petición, no solo la primera. Si no se indica el sillón
+  o el profesional se usa el único activo del consultorio; si no hay uno solo, se rechaza con RN-GL-04
+  (RN-AG-14). El consultorio del turno sale del profesional (v1: un profesional pertenece a un consultorio);
+  una referencia de otro consultorio cuenta como inexistente. Si el candidato choca con varios turnos de un
+  recurso, el Conflicto lleva el que empieza primero.
   El primer change incluye un test de ida y vuelta de zonas horarias con SQLite (escribir aware UTC, leer
-  aware UTC) y un test que falla si app/domain importa un módulo prohibido.
+  aware UTC) y un test que falla si backend/app/domain importa un módulo prohibido.
   Datos de pacientes siempre ficticios. Nunca versionar secretos ni .env.
 
 # Per-artifact rules
@@ -40,7 +69,8 @@ rules:
   proposal:
     - Incluir una sección "Fuera de alcance" que liste explícitamente lo que el change no hace.
     - Citar las historias (US-NNN) y los escenarios (E#) que cubre y los que deja fuera.
-    - Mantener el change chico: una sola capability.
+    - "Mantener el change chico: una sola capability."
+    - Dejar asentadas, en el primer change, sus dos excepciones a CHANGES.md (8 escenarios frente a 3 a 6, D123, y la cantidad de tareas frente a alrededor de 20, D134).
   specs:
     - Escribir cada Requirement con SHALL y citar las reglas de negocio (RN-XX-NN) que implementa.
     - Escribir cada Scenario en formato WHEN/THEN, con el ID de escenario (E#) en el título.
@@ -48,13 +78,15 @@ rules:
     - Los horarios de los ejemplos se expresan en UTC.
   design:
     - Incluir una sección "Non-goals" (qué no se resuelve en este change).
-    - Fijar las versiones exactas de las dependencias (pins) y el archivo único donde viven.
+    - Fijar las versiones exactas de las dependencias (pins) en backend/pyproject.toml, cada una con su fecha de publicación y su fuente, sin versiones publicadas en la última semana.
+    - Clasificar cada rechazo como validación de entrada o como regla de negocio (RN-GL-02) y fijar el orden de evaluación.
     - Marcar cada elección no confirmada por el autor como "Propuesta".
     - Marcar cada comprobación técnica pendiente como "A verificar en el change", indicando antes de qué se verifica.
   tasks:
     - Ordenar las tareas por escenario en el ciclo RED, GREEN, TRIANGULATE, REFACTOR; el test que falla va antes que el código.
     - Cada tarea de test cita el escenario (E#) y la regla (RN) que verifica.
     - No agrupar los tests al final ni incluir tareas de "leer archivos" como tareas.
+    - Agrupar las tareas por tema (preparación, dominio, persistencia, un grupo por escenario, API, demo y README, verificación final).
     - Incluir una tarea final de verificación en clon limpio siguiendo solo el README.
     - Incluir una tarea que levante la API y pruebe POST /turnos desde /docs (201, 409 con codigos, 422 con RN-GL-04).
 
@@ -62,7 +94,7 @@ rules:
 operations:
   apply:
     guidance:
-      - TDD estricto: no escribir código de producción sin un test que falle antes.
+      - "TDD estricto: no escribir código de producción sin un test que falle antes."
       - No usar mocks de sesión ni de repositorio.
   archive:
     guidance:

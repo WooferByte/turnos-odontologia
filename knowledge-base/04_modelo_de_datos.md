@@ -114,7 +114,7 @@ Los plazos de seña y de oferta son **valores de diseño del autor, no de mercad
 | `rol` | texto | NN | Valores: `odontologo`, `recepcionista`, `dueno`; parte de la PK compuesta |
 
 ### Profesional
-**Change que la crea:** primer change (sin `usuario_id` ni `matricula`). MVP: 1 profesional; el modelo admite N (Fase 2). **En la v1, asignar el rol `odontologo` a otro usuario no crea un `Profesional`:** el único profesional queda vinculado al usuario del seed; un segundo profesional es **Fase 2** (multi-profesional) (decisión del autor 2026-10-05, D46).
+**Change que la crea:** primer change (sin `usuario_id` ni `matricula`). MVP: 1 profesional; el modelo admite N (Fase 2). **En la v1, asignar el rol `odontologo` a otro usuario no crea un `Profesional`:** el único profesional queda vinculado al usuario del seed; un segundo profesional es **Fase 2** (multi-profesional) (decisión del autor 2026-10-05, D46). **v1: un profesional pertenece a un consultorio** (decisión del autor 2026-10-07, D126): `Turno.consultorio_id` sale del profesional; un profesional en varios consultorios queda fuera de la v1.
 
 | Campo | Tipo | Null | Restricciones / FK / nota |
 |---|---|---|---|
@@ -126,7 +126,7 @@ Los plazos de seña y de oferta son **valores de diseño del autor, no de mercad
 | `activo` | bool | NN | Default `true` |
 
 ### Sillon (recurso)
-**Change que la crea:** primer change. **MVP: un único sillón creado por seed; todo turno se asigna a él por defecto** (RN-AG-06).
+**Change que la crea:** primer change. **MVP: un único sillón creado por seed; todo turno se asigna a él por defecto** (RN-AG-06) porque es el único activo (RN-AG-14, D125); el modelo no tiene una columna de «sillón por defecto».
 
 | Campo | Tipo | Null | Restricciones / FK / nota |
 |---|---|---|---|
@@ -180,7 +180,7 @@ Los plazos de seña y de oferta son **valores de diseño del autor, no de mercad
 Índices: `(profesional_id, inicio, fin)` y `(sillon_id, inicio, fin)` (†).
 
 ### Paciente
-**Change que la crea:** primer change con `nombre`, `apellido` y `telefono_whatsapp`. **`es_nuevo` la agrega el change de marcado atendido / ausente (US-014)**, el primero que la cambia (D99). **`dni`, `email`, `fecha_nacimiento`, `creado_en` y `acepta_contacto` las agrega el change de pacientes desde el panel (US-016)** (decisión del autor 2026-10-05, D95); el primer change que **aplica** `acepta_contacto` es el de recordatorios (US-030), el primero que prepara mensajes. **Datos siempre ficticios en seeds, tests y ejemplos** (RN-PR-01).
+**Change que la crea:** primer change con `nombre`, `apellido` y `telefono_whatsapp`. **`es_nuevo` la agrega el change de marcado atendido / ausente (US-014)**, el primero que la cambia (D99). **`dni`, `email`, `fecha_nacimiento`, `creado_en` y `acepta_contacto` las agrega el change de pacientes desde el panel (US-016)** (decisión del autor 2026-10-05, D95); el primer change que **aplica** `acepta_contacto` es el de recordatorios (US-030), el primero que prepara mensajes. **Sin estado de actividad** (decisión del autor 2026-10-07, D136): `Paciente` no tiene columna `activo`; en una petición solo puede ser `inexistente` (RN-GL-04), y el «paciente inactivo» queda para la Fase 2 (`acepta_contacto` es «no contactar», no inactividad). **Datos siempre ficticios en seeds, tests y ejemplos** (RN-PR-01).
 
 | Campo | Tipo | Null | Restricciones / FK / nota |
 |---|---|---|---|
@@ -229,7 +229,7 @@ Identificación del paciente en la reserva pública (decisión del autor 2026-10
 | Campo | Tipo | Null | Restricciones / FK / nota |
 |---|---|---|---|
 | `id` | entero | NN | PK |
-| `consultorio_id` | entero | NN | FK → Consultorio |
+| `consultorio_id` | entero | NN | FK → Consultorio; se toma del profesional (v1: un profesional pertenece a un consultorio; paciente, prestación y sillón de otro consultorio se tratan como inexistentes, RN-GL-04; D126) |
 | `paciente_id` | entero | NN | FK → Paciente |
 | `profesional_id` | entero | NN | FK → Profesional |
 | `sillon_id` | entero | NN | FK → Sillon |
@@ -492,6 +492,7 @@ El primer change ("crear turno sin solapamientos por profesional y por sillón",
 **Columnas que NO crea** (las agregan los changes indicados en cada tabla): `Consultorio.creado_en` †; `Profesional.usuario_id`, `matricula`; `Prestacion.color`, `reservable_online`; `Paciente.dni`, `email`, `fecha_nacimiento`, `es_nuevo`, `acepta_contacto`, `creado_en`; `Turno.origen`, `token_gestion`, `creado_por`, `actualizado_en`, `version`.
 **Quedan fuera del primer change:** `EventoTurno`, `FranjaHoraria`, `Bloqueo`, `ConfiguracionReglas`, `Usuario`/`UsuarioRol` y todo lo de lista de espera, mensajería, seña, ficha y presupuestos.
 
+- **Lectura de «NN» y de las columnas omitidas (decisión del autor 2026-10-07, D130):** la nulabilidad `NN` de las tablas de este archivo es la del **modelo completo**. Una columna de la lista «Columnas que NO crea» **todavía no existe** en el primer change, así que no hay una columna `NN` sin valor: el esquema y el seed del primer change **omiten** `Consultorio.creado_en`, `Paciente.creado_en`, `Prestacion.color` y `Turno.actualizado_en` / `version` (y las demás de la lista). `Turno.creado_en` sí la crea el primer change (`creado_en = reloj()`). El change que agregue cada columna `NN` decide cómo se llenan las filas existentes (**Propuesta:** valor por defecto en la migración); se fija en su design.
 - **Estado inicial:** el turno nace `reservado` (decisión del autor 2026-10-03). `pendiente_sena` y `pendiente_aprobacion` dependen de seña y aprobación manual, fuera del primer change.
 - **`estado` como enum de texto** (decisión del autor 2026-10-03), con `ESTADOS_ACTIVOS` como constante del dominio (RN-AG-10).
 - **Sin restricción de exclusión en el primer change:** la regla vive en el dominio (DD-02) y SQLite no soporta `EXCLUDE`; ver DD-04.
@@ -501,13 +502,15 @@ El primer change ("crear turno sin solapamientos por profesional y por sillón",
 
 Todos los datos son **ficticios** (RN-PR-01). El seed del primer change incluye `Consultorio`, `Profesional`, `Sillon`, `Prestacion` y `Paciente`; el resto se agrega con el change que crea cada tabla (`Usuario`, `ConfiguracionReglas`, horario):
 
-- 1 `Consultorio` ("Consultorio Demo", slug `consultorio-demo`) con `ConfiguracionReglas` por defecto.
-- 1 `Usuario` con roles `odontologo` + `dueno` (credenciales de prueba definidas en un archivo de ejemplo de entorno, nunca reales).
-- 1 `Profesional` vinculado a ese usuario.
-- 1 `Sillon` ("Sillón 1") — el recurso por defecto del MVP.
-- Prestaciones de ejemplo (**datos ilustrativos confirmados por el autor el 2026-10-05, D56**, sin fuente de mercado): Consulta / control 30 min; Limpieza 45 min; Obturación 60 min; Extracción 45 min; Urgencia 30 min. Cada una con un color.
-- Horario recurrente de ejemplo: lunes a viernes 09:00-13:00 y 15:00-19:00 (dato ilustrativo confirmado por el autor el 2026-10-05, D56, sin fuente de mercado).
+- 1 `Consultorio` ("Consultorio Demo", slug `consultorio-demo`) con `ConfiguracionReglas` por defecto (esta tabla la carga el change que la crea; el primer change no la lleva).
+- 1 `Usuario` con roles `odontologo` + `dueno` (credenciales de prueba definidas en un archivo de ejemplo de entorno, nunca reales). No va en el primer change: lo carga el change de usuarios y acceso.
+- 1 `Profesional` vinculado a ese usuario (el vínculo, `usuario_id`, llega con el change de usuarios; el primer change carga el profesional sin vínculo).
+- 1 `Sillon` ("Sillón 1") — el recurso por defecto del MVP: el único activo (RN-AG-14).
+- Prestaciones de ejemplo (**datos ilustrativos confirmados por el autor el 2026-10-05, D56**, sin fuente de mercado): Consulta / control 30 min; Limpieza 45 min; Obturación 60 min; Extracción 45 min; Urgencia 30 min. Cada una con un color (el `color` lo agrega US-001: el primer change carga las prestaciones sin él, D130).
+- Horario recurrente de ejemplo: lunes a viernes 09:00-13:00 y 15:00-19:00 (dato ilustrativo confirmado por el autor el 2026-10-05, D56, sin fuente de mercado). No va en el primer change: lo carga el change de horario.
 - 2-3 pacientes ficticios (nombres inventados, teléfonos con prefijo de prueba, sin DNI real).
+
+**Datos de la demo del primer change (decisión del autor 2026-10-07, D124):** la API que se levanta para probar `POST /turnos` desde Swagger usa SQLite en memoria con datos ficticios cargados **al arrancar**, con **identificadores fijos** documentados en el README junto con un ejemplo de petición. Los tests **no** usan ese seed: cada test arma sus datos con factories (`08_arquitectura_propuesta.md`, «Fixtures de test»). **Límite:** son datos de demo, un reinicio los restablece y no se agregan endpoints de lectura para consultarlos.
 
 ## Propuestas aceptadas y Suposiciones resueltas
 

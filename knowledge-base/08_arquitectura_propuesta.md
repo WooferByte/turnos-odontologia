@@ -45,7 +45,7 @@ proyecto/
 │   │   ├── unit/                # dominio puro (solapamiento, ventanas)
 │   │   ├── integration/         # casos de uso + repos con SQLite en memoria
 │   │   └── api/                 # endpoints con TestClient
-│   ├── pyproject.toml
+│   ├── pyproject.toml           # archivo único: dependencias y configuración de pytest (D137)
 │   └── Dockerfile
 ├── frontend/
 │   └── src/
@@ -56,6 +56,8 @@ proyecto/
 ├── .env.example                 # solo valores de prueba
 └── README.md                    # cómo correr tests sin Postgres ni Redis, y el perfil opcional con PostgreSQL (E11)
 ```
+
+**Ubicación del código (decisión del autor 2026-10-07, D122):** el código vive en `backend/app` y los tests en `backend/tests`; el archivo único de dependencias es `backend/pyproject.toml` (decisión del autor 2026-10-07, D137; antes su formato quedaba para el design), y el `README.md` va en la raíz del repositorio. **Por qué `backend/` y no el `src/` de la estructura mínima de la consigna:** la consigna aclara que los nombres pueden variar; el frontend de React llega en la fase 3 como carpeta hermana (`frontend/`), y una raíz `backend/` mantiene separados los dos desde el primer día; este archivo ya usaba esa estructura. **Consecuencias:** el README dice desde qué directorio se instala y se corre `pytest`; toda referencia a `app/domain` en `openspec/config.yaml` y en `CLAUDE.md` / `AGENTS.md` significa `backend/app/domain`.
 
 **Migraciones:** Alembic **no se usa en el primer change**; los tests crean el esquema con `create_all`. **Alembic se usa a partir del change de infraestructura con PostgreSQL** (decisión del autor 2026-10-03, DD-15), que va en el **orden 2, justo después del primer change** (decisión del autor 2026-10-05, D105). Las columnas que el primer change no crea se agregan con migraciones (`04_modelo_de_datos.md`).
 
@@ -72,7 +74,7 @@ api → application → domain          infrastructure → domain
 
 | Capa | Responsabilidad | Puede importar |
 |---|---|---|
-| `domain` | Reglas puras: `Intervalo`, solapamiento, estados, errores de dominio, `utc_now()` | Solo biblioteca estándar |
+| `domain` | Reglas puras: `Intervalo`, solapamiento, estados, errores de dominio, `utc_now()` | Solo biblioteca estándar (incluida `zoneinfo`, D132) |
 | `application` | Casos de uso; orquesta repositorio y transacción; lanza errores de dominio | `domain` |
 | `infrastructure` | Modelos SQLAlchemy, repositorios, sesión | `domain` (y `application` solo para implementar sus puertos) |
 | `api` | HTTP: valida el cuerpo con Pydantic, llama al caso de uso, traduce errores a RFC 7807 | `application`, `domain` |
@@ -85,7 +87,7 @@ api → application → domain          infrastructure → domain
 - Un caso de uso que arme consultas SQL directamente: cada consulta es un método del repositorio (por ejemplo, `turnos_que_intersecan(recurso, intervalo)`).
 - Tests que sustituyan la sesión o el repositorio por mocks (ver «Estrategia de tests»).
 
-Verificación mecánica (confirmada por el autor 2026-10-05, D70): un test que recorra los imports de `app/domain` y falle si aparece un módulo prohibido.
+Verificación mecánica (confirmada por el autor 2026-10-05, D70): un test que recorra los imports de `backend/app/domain` y falle si aparece un módulo prohibido. El conjunto permitido es la biblioteca estándar, que incluye `zoneinfo`; el paquete de datos de zonas (`tzdata`) se declara como dependencia pero el dominio **no lo importa** (decisión del autor 2026-10-07, D132).
 
 ## Contrato del primer change
 
@@ -113,7 +115,7 @@ class Conflicto:
     codigo: Literal["RN-AG-05", "RN-AG-08"]
     recurso: Literal["profesional", "sillon"]
     recurso_id: int
-    turno_id: int                    # turno existente con el que choca
+    turno_id: int                    # turno existente con el que choca; si son varios del mismo recurso, el que empieza primero (D129)
 
 def detectar_conflictos(
     candidato: Intervalo,
@@ -123,7 +125,7 @@ def detectar_conflictos(
 ```
 
 - Solo cuentan los turnos con `estado in ESTADOS_ACTIVOS` (RN-AG-10); el filtro vive en el dominio (decisión del autor 2026-10-03).
-- Evalúa RN-AG-05 y RN-AG-08 **por separado** y devuelve **todos** los conflictos: tupla vacía si no hay ninguno; una por recurso en conflicto; **dos** si choca con ambos (E4). Orden estable: profesional primero, luego sillón.
+- Evalúa RN-AG-05 y RN-AG-08 **por separado** y devuelve **todos** los conflictos: tupla vacía si no hay ninguno; una por recurso en conflicto; **dos** si choca con ambos (E4). Orden estable: profesional primero, luego sillón. **Un `Conflicto` por recurso, con el turno existente que empieza primero** (menor `inicio`) si el candidato choca con más de uno del mismo recurso (decisión del autor 2026-10-07, D129); no hay empate posible, porque los turnos activos de un mismo recurso no se solapan entre sí (RN-AG-05, RN-AG-08).
 - El bloque muestra solo `inicio` y `fin`: **cómo recibe `Intervalo` la zona del consultorio** para RN-AG-10d (campo, parámetro del constructor o validación aparte) **se fija en el design del primer change**.
 
 **Error de dominio:**
@@ -138,27 +140,47 @@ class ErrorDeSolapamiento(ErrorDeDominio):
     @property
     def codigos(self) -> list[str]: ...  # ["RN-AG-05"], ["RN-AG-08"] o ["RN-AG-05", "RN-AG-08"]
 
-class RecursoNoEncontrado(ErrorDeDominio):   # codigo = "RN-GL-04" (E12)
+@dataclass(frozen=True)
+class ReferenciaInvalida:
     recurso: Literal["prestacion", "paciente", "profesional", "sillon"]
-    recurso_id: int | None               # None si no vino (p. ej. no hay sillón por defecto)
-    motivo: Literal["inexistente", "inactivo"]
+    recurso_id: int | None               # None si no vino y no hay un único activo por defecto (RN-AG-14)
+    motivo: Literal["inexistente", "inactivo"]   # RN-AG-14 suma valores para «ninguno activo» y «varios activos»: nombres en el design
+                                                 # un paciente solo puede ser "inexistente" (D136)
+
+class RecursoNoEncontrado(ErrorDeDominio):   # codigo = "RN-GL-04" (E12)
+    referencias: tuple[ReferenciaInvalida, ...]   # TODAS las inválidas de la petición, 1 o más (D127)
+
+class FechaNoUTC(ErrorDeDominio): ...        # codigo = "RN-GL-01" (D128)
+
+class EntradaInvalida(ErrorDeDominio):       # validación de entrada: se informa todo junto (RN-GL-02, D135)
+    errores: tuple[ErrorDeDominio, ...]      # FechaNoUTC y/o RecursoNoEncontrado; 1 o 2
+    @property
+    def codigos(self) -> list[str]: ...      # ["RN-GL-01"], ["RN-GL-04"] o ["RN-GL-01", "RN-GL-04"]
 ```
 
+**Propuesta** (la forma exacta se **fija en el design** del primer change): hasta el 2026-10-06 este contrato modelaba un único recurso (`recurso`, `recurso_id`, `motivo` en el propio error). Desde la decisión del autor 2026-10-07 (D127) el error lista **todas** las referencias inválidas de la petición, así que la lista `referencias` reemplaza a esos tres campos. Un id de otro consultorio cuenta como `inexistente` (D126). Desde D135 el caso de uso no lanza `RecursoNoEncontrado` ni `FechaNoUTC` sueltos: los reúne en `EntradaInvalida`, que es el único error de validación de entrada que sale del caso de uso (**Propuesta**: nombre y forma se fijan en el design). `Intervalo` sigue lanzando `FechaNoUTC` por su cuenta cuando se lo construye con una fecha inválida (E8).
+
 **Caso de uso** (aplicación): `crear_turno(comando: CrearTurnoComando, uow: UnidadDeTrabajo, reloj: Reloj = utc_now) -> Turno`.
-- `CrearTurnoComando`: `paciente_id`, `prestacion_id`, `inicio` (aware UTC), `profesional_id` y `sillon_id` opcionales (defaults RN-AG-06).
-- **Primero** resuelve los defaults y verifica que prestación, paciente, profesional y sillón existan y estén activos; si no, lanza `RecursoNoEncontrado` (`RN-GL-04`, E12) **sin persistir nada**. Luego calcula `fin`, pide al repositorio los turnos de cada recurso que intersecan el intervalo, llama a `detectar_conflictos`, y si la tupla no está vacía lanza `ErrorDeSolapamiento` **sin persistir nada**. Si no hay conflicto persiste el `Turno` en `reservado` con `creado_en = reloj()` y la unidad de trabajo hace commit.
+- `CrearTurnoComando`: `paciente_id`, `prestacion_id`, `inicio` (aware UTC), `profesional_id` y `sillon_id` opcionales (si faltan, el único activo del consultorio: RN-AG-14, D125; si no hay uno solo, `RN-GL-04`). El comando no lleva `consultorio_id`: sale del profesional (D126).
+- **Orden de evaluación (RN-GL-02, decisión del autor 2026-10-07, D135).** El caso de uso tiene dos fases y la segunda solo corre si la primera no encontró nada:
+  1. **Validación de entrada, todo junto.** Verifica que `inicio` sea aware en UTC (`RN-GL-01`), resuelve los defaults (RN-AG-14) y verifica que prestación, profesional y sillón existan, estén activos y pertenezcan al consultorio del profesional, y que el paciente exista y sea de ese consultorio (D126, D136). Reúne **todos** los problemas; si hay alguno, lanza `EntradaInvalida` con los códigos que correspondan (`RN-GL-01` y/o `RN-GL-04`, este con la lista completa de referencias, D127) **sin persistir nada**. Lo que no se puede evaluar porque otro dato es inválido no se informa.
+  2. **Reglas de negocio, de a una.** Calcula `fin` y construye el `Intervalo`: si cruza la medianoche del consultorio lanza el error de `RN-AG-10d` y termina. Si no, pide al repositorio los turnos de cada recurso que intersecan el intervalo y llama a `detectar_conflictos`; si la tupla no está vacía lanza `ErrorDeSolapamiento` (una regla, uno o dos códigos; E4) **sin persistir nada**.
+- Si nada falla, persiste el `Turno` en `reservado` con `creado_en = reloj()` y la unidad de trabajo hace commit.
 - No registra `EventoTurno` (change siguiente). La concurrencia (RN-AG-10c) no se resuelve en este change.
 
 **Endpoint** (decisión del autor 2026-10-03): el primer change expone `POST /turnos` con FastAPI, para probarlo desde Swagger (`/docs`) en el video. **Sin autenticación** en el primer change: es un **límite conocido** (DD-14); se protege con JWT en el change de usuarios y acceso (US-092). Sigue sin interfaz gráfica.
 
-**Mapeo a HTTP** (cuerpo `application/problem+json`, RFC 7807):
+**Demo con Swagger** (decisión del autor 2026-10-07, D124): la API que se levanta para la prueba manual usa SQLite en memoria con datos ficticios cargados al arrancar; los identificadores son **fijos** y el README los documenta con un ejemplo de petición. **Límite:** son datos de demo, un reinicio los restablece y no se agregan endpoints de lectura para esto. El comando de arranque y el módulo de entrada se fijan en el design.
 
-| Situación | Estado | Notas |
-|---|---|---|
-| `ErrorDeSolapamiento` (E2, E3, E4, E7) | `409` | Cuerpo abajo |
-| Cuerpo inválido (formato, `inicio` naive) o intervalo inválido (por ejemplo, el turno cruza la medianoche del consultorio) | `422` | Validación de Pydantic / error de dominio `RN-AG-10d` |
-| `RecursoNoEncontrado` (E12) | `422` | La referencia viaja en el cuerpo, no en la URL. Código `RN-GL-04`; `422` confirmado por el autor 2026-10-05 (D73); un único status para inexistente e inactivo |
-| `RecursoNoEncontrado` con el recurso identificado en la URL (por ejemplo, `GET /turnos/{id}` con un id inexistente) | `404` | Distinción confirmada por el autor 2026-10-05 (D73): `404` es para un recurso inexistente **identificado en la URL**; `422` es para una referencia inválida **dentro del cuerpo** (por ejemplo, `prestacion_id` inexistente en `POST /turnos`). No aplica al primer change, que solo expone `POST /turnos`. Los nombres de los campos del cuerpo y del error se fijan en el design |
+**Mapeo a HTTP** (cuerpo `application/problem+json`, RFC 7807). La columna «Clase» es la de RN-GL-02 (D135):
+
+| Situación | Clase | Estado | Notas |
+|---|---|---|---|
+| `ErrorDeSolapamiento` (E2, E3, E4, E7) | Regla de negocio | `409` | Cuerpo abajo. Una regla que mira dos recursos: uno o dos códigos |
+| El turno cruza la medianoche del consultorio | Regla de negocio (**Propuesta**, D135) | `422` | Error de dominio `RN-AG-10d`. Se evalúa antes del solapamiento y, si falla, es el único código |
+| `EntradaInvalida`: referencias inválidas (E12), `inicio` sin zona o con un desfase distinto de UTC, o las dos cosas | Validación de entrada | `422` | **Un único `422` con todos los problemas** (D135): `codigos` lleva `RN-GL-04` (D73, D127; un único status para inexistente e inactivo), `RN-GL-01` (D128) o los dos. La referencia viaja en el cuerpo, no en la URL |
+| Cuerpo inválido de formato (campo ausente, tipo erróneo, campo de más) | Validación de entrada | `422` | Validación de Pydantic, adaptada al **mismo cuerpo** del `422` de entrada, sin código RN. Si el cuerpo no se puede leer como petición no se evalúan referencias ni fecha (D135). La forma exacta se fija en el design |
+| Recurso identificado en la URL que no existe (por ejemplo, `GET /turnos/{id}` con un id inexistente) | Validación de entrada | `404` | Distinción confirmada por el autor 2026-10-05 (D73): `404` es para un recurso inexistente **identificado en la URL**; `422` es para una referencia inválida **dentro del cuerpo** (por ejemplo, `prestacion_id` inexistente en `POST /turnos`). No aplica al primer change, que solo expone `POST /turnos`. Los nombres de los campos del cuerpo y del error se fijan en el design |
 
 ```json
 {
@@ -177,7 +199,7 @@ class RecursoNoEncontrado(ErrorDeDominio):   # codigo = "RN-GL-04" (E12)
 
 `codigos` es la lista de códigos RN (uno o dos); `conflictos` detalla recurso y turno en conflicto. El valor de `type` (URI relativa) es una propuesta aceptada por el autor 2026-10-03; se revisa en el design del change. Los tests de dominio verifican la tupla de `Conflicto`; los de API, el estado y `codigos`.
 
-Cuerpo para E12 (`422`): igual forma, con `"type": "/errores/recurso-no-encontrado"`, `"title": "Recurso no encontrado"`, `"codigos": ["RN-GL-04"]` y los campos `recurso`, `recurso_id` y `motivo`.
+Cuerpo del `422` de validación de entrada (E12, fecha inválida, formato): igual forma, con `codigos` (para E12, `["RN-GL-04"]`: un solo código aunque haya varias referencias inválidas; `["RN-GL-01", "RN-GL-04"]` si además la fecha es inválida) y, para `RN-GL-04`, una lista con un elemento por referencia inválida, cada uno con `recurso`, `recurso_id` y `motivo` (D127). **Propuesta** (se fija en el design, D135): un único valor de `type` para toda la validación de entrada, en lugar del `/errores/recurso-no-encontrado` que figuraba acá, porque un mismo `422` puede reunir problemas de varias clases; los nombres de las listas de detalle y los ejemplos completos están en el design.
 
 ## Vencimientos y tarea periódica (Redis en la v1)
 
@@ -243,32 +265,34 @@ Los nombres son **propuestos** y se toman como requisito (confirmado por el auto
 
 - Un único `utc_now()` en `domain/tiempo.py` devuelve un datetime aware en UTC. Está prohibido `datetime.utcnow()` y `datetime.now()` sin zona.
 - Los casos de uso reciben el reloj como parámetro (`reloj: Reloj = utc_now`), por lo que los tests lo reemplazan.
-- El **dominio recibe solo datetimes aware en UTC**: `Intervalo` rechaza datetimes naive o con otro offset (E8). La conversión desde `America/Argentina/Buenos_Aires` ocurre en el borde (API o adaptador). **Única excepción** (RN-AG-10d, decisión del autor 2026-10-05, D63): para verificar que un turno no cruce la medianoche, `Intervalo` recibe la **zona del consultorio** (`Consultorio.zona_horaria`) como dato y convierte `inicio` y `fin` a esa zona solo para esa comprobación; el instante guardado sigue siendo UTC. La zona entra como parámetro, no se lee de la configuración dentro del dominio.
+- El **dominio recibe solo datetimes aware en UTC**: `Intervalo` rechaza datetimes naive o con otro offset (E8) con el código `RN-GL-01` (decisión del autor 2026-10-07, D128). La conversión desde `America/Argentina/Buenos_Aires` ocurre en el borde (API o adaptador). **Única excepción** (RN-AG-10d, decisión del autor 2026-10-05, D63): para verificar que un turno no cruce la medianoche, `Intervalo` recibe la **zona del consultorio** (`Consultorio.zona_horaria`) como dato y convierte `inicio` y `fin` a esa zona solo para esa comprobación; el instante guardado sigue siendo UTC. La zona entra como parámetro, no se lee de la configuración dentro del dominio.
 - El **adaptador de persistencia normaliza** lo que lee de la base antes de entregarlo al dominio.
 - **A verificar en el change** (verificar antes de cerrar el primer change; decisión del autor 2026-10-05, D85): SQLite no conserva la zona horaria y SQLAlchemy puede devolver datetimes naive aunque la columna tenga `timezone=True`; por eso la normalización del adaptador y un test de ida y vuelta (escribir aware UTC, leer aware UTC) son parte del change. PostgreSQL sí conserva el instante.
 
 ## Versiones y dependencias
 
-Política (decisión del autor 2026-10-03; **no se inventan números de versión**): 
-- **Confirmadas por el autor:** Python 3.11+ y SQLAlchemy 2.x. Las versiones exactas de FastAPI, Pydantic, pytest, PostgreSQL, Redis, React y Vite **no están decididas**.
-- **Un único archivo de dependencias** (`pyproject.toml` o `requirements`: **lo elige el design del primer change**, que es el primero que lo necesita), con **versiones exactas** (pins), sin duplicar la lista en otro archivo (criterio fijado por el autor el 2026-10-05, D72; quién lo elige, D116).
-- Los pins se **fijan en el `design.md` del primer change** (las versiones se consultan ese día; hoy solo se fija el criterio) y se **verifican en un clon limpio** (crear entorno, instalar solo desde ese archivo, correr los tests). **Los changes siguientes (incluido el de infraestructura con PostgreSQL) agregan sus dependencias a ese mismo archivo, con versión exacta**, cada uno en su design (D116).
+Política (decisión del autor 2026-10-03; **no se inventan números de versión**; precisada el 2026-10-07, D133 y D137):
+- **Confirmadas por el autor:** Python 3.11+; SQLAlchemy de la **serie 2.0.x** (no la 2.1: «2.x» en esta KB significa la línea 2.0, con su API declarativa tipada); FastAPI de la **serie 0.115.x**; Pydantic, una versión compatible con ese FastAPI. Las versiones exactas de pytest, PostgreSQL, Redis, React y Vite **no están decididas**.
+- **Antigüedad mínima de un pin** (D133): **ninguna versión publicada en la semana anterior al día del design**. Si la más nueva de un paquete es tan reciente, se toma la más nueva publicada antes, dentro de la serie permitida. Motivo: una versión de pocos días no tiene recorrido, y el design no instala nada para probarla. Vale para el design del primer change y para el de cada change que agregue dependencias.
+- **Un único archivo de dependencias: `backend/pyproject.toml`** (decisión del autor 2026-10-07, D137; D116 dejaba la elección al design), con **versiones exactas** (pins), sin duplicar la lista en otro archivo (criterio fijado por el autor el 2026-10-05, D72). Ahí van las dependencias de ejecución, las de test y la **configuración de pytest**: no hay `requirements.txt` ni `pytest.ini`. **Sin empaquetado**: no se agrega un backend de construcción ni más de lo necesario para instalar y correr los tests. **Propuesta** (se fija en el design del primer change): cómo se declaran las dependencias dentro del archivo y el comando exacto de instalación.
+- Los pins se **fijan en el `design.md` del primer change**, con la versión exacta, su fecha de publicación, la fuente y la fecha de consulta, y la compatibilidad entre ellos se comprueba con los metadatos de los paquetes, no se supone; lo que no se pueda obtener queda como **A verificar en el change** (verificar antes de crear el archivo de dependencias). Se **verifican en un clon limpio** (crear entorno, instalar solo desde ese archivo, correr los tests). **Los changes siguientes (incluido el de infraestructura con PostgreSQL) agregan sus dependencias a ese mismo archivo, con versión exacta**, cada uno en su design (D116), con el mismo criterio de antigüedad.
 - **Toda dependencia de test está declarada** en ese archivo (pytest y cualquier plugin que use la configuración). Ninguna dependencia queda implícita ni instalada solo en la máquina del autor.
+- **Zonas horarias en Windows** (decisión del autor 2026-10-07, D132): el paquete de datos de zonas (`tzdata`) se declara en el archivo único de dependencias, con versión exacta fijada en el design, y se menciona en el README; en Windows `zoneinfo` no trae base de zonas propia. `backend/app/domain` sigue importando solo la biblioteca estándar (`zoneinfo` lo es); `tzdata` no se importa, `zoneinfo` lo encuentra por su cuenta.
 - Sin dependencias del lado async (ver DD-12). Alembic no entra en el primer change.
 
 ## Definition of Done del primer change
 
 Checklist verificable (el requisito de fondo es de la consigna y de DD-03; la redacción de los ítems y el uso de `/docs` en el video son decisión del autor 2026-10-03):
-- [ ] En un **clon limpio**, siguiendo solo el README, se crea el entorno, se instala desde el único archivo de dependencias y se corre `pytest` sin Docker, PostgreSQL ni Redis.
-- [ ] El README dice explícitamente que los tests corren con **SQLite en memoria** y lista las versiones fijadas.
-- [ ] `pytest` termina en verde y ejecuta al menos **un test por escenario del primer change (E1..E7 y E12)**; una tabla escenario ↔ test está en el README o en el design.
-- [ ] **Se levanta la API** (`uvicorn`, con el comando del README) y `POST /turnos` se prueba desde Swagger en `/docs`: un turno válido devuelve `201`, un solapamiento devuelve `409` con `codigos`, y una referencia inexistente devuelve `422` con `RN-GL-04`. Qué base usa la demo sin PostgreSQL y cómo se cargan sus datos ficticios **se fija en el design del change** (los tests usan una base en memoria por test, sin seed compartido).
+- [ ] En un **clon limpio**, siguiendo solo el README (que indica desde qué directorio, `backend/`, se instala y se corre `pytest`, D122), se crea el entorno, se instala desde el único archivo de dependencias y se corre `pytest` sin Docker, PostgreSQL ni Redis.
+- [ ] El README dice explícitamente que los tests corren con **SQLite en memoria**, lista las versiones fijadas y dice con qué versiones de Python se instala (D133).
+- [ ] `pytest` termina en verde y ejecuta al menos **un test por escenario del primer change (E1..E7 y E12)**; una tabla escenario ↔ test está en el README o en el design. Son 8 escenarios: excepción registrada al «3 a 6» de `CHANGES.md` (D123); sus tareas, agrupadas por tema, son la segunda excepción, al «alrededor de 20» (D134).
+- [ ] **Se levanta la API** (`uvicorn`, con el comando del README) y `POST /turnos` se prueba desde Swagger en `/docs`: un turno válido devuelve `201`, un solapamiento devuelve `409` con `codigos`, y una referencia inexistente devuelve `422` con `RN-GL-04`. La demo usa SQLite en memoria con datos ficticios cargados al arrancar, con identificadores fijos documentados en el README junto con un ejemplo de petición (D124); el comando de arranque se fija en el design. Los tests usan una base en memoria por test, sin seed compartido.
 - [ ] El spec del change tiene al menos 3 escenarios (feliz, error de negocio, borde), con Requirement y Scenario en WHEN/THEN citando RN y E#.
 - [ ] El historial TDD muestra primero el test que falla y luego el código (RED → GREEN → TRIANGULATE → REFACTOR por escenario).
 - [ ] Ningún test usa mocks de sesión ni de repositorio; ninguna dependencia de test falta en el archivo de dependencias.
 - [ ] El test guard de fechas pasa y no hay `datetime.utcnow()` en el código.
 - [ ] El **test de ida y vuelta de fechas** pasa: se escribe un datetime aware en UTC y se lee aware en UTC con SQLite (DD-13, D85).
-- [ ] El **test de imports de `app/domain`** pasa (regla de capas, D70).
+- [ ] El **test de imports de `backend/app/domain`** pasa (regla de capas, D70; permite `zoneinfo`, D132).
 - [ ] `openspec validate` del change sin errores y sin archivos de bloqueo residuales (`.openspec-archive.lock`) antes de archivar.
 - [ ] No hay datos reales, secretos ni `.env` versionados; `.env.example` solo con valores de prueba (RN-PR-01).
 - [ ] El README declara el **límite conocido**: `POST /turnos` va sin autenticación en este change (DD-14).

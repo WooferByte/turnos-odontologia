@@ -54,7 +54,7 @@ Los criterios de US-010 usan IDs estables `E1..E12` (compartidos con `07_flujos_
 
 ### US-004 — Sillón como recurso
 **Como** odontólogo **quiero** que el consultorio tenga un sillón por defecto **para** que la agenda controle su ocupación sin configuración extra.
-- [ ] CA-1: el seed crea "Sillón 1"; todo turno sin sillón explícito se asigna a él.
+- [ ] CA-1: el seed crea "Sillón 1"; todo turno sin sillón explícito se asigna a él mientras sea el único sillón activo (RN-AG-14, D125; con más de uno activo hay que indicarlo).
 - [ ] CA-2: el modelo admite agregar más sillones (la UI multi-sillón es Fase 2).
 - [ ] CA-3: puedo dar de alta un sillón y desactivarlo (`POST /sillones`, `PATCH /sillones/{id}`); un sillón inactivo no admite turnos nuevos (RN-AG-07). CA-1 ya lo cumple el primer change; este change agrega la gestión.
 **Orden**: 2
@@ -85,18 +85,21 @@ Los criterios de US-010 usan IDs estables `E1..E12` (compartidos con `07_flujos_
 | E5 | **Borde contiguo**: un turno que empieza exactamente cuando termina otro se acepta (RN-AG-09) | **Sí** |
 | E6 | **Estado no activo**: un turno cancelado, vencido, atendido o ausente no bloquea el horario (RN-AG-10) | **Sí** |
 | E7 | **Borde de un minuto**: un solapamiento de un minuto se rechaza | **Sí** |
-| E8 | Intervalo inválido (`inicio >= fin`, naive, fuera de UTC o que cruza la medianoche del consultorio) se rechaza (RN-AG-10d, RN-GL-01) | **No como escenario del spec**: lo cubre un test unitario del value object `Intervalo` (decisión del autor 2026-10-03) |
+| E8 | Intervalo inválido (`inicio >= fin`, naive, fuera de UTC o que cruza la medianoche del consultorio) se rechaza (RN-AG-10d, RN-GL-01). Naive o fuera de UTC es **validación de entrada**; `inicio >= fin` y el cruce de la medianoche son **regla de negocio** (RN-GL-02, D135) | **No como escenario del spec**: lo cubre un test unitario del value object `Intervalo` (decisión del autor 2026-10-03) |
 | E9 | La creación queda registrada en el historial (antes CA-7; RN-AG-11) | **No: fuera del primer change; change siguiente** (decisión del autor 2026-10-03) |
 | E10 | Un turno fuera del horario o sobre un bloqueo se rechaza (RN-AG-04/04b; antes CA-8) | **No** (decisión del autor 2026-10-02, P-10) |
 | E11 | Dos reservas concurrentes del mismo hueco: solo una gana (RN-AG-10c) | **No** (no verificable con SQLite; corre solo en un perfil opcional con PostgreSQL, con un marcador de pytest, fuera de la suite por defecto; decisión del autor 2026-10-03 y 2026-10-05, D75) |
-| E12 | **Recurso no encontrado**: prestación, paciente, profesional o sillón inexistente o inactivo, referenciado en el cuerpo, se rechaza con `RN-GL-04` (RN-AG-07); en HTTP, `422` (`404` queda para un recurso inexistente identificado en la URL) | **Sí** (decisión del autor 2026-10-03; `422` confirmado el 2026-10-05, D73) |
+| E12 | **Recurso no encontrado**: prestación, profesional o sillón inexistente o inactivo, o paciente inexistente (el paciente no tiene estado de actividad en la v1, D136), referenciado en el cuerpo, se rechaza con `RN-GL-04` (RN-AG-07, RN-AG-14), listando **todas** las referencias inválidas (D127); en HTTP, `422` (`404` queda para un recurso inexistente identificado en la URL). Es validación de entrada: si además la fecha no tiene zona o no está en UTC, el mismo `422` lleva también `RN-GL-01` (RN-GL-02, D135) | **Sí** (decisión del autor 2026-10-03; `422` confirmado el 2026-10-05, D73) |
 
 - **Nota del orden**: US-010 es el change de la consigna y el hito de entrega. Depende conceptualmente de US-001 y US-004, pero va primero porque este change crea el subconjunto mínimo (prestación y sillón por seed); US-001 y US-004 agregan después la gestión (decisión del autor 2026-10-03).
 - **Estado inicial** del turno en el primer change: `reservado` (decisión del autor 2026-10-03; `pendiente_sena` depende de la seña, fuera del primer change).
 - **Endpoint:** el primer change expone `POST /turnos` (FastAPI) para probarlo desde Swagger (`/docs`), **sin autenticación** (límite conocido, decisión del autor 2026-10-03, DD-14); se protege con JWT en el change de usuarios y acceso (US-092). Sin interfaz gráfica.
+- **Tamaño (decisión del autor 2026-10-07, D123):** el primer change conserva sus 8 escenarios (E1..E7 y E12) como **excepción registrada** a la regla de «3 a 6 escenarios» de `CHANGES.md`: son variantes cortas de una sola regla, la KB ya las definió y recortarlas dejaría casos definidos sin probar. La excepción vale solo para este change y debe constar también en su `proposal.md`. **Segunda excepción (decisión del autor 2026-10-07, D134):** sus tareas (53) superan el «alrededor de 20» de `CHANGES.md`; se aceptan con la condición de que vayan agrupadas por tema, y consta en `proposal.md` y en el encabezado de `tasks.md`.
+- **Recursos por defecto, consultorio y errores (decisiones del autor 2026-10-07, D125 a D129):** si no se indica el sillón o el profesional se usa el único activo, y si no hay uno solo se rechaza con `RN-GL-04` (RN-AG-14); el consultorio del turno sale del profesional; `RN-GL-04` lista todas las referencias inválidas; un `Conflicto` por recurso con el turno que empieza primero.
+- **Cómo se informan los errores (decisión del autor 2026-10-07, D135 y D136; RN-GL-02):** los problemas de **validación de entrada** (referencias inválidas, `RN-GL-04`; fecha sin zona o fuera de UTC, `RN-GL-01`; cuerpo mal formado) se informan **todos juntos** en un único `422`; las **reglas de negocio** se evalúan solo con la entrada válida y **de a una** (primero RN-AG-10d, después el solapamiento). El solapamiento es una sola regla que mira dos recursos: E4 sigue informando los dos códigos (**lectura a confirmar por el autor**). Un paciente solo puede ser `inexistente`.
 **Orden**: 1
 **Depende de**: Ninguna (conceptualmente usa US-001 y US-004; ver nota del orden). E10 dependería además de US-002 y US-003
-**Reglas**: RN-AG-02, RN-AG-05, RN-AG-06, RN-AG-08, RN-AG-09, RN-AG-10, RN-AG-10b (reprogramar: fuera del primer change), RN-AG-10c, RN-AG-10d, RN-AG-11 (historial: **fuera del primer change**), RN-GL-01, RN-GL-02, RN-GL-04
+**Reglas**: RN-AG-02, RN-AG-05, RN-AG-06, RN-AG-08, RN-AG-09, RN-AG-10, RN-AG-10b (reprogramar: fuera del primer change), RN-AG-10c, RN-AG-10d, RN-AG-14, RN-AG-11 (historial: **fuera del primer change**), RN-GL-01, RN-GL-02, RN-GL-04
 
 ### US-011 — Agenda del día
 **Como** odontólogo **quiero** ver los turnos del día con color por prestación y estado **para** organizar la atención.
