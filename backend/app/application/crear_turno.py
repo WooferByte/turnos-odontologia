@@ -39,6 +39,8 @@ def crear_turno(comando: CrearTurnoComando, uow: UnidadDeTrabajo, reloj: Reloj =
         prestacion = uow.agenda.prestacion(comando.prestacion_id)
         if prestacion is None:
             referencias.append(ReferenciaInvalida("prestacion", comando.prestacion_id, "inexistente"))
+        elif not prestacion.activa:
+            referencias.append(ReferenciaInvalida("prestacion", prestacion.id, "inactivo"))
         paciente = uow.agenda.paciente(comando.paciente_id)
         if paciente is None:
             referencias.append(ReferenciaInvalida("paciente", comando.paciente_id, "inexistente"))
@@ -47,9 +49,13 @@ def crear_turno(comando: CrearTurnoComando, uow: UnidadDeTrabajo, reloj: Reloj =
             referencias.append(
                 ReferenciaInvalida("profesional", comando.profesional_id, "inexistente")
             )
+        elif not profesional.activo:
+            referencias.append(ReferenciaInvalida("profesional", profesional.id, "inactivo"))
         sillon = uow.agenda.sillon(comando.sillon_id)
         if sillon is None:
             referencias.append(ReferenciaInvalida("sillon", comando.sillon_id, "inexistente"))
+        elif not sillon.activo:
+            referencias.append(ReferenciaInvalida("sillon", sillon.id, "inactivo"))
         if referencias:
             errores.append(RecursoNoEncontrado(tuple(referencias)))
         if errores:
