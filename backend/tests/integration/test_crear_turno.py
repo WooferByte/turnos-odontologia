@@ -818,3 +818,34 @@ def test_cruce_de_medianoche_y_horario_ocupado_informa_solo_rn_ag_10d(
     assert excinfo.value.codigos == ["RN-AG-10d"]
     with fabrica_sesiones() as otra_sesion:
         assert len(otra_sesion.scalars(select(TurnoModelo)).all()) == 1  # solo el existente
+
+
+def test_e12_el_sillon_por_defecto_tambien_se_controla_por_solapamiento(
+    sesion, fabrica_sesiones, uow
+):
+    datos = _escenario(sesion)
+    profesional_b = un_profesional(sesion, datos["consultorio"])
+    existente = un_turno(
+        sesion,
+        paciente=datos["paciente"],
+        profesional=profesional_b,
+        sillon=datos["sillon"],
+        prestacion=datos["prestacion"],
+        inicio=a_las(10),
+    )
+    comando = replace(_comando(datos, a_las(10)), sillon_id=None)  # el único sillón activo
+
+    with pytest.raises(ErrorDeSolapamiento) as excinfo:
+        crear_turno(comando, uow, reloj_fijo)
+
+    assert excinfo.value.codigos == ["RN-AG-08"]
+    assert excinfo.value.conflictos == (
+        Conflicto(
+            codigo="RN-AG-08",
+            recurso="sillon",
+            recurso_id=datos["sillon"].id,
+            turno_id=existente.id,
+        ),
+    )
+    with fabrica_sesiones() as otra_sesion:
+        assert len(otra_sesion.scalars(select(TurnoModelo)).all()) == 1  # solo el existente
