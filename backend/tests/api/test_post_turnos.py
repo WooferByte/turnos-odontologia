@@ -139,6 +139,60 @@ def test_e4_post_turnos_responde_409_con_los_dos_codigos(cliente, sesion):
     }
 
 
+@pytest.mark.parametrize(
+    ("recurso", "codigo", "detail"),
+    [
+        ("profesional", "RN-AG-05", "El profesional ya tiene un turno activo en ese horario."),
+        ("sillon", "RN-AG-08", "El sillón ya tiene un turno activo en ese horario."),
+    ],
+    ids=["profesional", "sillon"],
+)
+def test_conflicto_de_un_solo_recurso_responde_409_con_un_codigo(
+    cliente, sesion, recurso, codigo, detail
+):
+    datos = _escenario(sesion)
+    existente = un_turno(
+        sesion,
+        paciente=datos["paciente"],
+        profesional=datos["profesional"],
+        sillon=datos["sillon"],
+        prestacion=datos["prestacion"],
+        inicio=a_las(10),
+    )
+    if recurso == "profesional":
+        # mismo profesional, otro sillón, solapado a las 10:15
+        otro = {"sillon": un_sillon(sesion, datos["consultorio"])}
+        inicio = "2026-11-02T10:15:00Z"
+        ocupado = datos["profesional"]
+    else:
+        # otro profesional, mismo sillón, a las 10:00
+        otro = {"profesional": un_profesional(sesion, datos["consultorio"])}
+        inicio = "2026-11-02T10:00:00Z"
+        ocupado = datos["sillon"]
+    peticion = _peticion({**datos, **otro}, inicio)
+
+    respuesta = cliente.post("/turnos", json=peticion)
+
+    assert respuesta.status_code == 409
+    assert respuesta.headers["content-type"] == "application/problem+json"
+    assert respuesta.json() == {
+        "type": "/errores/solapamiento-turno",
+        "title": "Turno solapado",
+        "status": 409,
+        "detail": detail,
+        "instance": "/turnos",
+        "codigos": [codigo],
+        "conflictos": [
+            {
+                "codigo": codigo,
+                "recurso": recurso,
+                "recurso_id": ocupado.id,
+                "turno_id": existente.id,
+            }
+        ],
+    }
+
+
 def test_e12_post_turnos_responde_422_con_rn_gl_04(cliente, sesion):
     datos = _escenario(sesion)
     sillon_inactivo = un_sillon(sesion, datos["consultorio"], activo=False)
