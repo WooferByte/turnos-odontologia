@@ -5,7 +5,7 @@ import pytest
 from sqlalchemy import select
 
 from app.application.crear_turno import CrearTurnoComando, crear_turno
-from app.domain.errors import IntervaloInvalido
+from app.domain.errors import Conflicto, ErrorDeSolapamiento, IntervaloInvalido
 from app.domain.tiempo import UTC
 from app.domain.turnos.estados import EstadoTurno
 from app.infrastructure.db.modelos import TurnoModelo
@@ -16,6 +16,7 @@ from tests.factories import (
     un_profesional,
     una_prestacion,
     un_sillon,
+    un_turno,
 )
 
 DIA = (2026, 11, 2)
@@ -96,3 +97,38 @@ def test_e1_si_el_caso_de_uso_falla_no_queda_ningun_turno(sesion, fabrica_sesion
 
     with fabrica_sesiones() as otra_sesion:
         assert otra_sesion.scalars(select(TurnoModelo)).all() == []
+
+
+def test_e2_profesional_ocupado_rechaza_con_rn_ag_05(sesion, fabrica_sesiones, uow):
+    datos = _escenario(sesion, duracion_minutos=30)
+    sillon_2 = un_sillon(sesion, datos["consultorio"])
+    existente = un_turno(
+        sesion,
+        paciente=datos["paciente"],
+        profesional=datos["profesional"],
+        sillon=datos["sillon"],
+        prestacion=datos["prestacion"],
+        inicio=_a_las(10),
+    )
+    comando = CrearTurnoComando(
+        paciente_id=datos["paciente"].id,
+        prestacion_id=datos["prestacion"].id,
+        inicio=_a_las(10, 15),
+        profesional_id=datos["profesional"].id,
+        sillon_id=sillon_2.id,
+    )
+
+    with pytest.raises(ErrorDeSolapamiento) as excinfo:
+        crear_turno(comando, uow, reloj_fijo)
+
+    assert excinfo.value.codigos == ["RN-AG-05"]
+    assert excinfo.value.conflictos == (
+        Conflicto(
+            codigo="RN-AG-05",
+            recurso="profesional",
+            recurso_id=datos["profesional"].id,
+            turno_id=existente.id,
+        ),
+    )
+    with fabrica_sesiones() as otra_sesion:
+        assert len(otra_sesion.scalars(select(TurnoModelo)).all()) == 1  # solo el existente
