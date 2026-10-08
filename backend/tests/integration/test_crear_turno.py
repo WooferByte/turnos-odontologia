@@ -703,3 +703,34 @@ def test_e12_recurso_omitido_sin_un_unico_activo_rechaza_con_rn_gl_04(
     assert error.codigos == ["RN-GL-04"]
     assert error.referencias == (ReferenciaInvalida(recurso, None, motivo),)
     assert _sin_turnos_guardados(fabrica_sesiones)
+
+
+def test_e12_sin_profesional_y_con_paciente_inexistente_informa_solo_el_paciente(
+    sesion, fabrica_sesiones, uow
+):
+    datos = _escenario(sesion)
+    comando = replace(_comando(datos, a_las(10)), paciente_id=999, profesional_id=None)
+
+    error = _rechazo_de_entrada(uow, comando)
+
+    assert error.codigos == ["RN-GL-04"]
+    assert error.referencias == (ReferenciaInvalida("paciente", 999, "inexistente"),)
+    assert _sin_turnos_guardados(fabrica_sesiones)
+
+
+def test_e12_sin_sillon_y_con_profesional_inactivo_informa_solo_el_profesional(
+    sesion, fabrica_sesiones, uow
+):
+    datos = _escenario(sesion)
+    profesional_inactivo = un_profesional(sesion, datos["consultorio"], activo=False)
+    comando = replace(
+        _comando(datos, a_las(10)), profesional_id=profesional_inactivo.id, sillon_id=None
+    )
+
+    error = _rechazo_de_entrada(uow, comando)
+
+    assert error.codigos == ["RN-GL-04"]
+    assert error.referencias == (
+        ReferenciaInvalida("profesional", profesional_inactivo.id, "inactivo"),
+    )
+    assert _sin_turnos_guardados(fabrica_sesiones)
