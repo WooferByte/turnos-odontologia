@@ -589,3 +589,18 @@ def test_e12_sillon_de_otro_consultorio_e_inactivo_se_informa_como_inexistente(
 
     assert error.referencias == (ReferenciaInvalida("sillon", ajeno.id, "inexistente"),)
     assert _sin_turnos_guardados(fabrica_sesiones)
+
+
+def test_e12_paciente_de_otro_consultorio_es_inexistente_y_nunca_inactivo(
+    sesion, fabrica_sesiones, uow
+):
+    datos = _escenario(sesion)
+    ajeno = un_paciente(sesion, un_consultorio(sesion))
+    comando = replace(_comando(datos, a_las(10)), paciente_id=ajeno.id)
+
+    error = _rechazo_de_entrada(uow, comando)
+
+    assert error.codigos == ["RN-GL-04"]
+    assert error.referencias == (ReferenciaInvalida("paciente", ajeno.id, "inexistente"),)
+    assert all(r.motivo != "inactivo" for r in error.referencias)  # D136
+    assert _sin_turnos_guardados(fabrica_sesiones)
