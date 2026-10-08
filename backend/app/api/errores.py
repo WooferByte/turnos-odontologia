@@ -33,7 +33,9 @@ def _detalle_de_solapamiento(error: ErrorDeSolapamiento) -> str:
     recursos = {c.recurso for c in error.conflictos}
     if recursos == {"profesional", "sillon"}:
         return "El profesional y el sillón ya tienen un turno activo en ese horario."
-    return f"El {recursos.pop()} ya tiene un turno activo en ese horario."
+    if recursos == {"sillon"}:
+        return "El sillón ya tiene un turno activo en ese horario."
+    return "El profesional ya tiene un turno activo en ese horario."
 
 
 def _texto_de_referencia(referencia: ReferenciaSalida) -> str:
