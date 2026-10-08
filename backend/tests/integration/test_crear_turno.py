@@ -10,7 +10,9 @@ from app.domain.errors import (
     Conflicto,
     EntradaInvalida,
     ErrorDeSolapamiento,
+    FechaNoUTC,
     IntervaloInvalido,
+    RecursoNoEncontrado,
     ReferenciaInvalida,
 )
 from app.domain.tiempo import UTC
@@ -734,3 +736,85 @@ def test_e12_sin_sillon_y_con_profesional_inactivo_informa_solo_el_profesional(
         ReferenciaInvalida("profesional", profesional_inactivo.id, "inactivo"),
     )
     assert _sin_turnos_guardados(fabrica_sesiones)
+
+
+SIN_ZONA = datetime(2026, 11, 2, 10, 0)  # naive: no cumple RN-GL-01
+
+
+def test_entrada_invalida_informa_fecha_y_referencias_juntas(sesion, fabrica_sesiones, uow):
+    datos = _escenario(sesion)
+    comando = replace(_comando(datos, SIN_ZONA), prestacion_id=999)
+
+    error = _rechazo_de_entrada(uow, comando)
+
+    assert error.codigos == ["RN-GL-01", "RN-GL-04"]
+    assert error.referencias == (ReferenciaInvalida("prestacion", 999, "inexistente"),)
+    assert [type(e) for e in error.errores] == [FechaNoUTC, RecursoNoEncontrado]
+    assert _sin_turnos_guardados(fabrica_sesiones)
+
+
+def test_referencia_invalida_y_horario_ocupado_informa_solo_rn_gl_04(
+    sesion, fabrica_sesiones, uow
+):
+    datos = _escenario(sesion)
+    prestacion_inactiva = una_prestacion(sesion, datos["consultorio"], activa=False)
+    un_turno(
+        sesion,
+        paciente=datos["paciente"],
+        profesional=datos["profesional"],
+        sillon=datos["sillon"],
+        prestacion=datos["prestacion"],
+        inicio=a_las(10),
+    )
+    comando = replace(_comando(datos, a_las(10)), prestacion_id=prestacion_inactiva.id)
+
+    error = _rechazo_de_entrada(uow, comando)  # y no ErrorDeSolapamiento
+
+    assert error.codigos == ["RN-GL-04"]
+    assert error.referencias == (ReferenciaInvalida("prestacion", prestacion_inactiva.id, "inactivo"),)
+    with fabrica_sesiones() as otra_sesion:
+        assert len(otra_sesion.scalars(select(TurnoModelo)).all()) == 1  # solo el existente
+
+
+def test_fecha_sin_zona_y_horario_ocupado_informa_solo_rn_gl_01(sesion, fabrica_sesiones, uow):
+    datos = _escenario(sesion)
+    un_turno(
+        sesion,
+        paciente=datos["paciente"],
+        profesional=datos["profesional"],
+        sillon=datos["sillon"],
+        prestacion=datos["prestacion"],
+        inicio=a_las(10),
+    )
+    comando = _comando(datos, SIN_ZONA)  # misma hora que el existente, pero sin zona
+
+    error = _rechazo_de_entrada(uow, comando)  # y no ErrorDeSolapamiento
+
+    assert error.codigos == ["RN-GL-01"]
+    assert error.referencias == ()
+    with fabrica_sesiones() as otra_sesion:
+        assert len(otra_sesion.scalars(select(TurnoModelo)).all()) == 1  # solo el existente
+
+
+def test_cruce_de_medianoche_y_horario_ocupado_informa_solo_rn_ag_10d(
+    sesion, fabrica_sesiones, uow
+):
+    datos = _escenario(sesion, duracion_minutos=30)
+    prestacion_de_una_hora = una_prestacion(sesion, datos["consultorio"], duracion_minutos=60)
+    inicio = datetime(2026, 11, 3, 2, 30, tzinfo=UTC)  # 23:30 en Buenos Aires
+    un_turno(
+        sesion,
+        paciente=datos["paciente"],
+        profesional=datos["profesional"],
+        sillon=datos["sillon"],
+        prestacion=datos["prestacion"],
+        inicio=inicio,  # de 02:30 a 03:00 UTC: el pedido de 02:30 a 03:30 UTC se solapa
+    )
+    comando = replace(_comando(datos, inicio), prestacion_id=prestacion_de_una_hora.id)
+
+    with pytest.raises(IntervaloInvalido) as excinfo:  # y no ErrorDeSolapamiento
+        crear_turno(comando, uow, reloj_fijo)
+
+    assert excinfo.value.codigos == ["RN-AG-10d"]
+    with fabrica_sesiones() as otra_sesion:
+        assert len(otra_sesion.scalars(select(TurnoModelo)).all()) == 1  # solo el existente
