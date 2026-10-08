@@ -459,7 +459,11 @@ def test_e7_borde_de_un_minuto_sobre_el_sillon_se_rechaza(sesion, fabrica_sesion
         assert len(otra_sesion.scalars(select(TurnoModelo)).all()) == 1  # solo el existente
 
 
-def test_e6_estado_no_activo_no_bloquea(sesion, fabrica_sesiones, uow):
+@pytest.mark.parametrize(
+    "estado",
+    ["cancelado_paciente", "cancelado_profesional", "vencido", "atendido", "ausente"],
+)
+def test_e6_estado_no_activo_no_bloquea(sesion, fabrica_sesiones, uow, estado):
     datos = _escenario(sesion, duracion_minutos=30)
     un_turno(
         sesion,
@@ -468,7 +472,7 @@ def test_e6_estado_no_activo_no_bloquea(sesion, fabrica_sesiones, uow):
         sillon=datos["sillon"],
         prestacion=datos["prestacion"],
         inicio=a_las(10),
-        estado="cancelado_paciente",
+        estado=estado,
     )
 
     turno = crear_turno(_comando(datos, a_las(10)), uow, reloj_fijo)

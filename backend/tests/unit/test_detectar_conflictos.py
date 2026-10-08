@@ -104,3 +104,31 @@ def test_e6_estados_no_activos_no_generan_conflicto(estado):
     )
 
     assert conflictos == ()
+
+
+@pytest.mark.parametrize(
+    "estado",
+    [
+        EstadoTurno.PENDIENTE_APROBACION,
+        EstadoTurno.PENDIENTE_SENA,
+        EstadoTurno.RESERVADO,
+        EstadoTurno.CONFIRMADO,
+    ],
+    ids=lambda estado: estado.value,
+)
+def test_e6_estados_activos_si_generan_conflicto(estado):
+    existente_del_profesional = TurnoOcupado(7, Intervalo(a_las(10), a_las(10, 30)), estado)
+    existente_del_sillon = TurnoOcupado(8, Intervalo(a_las(10), a_las(10, 30)), estado)
+
+    conflictos = detectar_conflictos(
+        candidato=Intervalo(a_las(10), a_las(10, 30)),
+        profesional_id=1,
+        ocupados_profesional=[existente_del_profesional],
+        sillon_id=2,
+        ocupados_sillon=[existente_del_sillon],
+    )
+
+    assert conflictos == (
+        Conflicto(codigo="RN-AG-05", recurso="profesional", recurso_id=1, turno_id=7),
+        Conflicto(codigo="RN-AG-08", recurso="sillon", recurso_id=2, turno_id=8),
+    )
