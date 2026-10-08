@@ -352,3 +352,38 @@ def test_e5_turno_entre_dos_existentes_contiguos_se_acepta(sesion, fabrica_sesio
     assert turno.fin == a_las(11)
     with fabrica_sesiones() as otra_sesion:
         assert len(otra_sesion.scalars(select(TurnoModelo)).all()) == 3  # dos existentes y el nuevo
+
+
+def test_e7_borde_de_un_minuto_se_rechaza(sesion, fabrica_sesiones, uow):
+    datos = _escenario(sesion, duracion_minutos=30)
+    sillon_2 = un_sillon(sesion, datos["consultorio"])
+    existente = un_turno(
+        sesion,
+        paciente=datos["paciente"],
+        profesional=datos["profesional"],
+        sillon=datos["sillon"],
+        prestacion=datos["prestacion"],
+        inicio=a_las(10),
+    )
+    comando = CrearTurnoComando(
+        paciente_id=datos["paciente"].id,
+        prestacion_id=datos["prestacion"].id,
+        inicio=a_las(10, 29),  # un minuto antes de que termine el existente (10:30)
+        profesional_id=datos["profesional"].id,
+        sillon_id=sillon_2.id,
+    )
+
+    with pytest.raises(ErrorDeSolapamiento) as excinfo:
+        crear_turno(comando, uow, reloj_fijo)
+
+    assert excinfo.value.codigos == ["RN-AG-05"]
+    assert excinfo.value.conflictos == (
+        Conflicto(
+            codigo="RN-AG-05",
+            recurso="profesional",
+            recurso_id=datos["profesional"].id,
+            turno_id=existente.id,
+        ),
+    )
+    with fabrica_sesiones() as otra_sesion:
+        assert len(otra_sesion.scalars(select(TurnoModelo)).all()) == 1  # solo el existente
