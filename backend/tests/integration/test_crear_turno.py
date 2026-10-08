@@ -1,4 +1,5 @@
 """Caso de uso ``crear_turno`` con repositorio real sobre SQLite en memoria (D12, D16)."""
+from dataclasses import replace
 from datetime import datetime
 
 import pytest
@@ -508,3 +509,29 @@ def test_e12_recurso_no_encontrado_rechaza_con_rn_gl_04(sesion, fabrica_sesiones
     assert excinfo.value.referencias == (ReferenciaInvalida("prestacion", 999, "inexistente"),)
     with fabrica_sesiones() as otra_sesion:
         assert otra_sesion.scalars(select(TurnoModelo)).all() == []
+
+
+def _rechazo_de_entrada(uow, comando: CrearTurnoComando) -> EntradaInvalida:
+    with pytest.raises(EntradaInvalida) as excinfo:
+        crear_turno(comando, uow, reloj_fijo)
+    return excinfo.value
+
+
+def _sin_turnos_guardados(fabrica_sesiones) -> bool:
+    with fabrica_sesiones() as otra_sesion:
+        return otra_sesion.scalars(select(TurnoModelo)).all() == []
+
+
+@pytest.mark.parametrize("recurso", ["paciente", "profesional", "sillon"])
+def test_e12_referencia_inexistente_rechaza_con_rn_gl_04(
+    sesion, fabrica_sesiones, uow, recurso
+):
+    datos = _escenario(sesion)
+    comando = replace(_comando(datos, a_las(10)), **{f"{recurso}_id": 999})
+
+    error = _rechazo_de_entrada(uow, comando)
+
+    assert error.codigos == ["RN-GL-04"]
+    assert error.referencias == (ReferenciaInvalida(recurso, 999, "inexistente"),)
+    assert _sin_turnos_guardados(fabrica_sesiones)
+
