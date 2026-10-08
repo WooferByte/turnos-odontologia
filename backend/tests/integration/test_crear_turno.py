@@ -674,3 +674,32 @@ def test_e12_recurso_omitido_con_un_solo_activo_usa_ese_recurso(
         guardado = otra_sesion.get(TurnoModelo, turno.id)
     assert guardado.profesional_id == datos["profesional"].id
     assert guardado.sillon_id == datos["sillon"].id
+
+
+@pytest.mark.parametrize(
+    ("recurso", "motivo"),
+    [
+        pytest.param("profesional", "ninguno_activo", id="profesional-ninguno-activo"),
+        pytest.param("profesional", "varios_activos", id="profesional-varios-activos"),
+        pytest.param("sillon", "ninguno_activo", id="sillon-ninguno-activo"),
+        pytest.param("sillon", "varios_activos", id="sillon-varios-activos"),
+    ],
+)
+def test_e12_recurso_omitido_sin_un_unico_activo_rechaza_con_rn_gl_04(
+    sesion, fabrica_sesiones, uow, recurso, motivo
+):
+    datos = _escenario(sesion)
+    fabrica = {"profesional": un_profesional, "sillon": un_sillon}[recurso]
+    if motivo == "varios_activos":
+        fabrica(sesion, datos["consultorio"])  # un segundo activo
+    else:
+        # El único activo del escenario pasa a inactivo: el consultorio queda sin ninguno.
+        datos[recurso].activo = False
+        sesion.commit()
+    comando = replace(_comando(datos, a_las(10)), **{f"{recurso}_id": None})  # solo se omite uno
+
+    error = _rechazo_de_entrada(uow, comando)
+
+    assert error.codigos == ["RN-GL-04"]
+    assert error.referencias == (ReferenciaInvalida(recurso, None, motivo),)
+    assert _sin_turnos_guardados(fabrica_sesiones)
