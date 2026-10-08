@@ -40,3 +40,11 @@ def sesion(fabrica_sesiones: sessionmaker[Session]) -> Iterator[Session]:
 @pytest.fixture
 def uow(fabrica_sesiones: sessionmaker[Session]) -> UnidadDeTrabajoSqlAlchemy:
     return UnidadDeTrabajoSqlAlchemy(fabrica_sesiones)
+
+
+DIA_DE_PRUEBA = (2026, 11, 2)  # horario compartido por los tests de agenda
+
+
+def a_las(hora: int, minuto: int = 0) -> datetime:
+    """Instante UTC de ``DIA_DE_PRUEBA`` a esa hora y minuto."""
+    return datetime(*DIA_DE_PRUEBA, hora, minuto, tzinfo=UTC)

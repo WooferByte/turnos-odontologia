@@ -9,7 +9,7 @@ from app.domain.errors import Conflicto, ErrorDeSolapamiento, IntervaloInvalido
 from app.domain.tiempo import UTC
 from app.domain.turnos.estados import EstadoTurno
 from app.infrastructure.db.modelos import TurnoModelo
-from tests.conftest import RELOJ_FIJO, reloj_fijo
+from tests.conftest import RELOJ_FIJO, a_las, reloj_fijo
 from tests.factories import (
     un_consultorio,
     un_paciente,
@@ -19,11 +19,6 @@ from tests.factories import (
     un_turno,
 )
 
-DIA = (2026, 11, 2)
-
-
-def _a_las(hora: int, minuto: int = 0) -> datetime:
-    return datetime(*DIA, hora, minuto, tzinfo=UTC)
 
 
 def _escenario(sesion, duracion_minutos: int = 30) -> dict:
@@ -50,12 +45,12 @@ def _comando(datos: dict, inicio: datetime) -> CrearTurnoComando:
 def test_e1_feliz_crea_turno_reservado_con_fin_calculado(sesion, fabrica_sesiones, uow):
     datos = _escenario(sesion, duracion_minutos=30)
 
-    turno = crear_turno(_comando(datos, _a_las(10)), uow, reloj_fijo)
+    turno = crear_turno(_comando(datos, a_las(10)), uow, reloj_fijo)
 
     assert turno.id is not None
     assert turno.estado == EstadoTurno.RESERVADO
-    assert turno.inicio == _a_las(10)
-    assert turno.fin == _a_las(10, 30)
+    assert turno.inicio == a_las(10)
+    assert turno.fin == a_las(10, 30)
     assert turno.duracion_minutos == 30
     assert turno.consultorio_id == datos["profesional"].consultorio_id
     assert turno.creado_en == RELOJ_FIJO
@@ -63,8 +58,8 @@ def test_e1_feliz_crea_turno_reservado_con_fin_calculado(sesion, fabrica_sesione
         guardado = otra_sesion.get(TurnoModelo, turno.id)
     assert guardado is not None
     assert guardado.estado == "reservado"
-    assert guardado.inicio == _a_las(10)
-    assert guardado.fin == _a_las(10, 30)
+    assert guardado.inicio == a_las(10)
+    assert guardado.fin == a_las(10, 30)
     assert guardado.consultorio_id == datos["consultorio"].id
     assert guardado.profesional_id == datos["profesional"].id
     assert guardado.sillon_id == datos["sillon"].id
@@ -73,14 +68,14 @@ def test_e1_feliz_crea_turno_reservado_con_fin_calculado(sesion, fabrica_sesione
 
 @pytest.mark.parametrize(
     ("duracion_minutos", "fin_esperado"),
-    [(30, _a_las(10, 30)), (45, _a_las(10, 45)), (60, _a_las(11))],
+    [(30, a_las(10, 30)), (45, a_las(10, 45)), (60, a_las(11))],
 )
 def test_e1_fin_es_inicio_mas_la_duracion_de_la_prestacion(
     sesion, fabrica_sesiones, uow, duracion_minutos, fin_esperado
 ):
     datos = _escenario(sesion, duracion_minutos=duracion_minutos)
 
-    turno = crear_turno(_comando(datos, _a_las(10)), uow, reloj_fijo)
+    turno = crear_turno(_comando(datos, a_las(10)), uow, reloj_fijo)
 
     assert turno.fin == fin_esperado
     assert turno.duracion_minutos == duracion_minutos
@@ -122,12 +117,12 @@ def test_e2_profesional_ocupado_rechaza_con_rn_ag_05(
         profesional=datos["profesional"],
         sillon=datos["sillon"],
         prestacion=datos["prestacion"],
-        inicio=_a_las(10),
+        inicio=a_las(10),
     )
     comando = CrearTurnoComando(
         paciente_id=datos["paciente"].id,
         prestacion_id=prestacion_pedida.id,
-        inicio=_a_las(hora, minuto),
+        inicio=a_las(hora, minuto),
         profesional_id=datos["profesional"].id,
         sillon_id=sillon_2.id,
     )
