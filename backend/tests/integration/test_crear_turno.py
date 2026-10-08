@@ -555,3 +555,37 @@ def test_e12_referencia_inactiva_rechaza_con_rn_gl_04(sesion, fabrica_sesiones, 
     assert error.codigos == ["RN-GL-04"]
     assert error.referencias == (ReferenciaInvalida(recurso, inactivo.id, "inactivo"),)
     assert _sin_turnos_guardados(fabrica_sesiones)
+
+
+_RECURSOS_AJENOS = {
+    "prestacion": lambda sesion, consultorio, **kw: una_prestacion(sesion, consultorio, **kw),
+    "sillon": lambda sesion, consultorio, **kw: un_sillon(sesion, consultorio, **kw),
+}
+
+
+@pytest.mark.parametrize("recurso", ["prestacion", "sillon"])
+def test_e12_referencia_de_otro_consultorio_es_inexistente(
+    sesion, fabrica_sesiones, uow, recurso
+):
+    datos = _escenario(sesion)
+    ajeno = _RECURSOS_AJENOS[recurso](sesion, un_consultorio(sesion))
+    comando = replace(_comando(datos, a_las(10)), **{f"{recurso}_id": ajeno.id})
+
+    error = _rechazo_de_entrada(uow, comando)
+
+    assert error.codigos == ["RN-GL-04"]
+    assert error.referencias == (ReferenciaInvalida(recurso, ajeno.id, "inexistente"),)
+    assert _sin_turnos_guardados(fabrica_sesiones)
+
+
+def test_e12_sillon_de_otro_consultorio_e_inactivo_se_informa_como_inexistente(
+    sesion, fabrica_sesiones, uow
+):
+    datos = _escenario(sesion)
+    ajeno = un_sillon(sesion, un_consultorio(sesion), activo=False)
+    comando = replace(_comando(datos, a_las(10)), sillon_id=ajeno.id)
+
+    error = _rechazo_de_entrada(uow, comando)
+
+    assert error.referencias == (ReferenciaInvalida("sillon", ajeno.id, "inexistente"),)
+    assert _sin_turnos_guardados(fabrica_sesiones)
