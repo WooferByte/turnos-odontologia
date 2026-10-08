@@ -535,3 +535,23 @@ def test_e12_referencia_inexistente_rechaza_con_rn_gl_04(
     assert error.referencias == (ReferenciaInvalida(recurso, 999, "inexistente"),)
     assert _sin_turnos_guardados(fabrica_sesiones)
 
+
+
+_RECURSOS_INACTIVOS = {
+    "prestacion": lambda sesion, consultorio: una_prestacion(sesion, consultorio, activa=False),
+    "profesional": lambda sesion, consultorio: un_profesional(sesion, consultorio, activo=False),
+    "sillon": lambda sesion, consultorio: un_sillon(sesion, consultorio, activo=False),
+}
+
+
+@pytest.mark.parametrize("recurso", ["prestacion", "profesional", "sillon"])
+def test_e12_referencia_inactiva_rechaza_con_rn_gl_04(sesion, fabrica_sesiones, uow, recurso):
+    datos = _escenario(sesion)
+    inactivo = _RECURSOS_INACTIVOS[recurso](sesion, datos["consultorio"])
+    comando = replace(_comando(datos, a_las(10)), **{f"{recurso}_id": inactivo.id})
+
+    error = _rechazo_de_entrada(uow, comando)
+
+    assert error.codigos == ["RN-GL-04"]
+    assert error.referencias == (ReferenciaInvalida(recurso, inactivo.id, "inactivo"),)
+    assert _sin_turnos_guardados(fabrica_sesiones)
