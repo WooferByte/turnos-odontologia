@@ -286,3 +286,21 @@ def test_cuerpo_con_json_roto_responde_problem_json_sin_campo(cliente):
         "referencias": [],
         "errores": [{"campo": None, "codigo": None, "mensaje": "JSON decode error"}],
     }
+
+
+def test_sillon_omitido_con_varios_activos_responde_422_sin_id_en_el_detalle(cliente, sesion):
+    datos = _escenario(sesion)
+    un_sillon(sesion, datos["consultorio"])  # ahora hay dos sillones activos (RN-AG-14)
+    peticion = _peticion(datos, "2026-11-02T10:00:00Z")
+    del peticion["sillon_id"]
+
+    respuesta = cliente.post("/turnos", json=peticion)
+
+    assert respuesta.status_code == 422
+    assert respuesta.json()["codigos"] == ["RN-GL-04"]
+    assert respuesta.json()["referencias"] == [
+        {"recurso": "sillon", "recurso_id": None, "motivo": "varios_activos"}
+    ]
+    assert respuesta.json()["detail"] == (
+        "La petición tiene 1 problema de entrada: sillon (varios_activos)."
+    )
