@@ -4,6 +4,7 @@ from datetime import datetime
 
 from app.application.puertos import UnidadDeTrabajo
 from app.domain.agenda.intervalo import Intervalo
+from app.domain.agenda.recursos import Prestacion, Sillon
 from app.domain.agenda.solapamiento import detectar_conflictos
 from app.domain.errors import (
     EntradaInvalida,
@@ -27,6 +28,11 @@ class CrearTurnoComando:
     sillon_id: int | None = None
 
 
+def _es_de_otro_consultorio(recurso: Prestacion | Sillon, consultorio_id: int | None) -> bool:
+    """Un recurso de otro consultorio cuenta como inexistente (D126); sin C no se puede decir."""
+    return consultorio_id is not None and recurso.consultorio_id != consultorio_id
+
+
 def crear_turno(comando: CrearTurnoComando, uow: UnidadDeTrabajo, reloj: Reloj = utc_now) -> Turno:
     with uow:
         # Validación de entrada, toda junta: las dos cosas siempre, sin cortar en la primera (D6).
@@ -36,15 +42,17 @@ def crear_turno(comando: CrearTurnoComando, uow: UnidadDeTrabajo, reloj: Reloj =
         except FechaNoUTC as error:
             errores.append(error)
         referencias: list[ReferenciaInvalida] = []
+        profesional = uow.agenda.profesional(comando.profesional_id)
+        # Consultorio del turno (C, D10): el del profesional; desconocido (None) si no se resolvió.
+        consultorio_id = profesional.consultorio_id if profesional and profesional.activo else None
         prestacion = uow.agenda.prestacion(comando.prestacion_id)
-        if prestacion is None:
+        if prestacion is None or _es_de_otro_consultorio(prestacion, consultorio_id):
             referencias.append(ReferenciaInvalida("prestacion", comando.prestacion_id, "inexistente"))
         elif not prestacion.activa:
             referencias.append(ReferenciaInvalida("prestacion", prestacion.id, "inactivo"))
         paciente = uow.agenda.paciente(comando.paciente_id)
         if paciente is None:
             referencias.append(ReferenciaInvalida("paciente", comando.paciente_id, "inexistente"))
-        profesional = uow.agenda.profesional(comando.profesional_id)
         if profesional is None:
             referencias.append(
                 ReferenciaInvalida("profesional", comando.profesional_id, "inexistente")
@@ -52,7 +60,7 @@ def crear_turno(comando: CrearTurnoComando, uow: UnidadDeTrabajo, reloj: Reloj =
         elif not profesional.activo:
             referencias.append(ReferenciaInvalida("profesional", profesional.id, "inactivo"))
         sillon = uow.agenda.sillon(comando.sillon_id)
-        if sillon is None:
+        if sillon is None or _es_de_otro_consultorio(sillon, consultorio_id):
             referencias.append(ReferenciaInvalida("sillon", comando.sillon_id, "inexistente"))
         elif not sillon.activo:
             referencias.append(ReferenciaInvalida("sillon", sillon.id, "inactivo"))
