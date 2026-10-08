@@ -52,11 +52,15 @@ def crear_turno(comando: CrearTurnoComando, uow: UnidadDeTrabajo, reloj: Reloj =
             errores.append(error)
         referencias: list[ReferenciaInvalida] = []
         paciente = uow.agenda.paciente(comando.paciente_id)
-        motivo_profesional: Motivo = "inexistente"
+        # Motivo con el que se informa un profesional que no se resolvió; None = no se informa.
+        motivo_profesional: Motivo | None = "inexistente"
         if comando.profesional_id is None:  # RN-AG-14: el único activo del consultorio del paciente
-            activos = uow.agenda.profesionales_activos(paciente.consultorio_id)
-            profesional = activos[0] if len(activos) == 1 else None
-            motivo_profesional = _motivo_sin_unico_activo(len(activos))
+            profesional = None
+            motivo_profesional = None  # sin paciente no hay consultorio donde buscarlo (D10)
+            if paciente is not None:
+                activos = uow.agenda.profesionales_activos(paciente.consultorio_id)
+                profesional = activos[0] if len(activos) == 1 else None
+                motivo_profesional = _motivo_sin_unico_activo(len(activos))
         else:
             profesional = uow.agenda.profesional(comando.profesional_id)
         # Consultorio del turno (C, D10): el del profesional; desconocido (None) si no se resolvió.
@@ -69,20 +73,25 @@ def crear_turno(comando: CrearTurnoComando, uow: UnidadDeTrabajo, reloj: Reloj =
         if paciente is None or _es_de_otro_consultorio(paciente, consultorio_id):
             referencias.append(ReferenciaInvalida("paciente", comando.paciente_id, "inexistente"))
         if profesional is None:
-            referencias.append(
-                ReferenciaInvalida("profesional", comando.profesional_id, motivo_profesional)
-            )
+            if motivo_profesional is not None:
+                referencias.append(
+                    ReferenciaInvalida("profesional", comando.profesional_id, motivo_profesional)
+                )
         elif not profesional.activo:
             referencias.append(ReferenciaInvalida("profesional", profesional.id, "inactivo"))
-        motivo_sillon: Motivo = "inexistente"
+        motivo_sillon: Motivo | None = "inexistente"
         if comando.sillon_id is None:  # RN-AG-14: el único activo del consultorio del turno
-            activos_sillon = uow.agenda.sillones_activos(consultorio_id)
-            sillon = activos_sillon[0] if len(activos_sillon) == 1 else None
-            motivo_sillon = _motivo_sin_unico_activo(len(activos_sillon))
+            sillon = None
+            motivo_sillon = None  # sin consultorio del turno no se puede buscar (D10)
+            if consultorio_id is not None:
+                activos_sillon = uow.agenda.sillones_activos(consultorio_id)
+                sillon = activos_sillon[0] if len(activos_sillon) == 1 else None
+                motivo_sillon = _motivo_sin_unico_activo(len(activos_sillon))
         else:
             sillon = uow.agenda.sillon(comando.sillon_id)
         if sillon is None or _es_de_otro_consultorio(sillon, consultorio_id):
-            referencias.append(ReferenciaInvalida("sillon", comando.sillon_id, motivo_sillon))
+            if motivo_sillon is not None:
+                referencias.append(ReferenciaInvalida("sillon", comando.sillon_id, motivo_sillon))
         elif not sillon.activo:
             referencias.append(ReferenciaInvalida("sillon", sillon.id, "inactivo"))
         if referencias:
