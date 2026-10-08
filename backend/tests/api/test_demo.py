@@ -5,6 +5,7 @@ Sin dobles: la aplicación, la base en memoria y el seed son los reales. Estos t
 """
 from datetime import datetime
 
+import pytest
 from fastapi.testclient import TestClient
 
 from app.main import crear_app_demo
@@ -38,3 +39,48 @@ def test_la_peticion_de_ejemplo_del_readme_responde_201():
     # Paso 2: repetirla choca con el profesional y con el sillón (E4).
     assert repetida.status_code == 409
     assert repetida.json()["codigos"] == ["RN-AG-05", "RN-AG-08"]
+
+
+def test_la_peticion_de_ejemplo_con_una_prestacion_inexistente_responde_422_con_rn_gl_04():
+    cliente = TestClient(crear_app_demo())
+
+    respuesta = cliente.post("/turnos", json={**PETICION_DE_EJEMPLO, "prestacion_id": 999})
+
+    # Paso 3 del recorrido de la prueba manual.
+    assert respuesta.status_code == 422
+    cuerpo = respuesta.json()
+    assert cuerpo["codigos"] == ["RN-GL-04"]
+    assert cuerpo["referencias"] == [
+        {"recurso": "prestacion", "recurso_id": 999, "motivo": "inexistente"}
+    ]
+
+
+@pytest.mark.parametrize(
+    ("prestacion_id", "duracion_minutos"),
+    [(1, 30), (2, 45), (3, 60), (4, 45), (5, 30)],
+)
+def test_el_seed_de_la_demo_deja_las_cinco_prestaciones_con_su_duracion(
+    prestacion_id, duracion_minutos
+):
+    cliente = TestClient(crear_app_demo())
+
+    respuesta = cliente.post(
+        "/turnos", json={**PETICION_DE_EJEMPLO, "prestacion_id": prestacion_id}
+    )
+
+    assert respuesta.status_code == 201
+    assert respuesta.json()["duracion_minutos"] == duracion_minutos
+
+
+@pytest.mark.parametrize("paciente_id", [1, 2, 3])
+def test_el_seed_de_la_demo_deja_tres_pacientes_y_ninguno_mas(paciente_id):
+    cliente = TestClient(crear_app_demo())
+
+    existente = cliente.post("/turnos", json={**PETICION_DE_EJEMPLO, "paciente_id": paciente_id})
+    inexistente = cliente.post("/turnos", json={**PETICION_DE_EJEMPLO, "paciente_id": 4})
+
+    assert existente.status_code == 201
+    assert inexistente.status_code == 422
+    assert inexistente.json()["referencias"] == [
+        {"recurso": "paciente", "recurso_id": 4, "motivo": "inexistente"}
+    ]
