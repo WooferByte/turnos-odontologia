@@ -689,6 +689,18 @@ def crear_engine_en_memoria() -> Engine:
 
 **Hueco conocido hasta el grupo 11.** Entre los grupos 4 y 10, `crear_turno` supone que `profesional_id` y `sillon_id` vienen en el comando y que todas las referencias existen. Si falta el profesional o una referencia no existe, hoy falla con un error de programación (`AttributeError`) y no con un error de dominio. Lo cierran la validación de referencias (tareas 11.2 y 11.3) y los recursos por defecto (tarea 11.4, RN-AG-14). No tiene salida al exterior: la API llega en el grupo 12, después de cerrarlo.
 
+**Cierre del hueco (2026-10-08, Apply del grupo 11).** Quedó cerrado por completo:
+
+| Mitad del hueco | Tarea | Test que la cierra (`tests/integration/test_crear_turno.py`) |
+|---|---|---|
+| Prestación inexistente | 11.1 y 11.2 | `test_e12_recurso_no_encontrado_rechaza_con_rn_gl_04` |
+| Profesional inexistente (el caso que terminaba en `AttributeError`) | 11.3 | `test_e12_referencia_inexistente_rechaza_con_rn_gl_04[profesional]` |
+| Falta `profesional_id` o `sillon_id` en el comando | 11.4 | `test_e12_recurso_omitido_con_un_solo_activo_usa_ese_recurso`, `test_e12_recurso_omitido_sin_un_unico_activo_rechaza_con_rn_gl_04` |
+
+Comprobado además fuera de la suite, con un script que no forma parte del repositorio: 6480 combinaciones de `crear_turno`, cada una dos veces (ids válidos, inexistentes, inactivos y de otro consultorio; profesional y sillón omitidos; consultorios sin recursos o con dos activos; fecha naive y fecha que cruza la medianoche). Ninguna termina en un error de programación: todas dan `EntradaInvalida`, `IntervaloInvalido`, `ErrorDeSolapamiento` o un turno creado. `paciente_id` y `prestacion_id` nulos no se probaron porque el tipo del comando no los admite: los filtra el esquema de la API (grupo 12).
+
+**Defecto encontrado y corregido dentro del grupo 11.** El commit `6d4d31f` (recursos por defecto, RN-AG-14) resolvía el sillón omitido pero no usaba el sillón resuelto al consultar los turnos: un turno pedido sin sillón no se controlaba contra el sillón ocupado. Los tests de esa regla no lo detectaron porque no cargaban ningún turno previo. Lo cubre `test_e12_el_sillon_por_defecto_tambien_se_controla_por_solapamiento`, del commit `502679f` (en rojo), y lo corrige el commit `80cc21c`; entre esos dos commits la suite pasaba con el defecto adentro. No se reescribió el historial. **Deuda que se suma a la del grupo 12:** los mensajes de `RecursoNoEncontrado` y `EntradaInvalida` son genéricos, igual que el de `ErrorDeSolapamiento`; el texto de `detail` se decide en la tarea 12.4.
+
 **Estado del código al cerrar el grupo 5 — Decisión del autor (2026-10-08).** Tres puntos que el grupo 5 (E2) dejó a propósito y que el autor aceptó:
 
 - **Hueco conocido hasta el grupo 8: `turnos_que_intersecan` no recorta por rango.** Hoy devuelve **todos** los turnos del recurso, y `detectar_conflictos` trata como choque cualquier turno que recibe. Con el código de los grupos 5 a 7, un turno del mismo profesional a otra hora del día también bloquearía: el nombre del método no describe todavía lo que hace. Es deliberado: si la comparación de intervalos existiera ya, los tests de E5 (tarea 8.1) nacerían verdes. Lo cierra la tarea 8.2 (`Intervalo.se_solapa_con`, usado en `detectar_conflictos`); el recorte en la consulta SQL llega después, en la tarea 9.3, como optimización que no cambia la regla. Los tests de E2 a E4 usan solo turnos que de verdad se solapan, así que no dependen del hueco.
@@ -864,6 +876,12 @@ El criterio cambia a partir del grupo 5 de `tasks.md`:
 **Motivo.** Desde el grupo 5 cada escenario modifica los mismos archivos (`tests/integration/test_crear_turno.py`, `app/application/crear_turno.py`, `app/domain/errors.py`): ya no se puede separar el test del código por archivo al final del grupo. Con el commit hecho en el momento, el historial muestra el RED real, con su hora, antes que el código.
 
 **Límite y relación con la regla dura 10.** El ok del autor sigue siendo explícito, pero se da **por grupo y por adelantado**: autoriza los commits de ese grupo, no los del siguiente. Los mensajes van en español, con prefijo convencional y la línea `Co-Authored-By`. No se fusiona ni se reescribe el historial: si el autor no acepta el resultado de un grupo, la corrección va en commits nuevos, sin `--amend`. Vale para los grupos 5 a 11 de este change; para los grupos 12 a 14 el autor lo define al llegar. Los tres puntos (commits propios para la triangulación y el refactor, correcciones en commits nuevos y alcance hasta el grupo 11) los confirmó el autor el 2026-10-08.
+
+**Grupos 12 a 14 — Decisión del autor (2026-10-08, tras el grupo 11).**
+
+- **Grupo 12 (API).** El mismo criterio que los grupos 5 a 11: el sub-agente commitea dentro del grupo (`test:` en rojo antes que su `feat:`, triangulación y refactor en commits propios), frena al cerrar el grupo y el autor revisa.
+- **Grupo 13 (demo y README).** El mismo criterio para las tareas 13.1 y 13.2. La tarea 13.3 (prueba manual en `/docs`) la hace **el autor**: el Apply frena ahí y el orquestador le da las instrucciones, porque es material del video de defensa. El `README.md` (13.4) va en un commit `docs:`.
+- **Grupo 14 (verificación final).** Lo corre un sub-agente **sin commits**, salvo que la verificación en clon limpio obligue a corregir el `README.md`; en ese caso la corrección va en un commit `docs:` con el ok del autor.
 
 **Cómo se ve el RED en el historial — Decisión del autor (2026-10-08, tras el grupo 5).**
 
