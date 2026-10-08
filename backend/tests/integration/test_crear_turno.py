@@ -604,3 +604,46 @@ def test_e12_paciente_de_otro_consultorio_es_inexistente_y_nunca_inactivo(
     assert error.referencias == (ReferenciaInvalida("paciente", ajeno.id, "inexistente"),)
     assert all(r.motivo != "inactivo" for r in error.referencias)  # D136
     assert _sin_turnos_guardados(fabrica_sesiones)
+
+
+def test_e12_prestacion_inexistente_y_sillon_inactivo_se_informan_juntos(
+    sesion, fabrica_sesiones, uow
+):
+    datos = _escenario(sesion)
+    sillon_inactivo = un_sillon(sesion, datos["consultorio"], activo=False)
+    comando = replace(_comando(datos, a_las(10)), prestacion_id=999, sillon_id=sillon_inactivo.id)
+
+    error = _rechazo_de_entrada(uow, comando)
+
+    assert error.codigos == ["RN-GL-04"]
+    assert error.referencias == (
+        ReferenciaInvalida("prestacion", 999, "inexistente"),
+        ReferenciaInvalida("sillon", sillon_inactivo.id, "inactivo"),
+    )
+    assert _sin_turnos_guardados(fabrica_sesiones)
+
+
+def test_e12_cuatro_referencias_invalidas_se_informan_en_orden_con_un_solo_codigo(
+    sesion, fabrica_sesiones, uow
+):
+    datos = _escenario(sesion)
+    profesional_inactivo = un_profesional(sesion, datos["consultorio"], activo=False)
+    sillon_inactivo = un_sillon(sesion, datos["consultorio"], activo=False)
+    comando = CrearTurnoComando(
+        paciente_id=999,
+        prestacion_id=998,
+        inicio=a_las(10),
+        profesional_id=profesional_inactivo.id,
+        sillon_id=sillon_inactivo.id,
+    )
+
+    error = _rechazo_de_entrada(uow, comando)
+
+    assert error.codigos == ["RN-GL-04"]
+    assert error.referencias == (
+        ReferenciaInvalida("prestacion", 998, "inexistente"),
+        ReferenciaInvalida("paciente", 999, "inexistente"),
+        ReferenciaInvalida("profesional", profesional_inactivo.id, "inactivo"),
+        ReferenciaInvalida("sillon", sillon_inactivo.id, "inactivo"),
+    )
+    assert _sin_turnos_guardados(fabrica_sesiones)
