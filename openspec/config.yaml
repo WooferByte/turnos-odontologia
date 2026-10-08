@@ -3,7 +3,7 @@ schema: spec-driven
 # Project context
 # Restricciones que guían los artefactos y que un agente no puede inferir leyendo el código.
 # Fuente: knowledge-base/ (decisiones del autor 2026-10-02, 2026-10-03, 2026-10-05 y 2026-10-07; registro en
-# knowledge-base/10_preguntas_abiertas.md, D1..D139).
+# knowledge-base/10_preguntas_abiertas.md, D1..D141).
 context: |
   Proyecto: sistema de turnos y agenda para consultorios odontológicos (Argentina). Trabajo universitario.
   Todos los artefactos (proposal, specs, design, tasks) se escriben en español.

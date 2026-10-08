@@ -44,7 +44,7 @@ La fuente de verdad del dominio vive en `knowledge-base/`. **Leé el archivo rel
 | [07_flujos_principales.md](knowledge-base/07_flujos_principales.md) | Flujos E2E (crear turno, reserva, WhatsApp, seña, cancelar, lista de espera, ficha, auth) |
 | [08_arquitectura_propuesta.md](knowledge-base/08_arquitectura_propuesta.md) | Patrones, directorios, regla de capas, reloj/UTC, estrategia de tests, versiones, Definition of Done |
 | [09_decisiones_y_supuestos.md](knowledge-base/09_decisiones_y_supuestos.md) | Decisiones DD, supuestos SU y riesgos R: por qué se eligió cada cosa |
-| [10_preguntas_abiertas.md](knowledge-base/10_preguntas_abiertas.md) | Inconsistencias, preguntas priorizadas y registro de decisiones del autor (D1..D139) |
+| [10_preguntas_abiertas.md](knowledge-base/10_preguntas_abiertas.md) | Inconsistencias, preguntas priorizadas y registro de decisiones del autor (D1..D141) |
 | [11_integraciones_whatsapp_y_mercadopago.md](knowledge-base/11_integraciones_whatsapp_y_mercadopago.md) | Implementar o diseñar recordatorios (`wa.me` / Cloud API) o la seña con Checkout Pro |
 | [12_contexto_de_mercado.md](knowledge-base/12_contexto_de_mercado.md) | Entender competidores y vacíos del mercado; justificar una decisión de producto |
 
