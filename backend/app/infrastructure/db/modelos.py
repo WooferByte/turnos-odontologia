@@ -1,0 +1,90 @@
+"""Modelos ORM del subconjunto del primer change (D130). Estilo SQLAlchemy 2.x."""
+from datetime import datetime
+
+from sqlalchemy import CheckConstraint, ForeignKey, Index, String, UniqueConstraint
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+
+from app.infrastructure.db.tipos import FechaHoraUTC
+
+
+class Base(DeclarativeBase):
+    pass
+
+
+def _fk(tabla: str) -> ForeignKey:
+    return ForeignKey(f"{tabla}.id", ondelete="RESTRICT")
+
+
+class ConsultorioModelo(Base):
+    __tablename__ = "consultorio"
+    __table_args__ = (UniqueConstraint("slug"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    nombre: Mapped[str]
+    slug: Mapped[str]
+    zona_horaria: Mapped[str] = mapped_column(default="America/Argentina/Buenos_Aires")
+
+
+class ProfesionalModelo(Base):
+    __tablename__ = "profesional"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    consultorio_id: Mapped[int] = mapped_column(_fk("consultorio"))
+    nombre: Mapped[str]
+    activo: Mapped[bool] = mapped_column(default=True)
+
+
+class SillonModelo(Base):
+    __tablename__ = "sillon"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    consultorio_id: Mapped[int] = mapped_column(_fk("consultorio"))
+    nombre: Mapped[str]
+    activo: Mapped[bool] = mapped_column(default=True)
+
+
+class PrestacionModelo(Base):
+    __tablename__ = "prestacion"
+    __table_args__ = (
+        UniqueConstraint("consultorio_id", "nombre"),
+        CheckConstraint("duracion_minutos > 0", name="ck_prestacion_duracion_positiva"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    consultorio_id: Mapped[int] = mapped_column(_fk("consultorio"))
+    nombre: Mapped[str]
+    duracion_minutos: Mapped[int]
+    activa: Mapped[bool] = mapped_column(default=True)
+
+
+class PacienteModelo(Base):
+    __tablename__ = "paciente"
+    __table_args__ = (Index("ix_paciente_consultorio_telefono", "consultorio_id", "telefono_whatsapp"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    consultorio_id: Mapped[int] = mapped_column(_fk("consultorio"))
+    nombre: Mapped[str]
+    apellido: Mapped[str]
+    telefono_whatsapp: Mapped[str]
+
+
+class TurnoModelo(Base):
+    __tablename__ = "turno"
+    __table_args__ = (
+        CheckConstraint("inicio < fin", name="ck_turno_inicio_antes_de_fin"),
+        CheckConstraint("duracion_minutos > 0", name="ck_turno_duracion_positiva"),
+        Index("ix_turno_profesional_inicio_fin", "profesional_id", "inicio", "fin"),
+        Index("ix_turno_sillon_inicio_fin", "sillon_id", "inicio", "fin"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    consultorio_id: Mapped[int] = mapped_column(_fk("consultorio"))
+    paciente_id: Mapped[int] = mapped_column(_fk("paciente"))
+    profesional_id: Mapped[int] = mapped_column(_fk("profesional"))
+    sillon_id: Mapped[int] = mapped_column(_fk("sillon"))
+    prestacion_id: Mapped[int] = mapped_column(_fk("prestacion"))
+    inicio: Mapped[datetime] = mapped_column(FechaHoraUTC)
+    fin: Mapped[datetime] = mapped_column(FechaHoraUTC)
+    duracion_minutos: Mapped[int]
+    estado: Mapped[str] = mapped_column(String)
+    creado_en: Mapped[datetime] = mapped_column(FechaHoraUTC)

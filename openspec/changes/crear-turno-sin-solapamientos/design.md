@@ -503,6 +503,14 @@ class ErrorDeSolapamiento(ErrorDeDominio):        # codigo = conflictos[0].codig
 
 `Conflicto` y `ReferenciaInvalida` viven en `errors.py` (y no en `agenda/`) para que `errors.py` no importe nada de `agenda/` y no haya imports circulares. `exigir_utc(valor: datetime, campo: str) -> None` vive en `domain/tiempo.py` y levanta `FechaNoUTC` si el valor es naive o tiene un desfase distinto de cero; la usan `Intervalo` y el caso de uso, así la regla está escrita una sola vez.
 
+**Convención de constructores — Decisión del autor (2026-10-08, fijada en el Apply de los grupos 2 y 3; la siguen los grupos 5 y 11):**
+
+- `ErrorDeDominio.__init__(self, mensaje: str)` guarda `mensaje` y llama a `super().__init__(mensaje)`. `codigos` es una propiedad que devuelve `[self.codigo]`.
+- El código RN es **atributo de clase** cuando es fijo: `FechaNoUTC.codigo = "RN-GL-01"`, `IntervaloInvalido.codigo = "RN-AG-10d"`, `RecursoNoEncontrado.codigo = "RN-GL-04"`. No se pasa por el constructor.
+- Cada subclase con datos propios define su constructor, **recibe sus datos y arma ella misma el mensaje en español**: `FechaNoUTC(campo)`. Con la misma forma, `RecursoNoEncontrado(referencias)`, `EntradaInvalida(errores)` y `ErrorDeSolapamiento(conflictos)` (grupos 11 y 5) guardan su tupla y arman su mensaje.
+- Una subclase sin datos propios recibe el texto: `IntervaloInvalido(mensaje)`, porque el motivo (`inicio >= fin` o cruce de medianoche) lo conoce quien la levanta.
+- Donde el código depende de los datos (`EntradaInvalida`, `ErrorDeSolapamiento`), `codigo` se asigna en el constructor como atributo de instancia (`errores[0].codigo`, `conflictos[0].codigo`) y la clase redefine `codigos`.
+
 **Las dos clases de rechazo (RN-GL-02, decisión del autor D135):**
 
 | Rechazo | Código | Clase | Por qué |
@@ -677,11 +685,11 @@ class FechaHoraUTC(TypeDecorator):
     def process_result_value(self, valor, dialect): ...   # None -> None; naive -> replace(tzinfo=UTC); aware -> astimezone(UTC)
 ```
 
-- **Al escribir** rechaza con `ValueError` un datetime naive o con desfase distinto de cero: es un error de programación (el dominio ya lo filtró), no un error de negocio, por eso no lleva código RN.
+- **Al escribir** rechaza con `ValueError` un datetime naive o con desfase distinto de cero: es un error de programación (el dominio ya lo filtró), no un error de negocio, por eso no lleva código RN. **Cuando el guardado pasa por la sesión, SQLAlchemy envuelve ese error**: lo que se levanta es `sqlalchemy.exc.StatementError`, con el `ValueError` original en `.orig` (comprobado en el Apply con SQLAlchemy 2.0.54; decisión del autor del 2026-10-08). El código no lo desenvuelve.
 - **Al leer** normaliza: SQLite devuelve naive, y como solo se escribió UTC, se le pone la zona UTC; PostgreSQL devolverá aware y se pasa a UTC.
 - **Toda** columna de fecha-hora usa `FechaHoraUTC`: `turno.inicio`, `turno.fin`, `turno.creado_en`. Como las comparaciones de `turnos_que_intersecan` son contra esas columnas, los parámetros pasan por el mismo tipo.
 
-**A verificar en el change** (verificar antes de cerrar el primer change, y en la práctica antes del grupo 4 de tareas, que es el primero que persiste turnos): `backend/tests/integration/test_fechas_ida_y_vuelta.py` comprueba que (a) un turno escrito con `inicio` aware UTC se lee con `tzinfo` UTC y el mismo instante; (b) escribir un naive levanta `ValueError`; (c) la consulta por rango devuelve el turno correcto comparando contra un parámetro aware UTC (que SQLite compare bien el texto que guarda).
+**A verificar en el change** (verificar antes de cerrar el primer change, y en la práctica antes del grupo 4 de tareas, que es el primero que persiste turnos): `backend/tests/integration/test_fechas_ida_y_vuelta.py` comprueba que (a) un turno escrito con `inicio` aware UTC se lee con `tzinfo` UTC y el mismo instante; (b) escribir un naive, o un aware con desfase distinto de cero, levanta `StatementError` cuyo `.orig` es el `ValueError` original (el test verifica las dos cosas); (c) la consulta por rango devuelve el turno correcto comparando contra un parámetro aware UTC (que SQLite compare bien el texto que guarda).
 
 ### D14. Test de imports del dominio — Propuesta (método), sobre D70 y D132
 
