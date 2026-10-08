@@ -5,7 +5,13 @@ import pytest
 from sqlalchemy import select
 
 from app.application.crear_turno import CrearTurnoComando, crear_turno
-from app.domain.errors import Conflicto, ErrorDeSolapamiento, IntervaloInvalido
+from app.domain.errors import (
+    Conflicto,
+    EntradaInvalida,
+    ErrorDeSolapamiento,
+    IntervaloInvalido,
+    ReferenciaInvalida,
+)
 from app.domain.tiempo import UTC
 from app.domain.turnos.estados import EstadoTurno
 from app.infrastructure.db.modelos import TurnoModelo
@@ -483,3 +489,22 @@ def test_e6_estado_no_activo_no_bloquea(sesion, fabrica_sesiones, uow, estado):
     assert turno.fin == a_las(10, 30)
     with fabrica_sesiones() as otra_sesion:
         assert len(otra_sesion.scalars(select(TurnoModelo)).all()) == 2  # el cancelado y el nuevo
+
+
+def test_e12_recurso_no_encontrado_rechaza_con_rn_gl_04(sesion, fabrica_sesiones, uow):
+    datos = _escenario(sesion, duracion_minutos=30)
+    comando = CrearTurnoComando(
+        paciente_id=datos["paciente"].id,
+        prestacion_id=999,
+        inicio=a_las(10),
+        profesional_id=datos["profesional"].id,
+        sillon_id=datos["sillon"].id,
+    )
+
+    with pytest.raises(EntradaInvalida) as excinfo:
+        crear_turno(comando, uow, reloj_fijo)
+
+    assert excinfo.value.codigos == ["RN-GL-04"]
+    assert excinfo.value.referencias == (ReferenciaInvalida("prestacion", 999, "inexistente"),)
+    with fabrica_sesiones() as otra_sesion:
+        assert otra_sesion.scalars(select(TurnoModelo)).all() == []
