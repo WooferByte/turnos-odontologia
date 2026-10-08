@@ -197,3 +197,27 @@ def test_fecha_sin_zona_responde_422_con_rn_gl_01(cliente, sesion, inicio):
         "referencias": [],
         "errores": [{"campo": "inicio", "codigo": "RN-GL-01", "mensaje": MENSAJE_FECHA_NO_UTC}],
     }
+
+
+def test_fecha_sin_zona_y_referencia_invalida_responde_un_422_con_los_dos_codigos(cliente, sesion):
+    datos = _escenario(sesion)
+
+    respuesta = cliente.post(
+        "/turnos", json=_peticion(datos, "2026-11-02T10:00:00", prestacion_id=999)
+    )
+
+    assert respuesta.status_code == 422
+    assert respuesta.headers["content-type"] == "application/problem+json"
+    assert respuesta.json() == {
+        "type": "/errores/entrada-invalida",
+        "title": "Entrada inválida",
+        "status": 422,
+        "detail": (
+            "La petición tiene 2 problemas de entrada: inicio debe tener zona y estar en UTC; "
+            "prestacion 999 (inexistente)."
+        ),
+        "instance": "/turnos",
+        "codigos": ["RN-GL-01", "RN-GL-04"],
+        "referencias": [{"recurso": "prestacion", "recurso_id": 999, "motivo": "inexistente"}],
+        "errores": [{"campo": "inicio", "codigo": "RN-GL-01", "mensaje": MENSAJE_FECHA_NO_UTC}],
+    }
