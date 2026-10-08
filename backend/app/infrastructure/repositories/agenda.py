@@ -49,6 +49,20 @@ class RepositorioAgendaSqlAlchemy:
             return None
         return Profesional(modelo.id, modelo.consultorio_id, modelo.activo)
 
+    def profesionales_activos(self, consultorio_id: int) -> Sequence[Profesional]:
+        consulta = select(ProfesionalModelo).where(
+            ProfesionalModelo.consultorio_id == consultorio_id, ProfesionalModelo.activo
+        )
+        return [
+            Profesional(m.id, m.consultorio_id, m.activo) for m in self._sesion.scalars(consulta)
+        ]
+
+    def sillones_activos(self, consultorio_id: int) -> Sequence[Sillon]:
+        consulta = select(SillonModelo).where(
+            SillonModelo.consultorio_id == consultorio_id, SillonModelo.activo
+        )
+        return [Sillon(m.id, m.consultorio_id, m.activo) for m in self._sesion.scalars(consulta)]
+
     def zona_horaria(self, consultorio_id: int) -> str:
         return self._sesion.get_one(ConsultorioModelo, consultorio_id).zona_horaria
 
