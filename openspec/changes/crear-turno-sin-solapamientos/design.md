@@ -673,6 +673,22 @@ def crear_engine_en_memoria() -> Engine:
 
 **A verificar en el change** (verificar antes de escribir las pruebas de API, grupo 12 de tareas): que con esa configuración un test que carga datos en el hilo del test y llama a `POST /turnos` con `TestClient` ve los datos y no recibe el error de hilo de `pysqlite`. Lo prueba el primer test de API (E1). Si falla, no se cambia la configuración en silencio: se vuelve a este design.
 
+**Test propio de la unidad de trabajo — Decisión del autor (2026-10-08, Apply del grupo 4).** Se agrega `backend/tests/integration/test_unidad_de_trabajo.py`, que no estaba en este design. **Por qué el test de la tarea 4.3 no alcanza:** `test_e1_si_el_caso_de_uso_falla_no_queda_ningun_turno` hace fallar a `crear_turno` con `IntervaloInvalido`, y ese error se levanta **antes** de llamar a `agregar`. Nada llegó a la base, así que el test pasa igual aunque `__exit__` no haga `rollback()`: se comprobó cambiando `rollback()` por `commit()` y el test siguió en verde. Prueba que el caso de uso no guarda si falla la regla, no que la unidad de trabajo deshace lo ya enviado. El test nuevo sí lo prueba: dentro de `with uow:` llama a `agregar` (que hace `flush()`), levanta un error y comprueba con otra sesión que no quedó ningún turno (`test_sale_con_error_deshace_lo_ya_enviado_a_la_base`); su par, `test_sale_sin_error_confirma_el_turno`, comprueba el `commit()`. El primero falla si se quita el `rollback()`.
+
+**Estado del código al cerrar el grupo 4 — Decisión del autor (2026-10-08).** El grupo 4 escribió solo lo que pide E1 (tarea 4.2, «lo mínimo»). Lo que sigue está descrito en este design y **todavía no existe**; entra con el test que lo pida:
+
+| Pieza | Dónde | Entra en |
+|---|---|---|
+| `TurnoOcupado`, `detectar_conflictos`, `Conflicto`, `ErrorDeSolapamiento` | `domain/agenda/solapamiento.py`, `domain/errors.py` | Grupo 5 (tarea 5.2) |
+| `RepositorioAgenda.turnos_que_intersecan` | `application/puertos.py`, `infrastructure/repositories/agenda.py` | Grupo 5 (tarea 5.2); el recorte por rango en la consulta, grupo 9 (tarea 9.3) |
+| `ESTADOS_ACTIVOS` | `domain/turnos/estados.py` | Grupo 10 (tarea 10.2) |
+| Tipos `Paciente` y `Sillon` | `domain/agenda/recursos.py` | Grupo 11 (tareas 11.2 y 11.3; las tareas no los nombran uno por uno) |
+| `RepositorioAgenda.paciente` y `.sillon` | `application/puertos.py`, `infrastructure/repositories/agenda.py` | Grupo 11 (tareas 11.2 y 11.3; ídem) |
+| `RepositorioAgenda.profesionales_activos` y `.sillones_activos` | ídem | Grupo 11 (tarea 11.4) |
+| `ReferenciaInvalida`, `RecursoNoEncontrado`, `EntradaInvalida` y la fase de validación de entrada | `domain/errors.py`, `application/crear_turno.py` | Grupo 11 (tarea 11.2) |
+
+**Hueco conocido hasta el grupo 11.** Entre los grupos 4 y 10, `crear_turno` supone que `profesional_id` y `sillon_id` vienen en el comando y que todas las referencias existen. Si falta el profesional o una referencia no existe, hoy falla con un error de programación (`AttributeError`) y no con un error de dominio. Lo cierran la validación de referencias (tareas 11.2 y 11.3) y los recursos por defecto (tarea 11.4, RN-AG-14). No tiene salida al exterior: la API llega en el grupo 12, después de cerrarlo.
+
 ### D13. Ida y vuelta de fechas con SQLite — Propuesta + A verificar (D85)
 
 `backend/app/infrastructure/db/tipos.py` define un `TypeDecorator`:
@@ -742,6 +758,7 @@ Tests fuera del spec que también entran en el change:
 | Fecha no UTC e intervalo inválido por HTTP | RN-GL-01, RN-AG-10d, D128 | `api/test_post_turnos.py::test_fecha_sin_zona_responde_422_con_rn_gl_01`, `::test_cruce_de_medianoche_responde_422_con_rn_ag_10d` |
 | `422` de formato con el mismo cuerpo | D4, D135 | `api/test_post_turnos.py::test_cuerpo_invalido_responde_problem_json` |
 | Reloj | DD-13 | `unit/test_tiempo.py::test_utc_now_devuelve_aware_utc` |
+| Unidad de trabajo: confirma sin error y deshace con error | D12 | `integration/test_unidad_de_trabajo.py::test_sale_sin_error_confirma_el_turno`, `::test_sale_con_error_deshace_lo_ya_enviado_a_la_base` |
 | Ida y vuelta de fechas | D85 | `integration/test_fechas_ida_y_vuelta.py` |
 | Imports del dominio | D70, D132 | `unit/test_imports_dominio.py` |
 | Guard de fechas | DD-13 | `integration/test_guard_fechas.py` |
@@ -828,6 +845,17 @@ Las prestaciones y sus duraciones son las de `04_modelo_de_datos.md` («Seed dat
 ```
 
 Recorrido de la prueba manual en `/docs`: (1) esa petición → `201`; (2) la misma petición otra vez → `409` con `codigos` `["RN-AG-05", "RN-AG-08"]`; (3) la misma con `"prestacion_id": 999` → `422` con `RN-GL-04`.
+
+### D20. Commits durante el Apply — Decisión del autor (2026-10-08)
+
+El criterio cambia a partir del grupo 5 de `tasks.md`:
+
+- **Grupos 1 a 4.** El sub-agente que implementa no commitea. Al cerrar el grupo, el orquestador arma los commits separando archivos (los de test en un commit `test:`, los de producción en un commit `feat:`) y el autor da el ok antes de que se hagan. El cuerpo de cada commit lleva una línea «Orden test → código» que aclara que los commits se armaron al cerrar el grupo.
+- **Grupos 5 a 11** (un grupo por escenario). El sub-agente **commitea él mismo dentro del grupo**: un commit `test:` al cerrar cada RED y un commit `feat:` al cerrar cada GREEN, como sugiere el encabezado de `tasks.md`; la triangulación y el refactor van en sus propios commits con el prefijo que corresponda. Al cerrar el grupo **para y avisa**. El autor revisa el resultado del grupo y recién entonces da el ok para el grupo siguiente.
+
+**Motivo.** Desde el grupo 5 cada escenario modifica los mismos archivos (`tests/integration/test_crear_turno.py`, `app/application/crear_turno.py`, `app/domain/errors.py`): ya no se puede separar el test del código por archivo al final del grupo. Con el commit hecho en el momento, el historial muestra el RED real, con su hora, antes que el código.
+
+**Límite y relación con la regla dura 10.** El ok del autor sigue siendo explícito, pero se da **por grupo y por adelantado**: autoriza los commits de ese grupo, no los del siguiente. Los mensajes van en español, con prefijo convencional y la línea `Co-Authored-By`. No se fusiona ni se reescribe el historial: si el autor no acepta el resultado de un grupo, la corrección va en commits nuevos, sin `--amend`. Vale para los grupos 5 a 11 de este change; para los grupos 12 a 14 el autor lo define al llegar. Los tres puntos (commits propios para la triangulación y el refactor, correcciones en commits nuevos y alcance hasta el grupo 11) los confirmó el autor el 2026-10-08.
 
 ### Esquema de base de datos — Decisión del autor (subconjunto del primer change, D130) + Propuesta (nombres de tabla)
 
