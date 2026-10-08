@@ -9,7 +9,13 @@ from app.domain.turnos.turno import Turno
 class CrearTurnoEntrada(BaseModel):
     """Cuerpo de la petición. No valida la zona de ``inicio``: eso es del caso de uso (D6)."""
 
-    model_config = ConfigDict(extra="forbid")
+    model_config = ConfigDict(
+        extra="forbid",
+        # Ejemplo para /docs: identificadores de la demo (D19).
+        json_schema_extra={
+            "examples": [{"paciente_id": 1, "prestacion_id": 1, "inicio": "2026-11-02T13:00:00Z"}]
+        },
+    )
 
     paciente_id: int
     prestacion_id: int
