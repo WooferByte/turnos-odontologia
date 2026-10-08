@@ -1,4 +1,6 @@
 """Reglas puras de solapamiento, sin base de datos (E2..E7, D8)."""
+import pytest
+
 from app.domain.agenda.intervalo import Intervalo
 from app.domain.agenda.solapamiento import TurnoOcupado, detectar_conflictos
 from app.domain.errors import Conflicto
@@ -75,3 +77,30 @@ def test_conflicto_lleva_el_turno_que_empieza_primero():
         Conflicto(codigo="RN-AG-05", recurso="profesional", recurso_id=1, turno_id=1),
         Conflicto(codigo="RN-AG-08", recurso="sillon", recurso_id=2, turno_id=3),
     )
+
+
+@pytest.mark.parametrize(
+    "estado",
+    [
+        EstadoTurno.CANCELADO_PACIENTE,
+        EstadoTurno.CANCELADO_PROFESIONAL,
+        EstadoTurno.VENCIDO,
+        EstadoTurno.ATENDIDO,
+        EstadoTurno.AUSENTE,
+    ],
+    ids=lambda estado: estado.value,
+)
+def test_e6_estados_no_activos_no_generan_conflicto(estado):
+    # Un turno en estado no activo libera el horario (RN-AG-10), sea del profesional o del sillón.
+    existente_del_profesional = TurnoOcupado(7, Intervalo(a_las(10), a_las(10, 30)), estado)
+    existente_del_sillon = TurnoOcupado(8, Intervalo(a_las(10), a_las(10, 30)), estado)
+
+    conflictos = detectar_conflictos(
+        candidato=Intervalo(a_las(10), a_las(10, 30)),
+        profesional_id=1,
+        ocupados_profesional=[existente_del_profesional],
+        sillon_id=2,
+        ocupados_sillon=[existente_del_sillon],
+    )
+
+    assert conflictos == ()

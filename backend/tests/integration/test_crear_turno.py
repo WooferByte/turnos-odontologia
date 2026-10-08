@@ -457,3 +457,25 @@ def test_e7_borde_de_un_minuto_sobre_el_sillon_se_rechaza(sesion, fabrica_sesion
     )
     with fabrica_sesiones() as otra_sesion:
         assert len(otra_sesion.scalars(select(TurnoModelo)).all()) == 1  # solo el existente
+
+
+def test_e6_estado_no_activo_no_bloquea(sesion, fabrica_sesiones, uow):
+    datos = _escenario(sesion, duracion_minutos=30)
+    un_turno(
+        sesion,
+        paciente=datos["paciente"],
+        profesional=datos["profesional"],
+        sillon=datos["sillon"],
+        prestacion=datos["prestacion"],
+        inicio=a_las(10),
+        estado="cancelado_paciente",
+    )
+
+    turno = crear_turno(_comando(datos, a_las(10)), uow, reloj_fijo)
+
+    assert turno.id is not None
+    assert turno.estado == EstadoTurno.RESERVADO
+    assert turno.inicio == a_las(10)
+    assert turno.fin == a_las(10, 30)
+    with fabrica_sesiones() as otra_sesion:
+        assert len(otra_sesion.scalars(select(TurnoModelo)).all()) == 2  # el cancelado y el nuevo
