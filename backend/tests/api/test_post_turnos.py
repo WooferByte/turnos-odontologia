@@ -17,6 +17,7 @@ from tests.factories import (
     un_profesional,
     una_prestacion,
     un_sillon,
+    un_turno,
 )
 
 CAMPOS_DE_TURNO_SALIDA = {
@@ -86,3 +87,84 @@ def test_e1_post_turnos_responde_201(cliente, sesion):
     assert cuerpo["estado"] == "reservado"
     assert _fecha(cuerpo["creado_en"]) == RELOJ_FIJO
     assert _fecha(cuerpo["inicio"]).utcoffset() == timedelta(0)
+
+
+def _peticion(datos: dict, inicio: str, **extra) -> dict:
+    return {
+        "paciente_id": datos["paciente"].id,
+        "prestacion_id": datos["prestacion"].id,
+        "inicio": inicio,
+        "profesional_id": datos["profesional"].id,
+        "sillon_id": datos["sillon"].id,
+        **extra,
+    }
+
+
+def test_e4_post_turnos_responde_409_con_los_dos_codigos(cliente, sesion):
+    datos = _escenario(sesion)
+    existente = un_turno(
+        sesion,
+        paciente=datos["paciente"],
+        profesional=datos["profesional"],
+        sillon=datos["sillon"],
+        prestacion=datos["prestacion"],
+        inicio=a_las(10),
+    )
+
+    respuesta = cliente.post("/turnos", json=_peticion(datos, "2026-11-02T10:00:00Z"))
+
+    assert respuesta.status_code == 409
+    assert respuesta.headers["content-type"] == "application/problem+json"
+    assert respuesta.json() == {
+        "type": "/errores/solapamiento-turno",
+        "title": "Turno solapado",
+        "status": 409,
+        "detail": "El profesional y el sillón ya tienen un turno activo en ese horario.",
+        "instance": "/turnos",
+        "codigos": ["RN-AG-05", "RN-AG-08"],
+        "conflictos": [
+            {
+                "codigo": "RN-AG-05",
+                "recurso": "profesional",
+                "recurso_id": datos["profesional"].id,
+                "turno_id": existente.id,
+            },
+            {
+                "codigo": "RN-AG-08",
+                "recurso": "sillon",
+                "recurso_id": datos["sillon"].id,
+                "turno_id": existente.id,
+            },
+        ],
+    }
+
+
+def test_e12_post_turnos_responde_422_con_rn_gl_04(cliente, sesion):
+    datos = _escenario(sesion)
+    sillon_inactivo = un_sillon(sesion, datos["consultorio"], activo=False)
+
+    respuesta = cliente.post(
+        "/turnos",
+        json=_peticion(
+            datos, "2026-11-02T10:00:00Z", prestacion_id=999, sillon_id=sillon_inactivo.id
+        ),
+    )
+
+    assert respuesta.status_code == 422
+    assert respuesta.headers["content-type"] == "application/problem+json"
+    assert respuesta.json() == {
+        "type": "/errores/entrada-invalida",
+        "title": "Entrada inválida",
+        "status": 422,
+        "detail": (
+            "La petición tiene 2 problemas de entrada: prestacion 999 (inexistente); "
+            f"sillon {sillon_inactivo.id} (inactivo)."
+        ),
+        "instance": "/turnos",
+        "codigos": ["RN-GL-04"],
+        "referencias": [
+            {"recurso": "prestacion", "recurso_id": 999, "motivo": "inexistente"},
+            {"recurso": "sillon", "recurso_id": sillon_inactivo.id, "motivo": "inactivo"},
+        ],
+        "errores": [],
+    }
