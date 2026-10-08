@@ -1,5 +1,6 @@
 """Traducción de los errores de dominio a HTTP (D4). Solo esta capa conoce estados, ``type`` y ``title``."""
 from fastapi import FastAPI, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from app.api.esquemas import ConflictoSalida, ErrorDeCampoSalida, Problema, ReferenciaSalida
@@ -91,5 +92,40 @@ def _manejar_error_de_dominio(request: Request, error: ErrorDeDominio) -> JSONRe
     return _responder(_problema_de(error, estado, tipo, titulo, request.url.path))
 
 
+def _campo_de(ubicacion: tuple) -> str | None:
+    """Ubicación de Pydantic sin el prefijo body, unida con puntos; None si es del cuerpo entero."""
+    partes = [str(parte) for parte in ubicacion if parte != "body"]
+    return ".".join(partes) or None
+
+
+def _manejar_cuerpo_mal_formado(request: Request, error: RequestValidationError) -> JSONResponse:
+    errores = [
+        ErrorDeCampoSalida(
+            # Un JSON roto no apunta a ningún campo: su ubicación es la posición del texto.
+            campo=None if e["type"] == "json_invalid" else _campo_de(e["loc"]),
+            codigo=None,
+            mensaje=e["msg"],
+        )
+        for e in error.errors()
+    ]
+    estado, tipo, titulo = _CLASES_DE_ERROR[EntradaInvalida]
+    return _responder(
+        Problema(
+            type=tipo,
+            title=titulo,
+            status=estado,
+            detail=(
+                f"La petición tiene {_problemas(len(errores))} de entrada: "
+                "el cuerpo no tiene el formato esperado."
+            ),
+            instance=request.url.path,
+            codigos=[],
+            referencias=[],
+            errores=errores,
+        )
+    )
+
+
 def registrar_manejadores(app: FastAPI) -> None:
     app.add_exception_handler(ErrorDeDominio, _manejar_error_de_dominio)
+    app.add_exception_handler(RequestValidationError, _manejar_cuerpo_mal_formado)
