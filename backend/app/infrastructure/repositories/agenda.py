@@ -41,10 +41,15 @@ class RepositorioAgendaSqlAlchemy:
     def turnos_que_intersecan(
         self, recurso: Literal["profesional", "sillon"], recurso_id: int, intervalo: Intervalo
     ) -> Sequence[TurnoOcupado]:
-        # Por ahora devuelve todos los turnos del recurso: el recorte por rango
-        # (inicio < fin pedido AND fin > inicio pedido) entra en el grupo 9 (tarea 9.3).
+        # Recorte por rango para no traer toda la agenda (D12). Devuelve turnos de cualquier
+        # estado: qué estados bloquean y la regla de solapamiento las decide el dominio.
         columna = TurnoModelo.profesional_id if recurso == "profesional" else TurnoModelo.sillon_id
-        modelos = self._sesion.scalars(select(TurnoModelo).where(columna == recurso_id)).all()
+        consulta = select(TurnoModelo).where(
+            columna == recurso_id,
+            TurnoModelo.inicio < intervalo.fin,
+            TurnoModelo.fin > intervalo.inicio,
+        )
+        modelos = self._sesion.scalars(consulta).all()
         return [
             TurnoOcupado(m.id, Intervalo(m.inicio, m.fin), EstadoTurno(m.estado)) for m in modelos
         ]

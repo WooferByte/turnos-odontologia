@@ -69,7 +69,7 @@ Reglas de trabajo para todos los grupos (no son tareas):
 
 - [x] 9.1 RED. Escribir `tests/integration/test_crear_turno.py::test_e7_borde_de_un_minuto_se_rechaza` (E7; RN-AG-09, RN-AG-05): turno 10:00-10:30 del profesional A en el sillón 1; pedir 10:29 con A en el sillón 2 levanta `ErrorDeSolapamiento` con `codigos == ["RN-AG-05"]`. Verificación: si nace verde, aplicar la regla del encabezado sobre `se_solapa_con` y anotarlo.
 - [x] 9.2 TRIANGULATE (E7; RN-AG-09, RN-AG-08). Agregar el minuto de solape del otro lado (pedir 09:31 de 30 minutos, termina 10:01) y el mismo caso sobre el sillón (`RN-AG-08`). Verificación: suite en verde.
-- [ ] 9.3 REFACTOR. Llevar el recorte por rango a la consulta de `turnos_que_intersecan` (`turno.inicio < :fin AND turno.fin > :inicio`; design D12), sin quitar la regla del dominio. Verificación: toda la suite sigue en verde, incluidos E5 y E7.
+- [x] 9.3 REFACTOR. Llevar el recorte por rango a la consulta de `turnos_que_intersecan` (`turno.inicio < :fin AND turno.fin > :inicio`; design D12), sin quitar la regla del dominio. Verificación: toda la suite sigue en verde, incluidos E5 y E7.
 
 ## 10. E6: los estados no activos no bloquean
 
