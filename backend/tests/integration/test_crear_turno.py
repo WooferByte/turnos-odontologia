@@ -210,3 +210,48 @@ def test_e4_doble_conflicto_informa_los_dos_codigos(sesion, fabrica_sesiones, uo
     )
     with fabrica_sesiones() as otra_sesion:
         assert len(otra_sesion.scalars(select(TurnoModelo)).all()) == 1  # solo el existente
+
+
+def test_e4_cada_conflicto_lleva_su_propio_turno(sesion, fabrica_sesiones, uow):
+    datos = _escenario(sesion, duracion_minutos=30)
+    profesional_b = un_profesional(sesion, datos["consultorio"])
+    sillon_2 = un_sillon(sesion, datos["consultorio"])
+    # X: el profesional pedido, en otro sillón. Y: el sillón pedido, con otro profesional.
+    turno_x = un_turno(
+        sesion,
+        paciente=datos["paciente"],
+        profesional=datos["profesional"],
+        sillon=sillon_2,
+        prestacion=datos["prestacion"],
+        inicio=a_las(10),
+    )
+    turno_y = un_turno(
+        sesion,
+        paciente=datos["paciente"],
+        profesional=profesional_b,
+        sillon=datos["sillon"],
+        prestacion=datos["prestacion"],
+        inicio=a_las(10),
+    )
+    comando = _comando(datos, a_las(10))
+
+    with pytest.raises(ErrorDeSolapamiento) as excinfo:
+        crear_turno(comando, uow, reloj_fijo)
+
+    assert excinfo.value.codigos == ["RN-AG-05", "RN-AG-08"]
+    assert excinfo.value.conflictos == (
+        Conflicto(
+            codigo="RN-AG-05",
+            recurso="profesional",
+            recurso_id=datos["profesional"].id,
+            turno_id=turno_x.id,
+        ),
+        Conflicto(
+            codigo="RN-AG-08",
+            recurso="sillon",
+            recurso_id=datos["sillon"].id,
+            turno_id=turno_y.id,
+        ),
+    )
+    with fabrica_sesiones() as otra_sesion:
+        assert len(otra_sesion.scalars(select(TurnoModelo)).all()) == 2  # X e Y, ninguno nuevo

@@ -57,7 +57,7 @@ Reglas de trabajo para todos los grupos (no son tareas):
 
 - [x] 7.1 RED. Escribir `tests/unit/test_detectar_conflictos.py::test_e4_dos_conflictos_profesional_primero` (E4; RN-AG-05, RN-AG-08, RN-GL-02), `tests/integration/test_crear_turno.py::test_e4_doble_conflicto_informa_los_dos_codigos` (E4) y `tests/unit/test_detectar_conflictos.py::test_conflicto_lleva_el_turno_que_empieza_primero` (RN-AG-08, D129): con dos turnos activos del mismo recurso que chocan con el candidato, entregados en orden inverso, el `Conflicto` lleva el de menor `inicio`. Verificación: al menos el test de D129 falla; para los que nazcan verdes se aplica la regla del encabezado.
 - [x] 7.2 GREEN. Elegir el turno de menor `inicio` por recurso y garantizar el orden estable de la tupla (profesional, después sillón) y de `codigos`. Verificación: los tests de 7.1 pasan.
-- [ ] 7.3 TRIANGULATE y REFACTOR (E4; RN-GL-02). Agregar el caso en que el profesional choca con el turno X y el sillón con otro turno Y: cada `Conflicto` lleva su propio `turno_id`. Verificación: suite en verde.
+- [x] 7.3 TRIANGULATE y REFACTOR (E4; RN-GL-02). Agregar el caso en que el profesional choca con el turno X y el sillón con otro turno Y: cada `Conflicto` lleva su propio `turno_id`. Verificación: suite en verde.
 
 ## 8. E5: aceptar turnos contiguos
 
