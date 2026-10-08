@@ -168,3 +168,32 @@ def test_e12_post_turnos_responde_422_con_rn_gl_04(cliente, sesion):
         ],
         "errores": [],
     }
+
+
+MENSAJE_FECHA_NO_UTC = (
+    "La fecha y hora debe tener zona y estar en UTC, por ejemplo 2026-11-02T13:00:00Z."
+)
+
+
+@pytest.mark.parametrize(
+    "inicio",
+    ["2026-11-02T10:00:00", "2026-11-02T10:00:00-03:00"],
+    ids=["sin_zona", "desfase_menos_tres"],
+)
+def test_fecha_sin_zona_responde_422_con_rn_gl_01(cliente, sesion, inicio):
+    datos = _escenario(sesion)
+
+    respuesta = cliente.post("/turnos", json=_peticion(datos, inicio))
+
+    assert respuesta.status_code == 422
+    assert respuesta.headers["content-type"] == "application/problem+json"
+    assert respuesta.json() == {
+        "type": "/errores/entrada-invalida",
+        "title": "Entrada inválida",
+        "status": 422,
+        "detail": "La petición tiene 1 problema de entrada: inicio debe tener zona y estar en UTC.",
+        "instance": "/turnos",
+        "codigos": ["RN-GL-01"],
+        "referencias": [],
+        "errores": [{"campo": "inicio", "codigo": "RN-GL-01", "mensaje": MENSAJE_FECHA_NO_UTC}],
+    }
