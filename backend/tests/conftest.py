@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from app.domain.tiempo import UTC
 from app.infrastructure.db.modelos import Base
 from app.infrastructure.db.motor import crear_engine_en_memoria
+from app.infrastructure.unidad_de_trabajo import UnidadDeTrabajoSqlAlchemy
 
 RELOJ_FIJO = datetime(2026, 10, 7, 12, 0, tzinfo=UTC)
 
@@ -34,3 +35,8 @@ def fabrica_sesiones(engine: Engine) -> sessionmaker[Session]:
 def sesion(fabrica_sesiones: sessionmaker[Session]) -> Iterator[Session]:
     with fabrica_sesiones() as sesion:
         yield sesion
+
+
+@pytest.fixture
+def uow(fabrica_sesiones: sessionmaker[Session]) -> UnidadDeTrabajoSqlAlchemy:
+    return UnidadDeTrabajoSqlAlchemy(fabrica_sesiones)
