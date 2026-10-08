@@ -39,11 +39,21 @@ def crear_turno(comando: CrearTurnoComando, uow: UnidadDeTrabajo, reloj: Reloj =
         prestacion = uow.agenda.prestacion(comando.prestacion_id)
         if prestacion is None:
             referencias.append(ReferenciaInvalida("prestacion", comando.prestacion_id, "inexistente"))
+        paciente = uow.agenda.paciente(comando.paciente_id)
+        if paciente is None:
+            referencias.append(ReferenciaInvalida("paciente", comando.paciente_id, "inexistente"))
+        profesional = uow.agenda.profesional(comando.profesional_id)
+        if profesional is None:
+            referencias.append(
+                ReferenciaInvalida("profesional", comando.profesional_id, "inexistente")
+            )
+        sillon = uow.agenda.sillon(comando.sillon_id)
+        if sillon is None:
+            referencias.append(ReferenciaInvalida("sillon", comando.sillon_id, "inexistente"))
         if referencias:
             errores.append(RecursoNoEncontrado(tuple(referencias)))
         if errores:
             raise EntradaInvalida(tuple(errores))
-        profesional = uow.agenda.profesional(comando.profesional_id)
         zona = uow.agenda.zona_horaria(profesional.consultorio_id)
         intervalo = Intervalo.para_turno(comando.inicio, prestacion.duracion_minutos, zona)
         ocupados_profesional = uow.agenda.turnos_que_intersecan(

@@ -7,14 +7,16 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.domain.agenda.intervalo import Intervalo
-from app.domain.agenda.recursos import Prestacion, Profesional
+from app.domain.agenda.recursos import Paciente, Prestacion, Profesional, Sillon
 from app.domain.agenda.solapamiento import TurnoOcupado
 from app.domain.turnos.estados import EstadoTurno
 from app.domain.turnos.turno import Turno
 from app.infrastructure.db.modelos import (
     ConsultorioModelo,
+    PacienteModelo,
     PrestacionModelo,
     ProfesionalModelo,
+    SillonModelo,
     TurnoModelo,
 )
 
@@ -22,6 +24,18 @@ from app.infrastructure.db.modelos import (
 class RepositorioAgendaSqlAlchemy:
     def __init__(self, sesion: Session) -> None:
         self._sesion = sesion
+
+    def paciente(self, paciente_id: int) -> Paciente | None:
+        modelo = self._sesion.get(PacienteModelo, paciente_id)
+        if modelo is None:
+            return None
+        return Paciente(modelo.id, modelo.consultorio_id)
+
+    def sillon(self, sillon_id: int) -> Sillon | None:
+        modelo = self._sesion.get(SillonModelo, sillon_id)
+        if modelo is None:
+            return None
+        return Sillon(modelo.id, modelo.consultorio_id, modelo.activo)
 
     def prestacion(self, prestacion_id: int) -> Prestacion | None:
         modelo = self._sesion.get(PrestacionModelo, prestacion_id)

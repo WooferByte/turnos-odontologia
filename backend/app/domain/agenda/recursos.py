@@ -15,3 +15,16 @@ class Profesional:
     id: int
     consultorio_id: int
     activo: bool
+
+
+@dataclass(frozen=True)
+class Paciente:
+    id: int
+    consultorio_id: int
+
+
+@dataclass(frozen=True)
+class Sillon:
+    id: int
+    consultorio_id: int
+    activo: bool

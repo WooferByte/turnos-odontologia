@@ -3,13 +3,17 @@ from collections.abc import Sequence
 from typing import Literal, Protocol
 
 from app.domain.agenda.intervalo import Intervalo
-from app.domain.agenda.recursos import Prestacion, Profesional
+from app.domain.agenda.recursos import Paciente, Prestacion, Profesional, Sillon
 from app.domain.agenda.solapamiento import TurnoOcupado
 from app.domain.turnos.turno import Turno
 
 
 class RepositorioAgenda(Protocol):
+    def paciente(self, paciente_id: int) -> Paciente | None: ...
+
     def prestacion(self, prestacion_id: int) -> Prestacion | None: ...
+
+    def sillon(self, sillon_id: int) -> Sillon | None: ...
 
     def profesional(self, profesional_id: int) -> Profesional | None: ...
 
