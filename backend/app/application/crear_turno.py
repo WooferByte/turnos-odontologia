@@ -104,7 +104,7 @@ def crear_turno(comando: CrearTurnoComando, uow: UnidadDeTrabajo, reloj: Reloj =
             "profesional", profesional.id, intervalo
         )
         ocupados_sillon = uow.agenda.turnos_que_intersecan(
-            "sillon", comando.sillon_id, intervalo
+            "sillon", sillon.id, intervalo
         )
         conflictos = detectar_conflictos(
             intervalo,
