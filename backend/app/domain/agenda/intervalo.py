@@ -21,6 +21,10 @@ class Intervalo:
                 f"({self.fin.isoformat()})."
             )
 
+    def se_solapa_con(self, otro: "Intervalo") -> bool:
+        """Hay solape si cada uno empieza antes de que termine el otro (RN-AG-09)."""
+        return self.inicio < otro.fin and otro.inicio < self.fin
+
     @classmethod
     def para_turno(cls, inicio: datetime, duracion_minutos: int, zona_horaria: str) -> "Intervalo":
         """Intervalo de un turno nuevo.

@@ -22,12 +22,14 @@ def detectar_conflictos(
     sillon_id: int,
     ocupados_sillon: Sequence[TurnoOcupado],
 ) -> tuple[Conflicto, ...]:
-    # Por ahora todo turno recibido cuenta como choque: el recorte por rango lo
-    # hace el repositorio y la comparación de intervalos entra en el grupo 8.
+    # El repositorio puede devolver turnos de otro horario del recurso: la regla de
+    # solapamiento (RN-AG-09) la decide el dominio con Intervalo.se_solapa_con.
     # Primero el profesional, después el sillón.
     posibles = (
-        _conflicto_de_recurso("RN-AG-05", "profesional", profesional_id, ocupados_profesional),
-        _conflicto_de_recurso("RN-AG-08", "sillon", sillon_id, ocupados_sillon),
+        _conflicto_de_recurso(
+            "RN-AG-05", "profesional", profesional_id, candidato, ocupados_profesional
+        ),
+        _conflicto_de_recurso("RN-AG-08", "sillon", sillon_id, candidato, ocupados_sillon),
     )
     return tuple(c for c in posibles if c is not None)
 
@@ -36,9 +38,11 @@ def _conflicto_de_recurso(
     codigo: Literal["RN-AG-05", "RN-AG-08"],
     recurso: Literal["profesional", "sillon"],
     recurso_id: int,
+    candidato: Intervalo,
     ocupados: Sequence[TurnoOcupado],
 ) -> Conflicto | None:
-    if not ocupados:
+    que_chocan = [o for o in ocupados if o.intervalo.se_solapa_con(candidato)]
+    if not que_chocan:
         return None
-    primero = min(ocupados, key=lambda ocupado: ocupado.intervalo.inicio)  # D129
+    primero = min(que_chocan, key=lambda ocupado: ocupado.intervalo.inicio)  # D129
     return Conflicto(codigo=codigo, recurso=recurso, recurso_id=recurso_id, turno_id=primero.turno_id)
