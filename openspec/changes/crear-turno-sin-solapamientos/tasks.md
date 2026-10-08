@@ -49,8 +49,8 @@ Reglas de trabajo para todos los grupos (no son tareas):
 
 ## 6. E3: rechazar el solapamiento del sillón
 
-- [ ] 6.1 RED. Escribir `tests/unit/test_detectar_conflictos.py::test_e3_conflicto_solo_de_sillon` (E3; RN-AG-08) y `tests/integration/test_crear_turno.py::test_e3_sillon_ocupado_rechaza_con_rn_ag_08` (E3; RN-AG-08, RN-GL-02): turno `reservado` 10:00-10:30 del profesional A en el sillón 1; pedir 10:00 con el profesional B en el sillón 1 levanta `ErrorDeSolapamiento` con `codigos == ["RN-AG-08"]` y un único `Conflicto` (`recurso` `sillon`). Verificación: fallan.
-- [ ] 6.2 GREEN. Hacer que `detectar_conflictos` evalúe también el sillón, por separado del profesional. Verificación: los tests de 6.1 pasan y los de E2 siguen en verde.
+- [x] 6.1 RED. Escribir `tests/unit/test_detectar_conflictos.py::test_e3_conflicto_solo_de_sillon` (E3; RN-AG-08) y `tests/integration/test_crear_turno.py::test_e3_sillon_ocupado_rechaza_con_rn_ag_08` (E3; RN-AG-08, RN-GL-02): turno `reservado` 10:00-10:30 del profesional A en el sillón 1; pedir 10:00 con el profesional B en el sillón 1 levanta `ErrorDeSolapamiento` con `codigos == ["RN-AG-08"]` y un único `Conflicto` (`recurso` `sillon`). Verificación: fallan.
+- [x] 6.2 GREEN. Hacer que `detectar_conflictos` evalúe también el sillón, por separado del profesional. Verificación: los tests de 6.1 pasan y los de E2 siguen en verde.
 - [ ] 6.3 TRIANGULATE y REFACTOR (E3; RN-AG-08). Agregar el caso en que el profesional B tiene un turno a otra hora en otro sillón y el resultado sigue siendo solo `RN-AG-08`; quitar duplicación entre la rama del profesional y la del sillón. Verificación: suite en verde.
 
 ## 7. E4: informar los dos conflictos

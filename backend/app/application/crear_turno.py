@@ -29,12 +29,15 @@ def crear_turno(comando: CrearTurnoComando, uow: UnidadDeTrabajo, reloj: Reloj =
         ocupados_profesional = uow.agenda.turnos_que_intersecan(
             "profesional", profesional.id, intervalo
         )
+        ocupados_sillon = uow.agenda.turnos_que_intersecan(
+            "sillon", comando.sillon_id, intervalo
+        )
         conflictos = detectar_conflictos(
             intervalo,
             profesional.id,
             ocupados_profesional,
             comando.sillon_id,
-            [],  # el sillón se consulta desde el grupo 6 (E3)
+            ocupados_sillon,
         )
         if conflictos:
             raise ErrorDeSolapamiento(conflictos)

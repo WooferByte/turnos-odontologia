@@ -21,16 +21,25 @@ def detectar_conflictos(
     sillon_id: int,
     ocupados_sillon: Sequence[TurnoOcupado],
 ) -> tuple[Conflicto, ...]:
-    # Grupo 5 (E2): solo se evalúa el profesional. El sillón es del grupo 6.
     # Por ahora todo turno recibido cuenta como choque: el recorte por rango lo
     # hace el repositorio y la comparación de intervalos entra en el grupo 8.
+    conflictos: list[Conflicto] = []
     if ocupados_profesional:
-        return (
+        conflictos.append(
             Conflicto(
                 codigo="RN-AG-05",
                 recurso="profesional",
                 recurso_id=profesional_id,
                 turno_id=ocupados_profesional[0].turno_id,
-            ),
+            )
         )
-    return ()
+    if ocupados_sillon:
+        conflictos.append(
+            Conflicto(
+                codigo="RN-AG-08",
+                recurso="sillon",
+                recurso_id=sillon_id,
+                turno_id=ocupados_sillon[0].turno_id,
+            )
+        )
+    return tuple(conflictos)
