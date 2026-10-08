@@ -255,3 +255,80 @@ def test_e4_cada_conflicto_lleva_su_propio_turno(sesion, fabrica_sesiones, uow):
     )
     with fabrica_sesiones() as otra_sesion:
         assert len(otra_sesion.scalars(select(TurnoModelo)).all()) == 2  # X e Y, ninguno nuevo
+
+
+@pytest.mark.parametrize(
+    ("inicio_pedido", "fin_esperado"),
+    [
+        pytest.param(a_las(10, 30), a_las(11), id="empieza_donde_termina_el_existente"),
+        pytest.param(a_las(9, 30), a_las(10), id="termina_donde_empieza_el_existente"),
+    ],
+)
+def test_e5_borde_contiguo_se_acepta(
+    sesion, fabrica_sesiones, uow, inicio_pedido, fin_esperado
+):
+    datos = _escenario(sesion, duracion_minutos=30)
+    un_turno(
+        sesion,
+        paciente=datos["paciente"],
+        profesional=datos["profesional"],
+        sillon=datos["sillon"],
+        prestacion=datos["prestacion"],
+        inicio=a_las(10),
+    )
+
+    turno = crear_turno(_comando(datos, inicio_pedido), uow, reloj_fijo)
+
+    assert turno.id is not None
+    assert turno.inicio == inicio_pedido
+    assert turno.fin == fin_esperado
+    with fabrica_sesiones() as otra_sesion:
+        assert len(otra_sesion.scalars(select(TurnoModelo)).all()) == 2  # el existente y el nuevo
+
+
+def test_e3_profesional_con_turno_a_otra_hora_rechaza_solo_con_rn_ag_08(
+    sesion, fabrica_sesiones, uow
+):
+    datos = _escenario(sesion, duracion_minutos=30)
+    profesional_b = un_profesional(sesion, datos["consultorio"])
+    sillon_2 = un_sillon(sesion, datos["consultorio"])
+    # B tiene un turno a las 14:00 en el sillón 2: no choca con lo pedido a las 10:00.
+    un_turno(
+        sesion,
+        paciente=datos["paciente"],
+        profesional=profesional_b,
+        sillon=sillon_2,
+        prestacion=datos["prestacion"],
+        inicio=a_las(14),
+    )
+    # El sillón 1 está ocupado de 10:00 a 10:30 por el profesional A.
+    turno_de_a = un_turno(
+        sesion,
+        paciente=datos["paciente"],
+        profesional=datos["profesional"],
+        sillon=datos["sillon"],
+        prestacion=datos["prestacion"],
+        inicio=a_las(10),
+    )
+    comando = CrearTurnoComando(
+        paciente_id=datos["paciente"].id,
+        prestacion_id=datos["prestacion"].id,
+        inicio=a_las(10),
+        profesional_id=profesional_b.id,
+        sillon_id=datos["sillon"].id,
+    )
+
+    with pytest.raises(ErrorDeSolapamiento) as excinfo:
+        crear_turno(comando, uow, reloj_fijo)
+
+    assert excinfo.value.codigos == ["RN-AG-08"]
+    assert excinfo.value.conflictos == (
+        Conflicto(
+            codigo="RN-AG-08",
+            recurso="sillon",
+            recurso_id=datos["sillon"].id,
+            turno_id=turno_de_a.id,
+        ),
+    )
+    with fabrica_sesiones() as otra_sesion:
+        assert len(otra_sesion.scalars(select(TurnoModelo)).all()) == 2  # ninguno nuevo

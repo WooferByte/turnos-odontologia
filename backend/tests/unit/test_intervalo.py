@@ -105,3 +105,31 @@ def test_para_turno_con_inicio_naive_levanta_rn_gl_01():
 
     assert info.value.codigo == "RN-GL-01"
     assert info.value.campo == "inicio"
+
+
+# --- Intervalo.se_solapa_con (RN-AG-09, E5, E7) ---
+BASE = Intervalo(datetime(2026, 11, 2, 13, 0, tzinfo=UTC), datetime(2026, 11, 2, 13, 30, tzinfo=UTC))
+
+
+def _intervalo(hora_inicio: int, minuto_inicio: int, hora_fin: int, minuto_fin: int) -> Intervalo:
+    return Intervalo(
+        datetime(2026, 11, 2, hora_inicio, minuto_inicio, tzinfo=UTC),
+        datetime(2026, 11, 2, hora_fin, minuto_fin, tzinfo=UTC),
+    )
+
+
+@pytest.mark.parametrize(
+    ("otro", "esperado"),
+    [
+        pytest.param(_intervalo(13, 30, 14, 0), False, id="contiguo_despues"),
+        pytest.param(_intervalo(12, 30, 13, 0), False, id="contiguo_antes"),
+        pytest.param(_intervalo(13, 29, 13, 59), True, id="un_minuto_de_solape"),
+        pytest.param(_intervalo(13, 5, 13, 25), True, id="contenido"),
+        pytest.param(_intervalo(12, 30, 14, 0), True, id="que_contiene"),
+        pytest.param(_intervalo(13, 0, 13, 30), True, id="identico"),
+        pytest.param(_intervalo(15, 0, 15, 30), False, id="disjunto"),
+    ],
+)
+def test_se_solapa_con(otro, esperado):
+    assert BASE.se_solapa_con(otro) is esperado
+    assert otro.se_solapa_con(BASE) is esperado  # la relación es simétrica
