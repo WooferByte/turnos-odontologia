@@ -221,3 +221,21 @@ def test_fecha_sin_zona_y_referencia_invalida_responde_un_422_con_los_dos_codigo
         "referencias": [{"recurso": "prestacion", "recurso_id": 999, "motivo": "inexistente"}],
         "errores": [{"campo": "inicio", "codigo": "RN-GL-01", "mensaje": MENSAJE_FECHA_NO_UTC}],
     }
+
+
+def test_cruce_de_medianoche_responde_422_con_rn_ag_10d(cliente, sesion):
+    datos = _escenario(sesion, duracion_minutos=30)
+
+    # 02:45 UTC con 30 minutos: de 23:45 a 00:15 en Buenos Aires.
+    respuesta = cliente.post("/turnos", json=_peticion(datos, "2026-11-03T02:45:00Z"))
+
+    assert respuesta.status_code == 422
+    assert respuesta.headers["content-type"] == "application/problem+json"
+    assert respuesta.json() == {
+        "type": "/errores/intervalo-invalido",
+        "title": "Intervalo inválido",
+        "status": 422,
+        "detail": "El turno no puede cruzar la medianoche del consultorio.",
+        "instance": "/turnos",
+        "codigos": ["RN-AG-10d"],
+    }
