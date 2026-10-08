@@ -647,3 +647,30 @@ def test_e12_cuatro_referencias_invalidas_se_informan_en_orden_con_un_solo_codig
         ReferenciaInvalida("sillon", sillon_inactivo.id, "inactivo"),
     )
     assert _sin_turnos_guardados(fabrica_sesiones)
+
+
+@pytest.mark.parametrize(
+    "omitidos",
+    [
+        pytest.param(("profesional", "sillon"), id="sin-profesional-ni-sillon"),
+        pytest.param(("profesional",), id="sin-profesional"),
+        pytest.param(("sillon",), id="sin-sillon"),
+    ],
+)
+def test_e12_recurso_omitido_con_un_solo_activo_usa_ese_recurso(
+    sesion, fabrica_sesiones, uow, omitidos
+):
+    datos = _escenario(sesion)
+    un_profesional(sesion, datos["consultorio"], activo=False)  # los inactivos no cuentan
+    un_sillon(sesion, datos["consultorio"], activo=False)
+    comando = replace(_comando(datos, a_las(10)), **{f"{r}_id": None for r in omitidos})
+
+    turno = crear_turno(comando, uow, reloj_fijo)
+
+    assert turno.profesional_id == datos["profesional"].id
+    assert turno.sillon_id == datos["sillon"].id
+    assert turno.consultorio_id == datos["consultorio"].id
+    with fabrica_sesiones() as otra_sesion:
+        guardado = otra_sesion.get(TurnoModelo, turno.id)
+    assert guardado.profesional_id == datos["profesional"].id
+    assert guardado.sillon_id == datos["sillon"].id
