@@ -1,0 +1,26 @@
+# backend/pyproject.toml
+# Archivo único de dependencias del backend (D116, D137). Versiones exactas.
+# Consultadas en PyPI el 2026-10-07; ninguna publicada el 2026-09-30 o después (D133).
+# No es un paquete instalable: no tiene [project] ni [build-system].
+# Instalar, desde backend/:  python -m pip install --group test
+# Cada change agrega sus dependencias acá, con versión exacta, en su design.
+
+[dependency-groups]
+app = [
+    "fastapi==0.115.14",
+    "starlette==0.46.2",
+    "pydantic==2.11.10",
+    "SQLAlchemy==2.0.54",
+    "uvicorn==0.54.0",
+    "tzdata==2026.4",
+]
+test = [
+    {include-group = "app"},
+    "pytest==9.1.1",
+    "httpx==0.28.1",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["."]
+addopts = "-ra --strict-markers"

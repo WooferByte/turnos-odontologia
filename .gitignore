@@ -1,2 +1,18 @@
 # Configuración local de Claude Code (permisos de esta máquina)
 .claude/settings.local.json
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+
+# Entorno y secretos (nunca se versionan)
+.env
+.env.*
+!.env.example
+
+# Bases locales
+*.db
+*.sqlite3
