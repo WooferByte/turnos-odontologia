@@ -689,6 +689,12 @@ def crear_engine_en_memoria() -> Engine:
 
 **Hueco conocido hasta el grupo 11.** Entre los grupos 4 y 10, `crear_turno` supone que `profesional_id` y `sillon_id` vienen en el comando y que todas las referencias existen. Si falta el profesional o una referencia no existe, hoy falla con un error de programación (`AttributeError`) y no con un error de dominio. Lo cierran la validación de referencias (tareas 11.2 y 11.3) y los recursos por defecto (tarea 11.4, RN-AG-14). No tiene salida al exterior: la API llega en el grupo 12, después de cerrarlo.
 
+**Estado del código al cerrar el grupo 5 — Decisión del autor (2026-10-08).** Tres puntos que el grupo 5 (E2) dejó a propósito y que el autor aceptó:
+
+- **Hueco conocido hasta el grupo 8: `turnos_que_intersecan` no recorta por rango.** Hoy devuelve **todos** los turnos del recurso, y `detectar_conflictos` trata como choque cualquier turno que recibe. Con el código de los grupos 5 a 7, un turno del mismo profesional a otra hora del día también bloquearía: el nombre del método no describe todavía lo que hace. Es deliberado: si la comparación de intervalos existiera ya, los tests de E5 (tarea 8.1) nacerían verdes. Lo cierra la tarea 8.2 (`Intervalo.se_solapa_con`, usado en `detectar_conflictos`); el recorte en la consulta SQL llega después, en la tarea 9.3, como optimización que no cambia la regla. Los tests de E2 a E4 usan solo turnos que de verdad se solapan, así que no dependen del hueco.
+- **Firma adelantada de `detectar_conflictos`.** Desde el grupo 5 tiene la firma completa de D8, con los argumentos del sillón, aunque todavía los ignora; `crear_turno` le pasa una lista vacía. Así la firma no cambia en el grupo 6, que solo agrega la evaluación del sillón.
+- **Deuda para el grupo 12: mensaje de `ErrorDeSolapamiento`.** El constructor arma un mensaje genérico (recurso, id del recurso e id del turno). D4 muestra otros textos para el campo `detail` de la respuesta `409`. Al escribir el manejador de errores (tarea 12.4) se decide si `detail` sale del mensaje del error, y en ese caso se ajusta el mensaje, o si lo arma la capa de API.
+
 ### D13. Ida y vuelta de fechas con SQLite — Propuesta + A verificar (D85)
 
 `backend/app/infrastructure/db/tipos.py` define un `TypeDecorator`:
@@ -856,6 +862,12 @@ El criterio cambia a partir del grupo 5 de `tasks.md`:
 **Motivo.** Desde el grupo 5 cada escenario modifica los mismos archivos (`tests/integration/test_crear_turno.py`, `app/application/crear_turno.py`, `app/domain/errors.py`): ya no se puede separar el test del código por archivo al final del grupo. Con el commit hecho en el momento, el historial muestra el RED real, con su hora, antes que el código.
 
 **Límite y relación con la regla dura 10.** El ok del autor sigue siendo explícito, pero se da **por grupo y por adelantado**: autoriza los commits de ese grupo, no los del siguiente. Los mensajes van en español, con prefijo convencional y la línea `Co-Authored-By`. No se fusiona ni se reescribe el historial: si el autor no acepta el resultado de un grupo, la corrección va en commits nuevos, sin `--amend`. Vale para los grupos 5 a 11 de este change; para los grupos 12 a 14 el autor lo define al llegar. Los tres puntos (commits propios para la triangulación y el refactor, correcciones en commits nuevos y alcance hasta el grupo 11) los confirmó el autor el 2026-10-08.
+
+**Cómo se ve el RED en el historial — Decisión del autor (2026-10-08, tras el grupo 5).**
+
+- **El rojo puede ser un error de recolección y es lo esperado.** Cuando el test importa un módulo o un nombre que todavía no existe, pytest no llega a ejecutarlo: informa `N errors during collection` (con `ModuleNotFoundError` o `ImportError`) en lugar de `N failed`, y tampoco recoge los demás tests de ese archivo. Es el comportamiento normal de pytest y cuenta como RED: el test no puede pasar porque el código no existe. No se crean esqueletos vacíos para forzar un fallo de aserción, porque sería escribir código de producción antes que el test.
+- **El commit `test:` del RED lleva la salida de pytest en rojo en su cuerpo**, con el nombre de cada test y el motivo por el que falla, copiados de la corrida real. Solo ese commit: los de GREEN, triangulación y refactor no la llevan. Rige desde el grupo 6.
+- **Error conocido en el commit `f3e3012`** (RED de E2), que no se corrige porque no se reescribe el historial: el cuerpo dice «los otros 4 tests de E1» y «los otros 51 tests pasan». Lo correcto es **5** tests de E1 sin recoger y **50** tests que pasan con `--continue-on-collection-errors` (comprobado sobre una copia de ese commit). Los nombres de los dos tests que fallan y sus errores sí son correctos.
 
 ### Esquema de base de datos — Decisión del autor (subconjunto del primer change, D130) + Propuesta (nombres de tabla)
 
