@@ -239,3 +239,50 @@ def test_cruce_de_medianoche_responde_422_con_rn_ag_10d(cliente, sesion):
         "instance": "/turnos",
         "codigos": ["RN-AG-10d"],
     }
+
+
+def test_cuerpo_invalido_responde_problem_json(cliente, sesion):
+    datos = _escenario(sesion)
+    peticion = _peticion(datos, "2026-11-02T10:00:00Z", duracion_minutos=45)
+    del peticion["inicio"]  # falta inicio y sobra duracion_minutos
+
+    respuesta = cliente.post("/turnos", json=peticion)
+
+    assert respuesta.status_code == 422
+    assert respuesta.headers["content-type"] == "application/problem+json"
+    assert respuesta.json() == {
+        "type": "/errores/entrada-invalida",
+        "title": "Entrada inválida",
+        "status": 422,
+        "detail": (
+            "La petición tiene 2 problemas de entrada: el cuerpo no tiene el formato esperado."
+        ),
+        "instance": "/turnos",
+        "codigos": [],
+        "referencias": [],
+        "errores": [
+            {"campo": "inicio", "codigo": None, "mensaje": "Field required"},
+            {"campo": "duracion_minutos", "codigo": None, "mensaje": "Extra inputs are not permitted"},
+        ],
+    }
+
+
+def test_cuerpo_con_json_roto_responde_problem_json_sin_campo(cliente):
+    respuesta = cliente.post(
+        "/turnos", content="{esto no es json", headers={"Content-Type": "application/json"}
+    )
+
+    assert respuesta.status_code == 422
+    assert respuesta.headers["content-type"] == "application/problem+json"
+    assert respuesta.json() == {
+        "type": "/errores/entrada-invalida",
+        "title": "Entrada inválida",
+        "status": 422,
+        "detail": (
+            "La petición tiene 1 problema de entrada: el cuerpo no tiene el formato esperado."
+        ),
+        "instance": "/turnos",
+        "codigos": [],
+        "referencias": [],
+        "errores": [{"campo": None, "codigo": None, "mensaje": "JSON decode error"}],
+    }
