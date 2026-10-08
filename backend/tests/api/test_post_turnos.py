@@ -304,3 +304,19 @@ def test_sillon_omitido_con_varios_activos_responde_422_sin_id_en_el_detalle(cli
     assert respuesta.json()["detail"] == (
         "La petición tiene 1 problema de entrada: sillon (varios_activos)."
     )
+
+
+def test_openapi_declara_409_y_422_con_el_esquema_problema_y_un_ejemplo(engine):
+    openapi = crear_app(engine).openapi()
+
+    respuestas = openapi["paths"]["/turnos"]["post"]["responses"]
+    assert {"201", "409", "422"} <= set(respuestas)
+    for estado in ("409", "422"):
+        contenido = respuestas[estado]["content"]
+        assert contenido["application/problem+json"]["schema"] == {
+            "$ref": "#/components/schemas/Problema"
+        }
+    assert "HTTPValidationError" not in openapi["components"]["schemas"]
+    assert openapi["components"]["schemas"]["CrearTurnoEntrada"]["examples"] == [
+        {"paciente_id": 1, "prestacion_id": 1, "inicio": "2026-11-02T13:00:00Z"}
+    ]
