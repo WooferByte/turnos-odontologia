@@ -1,9 +1,15 @@
 """Repositorio de la agenda sobre SQLAlchemy. Traduce modelos ORM a tipos de dominio (D12)."""
+from collections.abc import Sequence
 from dataclasses import replace
+from typing import Literal
 
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.domain.agenda.intervalo import Intervalo
 from app.domain.agenda.recursos import Prestacion, Profesional
+from app.domain.agenda.solapamiento import TurnoOcupado
+from app.domain.turnos.estados import EstadoTurno
 from app.domain.turnos.turno import Turno
 from app.infrastructure.db.modelos import (
     ConsultorioModelo,
@@ -31,6 +37,17 @@ class RepositorioAgendaSqlAlchemy:
 
     def zona_horaria(self, consultorio_id: int) -> str:
         return self._sesion.get_one(ConsultorioModelo, consultorio_id).zona_horaria
+
+    def turnos_que_intersecan(
+        self, recurso: Literal["profesional", "sillon"], recurso_id: int, intervalo: Intervalo
+    ) -> Sequence[TurnoOcupado]:
+        # Por ahora devuelve todos los turnos del recurso: el recorte por rango
+        # (inicio < fin pedido AND fin > inicio pedido) entra en el grupo 9 (tarea 9.3).
+        columna = TurnoModelo.profesional_id if recurso == "profesional" else TurnoModelo.sillon_id
+        modelos = self._sesion.scalars(select(TurnoModelo).where(columna == recurso_id)).all()
+        return [
+            TurnoOcupado(m.id, Intervalo(m.inicio, m.fin), EstadoTurno(m.estado)) for m in modelos
+        ]
 
     def agregar(self, turno: Turno) -> Turno:
         modelo = TurnoModelo(

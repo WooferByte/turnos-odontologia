@@ -4,6 +4,8 @@ from datetime import datetime
 
 from app.application.puertos import UnidadDeTrabajo
 from app.domain.agenda.intervalo import Intervalo
+from app.domain.agenda.solapamiento import detectar_conflictos
+from app.domain.errors import ErrorDeSolapamiento
 from app.domain.tiempo import Reloj, utc_now
 from app.domain.turnos.estados import EstadoTurno
 from app.domain.turnos.turno import Turno
@@ -24,6 +26,18 @@ def crear_turno(comando: CrearTurnoComando, uow: UnidadDeTrabajo, reloj: Reloj =
         profesional = uow.agenda.profesional(comando.profesional_id)
         zona = uow.agenda.zona_horaria(profesional.consultorio_id)
         intervalo = Intervalo.para_turno(comando.inicio, prestacion.duracion_minutos, zona)
+        ocupados_profesional = uow.agenda.turnos_que_intersecan(
+            "profesional", profesional.id, intervalo
+        )
+        conflictos = detectar_conflictos(
+            intervalo,
+            profesional.id,
+            ocupados_profesional,
+            comando.sillon_id,
+            [],  # el sillón se consulta desde el grupo 6 (E3)
+        )
+        if conflictos:
+            raise ErrorDeSolapamiento(conflictos)
         return uow.agenda.agregar(
             Turno(
                 consultorio_id=profesional.consultorio_id,

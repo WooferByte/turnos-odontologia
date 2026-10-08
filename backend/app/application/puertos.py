@@ -1,7 +1,10 @@
 """Puertos que la capa de aplicación necesita; los implementa ``infrastructure`` (D12)."""
-from typing import Protocol
+from collections.abc import Sequence
+from typing import Literal, Protocol
 
+from app.domain.agenda.intervalo import Intervalo
 from app.domain.agenda.recursos import Prestacion, Profesional
+from app.domain.agenda.solapamiento import TurnoOcupado
 from app.domain.turnos.turno import Turno
 
 
@@ -11,6 +14,12 @@ class RepositorioAgenda(Protocol):
     def profesional(self, profesional_id: int) -> Profesional | None: ...
 
     def zona_horaria(self, consultorio_id: int) -> str: ...
+
+    def turnos_que_intersecan(
+        self, recurso: Literal["profesional", "sillon"], recurso_id: int, intervalo: Intervalo
+    ) -> Sequence[TurnoOcupado]:
+        """Turnos del recurso en cualquier estado; la regla la decide el dominio (D12)."""
+        ...
 
     def agregar(self, turno: Turno) -> Turno:
         """Guarda el turno y lo devuelve con su id."""
