@@ -36,6 +36,14 @@ def _detalle_de_solapamiento(error: ErrorDeSolapamiento) -> str:
     return f"El {recursos.pop()} ya tiene un turno activo en ese horario."
 
 
+def _texto_de_referencia(referencia: ReferenciaSalida) -> str:
+    """prestacion 999 (inexistente); sin id si el recurso se omitió (sillon (varios_activos))."""
+    recurso = referencia.recurso
+    if referencia.recurso_id is not None:
+        recurso = f"{recurso} {referencia.recurso_id}"
+    return f"{recurso} ({referencia.motivo})"
+
+
 def _problema_de_entrada(problema: dict, error: EntradaInvalida) -> Problema:
     errores = [
         ErrorDeCampoSalida(campo=e.campo, codigo=e.codigo, mensaje=MENSAJE_FECHA_NO_UTC)
@@ -47,7 +55,7 @@ def _problema_de_entrada(problema: dict, error: EntradaInvalida) -> Problema:
         for r in error.referencias
     ]
     partes = [f"{e.campo} debe tener zona y estar en UTC" for e in errores] + [
-        f"{r.recurso} {r.recurso_id} ({r.motivo})" for r in referencias
+        _texto_de_referencia(r) for r in referencias
     ]
     problema["detail"] = (
         f"La petición tiene {_problemas(len(partes))} de entrada: " + "; ".join(partes) + "."
