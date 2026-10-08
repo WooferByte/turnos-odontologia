@@ -28,6 +28,48 @@ class FechaNoUTC(ErrorDeDominio):
         )
 
 
+@dataclass(frozen=True)
+class ReferenciaInvalida:
+    recurso: Literal["prestacion", "paciente", "profesional", "sillon"]
+    recurso_id: int | None
+    motivo: Literal["inexistente", "inactivo", "ninguno_activo", "varios_activos"]
+
+
+class RecursoNoEncontrado(ErrorDeDominio):
+    """Una o más referencias inválidas bajo un único código RN-GL-04 (D7)."""
+
+    codigo = "RN-GL-04"
+    referencias: tuple[ReferenciaInvalida, ...]
+
+    def __init__(self, referencias: tuple[ReferenciaInvalida, ...]) -> None:
+        self.referencias = referencias
+        detalle = "; ".join(f"{r.recurso} {r.recurso_id} ({r.motivo})" for r in referencias)
+        super().__init__(f"Referencias inválidas: {detalle}.")
+
+
+class EntradaInvalida(ErrorDeDominio):
+    """Toda la validación de entrada junta: ``FechaNoUTC`` y/o ``RecursoNoEncontrado`` (D6)."""
+
+    errores: tuple[ErrorDeDominio, ...]
+
+    def __init__(self, errores: tuple[ErrorDeDominio, ...]) -> None:
+        self.errores = errores
+        self.codigo = errores[0].codigo
+        detalle = " ".join(e.mensaje for e in errores)
+        super().__init__(f"La petición tiene problemas de entrada. {detalle}")
+
+    @property
+    def codigos(self) -> list[str]:
+        return [e.codigo for e in self.errores]
+
+    @property
+    def referencias(self) -> tuple[ReferenciaInvalida, ...]:
+        for error in self.errores:
+            if isinstance(error, RecursoNoEncontrado):
+                return error.referencias
+        return ()
+
+
 # --- Reglas de negocio (de a una) ---
 class IntervaloInvalido(ErrorDeDominio):
     codigo = "RN-AG-10d"

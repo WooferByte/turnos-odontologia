@@ -5,8 +5,15 @@ from datetime import datetime
 from app.application.puertos import UnidadDeTrabajo
 from app.domain.agenda.intervalo import Intervalo
 from app.domain.agenda.solapamiento import detectar_conflictos
-from app.domain.errors import ErrorDeSolapamiento
-from app.domain.tiempo import Reloj, utc_now
+from app.domain.errors import (
+    EntradaInvalida,
+    ErrorDeDominio,
+    ErrorDeSolapamiento,
+    FechaNoUTC,
+    RecursoNoEncontrado,
+    ReferenciaInvalida,
+)
+from app.domain.tiempo import Reloj, exigir_utc, utc_now
 from app.domain.turnos.estados import EstadoTurno
 from app.domain.turnos.turno import Turno
 
@@ -22,7 +29,20 @@ class CrearTurnoComando:
 
 def crear_turno(comando: CrearTurnoComando, uow: UnidadDeTrabajo, reloj: Reloj = utc_now) -> Turno:
     with uow:
+        # Validación de entrada, toda junta: las dos cosas siempre, sin cortar en la primera (D6).
+        errores: list[ErrorDeDominio] = []
+        try:
+            exigir_utc(comando.inicio, "inicio")
+        except FechaNoUTC as error:
+            errores.append(error)
+        referencias: list[ReferenciaInvalida] = []
         prestacion = uow.agenda.prestacion(comando.prestacion_id)
+        if prestacion is None:
+            referencias.append(ReferenciaInvalida("prestacion", comando.prestacion_id, "inexistente"))
+        if referencias:
+            errores.append(RecursoNoEncontrado(tuple(referencias)))
+        if errores:
+            raise EntradaInvalida(tuple(errores))
         profesional = uow.agenda.profesional(comando.profesional_id)
         zona = uow.agenda.zona_horaria(profesional.consultorio_id)
         intervalo = Intervalo.para_turno(comando.inicio, prestacion.duracion_minutos, zona)
