@@ -176,3 +176,37 @@ def test_e3_sillon_ocupado_rechaza_con_rn_ag_08(sesion, fabrica_sesiones, uow):
     )
     with fabrica_sesiones() as otra_sesion:
         assert len(otra_sesion.scalars(select(TurnoModelo)).all()) == 1  # solo el existente
+
+
+def test_e4_doble_conflicto_informa_los_dos_codigos(sesion, fabrica_sesiones, uow):
+    datos = _escenario(sesion, duracion_minutos=30)
+    existente = un_turno(
+        sesion,
+        paciente=datos["paciente"],
+        profesional=datos["profesional"],
+        sillon=datos["sillon"],
+        prestacion=datos["prestacion"],
+        inicio=a_las(10),
+    )
+    comando = _comando(datos, a_las(10, 15))
+
+    with pytest.raises(ErrorDeSolapamiento) as excinfo:
+        crear_turno(comando, uow, reloj_fijo)
+
+    assert excinfo.value.codigos == ["RN-AG-05", "RN-AG-08"]
+    assert excinfo.value.conflictos == (
+        Conflicto(
+            codigo="RN-AG-05",
+            recurso="profesional",
+            recurso_id=datos["profesional"].id,
+            turno_id=existente.id,
+        ),
+        Conflicto(
+            codigo="RN-AG-08",
+            recurso="sillon",
+            recurso_id=datos["sillon"].id,
+            turno_id=existente.id,
+        ),
+    )
+    with fabrica_sesiones() as otra_sesion:
+        assert len(otra_sesion.scalars(select(TurnoModelo)).all()) == 1  # solo el existente
