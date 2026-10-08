@@ -40,9 +40,5 @@ def _conflicto_de_recurso(
 ) -> Conflicto | None:
     if not ocupados:
         return None
-    return Conflicto(
-        codigo=codigo,
-        recurso=recurso,
-        recurso_id=recurso_id,
-        turno_id=ocupados[0].turno_id,
-    )
+    primero = min(ocupados, key=lambda ocupado: ocupado.intervalo.inicio)  # D129
+    return Conflicto(codigo=codigo, recurso=recurso, recurso_id=recurso_id, turno_id=primero.turno_id)
