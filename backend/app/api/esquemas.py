@@ -48,3 +48,36 @@ class TurnoSalida(BaseModel):
             estado=turno.estado.value,
             creado_en=turno.creado_en,
         )
+
+
+class ConflictoSalida(BaseModel):
+    codigo: str
+    recurso: str
+    recurso_id: int
+    turno_id: int
+
+
+class ReferenciaSalida(BaseModel):
+    recurso: str
+    recurso_id: int | None
+    motivo: str
+
+
+class ErrorDeCampoSalida(BaseModel):
+    campo: str | None
+    codigo: str | None
+    mensaje: str
+
+
+class Problema(BaseModel):
+    """Cuerpo de todo error (RFC 7807, D4): seis campos comunes y las listas de su ``type``."""
+
+    type: str
+    title: str
+    status: int
+    detail: str
+    instance: str
+    codigos: list[str]
+    conflictos: list[ConflictoSalida] | None = None
+    referencias: list[ReferenciaSalida] | None = None
+    errores: list[ErrorDeCampoSalida] | None = None
