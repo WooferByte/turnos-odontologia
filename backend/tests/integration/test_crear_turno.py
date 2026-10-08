@@ -332,3 +332,23 @@ def test_e3_profesional_con_turno_a_otra_hora_rechaza_solo_con_rn_ag_08(
     )
     with fabrica_sesiones() as otra_sesion:
         assert len(otra_sesion.scalars(select(TurnoModelo)).all()) == 2  # ninguno nuevo
+
+
+def test_e5_turno_entre_dos_existentes_contiguos_se_acepta(sesion, fabrica_sesiones, uow):
+    datos = _escenario(sesion, duracion_minutos=30)
+    for hora, minuto in ((10, 0), (11, 0)):
+        un_turno(
+            sesion,
+            paciente=datos["paciente"],
+            profesional=datos["profesional"],
+            sillon=datos["sillon"],
+            prestacion=datos["prestacion"],
+            inicio=a_las(hora, minuto),
+        )
+
+    turno = crear_turno(_comando(datos, a_las(10, 30)), uow, reloj_fijo)
+
+    assert turno.inicio == a_las(10, 30)
+    assert turno.fin == a_las(11)
+    with fabrica_sesiones() as otra_sesion:
+        assert len(otra_sesion.scalars(select(TurnoModelo)).all()) == 3  # dos existentes y el nuevo

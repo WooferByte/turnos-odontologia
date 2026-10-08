@@ -63,7 +63,7 @@ Reglas de trabajo para todos los grupos (no son tareas):
 
 - [x] 8.1 RED. Escribir `tests/unit/test_intervalo.py::test_se_solapa_con` como tabla parametrizada (E5, E7; RN-AG-09): contiguo después, contiguo antes, un minuto de solape, contenido, que contiene, idéntico y disjunto; y `tests/integration/test_crear_turno.py::test_e5_borde_contiguo_se_acepta` (E5; RN-AG-09): con un turno 10:00-10:30, pedir 10:30 se acepta y pedir 09:30 (termina 10:00) también. Escribir además el caso que venía de la tarea 6.3, `tests/integration/test_crear_turno.py::test_e3_profesional_con_turno_a_otra_hora_rechaza_solo_con_rn_ag_08` (E3; RN-AG-08, RN-AG-09): el profesional B tiene un turno de 14:00 a 14:30 en el sillón 2; pedir 10:00 con B en el sillón 1, ocupado de 10:00 a 10:30 por el profesional A, levanta `ErrorDeSolapamiento` con `codigos == ["RN-AG-08"]` y un único `Conflicto` (`recurso` `sillon`). Verificación: fallan (no existe `se_solapa_con`, el caso de uso rechaza los contiguos y el turno de B a otra hora suma un `RN-AG-05` de más: `["RN-AG-05", "RN-AG-08"]`).
 - [x] 8.2 GREEN. Implementar `Intervalo.se_solapa_con` (`self.inicio < otro.fin and otro.inicio < self.fin`) y usarlo en `detectar_conflictos`. Verificación: los tests de 8.1 pasan y E2, E3 y E4 siguen en verde.
-- [ ] 8.3 TRIANGULATE y REFACTOR (E5; RN-AG-09). Agregar el caso de un turno entre dos existentes contiguos (10:00-10:30 y 11:00-11:30; pedir 10:30 de 30 minutos se acepta). Verificación: suite en verde.
+- [x] 8.3 TRIANGULATE y REFACTOR (E5; RN-AG-09). Agregar el caso de un turno entre dos existentes contiguos (10:00-10:30 y 11:00-11:30; pedir 10:30 de 30 minutos se acepta). Verificación: suite en verde.
 
 ## 9. E7: rechazar el solapamiento de un minuto
 
