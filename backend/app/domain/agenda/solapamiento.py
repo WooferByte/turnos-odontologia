@@ -5,7 +5,7 @@ from typing import Literal
 
 from app.domain.agenda.intervalo import Intervalo
 from app.domain.errors import Conflicto
-from app.domain.turnos.estados import EstadoTurno
+from app.domain.turnos.estados import ESTADOS_ACTIVOS, EstadoTurno
 
 
 @dataclass(frozen=True)
@@ -41,7 +41,11 @@ def _conflicto_de_recurso(
     candidato: Intervalo,
     ocupados: Sequence[TurnoOcupado],
 ) -> Conflicto | None:
-    que_chocan = [o for o in ocupados if o.intervalo.se_solapa_con(candidato)]
+    que_chocan = [
+        o
+        for o in ocupados
+        if o.estado in ESTADOS_ACTIVOS and o.intervalo.se_solapa_con(candidato)  # RN-AG-10
+    ]
     if not que_chocan:
         return None
     primero = min(que_chocan, key=lambda ocupado: ocupado.intervalo.inicio)  # D129

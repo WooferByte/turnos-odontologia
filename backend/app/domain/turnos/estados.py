@@ -12,3 +12,14 @@ class EstadoTurno(StrEnum):
     VENCIDO = "vencido"
     ATENDIDO = "atendido"
     AUSENTE = "ausente"
+
+
+# Solo estos estados ocupan el horario (RN-AG-10); el resto lo libera.
+ESTADOS_ACTIVOS = frozenset(
+    {
+        EstadoTurno.PENDIENTE_APROBACION,
+        EstadoTurno.PENDIENTE_SENA,
+        EstadoTurno.RESERVADO,
+        EstadoTurno.CONFIRMADO,
+    }
+)

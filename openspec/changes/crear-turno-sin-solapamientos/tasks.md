@@ -74,7 +74,7 @@ Reglas de trabajo para todos los grupos (no son tareas):
 ## 10. E6: los estados no activos no bloquean
 
 - [x] 10.1 RED. Escribir `tests/unit/test_detectar_conflictos.py::test_e6_estados_no_activos_no_generan_conflicto` (E6; RN-AG-10), parametrizado con `cancelado_paciente`, `cancelado_profesional`, `vencido`, `atendido` y `ausente`, y `tests/integration/test_crear_turno.py::test_e6_estado_no_activo_no_bloquea` (E6; RN-AG-10): con un turno `cancelado_paciente` 10:00-10:30, pedir 10:00 con el mismo profesional y sillón se acepta. Verificación: fallan (hoy cuenta cualquier estado).
-- [ ] 10.2 GREEN. Filtrar por `ESTADOS_ACTIVOS` dentro de `detectar_conflictos` (el filtro vive en el dominio, no en el repositorio). Verificación: los tests de 10.1 pasan.
+- [x] 10.2 GREEN. Filtrar por `ESTADOS_ACTIVOS` dentro de `detectar_conflictos` (el filtro vive en el dominio, no en el repositorio). Verificación: los tests de 10.1 pasan.
 - [ ] 10.3 TRIANGULATE y REFACTOR (E6; RN-AG-10). Parametrizar que los cuatro estados activos (`pendiente_aprobacion`, `pendiente_sena`, `reservado`, `confirmado`) sí bloquean, y parametrizar el test de integración con los cinco estados no activos. Verificación: suite en verde.
 
 ## 11. E12: rechazar las referencias inválidas (validación de entrada)
