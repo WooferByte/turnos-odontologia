@@ -51,7 +51,7 @@ Reglas de trabajo para todos los grupos (no son tareas):
 
 - [x] 6.1 RED. Escribir `tests/unit/test_detectar_conflictos.py::test_e3_conflicto_solo_de_sillon` (E3; RN-AG-08) y `tests/integration/test_crear_turno.py::test_e3_sillon_ocupado_rechaza_con_rn_ag_08` (E3; RN-AG-08, RN-GL-02): turno `reservado` 10:00-10:30 del profesional A en el sillón 1; pedir 10:00 con el profesional B en el sillón 1 levanta `ErrorDeSolapamiento` con `codigos == ["RN-AG-08"]` y un único `Conflicto` (`recurso` `sillon`). Verificación: fallan.
 - [x] 6.2 GREEN. Hacer que `detectar_conflictos` evalúe también el sillón, por separado del profesional. Verificación: los tests de 6.1 pasan y los de E2 siguen en verde.
-- [ ] 6.3 REFACTOR (E3; RN-AG-08). Quitar duplicación entre la rama del profesional y la del sillón de `detectar_conflictos`, sin cambiar comportamiento. Verificación: suite en verde. (El caso de triangulación que tenía esta tarea, el del profesional B con un turno a otra hora en otro sillón, pasó a la tarea 8.3: necesita la comparación de intervalos de la tarea 8.2; decisión del autor del 2026-10-08, design D12.)
+- [x] 6.3 REFACTOR (E3; RN-AG-08). Quitar duplicación entre la rama del profesional y la del sillón de `detectar_conflictos`, sin cambiar comportamiento. Verificación: suite en verde. (El caso de triangulación que tenía esta tarea, el del profesional B con un turno a otra hora en otro sillón, pasó a la tarea 8.3: necesita la comparación de intervalos de la tarea 8.2; decisión del autor del 2026-10-08, design D12.)
 
 ## 7. E4: informar los dos conflictos
 
