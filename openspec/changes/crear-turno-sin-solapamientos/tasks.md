@@ -44,7 +44,7 @@ Reglas de trabajo para todos los grupos (no son tareas):
 
 - [x] 5.1 RED. Escribir `tests/unit/test_detectar_conflictos.py::test_e2_conflicto_solo_de_profesional` (E2; RN-AG-05) y `tests/integration/test_crear_turno.py::test_e2_profesional_ocupado_rechaza_con_rn_ag_05` (E2; RN-AG-05, RN-GL-02): turno `reservado` 10:00-10:30 del profesional A en el sillón 1; pedir 10:15 con A en el sillón 2 levanta `ErrorDeSolapamiento` con `codigos == ["RN-AG-05"]` y un único `Conflicto` (`recurso` `profesional`, id de A, id del turno existente). Verificación: fallan porque `detectar_conflictos` no existe.
 - [x] 5.2 GREEN. Crear `app/domain/agenda/solapamiento.py` (`TurnoOcupado`, `detectar_conflictos` evaluando el profesional), `Conflicto` y `ErrorDeSolapamiento` en `errors.py`, `turnos_que_intersecan` en el repositorio y la llamada desde `crear_turno`. Verificación: los tests de 5.1 pasan.
-- [ ] 5.3 TRIANGULATE (E2; RN-AG-05, RN-AG-09). Parametrizar el test de integración con candidato idéntico (10:00), contenido y que contiene al existente; comprobar en todos que la cantidad de turnos guardados no cambia. Verificación: suite en verde.
+- [x] 5.3 TRIANGULATE (E2; RN-AG-05, RN-AG-09). Parametrizar el test de integración con candidato idéntico (10:00), contenido y que contiene al existente; comprobar en todos que la cantidad de turnos guardados no cambia. Verificación: suite en verde.
 - [ ] 5.4 REFACTOR. Limpiar duplicación entre el test unitario y el de integración (constantes de horario compartidas en el módulo de test). Verificación: suite en verde.
 
 ## 6. E3: rechazar el solapamiento del sillón

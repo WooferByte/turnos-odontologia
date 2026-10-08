@@ -99,8 +99,22 @@ def test_e1_si_el_caso_de_uso_falla_no_queda_ningun_turno(sesion, fabrica_sesion
         assert otra_sesion.scalars(select(TurnoModelo)).all() == []
 
 
-def test_e2_profesional_ocupado_rechaza_con_rn_ag_05(sesion, fabrica_sesiones, uow):
+@pytest.mark.parametrize(
+    ("hora", "minuto", "duracion_minutos"),
+    [
+        pytest.param(10, 15, 30, id="solape-parcial"),
+        pytest.param(10, 0, 30, id="identico"),
+        pytest.param(10, 10, 15, id="contenido"),
+        pytest.param(9, 45, 60, id="contiene-al-existente"),
+    ],
+)
+def test_e2_profesional_ocupado_rechaza_con_rn_ag_05(
+    sesion, fabrica_sesiones, uow, hora, minuto, duracion_minutos
+):
     datos = _escenario(sesion, duracion_minutos=30)
+    prestacion_pedida = una_prestacion(
+        sesion, datos["consultorio"], duracion_minutos=duracion_minutos
+    )
     sillon_2 = un_sillon(sesion, datos["consultorio"])
     existente = un_turno(
         sesion,
@@ -112,8 +126,8 @@ def test_e2_profesional_ocupado_rechaza_con_rn_ag_05(sesion, fabrica_sesiones, u
     )
     comando = CrearTurnoComando(
         paciente_id=datos["paciente"].id,
-        prestacion_id=datos["prestacion"].id,
-        inicio=_a_las(10, 15),
+        prestacion_id=prestacion_pedida.id,
+        inicio=_a_las(hora, minuto),
         profesional_id=datos["profesional"].id,
         sillon_id=sillon_2.id,
     )
