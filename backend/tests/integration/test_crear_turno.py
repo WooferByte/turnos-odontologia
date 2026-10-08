@@ -141,3 +141,38 @@ def test_e2_profesional_ocupado_rechaza_con_rn_ag_05(
     )
     with fabrica_sesiones() as otra_sesion:
         assert len(otra_sesion.scalars(select(TurnoModelo)).all()) == 1  # solo el existente
+
+
+def test_e3_sillon_ocupado_rechaza_con_rn_ag_08(sesion, fabrica_sesiones, uow):
+    datos = _escenario(sesion, duracion_minutos=30)
+    profesional_b = un_profesional(sesion, datos["consultorio"])
+    existente = un_turno(
+        sesion,
+        paciente=datos["paciente"],
+        profesional=datos["profesional"],
+        sillon=datos["sillon"],
+        prestacion=datos["prestacion"],
+        inicio=a_las(10),
+    )
+    comando = CrearTurnoComando(
+        paciente_id=datos["paciente"].id,
+        prestacion_id=datos["prestacion"].id,
+        inicio=a_las(10),
+        profesional_id=profesional_b.id,
+        sillon_id=datos["sillon"].id,
+    )
+
+    with pytest.raises(ErrorDeSolapamiento) as excinfo:
+        crear_turno(comando, uow, reloj_fijo)
+
+    assert excinfo.value.codigos == ["RN-AG-08"]
+    assert excinfo.value.conflictos == (
+        Conflicto(
+            codigo="RN-AG-08",
+            recurso="sillon",
+            recurso_id=datos["sillon"].id,
+            turno_id=existente.id,
+        ),
+    )
+    with fabrica_sesiones() as otra_sesion:
+        assert len(otra_sesion.scalars(select(TurnoModelo)).all()) == 1  # solo el existente

@@ -20,3 +20,19 @@ def test_e2_conflicto_solo_de_profesional():
     assert conflictos == (
         Conflicto(codigo="RN-AG-05", recurso="profesional", recurso_id=1, turno_id=7),
     )
+
+
+def test_e3_conflicto_solo_de_sillon():
+    existente = TurnoOcupado(8, Intervalo(a_las(10), a_las(10, 30)), EstadoTurno.RESERVADO)
+
+    conflictos = detectar_conflictos(
+        candidato=Intervalo(a_las(10), a_las(10, 30)),
+        profesional_id=2,
+        ocupados_profesional=[],
+        sillon_id=1,
+        ocupados_sillon=[existente],
+    )
+
+    assert conflictos == (
+        Conflicto(codigo="RN-AG-08", recurso="sillon", recurso_id=1, turno_id=8),
+    )
