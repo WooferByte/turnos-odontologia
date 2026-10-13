@@ -120,3 +120,15 @@ def carrera(
             raise
         sesion_ganadora.commit()
         return id_ganador, futuro.result(timeout=TOPE_DE_ESPERA)
+
+
+class ReservaGanadora:
+    """El ganador de la carrera: guarda su id al insertar, aunque el perdedor levante un error."""
+
+    def __init__(self, e: Escenario, profesional: ProfesionalModelo, sillon: SillonModelo, inicio: datetime):
+        self._datos = (e, profesional, sillon, inicio)
+        self.id: int | None = None
+
+    def __call__(self, sesion: Session) -> int:
+        self.id = turno_sin_confirmar(sesion, *self._datos)
+        return self.id

@@ -2,16 +2,22 @@
 
 Sin mocks: sesiones, repositorio, unidad de trabajo y caso de uso reales, contra PostgreSQL.
 """
+from concurrent.futures import ThreadPoolExecutor
+from threading import Barrier
+
 import pytest
+from fastapi.testclient import TestClient
 from sqlalchemy import Engine, func, select
 from sqlalchemy.orm import Session, sessionmaker
 
+from app.api.deps import get_reloj
 from app.application.crear_turno import CrearTurnoComando, crear_turno
 from app.domain.errors import ErrorDeSolapamiento
 from app.infrastructure.db.modelos import TurnoModelo
 from app.infrastructure.unidad_de_trabajo import UnidadDeTrabajoSqlAlchemy
-from tests.conftest import a_las
-from tests.postgres.carrera import Escenario, carrera, crear_escenario, turno_sin_confirmar
+from app.main import crear_app
+from tests.conftest import a_las, reloj_fijo
+from tests.postgres.carrera import Escenario, ReservaGanadora, carrera, crear_escenario
 
 pytestmark = pytest.mark.postgres
 
@@ -19,6 +25,11 @@ pytestmark = pytest.mark.postgres
 @pytest.fixture
 def escenario(sesion: Session) -> Escenario:
     return crear_escenario(sesion)
+
+
+@pytest.fixture
+def uow(engine: Engine) -> UnidadDeTrabajoSqlAlchemy:
+    return UnidadDeTrabajoSqlAlchemy(sessionmaker(bind=engine, expire_on_commit=False))
 
 
 def comando(e: Escenario, profesional, sillon, inicio) -> CrearTurnoComando:
@@ -36,22 +47,94 @@ def cantidad_de_turnos(sesion: Session) -> int:
 
 
 def test_e11_la_reserva_que_pierde_la_carrera_recibe_el_rechazo_por_solapamiento(
-    engine: Engine, sesion: Session, escenario: Escenario
+    engine: Engine, sesion: Session, escenario: Escenario, uow: UnidadDeTrabajoSqlAlchemy
 ) -> None:
-    uow = UnidadDeTrabajoSqlAlchemy(sessionmaker(bind=engine, expire_on_commit=False))
     pedido = comando(escenario, escenario.profesional_a, escenario.sillon_1, a_las(10))
-    id_ganador = None
-
-    def ganador(sesion_ganadora: Session) -> int:
-        nonlocal id_ganador
-        id_ganador = turno_sin_confirmar(
-            sesion_ganadora, escenario, escenario.profesional_a, escenario.sillon_1, a_las(10)
-        )
-        return id_ganador
+    ganador = ReservaGanadora(escenario, escenario.profesional_a, escenario.sillon_1, a_las(10))
 
     with pytest.raises(ErrorDeSolapamiento) as capturado:
         carrera(engine, ganador, lambda: crear_turno(pedido, uow))
 
     assert capturado.value.codigos == ["RN-AG-05", "RN-AG-08"]
-    assert [c.turno_id for c in capturado.value.conflictos] == [id_ganador, id_ganador]
+    assert [c.turno_id for c in capturado.value.conflictos] == [ganador.id, ganador.id]
+    assert cantidad_de_turnos(sesion) == 1
+
+
+def test_e11_la_carrera_por_un_solo_recurso_informa_solo_ese_codigo(
+    engine: Engine, sesion: Session, escenario: Escenario, uow: UnidadDeTrabajoSqlAlchemy
+) -> None:
+    pedido = comando(escenario, escenario.profesional_a, escenario.sillon_2, a_las(10, 15))
+    ganador = ReservaGanadora(escenario, escenario.profesional_a, escenario.sillon_1, a_las(10))
+
+    with pytest.raises(ErrorDeSolapamiento) as capturado:
+        carrera(engine, ganador, lambda: crear_turno(pedido, uow))
+
+    assert capturado.value.codigos == ["RN-AG-05"]
+    assert [c.turno_id for c in capturado.value.conflictos] == [ganador.id]
+    assert cantidad_de_turnos(sesion) == 1
+
+
+def test_e11_de_ocho_peticiones_a_la_vez_se_crea_un_solo_turno(
+    engine: Engine, sesion: Session, escenario: Escenario
+) -> None:
+    peticiones = 8
+    fabrica = sessionmaker(bind=engine, expire_on_commit=False)
+    pedido = comando(escenario, escenario.profesional_a, escenario.sillon_1, a_las(10))
+    largada = Barrier(peticiones, timeout=10)
+
+    def pedir():
+        largada.wait()
+        try:
+            return crear_turno(pedido, UnidadDeTrabajoSqlAlchemy(fabrica))
+        except ErrorDeSolapamiento as error:
+            return error
+
+    with ThreadPoolExecutor(max_workers=peticiones) as hilos:
+        futuros = [hilos.submit(pedir) for _ in range(peticiones)]
+        resultados = [f.result(timeout=30) for f in futuros]
+
+    rechazos = [r for r in resultados if isinstance(r, ErrorDeSolapamiento)]
+    creados = [r for r in resultados if not isinstance(r, ErrorDeSolapamiento)]
+    assert len(creados) == 1
+    assert creados[0].estado == "reservado"
+    assert len(rechazos) == peticiones - 1
+    assert all(r.codigos == ["RN-AG-05", "RN-AG-08"] for r in rechazos)
+    assert cantidad_de_turnos(sesion) == 1
+
+
+def test_e11_post_turnos_responde_409_al_que_pierde_la_carrera(
+    engine: Engine, sesion: Session, escenario: Escenario
+) -> None:
+    app = crear_app(engine)
+    app.dependency_overrides[get_reloj] = lambda: reloj_fijo
+    cliente = TestClient(app)
+    peticion = {
+        "paciente_id": escenario.paciente.id,
+        "prestacion_id": escenario.prestacion.id,
+        "inicio": "2026-11-02T10:00:00Z",
+        "profesional_id": escenario.profesional_a.id,
+        "sillon_id": escenario.sillon_1.id,
+    }
+    ganador = ReservaGanadora(escenario, escenario.profesional_a, escenario.sillon_1, a_las(10))
+
+    _, respuesta = carrera(engine, ganador, lambda: cliente.post("/turnos", json=peticion))
+
+    assert respuesta.status_code == 409
+    assert respuesta.headers["content-type"] == "application/problem+json"
+    cuerpo = respuesta.json()
+    assert cuerpo["codigos"] == ["RN-AG-05", "RN-AG-08"]
+    assert cuerpo["conflictos"] == [
+        {
+            "codigo": "RN-AG-05",
+            "recurso": "profesional",
+            "recurso_id": escenario.profesional_a.id,
+            "turno_id": ganador.id,
+        },
+        {
+            "codigo": "RN-AG-08",
+            "recurso": "sillon",
+            "recurso_id": escenario.sillon_1.id,
+            "turno_id": ganador.id,
+        },
+    ]
     assert cantidad_de_turnos(sesion) == 1
