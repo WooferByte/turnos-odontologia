@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from typing import Literal
 
-from app.application.puertos import UnidadDeTrabajo
+from app.application.puertos import SolapamientoEnLaBase, UnidadDeTrabajo
 from app.domain.agenda.intervalo import Intervalo
 from app.domain.agenda.recursos import Paciente, Prestacion, Profesional, Sillon
 from app.domain.agenda.solapamiento import detectar_conflictos
@@ -19,6 +19,8 @@ from app.domain.tiempo import Reloj, exigir_utc, utc_now
 from app.domain.turnos.estados import EstadoTurno
 from app.domain.turnos.turno import Turno
 
+
+INTENTOS_ANTE_CARRERA = 3  # design I8
 
 Motivo = Literal["inexistente", "inactivo", "ninguno_activo", "varios_activos"]
 
@@ -108,7 +110,9 @@ def _validar_entrada(
     return profesional, prestacion, sillon
 
 
-def crear_turno(comando: CrearTurnoComando, uow: UnidadDeTrabajo, reloj: Reloj = utc_now) -> Turno:
+def _intentar_crear_turno(
+    comando: CrearTurnoComando, uow: UnidadDeTrabajo, reloj: Reloj
+) -> Turno:
     with uow:
         profesional, prestacion, sillon = _validar_entrada(comando, uow)
         zona = uow.agenda.zona_horaria(profesional.consultorio_id)
@@ -140,3 +144,18 @@ def crear_turno(comando: CrearTurnoComando, uow: UnidadDeTrabajo, reloj: Reloj =
                 creado_en=reloj(),
             )
         )
+
+
+def crear_turno(comando: CrearTurnoComando, uow: UnidadDeTrabajo, reloj: Reloj = utc_now) -> Turno:
+    """Crea el turno; si la base lo rechaza por una carrera (E11), reevalúa con el dominio.
+
+    El ganador ya confirmó cuando la base devuelve la violación, así que el intento siguiente
+    lo encuentra y levanta el ``ErrorDeSolapamiento`` de siempre (design I8). Si todos los
+    intentos chocan, ``SolapamientoEnLaBase`` sube sin traducir: dominio y base no coinciden.
+    """
+    for _ in range(INTENTOS_ANTE_CARRERA - 1):
+        try:
+            return _intentar_crear_turno(comando, uow, reloj)
+        except SolapamientoEnLaBase:
+            continue  # otra transacción ganó el hueco: ahora el dominio ya la ve
+    return _intentar_crear_turno(comando, uow, reloj)
