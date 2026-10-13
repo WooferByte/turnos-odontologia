@@ -13,11 +13,11 @@ Stack definido por el autor en el Discovery (restricción, punto 9). Las version
 | Lenguaje backend | Python | 3.11+ (confirmada por el autor, 2026-10-02) |
 | Framework API | FastAPI (validación con Pydantic, incluido en FastAPI) | Serie 0.115.x (D133); pin exacto en el `design.md` del primer change |
 | Autenticación | JWT (access y refresh token, HS256) y hash bcrypt (decisión del autor 2026-10-05, D74) | No fijada |
-| ORM / acceso a datos | SQLAlchemy, **modo síncrono** en el primer change (DD-12) | Serie 2.0.x (no la 2.1; D133), API declarativa tipada (confirmada por el autor, 2026-10-02) |
-| Base de datos | PostgreSQL (producción / docker-compose) | No fijada (pin en el `design.md` del change que la use) |
+| ORM / acceso a datos | SQLAlchemy, **modo síncrono** en todos los changes (DD-12, D119); migraciones con Alembic 1.20.0 desde C-02 (DD-15, D143) | Serie 2.0.x (no la 2.1; D133), API declarativa tipada (confirmada por el autor, 2026-10-02) |
+| Base de datos | PostgreSQL (producción / docker-compose), driver `psycopg` 3 sincrónico | PostgreSQL **17.10** (imagen `postgres:17.10-bookworm` fijada por etiqueta y digest; D143, D144); `psycopg[binary]` 3.3.6 |
 | Base de datos de tests | SQLite en memoria, `sqlite+pysqlite:///:memory:` con `StaticPool` (DD-03, DD-12); sin `aiosqlite` | — |
 | Asincronía | Redis: tarea periódica que persiste los vencimientos (señas y ofertas) y dispara los efectos (recordatorios, ofertas de lista de espera); el vencimiento se evalúa al consultar, por lo que los tests no la necesitan (RN-GL-05, D80). No interviene en el primer change | No fijada (pin en el `design.md` del change que la use) |
-| Contenedores | Docker y Docker Compose | No fijada |
+| Contenedores | Docker y Docker Compose | Docker Compose v2 (servicios `postgres` y `api`; imagen de la API `python:3.13.15-slim-bookworm` con digest; D143, D151) |
 | Frontend | React + TypeScript + Vite (no interviene en el primer change) | No fijada |
 | Tests backend | pytest + cliente de pruebas de FastAPI (**confirmado por el autor 2026-10-05, D84**; el primer change expone `POST /turnos`, por lo que también se prueba la API); todas las dependencias de test declaradas en el archivo único de dependencias | — |
 

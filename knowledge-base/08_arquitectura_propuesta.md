@@ -44,22 +44,25 @@ proyecto/
 │   ├── tests/
 │   │   ├── unit/                # dominio puro (solapamiento, ventanas)
 │   │   ├── integration/         # casos de uso + repos con SQLite en memoria
-│   │   └── api/                 # endpoints con TestClient
+│   │   ├── api/                 # endpoints con TestClient
+│   │   └── postgres/            # perfil opcional con PostgreSQL (marcador `postgres`; C-02, D149)
 │   ├── pyproject.toml           # archivo único: dependencias y configuración de pytest (D137)
-│   └── Dockerfile
+│   ├── alembic.ini              # configuración de Alembic, sin URL ni credenciales (D147)
+│   └── Dockerfile               # dos etapas (D151)
 ├── frontend/
 │   └── src/
 │       ├── features/            # agenda, turnos, reserva-publica, ficha...
 │       ├── shared/
 │       └── pages/
-├── docker-compose.yml           # api, worker, postgres, redis, frontend
+├── docker-compose.yml           # api, worker, postgres, redis, frontend (C-02 crea api y postgres, D151)
+├── docker/postgres-init/        # 01_base_de_tests.sql: crea `turnos_test` (D149)
 ├── .env.example                 # solo valores de prueba
 └── README.md                    # cómo correr tests sin Postgres ni Redis, y el perfil opcional con PostgreSQL (E11)
 ```
 
 **Ubicación del código (decisión del autor 2026-10-07, D122):** el código vive en `backend/app` y los tests en `backend/tests`; el archivo único de dependencias es `backend/pyproject.toml` (decisión del autor 2026-10-07, D137; antes su formato quedaba para el design), y el `README.md` va en la raíz del repositorio. **Por qué `backend/` y no el `src/` de la estructura mínima de la consigna:** la consigna aclara que los nombres pueden variar; el frontend de React llega en la fase 3 como carpeta hermana (`frontend/`), y una raíz `backend/` mantiene separados los dos desde el primer día; este archivo ya usaba esa estructura. **Consecuencias:** el README dice desde qué directorio se instala y se corre `pytest`; toda referencia a `app/domain` en `openspec/config.yaml` y en `CLAUDE.md` / `AGENTS.md` significa `backend/app/domain`.
 
-**Migraciones:** Alembic **no se usa en el primer change**; los tests crean el esquema con `create_all`. **Alembic se usa a partir del change de infraestructura con PostgreSQL** (decisión del autor 2026-10-03, DD-15), que va en el **orden 2, justo después del primer change** (decisión del autor 2026-10-05, D105). Las columnas que el primer change no crea se agregan con migraciones (`04_modelo_de_datos.md`).
+**Migraciones:** Alembic **no se usa en el primer change**; los tests crean el esquema con `create_all`. **Alembic se usa a partir del change de infraestructura con PostgreSQL** (decisión del autor 2026-10-03, DD-15), que va en el **orden 2, justo después del primer change** (decisión del autor 2026-10-05, D105). Las columnas que el primer change no crea se agregan con migraciones (`04_modelo_de_datos.md`). **Aplicado en C-02 (2026-10-13):** las migraciones viven en `backend/app/infrastructure/db/migraciones/` (revisiones `0001_esquema_inicial` y `0002_exclusion_de_solapamientos`), son solo para PostgreSQL y la suite por defecto sigue con `create_all` (D145); la configuración está en `backend/alembic.ini` (D147); los nombres de claves y restricciones `UNIQUE` siguen una convención fija (D146).
 
 **Interfaz (decisión del autor 2026-10-05, D106):** las historias de orden 1 y 2 y el change de infraestructura con PostgreSQL se implementan y se prueban como API (tests de dominio y de API; sin interfaz gráfica). El `frontend/` empieza en el **orden 3**, con el inicio de sesión (Épica 10); la interfaz de las historias de orden 1 y 2 se construye a partir de ahí.
 
@@ -227,19 +230,21 @@ Decisión del autor 2026-10-05 (D80; RN-GL-05):
 
 | Variable | Descripción | Ejemplo | Sensible |
 |---|---|---|---|
-| `DATABASE_URL` | Conexión SQLAlchemy | `postgresql+psycopg://app:app@db:5432/turnos` (tests: `sqlite+pysqlite:///:memory:`) | Y |
+| `DATABASE_URL` | Conexión SQLAlchemy; la leen la API (`crear_app_desde_entorno`), Alembic y la carga del seed; **obligatoria**: si falta, `ConfiguracionInvalida` y no cae a SQLite (D148) | Dentro de Compose, `postgresql+psycopg://app:app@postgres:5432/turnos` (el servicio se llama `postgres`, no `db`; la arma `docker-compose.yml` desde las `POSTGRES_*`); desde el host, `postgresql+psycopg://app:app@127.0.0.1:5434/turnos` (D153, D154). **La suite por defecto no lee ninguna variable**: usa `sqlite+pysqlite:///:memory:` por código (D148) | Y |
+| `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` | Credenciales y base que crea la imagen oficial de PostgreSQL y que lee `docker-compose.yml` (los nombres los exige la imagen; C-02, D150) | `app`, `app`, `turnos` | Y |
+| `TEST_DATABASE_URL` | Base del perfil opcional `postgres` de pytest; el nombre de la base tiene que terminar en `_test` porque el perfil borra y recrea su esquema `public` (C-02, D149, D150) | `postgresql+psycopg://app:app@127.0.0.1:5434/turnos_test` | Y |
 | `REDIS_URL` | Cola de tareas | `redis://redis:6379/0` | N |
 | `JWT_SECRET` | Firma de JWT y tokens de gestión | `cambiar-en-local` | Y |
 | `JWT_ACCESS_MINUTES` | Vida del access token | `15` | N |
 | `JWT_REFRESH_DAYS` | Vida del refresh token | `7` | N |
-| `APP_TIMEZONE` | Zona por defecto con la que el seed carga `Consultorio.zona_horaria`; **la fuente de verdad es la columna** (RN-AG-10d) | `America/Argentina/Buenos_Aires` | N |
+| `APP_TIMEZONE` | Zona por defecto con la que el seed carga `Consultorio.zona_horaria`; **la fuente de verdad es la columna** (RN-AG-10d). **No se lee todavía**: el seed tiene escrita `America/Argentina/Buenos_Aires` (D150) | `America/Argentina/Buenos_Aires` | N |
 | `PUBLIC_BASE_URL` | Base de los links públicos | `http://localhost:5173` | N |
 | `WHATSAPP_MODE` | Canal de mensajería (v1: solo `wa_me`; `cloud_api` en Fase 2) | `wa_me` | N |
 | `MP_ACCESS_TOKEN` | Credencial **de prueba** de Mercado Pago | `TEST-...` | Y |
 | `MP_WEBHOOK_SECRET` | Validación de notificaciones | `<secret>` | Y |
 | `QUEUE_ENABLED` | Permite levantar la API sin la tarea periódica (los tests no usan Redis, RN-GL-05) | `false` en tests | N |
 
-Los nombres son **propuestos** y se toman como requisito (confirmado por el autor 2026-10-05, D70); los nombres definitivos se fijan en el change de infraestructura. Las variables de la Cloud API de Meta (token, id de número, verificación y secreto del webhook) se definen en la Fase 2. `JWT_*` aplican desde el change de usuarios y acceso.
+Los nombres son **propuestos** y se toman como requisito (confirmado por el autor 2026-10-05, D70); los nombres definitivos se fijaron en el change de infraestructura (C-02, 2026-10-13, D150): se confirman los once de esta tabla y se agregan `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` y `TEST_DATABASE_URL`. `.env.example` trae solo las variables que algún código lee hoy; Python no lee `.env` (lo lee Compose). Las URLs que se usan desde el host llevan `127.0.0.1` y no `localhost` (D154). Las variables de la Cloud API de Meta (token, id de número, verificación y secreto del webhook) se definen en la Fase 2. `JWT_*` aplican desde el change de usuarios y acceso.
 
 ## Estrategia de tests
 
@@ -248,7 +253,7 @@ Los nombres son **propuestos** y se toman como requisito (confirmado por el auto
 - **API**: `TestClient` de FastAPI con la misma base en memoria (se sustituye la dependencia de sesión por la del test). **El primer change expone `POST /turnos`**, por lo que estos tests son parte del change: verifican el estado HTTP y `codigos` de E1, E4 y E12 como mínimo (propuesta aceptada por el autor 2026-10-03; se revisa en el design del change). La dependencia de test del cliente HTTP se declara en el archivo de dependencias.
 - **Sin `aiosqlite` ni `pytest-asyncio`**: el backend es síncrono en todos los changes (DD-12, ampliada por D119).
 - Comando único documentado en el README (p. ej. `pytest`), sin Docker ni servicios externos. El README debe decir explícitamente que los tests corren con SQLite en memoria (DD-03, confirmada por el autor el 2026-10-02) y fijar las versiones (ver «Versiones y dependencias»).
-- **Perfil opcional con PostgreSQL** (decisión del autor 2026-10-05, D75): la restricción de exclusión (que se agrega en PostgreSQL **además** de la validación de dominio) y la prueba de reservas simultáneas (**E11**) se corren **solo** en este perfil, **fuera de la suite por defecto** (que usa SQLite en memoria, DD-03). Los tests de E11 llevan un marcador de pytest (por ejemplo, `postgres`) que la suite por defecto excluye; se corren levantando PostgreSQL con Docker Compose y ejecutando pytest con ese marcador. El comando exacto se fija en el change de infraestructura y **debe figurar en el README**. **No es requisito** para la suite del primer change. El SQL de la restricción (por ejemplo, la extensión `btree_gist`) queda para el design del change de infraestructura con PostgreSQL.
+- **Perfil opcional con PostgreSQL** (decisión del autor 2026-10-05, D75): la restricción de exclusión (que se agrega en PostgreSQL **además** de la validación de dominio) y la prueba de reservas simultáneas (**E11**) se corren **solo** en este perfil, **fuera de la suite por defecto** (que usa SQLite en memoria, DD-03). Los tests de E11 llevan un marcador de pytest (por ejemplo, `postgres`) que la suite por defecto excluye; se corren levantando PostgreSQL con Docker Compose y ejecutando pytest con ese marcador. El comando exacto se fija en el change de infraestructura y **debe figurar en el README**. **No es requisito** para la suite del primer change. El SQL de la restricción (por ejemplo, la extensión `btree_gist`) queda para el design del change de infraestructura con PostgreSQL. **Fijado en C-02 (2026-10-13, D145 y D149):** marcador `postgres` excluido por `-m "not postgres"` en `addopts`; se corre con `python -m pytest -m postgres` y `TEST_DATABASE_URL` definida; si PostgreSQL no está disponible el perfil se omite sin fallar; el esquema sale siempre de las migraciones; E11 se prueba forzando la carrera (D149) y la serialización por recurso de `crear_turno` (D157) se prueba también acá.
 - **Sin Redis en los tests**: los vencimientos se evalúan al consultar (RN-GL-05), así que ningún test necesita Redis; la lógica de la tarea periódica (persistir vencimientos, ofrecer huecos, preparar mensajes) se prueba llamando a su función directamente.
 - **Un test por escenario del spec**, con el ID en el nombre o el docstring (`test_e4_doble_conflicto`). TDD estricto: primero el test que falla, luego el mínimo código.
 
@@ -272,13 +277,15 @@ Los nombres son **propuestos** y se toman como requisito (confirmado por el auto
 ## Versiones y dependencias
 
 Política (decisión del autor 2026-10-03; **no se inventan números de versión**; precisada el 2026-10-07, D133 y D137):
-- **Confirmadas por el autor:** Python 3.11+; SQLAlchemy de la **serie 2.0.x** (no la 2.1: «2.x» en esta KB significa la línea 2.0, con su API declarativa tipada); FastAPI de la **serie 0.115.x**; Pydantic, una versión compatible con ese FastAPI. Las versiones exactas de pytest, PostgreSQL, Redis, React y Vite **no están decididas**.
+- **Confirmadas por el autor:** Python 3.11+; SQLAlchemy de la **serie 2.0.x** (no la 2.1: «2.x» en esta KB significa la línea 2.0, con su API declarativa tipada); FastAPI de la **serie 0.115.x**; Pydantic, una versión compatible con ese FastAPI. Las versiones exactas de pytest, Redis, React y Vite **no están decididas**. PostgreSQL quedó fijado en C-02: **17.10** (D143).
 - **Antigüedad mínima de un pin** (D133): **ninguna versión publicada en la semana anterior al día del design**. Si la más nueva de un paquete es tan reciente, se toma la más nueva publicada antes, dentro de la serie permitida. Motivo: una versión de pocos días no tiene recorrido, y el design no instala nada para probarla. Vale para el design del primer change y para el de cada change que agregue dependencias.
 - **Un único archivo de dependencias: `backend/pyproject.toml`** (decisión del autor 2026-10-07, D137; D116 dejaba la elección al design), con **versiones exactas** (pins), sin duplicar la lista en otro archivo (criterio fijado por el autor el 2026-10-05, D72). Ahí van las dependencias de ejecución, las de test y la **configuración de pytest**: no hay `requirements.txt` ni `pytest.ini`. **Sin empaquetado**: no se agrega un backend de construcción ni más de lo necesario para instalar y correr los tests. **Propuesta** (se fija en el design del primer change): cómo se declaran las dependencias dentro del archivo y el comando exacto de instalación.
 - Los pins se **fijan en el `design.md` del primer change**, con la versión exacta, su fecha de publicación, la fuente y la fecha de consulta, y la compatibilidad entre ellos se comprueba con los metadatos de los paquetes, no se supone; lo que no se pueda obtener queda como **A verificar en el change** (verificar antes de crear el archivo de dependencias). Se **verifican en un clon limpio** (crear entorno, instalar solo desde ese archivo, correr los tests). **Los changes siguientes (incluido el de infraestructura con PostgreSQL) agregan sus dependencias a ese mismo archivo, con versión exacta**, cada uno en su design (D116), con el mismo criterio de antigüedad.
 - **Toda dependencia de test está declarada** en ese archivo (pytest y cualquier plugin que use la configuración). Ninguna dependencia queda implícita ni instalada solo en la máquina del autor.
 - **Zonas horarias en Windows** (decisión del autor 2026-10-07, D132): el paquete de datos de zonas (`tzdata`) se declara en el archivo único de dependencias, con versión exacta fijada en el design, y se menciona en el README; en Windows `zoneinfo` no trae base de zonas propia. `backend/app/domain` sigue importando solo la biblioteca estándar (`zoneinfo` lo es); `tzdata` no se importa, `zoneinfo` lo encuentra por su cuenta.
 - Sin dependencias del lado async (ver DD-12). Alembic no entra en el primer change.
+- **Imágenes de Docker** (decisión del autor 2026-10-13, D144; precisa D133): la regla de la semana se aplica al **último push de la etiqueta** (Docker Hub no da la fecha de publicación original) y se fija **etiqueta y digest** en `docker-compose.yml` y en el `Dockerfile`.
+- **Agregadas por C-02** (2026-10-13, D143): `psycopg[binary]==3.3.6` y `alembic==1.20.0` en el grupo `app` de `backend/pyproject.toml`; PostgreSQL `17.10-bookworm` y Python `3.13.15-slim-bookworm` como imágenes. La configuración de Alembic va en `backend/alembic.ini`, no en `pyproject.toml` (D147).
 
 ## Definition of Done del primer change
 
