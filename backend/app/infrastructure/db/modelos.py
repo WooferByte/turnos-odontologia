@@ -1,14 +1,24 @@
 """Modelos ORM del subconjunto del primer change (D130). Estilo SQLAlchemy 2.x."""
 from datetime import datetime
 
-from sqlalchemy import CheckConstraint, ForeignKey, Index, String, UniqueConstraint
+from sqlalchemy import CheckConstraint, ForeignKey, Index, MetaData, String, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 from app.infrastructure.db.tipos import FechaHoraUTC
 
 
+# Nombres estables para claves y UNIQUE (design I4): las migraciones los necesitan.
+# Sin clave "ck": las CHECK y los índices ya tienen nombre explícito.
+CONVENCION_DE_NOMBRES = {
+    "ix": "ix_%(column_0_label)s",
+    "pk": "pk_%(table_name)s",
+    "fk": "fk_%(table_name)s_%(column_0_name)s",
+    "uq": "uq_%(table_name)s_%(column_0_N_name)s",
+}
+
+
 class Base(DeclarativeBase):
-    pass
+    metadata = MetaData(naming_convention=CONVENCION_DE_NOMBRES)
 
 
 def _fk(tabla: str) -> ForeignKey:
