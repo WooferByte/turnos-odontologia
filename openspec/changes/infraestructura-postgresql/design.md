@@ -51,8 +51,8 @@ Motivación y alcance: ver `proposal.md`. Acá va solo el estado actual que cond
 
 - Migraciones que corran en SQLite. Las migraciones son solo para PostgreSQL; la suite por defecto sigue con `create_all` (I6).
 - Declarar la restricción de exclusión en el modelo declarativo (I5).
-- Bloqueos explícitos (`SELECT ... FOR UPDATE`, bloqueos consultivos) o aislamiento serializable: la KB eligió la restricción (DD-04).
-- Reintentos genéricos de transacciones o manejo de interbloqueos.
+- Bloqueos consultivos o aislamiento serializable. El bloqueo de fila del profesional y del sillón que toma `crear_turno` (I8) sí entra en este change; la restricción de exclusión sigue siendo la última defensa (DD-04).
+- Reintentos genéricos de transacciones. El único interbloqueo que se trata es el de la inserción de un turno (`40P01`, I7), como red de seguridad.
 - Un endpoint de salud, lecturas, autenticación o cualquier cambio en el contrato de `POST /turnos`.
 - Leer un archivo `.env` desde Python: no se agrega ninguna biblioteca para eso (I11).
 - Redis, worker, frontend, tablas o columnas nuevas, historial (C-03).
@@ -271,6 +271,8 @@ Cómo responde cada parte a la KB:
 
 `SolapamientoEnLaBase` es una excepción nueva de `app/application/puertos.py`. No es un error de dominio ni lleva código RN: es la señal, entre el repositorio y el caso de uso, de que otra transacción ocupó el hueco. La regla de capas lo permite: `infrastructure` importa `application` «solo para implementar sus puertos» (`08`, D70). El repositorio no decide nada de negocio ni conoce HTTP.
 
+**Interbloqueo (`40P01`).** Dos inserciones simultáneas del mismo hueco pueden esperarse mutuamente al comprobar la restricción y PostgreSQL aborta una con `40P01`, sin nombrar ninguna restricción. El repositorio lo traduce a `SolapamientoEnLaBase(recurso=None)` (no hay dato fiable de qué recurso chocó). Desde el bloqueo de fila de I8 el camino de `crear_turno` ya no llega ahí; la traducción queda como red de seguridad para escrituras que no pasen por el bloqueo.
+
 **Por qué el repositorio no arma él mismo el `ErrorDeSolapamiento`.** PostgreSQL informa **una sola** restricción violada (la primera que encuentra) y no dice contra qué turno. `Conflicto` necesita el `turno_id`, y un choque doble (E4) necesita los dos códigos. Esa información la tiene la validación de dominio, no el mensaje de la base. Por eso se reevalúa (I8).
 
 ### I8. El que pierde la carrera se reevalúa con el dominio (E11) — Propuesta
@@ -289,7 +291,7 @@ def crear_turno(comando, uow, reloj=utc_now) -> Turno:
     return _intentar_crear_turno(comando, uow, reloj)
 ```
 
-`_intentar_crear_turno` es el cuerpo actual, sin cambios, con su `with uow:`. Cuando el repositorio levanta `SolapamientoEnLaBase`, la unidad de trabajo deshace y cierra la sesión (ya lo hace hoy ante cualquier excepción). El intento siguiente abre una sesión nueva; como el ganador **ya confirmó** (PostgreSQL solo devuelve `23P01` después de eso), la validación de dominio lo encuentra y levanta el `ErrorDeSolapamiento` de siempre: con `RN-AG-05`, `RN-AG-08` o los dos, y el `turno_id` del ganador. La capa `api` lo traduce al `409` `application/problem+json` que ya existe. **No se toca `app/api` ni `app/domain`.**
+`_intentar_crear_turno` es el cuerpo actual con su `with uow:`, más un paso nuevo: **después** de resolver y validar el profesional y el sillón (incluidos los recursos por defecto) y **antes** de leer los ocupados, llama a `uow.agenda.bloquear_recursos(profesional.id, sillon.id)`. Ese método (puerto y `RepositorioAgendaSqlAlchemy`) emite dos sentencias en orden fijo, primero la fila del profesional y después la del sillón, con `select(...).with_for_update(key_share=True)`: en PostgreSQL es `SELECT ... FOR NO KEY UPDATE` (se excluye con otro bloqueo igual, pero no frena un `INSERT` que solo referencia la fila por clave foránea) y en SQLite SQLAlchemy omite la cláusula. El bloqueo dura hasta que la unidad de trabajo confirma o deshace. Con aislamiento de lectura confirmada, la lectura de los ocupados que sigue al bloqueo ya ve el turno que confirmó la reserva anterior: la segunda reserva del mismo recurso responde su `409` con los códigos completos, **sin reintento**. La reevaluación con `INTENTOS_ANTE_CARRERA` queda como red para escrituras que no pasen por el bloqueo. Cuando el repositorio levanta `SolapamientoEnLaBase`, la unidad de trabajo deshace y cierra la sesión (ya lo hace hoy ante cualquier excepción). El intento siguiente abre una sesión nueva; como el ganador **ya confirmó** (PostgreSQL solo devuelve `23P01` después de eso), la validación de dominio lo encuentra y levanta el `ErrorDeSolapamiento` de siempre: con `RN-AG-05`, `RN-AG-08` o los dos, y el `turno_id` del ganador. La capa `api` lo traduce al `409` `application/problem+json` que ya existe. **No se toca `app/api` ni `app/domain`.**
 
 **Clasificación del rechazo (RN-GL-02, D135) y orden de evaluación.** No aparece ninguna clase de rechazo nueva:
 
@@ -305,7 +307,7 @@ El orden sigue siendo: validación de entrada, RN-AG-10d, solapamiento. La viola
 
 **Alternativas descartadas.**
 
-- *Bloquear el profesional y el sillón con `SELECT ... FOR UPDATE` antes de validar.* Evita la carrera sin reintento, pero DD-04 la consideró y eligió la restricción; además no protege ante un `INSERT` que no pase por el caso de uso.
+- *Bloquear solo, sin la restricción de exclusión.* El bloqueo evita la carrera sin reintento en el camino de `crear_turno`, pero no protege ante un `INSERT` que no pase por el caso de uso: por eso se usan las dos juntas (el autor lo decidió durante el Apply; modifica DD-04, que había descartado el bloqueo).
 - *Traducir directo en la capa `api`* un `IntegrityError` a `409`. La API pasaría a conocer SQLAlchemy y el nombre de una restricción, y el `409` saldría sin `turno_id` y con un solo código en el caso doble.
 - *Un error de dominio nuevo con código `RN-AG-10c`.* Cambia el contrato (`codigos` nuevos, `conflictos` vacío) para un caso que el cliente no distingue de «llegué tarde».
 
