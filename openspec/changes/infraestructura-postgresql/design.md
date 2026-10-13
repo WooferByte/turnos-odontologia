@@ -4,7 +4,9 @@ Fecha del design: **2026-10-13**. Gobernanza **ALTO**: nada de esto se implement
 
 **Revisión del autor (2026-10-13): aprobado tal cual.** Las decisiones marcadas «Propuesta» (I1 a I16) quedan confirmadas sin cambios, incluidas las 28 tareas como excepción de tamaño y el criterio de commits de I16. Su registro en `knowledge-base/10_preguntas_abiertas.md` y el cierre de los huecos de la sección «Contradicciones y huecos» se hacen al terminar el Apply, en un commit `docs(kb)` aparte.
 
-**Ajuste del autor durante el Apply (2026-10-13): el contenedor se publica en el puerto 5434 del host.** Al empezar el grupo 2 se encontró el puerto 5432 ocupado por un PostgreSQL instalado en Windows como servicio (y el 5433 por el contenedor de otro proyecto). El autor eligió publicar en `127.0.0.1:5434:5432`: cambia el mapeo de I10 y la `TEST_DATABASE_URL` de I9 e I11 (`localhost:5434`). Dentro de la red de Compose la API sigue usando `postgres:5432`. Motivo adicional: el perfil de tests borra y recrea el esquema `public`, y no debe poder apuntar por accidente a una base local ajena.
+**Ajuste del autor durante el Apply (2026-10-13): el contenedor se publica en el puerto 5434 del host.** Al empezar el grupo 2 se encontró el puerto 5432 ocupado por un PostgreSQL instalado en Windows como servicio (y el 5433 por el contenedor de otro proyecto). El autor eligió publicar en `127.0.0.1:5434:5432`: cambia el mapeo de I10 y la `TEST_DATABASE_URL` de I9 e I11 (`127.0.0.1:5434`). Dentro de la red de Compose la API sigue usando `postgres:5432`. Motivo adicional: el perfil de tests borra y recrea el esquema `public`, y no debe poder apuntar por accidente a una base local ajena.
+
+**Hallazgos del Apply, grupos 2 y 3 (2026-10-13).** (1) Las URLs del host usan `127.0.0.1` y no `localhost`: en Windows `localhost` resuelve primero a IPv6 (`::1`), donde el contenedor no escucha, y la conexión espera varios segundos antes de caer a IPv4. (2) El fixture `engine` del perfil agrega `connect_timeout=5` a la URL: sin ese tope, `psycopg` en Windows no falla rápido ante un puerto cerrado y el perfil se colgaba más de 100 segundos en vez de omitirse (INF-4). La firma de `crear_engine` de I12 no cambia. Commit `8afee44`.
 
 Las decisiones de este documento se numeran **I1 a I16** («I» de infraestructura) para no confundirlas con las D1..D141 de `knowledge-base/10_preguntas_abiertas.md` ni con las D1..D20 del design de C-01. Cuando se cita «D» seguido de un número mayor que 20 es una decisión de la KB; «design C-01 D12» es del design archivado.
 
@@ -325,11 +327,11 @@ Esa secuencia vive en `tests/postgres/carrera.py` y la usan el escenario princip
 
 ```
 # PowerShell
-$env:TEST_DATABASE_URL = "postgresql+psycopg://app:app@localhost:5434/turnos_test"
+$env:TEST_DATABASE_URL = "postgresql+psycopg://app:app@127.0.0.1:5434/turnos_test"
 python -m pytest -m postgres
 
 # bash
-TEST_DATABASE_URL=postgresql+psycopg://app:app@localhost:5434/turnos_test python -m pytest -m postgres
+TEST_DATABASE_URL=postgresql+psycopg://app:app@127.0.0.1:5434/turnos_test python -m pytest -m postgres
 ```
 
 Los tests corren en el entorno virtual de la máquina, contra el PostgreSQL del contenedor. No hace falta construir la imagen de la API para correrlos.
@@ -397,7 +399,7 @@ volumes:
 |---|---|---|
 | `DATABASE_URL` | La API (`crear_app_desde_entorno`), Alembic y la carga del seed | `postgresql+psycopg://app:app@postgres:5432/turnos` (dentro de Compose) |
 | `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` | La imagen oficial de PostgreSQL y `docker-compose.yml` | `app`, `app`, `turnos` |
-| `TEST_DATABASE_URL` | Solo el perfil `postgres` de pytest | `postgresql+psycopg://app:app@localhost:5434/turnos_test` |
+| `TEST_DATABASE_URL` | Solo el perfil `postgres` de pytest | `postgresql+psycopg://app:app@127.0.0.1:5434/turnos_test` |
 
 Las `POSTGRES_*` son los nombres que exige la imagen oficial: no se pueden elegir.
 
