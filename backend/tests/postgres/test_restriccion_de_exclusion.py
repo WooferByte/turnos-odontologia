@@ -4,13 +4,16 @@ Los turnos se guardan directamente con las fábricas, sin pasar por el caso de u
 prueba es la base, no la validación de dominio.
 """
 from dataclasses import dataclass
+from datetime import timedelta
 
 import pytest
 from sqlalchemy import func, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.application.puertos import SolapamientoEnLaBase
 from app.domain.turnos.estados import ESTADOS_ACTIVOS, EstadoTurno
+from app.domain.turnos.turno import Turno
 from app.infrastructure.db.modelos import (
     PacienteModelo,
     PrestacionModelo,
@@ -18,7 +21,8 @@ from app.infrastructure.db.modelos import (
     SillonModelo,
     TurnoModelo,
 )
-from tests.conftest import a_las
+from tests.conftest import RELOJ_FIJO, a_las
+from app.infrastructure.unidad_de_trabajo import UnidadDeTrabajoSqlAlchemy
 from tests.factories import (
     un_consultorio,
     un_paciente,
@@ -143,3 +147,59 @@ def test_inf3_un_turno_no_activo_no_bloquea(
     guardar(sesion, escenario, escenario.profesional_a, escenario.sillon_1, a_las(10), "reservado")
 
     assert cantidad_de_turnos(sesion) == 2
+
+
+def un_turno_de_dominio(e: Escenario, profesional, sillon, inicio, **cambios) -> Turno:
+    datos = {
+        "consultorio_id": profesional.consultorio_id,
+        "paciente_id": e.paciente.id,
+        "profesional_id": profesional.id,
+        "sillon_id": sillon.id,
+        "prestacion_id": e.prestacion.id,
+        "inicio": inicio,
+        "fin": inicio + timedelta(minutes=30),
+        "duracion_minutos": 30,
+        "estado": EstadoTurno.RESERVADO,
+        "creado_en": RELOJ_FIJO,
+    }
+    return Turno(**{**datos, **cambios})
+
+
+@pytest.mark.parametrize(
+    ("profesional", "sillon", "recurso"),
+    [("profesional_a", "sillon_2", "profesional"), ("profesional_b", "sillon_1", "sillon")],
+)
+def test_inf2_el_repositorio_identifica_el_recurso_en_conflicto(
+    sesion: Session,
+    uow: UnidadDeTrabajoSqlAlchemy,
+    escenario: Escenario,
+    profesional: str,
+    sillon: str,
+    recurso: str,
+) -> None:
+    guardar(sesion, escenario, escenario.profesional_a, escenario.sillon_1, a_las(10))
+    nuevo = un_turno_de_dominio(
+        escenario, getattr(escenario, profesional), getattr(escenario, sillon), a_las(10, 15)
+    )
+
+    with pytest.raises(SolapamientoEnLaBase) as capturado:
+        with uow:
+            uow.agenda.agregar(nuevo)
+
+    assert capturado.value.recurso == recurso
+    assert cantidad_de_turnos(sesion) == 1
+
+
+def test_otro_error_de_integridad_no_se_traduce(
+    sesion: Session, uow: UnidadDeTrabajoSqlAlchemy, escenario: Escenario
+) -> None:
+    sin_paciente = un_turno_de_dominio(
+        escenario, escenario.profesional_a, escenario.sillon_1, a_las(10), paciente_id=999_999
+    )
+
+    with pytest.raises(IntegrityError) as capturado:
+        with uow:
+            uow.agenda.agregar(sin_paciente)
+
+    assert capturado.value.orig.sqlstate == "23503"
+    assert cantidad_de_turnos(sesion) == 0
