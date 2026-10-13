@@ -12,6 +12,8 @@ from sqlalchemy.engine import make_url
 from sqlalchemy.exc import OperationalError
 
 VARIABLE = "TEST_DATABASE_URL"
+# En Windows psycopg no falla ante un puerto cerrado: sin tope la corrida se cuelga (INF-4).
+TIEMPO_DE_ESPERA = 5
 COMO_LEVANTARLO = (
     "levantá la base con 'docker compose up -d postgres' y definí "
     f"{VARIABLE}=postgresql+psycopg://app:app@127.0.0.1:5434/turnos_test"
@@ -27,7 +29,7 @@ def engine() -> Iterator[Engine]:
     if not base.endswith("_test"):
         # No es "PostgreSQL no disponible": borraría una base que no es de tests.
         pytest.fail(f"{VARIABLE} apunta a la base '{base}', que no termina en _test")
-    engine = create_engine(url, pool_pre_ping=True)
+    engine = create_engine(url, pool_pre_ping=True, connect_args={"connect_timeout": TIEMPO_DE_ESPERA})
     try:
         with engine.begin() as conexion:
             conexion.execute(text("DROP SCHEMA IF EXISTS public CASCADE"))
