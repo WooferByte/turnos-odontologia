@@ -258,6 +258,8 @@ La migración autogenerada **se revisa a mano** antes de usarla, y cada change q
 - Los datos de la demo sin Docker viven en memoria y se pierden al reiniciar; los de la API sobre PostgreSQL persisten en el volumen de Docker.
 - La coincidencia entre migraciones y modelos (INF-1) y la protección ante reservas simultáneas (E11) **solo se prueban en el perfil opcional con PostgreSQL**: la suite por defecto no las ejerce.
 - El puerto 5434 (PostgreSQL) y el 8000 (API) del host tienen que estar libres.
+- El proyecto de Compose tiene nombre fijo (`turnos-odontologia`): **dos copias del repositorio en la misma máquina comparten contenedores y volumen**, y un `docker compose down -v` en una borra los datos de la otra. Para levantar una segunda copia aparte, usá otro nombre de proyecto en todos los comandos: `docker compose -p otro-nombre up -d`.
+- En Windows, si el repositorio está en una ruta muy larga (más de unos 200 caracteres), el perfil opcional falla al importar `psycopg` con «El nombre del archivo o la extensión es demasiado largo». Cloná en una ruta corta.
 - Las credenciales de los ejemplos y de `.env.example` son de prueba. No hay configuración de producción: TLS, copias de respaldo, roles con privilegios mínimos ni ajuste del pool.
 - La API migra al arrancar el contenedor: sirve para una sola réplica.
 - No se valida el horario de atención del profesional ni del consultorio.
