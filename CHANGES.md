@@ -304,15 +304,15 @@ Primer change: `/opsx:propose crear-turno-sin-solapamientos`.
 > C-02 va primero. C-03, C-04 y C-05 no dependen entre sí. Ninguno tiene interfaz: se prueban con tests de dominio y de API.
 
 ### [C-02] `infraestructura-postgresql`
-- **Estado**: `[ ]` pendiente · **Orden**: 2 · **Gobernanza**: ALTO
+- **Estado**: `[x]` archivado · **Orden**: 2 · **Gobernanza**: ALTO
 - **Objetivo** (change técnico, sin historia): dejar el esquema bajo migraciones y PostgreSQL como base de ejecución, con la restricción de exclusión que hace atómico el anti-solapamiento (RN-AG-10c; E11 de US-010).
 - **Alcance — dentro**: Docker Compose con los servicios `api` y `postgres`; Alembic con una migración inicial equivalente al esquema de C-01; restricción de exclusión por profesional y por sillón sobre `[inicio, fin)` y solo estados activos (DD-04); marcador de pytest del perfil opcional con PostgreSQL y su comando en el README; nombres definitivos de las variables de entorno y `.env.example`; carga del seed ficticio; sus dependencias se agregan al archivo único de C-01 (D116).
 - **Alcance — fuera**: cambios en la suite por defecto, que sigue en SQLite en memoria (DD-03); Redis y worker (C-31); frontend; tablas nuevas.
 - **Depende de**: C-01
-- **Escenarios mínimos**: E11; INF-1 (una base vacía migrada queda con el esquema de C-01); INF-2 (la restricción rechaza E2 y E3 en la base); INF-3 (la restricción acepta E5 y E6); INF-4 (la suite por defecto corre sin PostgreSQL)
+- **Escenarios mínimos**: E11; INF-1 (una base vacía migrada queda con el esquema de C-01); INF-2 (la restricción rechaza E2 y E3 en la base); INF-3 (la restricción acepta E5 y E6); INF-4 (la suite por defecto corre sin PostgreSQL). Se implementó con 28 tareas: tercera excepción registrada al «alrededor de 20» (D152)
 - **Leer antes**:
   - `knowledge-base/06_funcionalidades.md` nota «Changes técnicos y frontend» y §US-010 (E11)
-  - `knowledge-base/09_decisiones_y_supuestos.md` DD-03, DD-04, DD-15 · `knowledge-base/10_preguntas_abiertas.md` D75, D85, D105
+  - `knowledge-base/09_decisiones_y_supuestos.md` DD-03, DD-04, DD-15 · `knowledge-base/10_preguntas_abiertas.md` D75, D85, D105, D116, D119, D133, D137 (y, ya implementado, D142 a D157)
   - `knowledge-base/05_reglas_de_negocio.md` RN-AG-09, RN-AG-10, RN-AG-10c · `knowledge-base/04_modelo_de_datos.md` §Turno (nota de DD-04) y «Seed data inicial»
   - `knowledge-base/08_arquitectura_propuesta.md` §«Estrategia de tests» (perfil opcional con PostgreSQL), «Variables de entorno», «Versiones y dependencias», «Estructura de directorios»
 

@@ -17,10 +17,10 @@ Las versiones exactas **no están decididas a propósito**: el criterio es versi
 | Framework API | FastAPI (validación con Pydantic, incluido en FastAPI) | Serie 0.115.x (D133); pin exacto en el `design.md` del primer change |
 | Autenticación | JWT (access y refresh token, HS256) y hash bcrypt | No fijada |
 | ORM / acceso a datos | SQLAlchemy, **modo síncrono** en todos los changes (DD-12, D119) | Serie 2.0.x (no la 2.1; D133), API declarativa tipada |
-| Base de datos | PostgreSQL (producción / docker-compose) | No fijada (pin en el `design.md` del change que la use) |
+| Base de datos | PostgreSQL (producción / docker-compose), con driver `psycopg` 3 y migraciones Alembic desde C-02 (DD-15) | 17.10, imagen `postgres:17.10-bookworm` fijada con etiqueta y digest (D143, D144) |
 | Base de datos de tests | SQLite en memoria, `sqlite+pysqlite:///:memory:` con `StaticPool` (DD-03, DD-12); sin `aiosqlite` | — |
 | Asincronía | Redis: tarea periódica que persiste vencimientos y dispara efectos (RN-GL-05); no interviene en el primer change | No fijada (pin en el `design.md` del change que la use) |
-| Contenedores | Docker y Docker Compose | No fijada |
+| Contenedores | Docker y Docker Compose; PostgreSQL se publica en `127.0.0.1:5434` y la API en `127.0.0.1:8000` (D153) | Imágenes fijadas con etiqueta y digest (D144) |
 | Frontend | React + TypeScript + Vite (no interviene en el primer change; empieza en la fase 3) | No fijada |
 | Tests backend | pytest + cliente de pruebas de FastAPI (D84) | — |
 
@@ -44,11 +44,11 @@ La fuente de verdad del dominio vive en `knowledge-base/`. **Leé el archivo rel
 | [07_flujos_principales.md](knowledge-base/07_flujos_principales.md) | Flujos E2E (crear turno, reserva, WhatsApp, seña, cancelar, lista de espera, ficha, auth) |
 | [08_arquitectura_propuesta.md](knowledge-base/08_arquitectura_propuesta.md) | Patrones, directorios, regla de capas, reloj/UTC, estrategia de tests, versiones, Definition of Done |
 | [09_decisiones_y_supuestos.md](knowledge-base/09_decisiones_y_supuestos.md) | Decisiones DD, supuestos SU y riesgos R: por qué se eligió cada cosa |
-| [10_preguntas_abiertas.md](knowledge-base/10_preguntas_abiertas.md) | Inconsistencias, preguntas priorizadas y registro de decisiones del autor (D1..D141) |
+| [10_preguntas_abiertas.md](knowledge-base/10_preguntas_abiertas.md) | Inconsistencias, preguntas priorizadas y registro de decisiones del autor (D1..D157) |
 | [11_integraciones_whatsapp_y_mercadopago.md](knowledge-base/11_integraciones_whatsapp_y_mercadopago.md) | Implementar o diseñar recordatorios (`wa.me` / Cloud API) o la seña con Checkout Pro |
 | [12_contexto_de_mercado.md](knowledge-base/12_contexto_de_mercado.md) | Entender competidores y vacíos del mercado; justificar una decisión de producto |
 
-> **Estado de `10_preguntas_abiertas.md`**: las tres preguntas de prioridad **Alta** (P-01, P-02, P-03: legales) están **cerradas** (2026-10-03) como fuera del alcance académico; requieren revisión legal antes de uso real, y la seña solo se usa con credenciales de prueba. No queda ninguna pregunta Alta abierta antes del primer change. Quedan diferidas (Fase 2 o fuera de la v1) P-04, P-05, P-06, P-07 y P-15. Antes de implementar un change, repasá igual el registro de decisiones del archivo: las decisiones D29 a D118 (cerradas el 2026-10-05) precisan reglas que aparecen en `05` y `06`.
+> **Estado de `10_preguntas_abiertas.md`**: las tres preguntas de prioridad **Alta** (P-01, P-02, P-03: legales) están **cerradas** (2026-10-03) como fuera del alcance académico; requieren revisión legal antes de uso real, y la seña solo se usa con credenciales de prueba. No queda ninguna pregunta Alta abierta antes del primer change. Quedan diferidas (Fase 2 o fuera de la v1) P-04, P-05, P-06, P-07 y P-15. Antes de implementar un change, repasá igual el registro de decisiones del archivo: las decisiones D29 a D118 (cerradas el 2026-10-05) precisan reglas que aparecen en `05` y `06`. Las decisiones D142 a D157 (2026-10-13) fijan la infraestructura con PostgreSQL de C-02 y el control de concurrencia al crear turnos: bloqueo de fila por recurso más restricción de exclusión (DD-04).
 
 ---
 
