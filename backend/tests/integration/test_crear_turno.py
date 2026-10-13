@@ -1,9 +1,10 @@
 """Caso de uso ``crear_turno`` con repositorio real sobre SQLite en memoria (D12, D16)."""
+import re
 from dataclasses import replace
 from datetime import datetime
 
 import pytest
-from sqlalchemy import select
+from sqlalchemy import event, select
 
 from app.application.crear_turno import CrearTurnoComando, crear_turno
 from app.domain.errors import (
@@ -849,3 +850,22 @@ def test_e12_el_sillon_por_defecto_tambien_se_controla_por_solapamiento(
     )
     with fabrica_sesiones() as otra_sesion:
         assert len(otra_sesion.scalars(select(TurnoModelo)).all()) == 1  # solo el existente
+
+
+def test_crear_turno_bloquea_el_profesional_y_el_sillon_antes_de_leer_los_ocupados(
+    engine, sesion, uow
+) -> None:
+    datos = _escenario(sesion)
+    tablas: list[str] = []
+
+    def registrar(conexion, cursor, sentencia, parametros, contexto, varias):
+        if sentencia.lstrip().upper().startswith("SELECT"):
+            tablas.append(re.search(r"FROM (\w+)", sentencia).group(1))
+
+    event.listen(engine, "before_cursor_execute", registrar)
+    try:
+        crear_turno(_comando(datos, a_las(10)), uow, reloj_fijo)
+    finally:
+        event.remove(engine, "before_cursor_execute", registrar)
+
+    assert tablas[-3:] == ["profesional", "sillon", "turno"]

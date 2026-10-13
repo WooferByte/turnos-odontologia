@@ -14,6 +14,7 @@ from app.api.deps import get_reloj
 from app.application.crear_turno import CrearTurnoComando, crear_turno
 from app.domain.errors import ErrorDeSolapamiento
 from app.infrastructure.db.modelos import TurnoModelo
+from app.infrastructure.repositories.agenda import RepositorioAgendaSqlAlchemy
 from app.infrastructure.unidad_de_trabajo import UnidadDeTrabajoSqlAlchemy
 from app.main import crear_app
 from tests.conftest import a_las, reloj_fijo
@@ -137,4 +138,64 @@ def test_e11_post_turnos_responde_409_al_que_pierde_la_carrera(
             "turno_id": ganador.id,
         },
     ]
+    assert cantidad_de_turnos(sesion) == 1
+
+
+class _AgendaQueCuenta:
+    """Envuelve el repositorio real y cuenta las llamadas, sin cambiar lo que devuelve."""
+
+    def __init__(self, agenda, llamadas: list[str]) -> None:
+        self._agenda = agenda
+        self._llamadas = llamadas
+
+    def __getattr__(self, nombre: str):
+        atributo = getattr(self._agenda, nombre)
+        if not callable(atributo):
+            return atributo
+
+        def registrar(*args, **kwargs):
+            self._llamadas.append(nombre)
+            return atributo(*args, **kwargs)
+
+        return registrar
+
+
+class _UnidadQueCuenta(UnidadDeTrabajoSqlAlchemy):
+    def __init__(self, fabrica, llamadas: list[str]) -> None:
+        super().__init__(fabrica)
+        self._llamadas = llamadas
+
+    def __enter__(self):
+        super().__enter__()
+        self.agenda = _AgendaQueCuenta(self.agenda, self._llamadas)
+        return self
+
+
+def test_e11_la_segunda_reserva_espera_el_bloqueo_y_se_rechaza_sin_reintento(
+    engine: Engine, sesion: Session, escenario: Escenario
+) -> None:
+    fabrica = sessionmaker(bind=engine, expire_on_commit=False)
+    llamadas: list[str] = []
+    pedido = comando(escenario, escenario.profesional_a, escenario.sillon_1, a_las(10))
+    ganador = ReservaGanadora(escenario, escenario.profesional_a, escenario.sillon_1, a_las(10))
+
+    def ganador_con_bloqueo(sesion_ganadora: Session) -> int:
+        RepositorioAgendaSqlAlchemy(sesion_ganadora).bloquear_recursos(
+            escenario.profesional_a.id, escenario.sillon_1.id
+        )
+        return ganador(sesion_ganadora)
+
+    with pytest.raises(ErrorDeSolapamiento) as capturado:
+        carrera(
+            engine,
+            ganador_con_bloqueo,
+            lambda: crear_turno(pedido, _UnidadQueCuenta(fabrica, llamadas)),
+        )
+
+    assert capturado.value.codigos == ["RN-AG-05", "RN-AG-08"]
+    assert [c.turno_id for c in capturado.value.conflictos] == [ganador.id, ganador.id]
+    # Un solo intento: leyó los ocupados una vez, con el turno ya confirmado, y nunca insertó,
+    # así que la base no llegó a levantar ni 23P01 ni 40P01.
+    assert llamadas.count("ocupados_en_el_intervalo") == 1
+    assert "agregar" not in llamadas
     assert cantidad_de_turnos(sesion) == 1

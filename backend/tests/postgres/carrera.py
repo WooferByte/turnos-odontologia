@@ -132,3 +132,17 @@ class ReservaGanadora:
     def __call__(self, sesion: Session) -> int:
         self.id = turno_sin_confirmar(sesion, *self._datos)
         return self.id
+
+
+def bloquear_en_otro_hilo(
+    engine: Engine, hilos: ThreadPoolExecutor, profesional_id: int, sillon_id: int
+):
+    """Pide en otra sesión el bloqueo de los recursos y confirma apenas lo obtiene."""
+    from app.infrastructure.repositories.agenda import RepositorioAgendaSqlAlchemy
+
+    def tarea() -> None:
+        with sessionmaker(bind=engine, expire_on_commit=False)() as sesion:
+            RepositorioAgendaSqlAlchemy(sesion).bloquear_recursos(profesional_id, sillon_id)
+            sesion.commit()
+
+    return hilos.submit(tarea)

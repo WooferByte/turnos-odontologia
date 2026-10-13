@@ -111,3 +111,46 @@ def test_lee_los_conflictos_con_una_sola_sentencia(
         event.remove(engine, "before_cursor_execute", registrar)
 
     assert len([s for s in sentencias if s.lstrip().upper().startswith("SELECT")]) == 1
+
+
+def _sentencias_que_emite(engine: Engine, accion) -> list[str]:
+    sentencias: list[str] = []
+
+    def registrar(conexion, cursor, sentencia, parametros, contexto, varias):
+        sentencias.append(" ".join(sentencia.split()))
+
+    event.listen(engine, "before_cursor_execute", registrar)
+    try:
+        accion()
+    finally:
+        event.remove(engine, "before_cursor_execute", registrar)
+    return sentencias
+
+
+def test_bloquear_recursos_emite_primero_el_profesional_y_despues_el_sillon(
+    engine: Engine, sesion: Session, mundo: dict
+) -> None:
+    repositorio = RepositorioAgendaSqlAlchemy(sesion)
+
+    sentencias = _sentencias_que_emite(
+        engine,
+        lambda: repositorio.bloquear_recursos(mundo["profesional"].id, mundo["sillon"].id),
+    )
+
+    assert len(sentencias) == 2
+    assert " FROM profesional " in sentencias[0] + " "
+    assert " FROM sillon " in sentencias[1] + " "
+
+
+def test_bloquear_recursos_en_sqlite_no_emite_clausula_de_bloqueo(
+    engine: Engine, sesion: Session, mundo: dict
+) -> None:
+    repositorio = RepositorioAgendaSqlAlchemy(sesion)
+
+    sentencias = _sentencias_que_emite(
+        engine,
+        lambda: repositorio.bloquear_recursos(mundo["otro_profesional"].id, mundo["otro_sillon"].id),
+    )
+
+    assert sentencias  # se emitieron
+    assert not any("FOR " in s.upper() for s in sentencias)
