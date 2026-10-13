@@ -4,6 +4,7 @@ Los identificadores se asignan a mano para que sean fijos y el README pueda docu
 Hay un solo profesional y un solo sillón a propósito: así omitirlos funciona (RN-AG-14) y un
 segundo turno a la misma hora muestra el ``409`` con los dos códigos (E4).
 """
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.infrastructure.db.modelos import (
@@ -57,6 +58,39 @@ def cargar_demo(sesion: Session) -> None:
                 nombre=nombre,
                 apellido=apellido,
                 telefono_whatsapp=telefono,
+            )
+        )
+    sesion.commit()
+
+
+def cargar_demo_si_falta(sesion: Session) -> bool:
+    """Carga la demo solo si el consultorio 1 no existe; devuelve si cargó (design I13).
+
+    Permite repetir el arranque del contenedor sin duplicar datos ni fallar.
+    """
+    if sesion.get(ConsultorioModelo, 1) is not None:
+        return False
+    cargar_demo(sesion)
+    return True
+
+
+# Tablas con identificador fijo en el seed.
+_TABLAS_SEMBRADAS = ("consultorio", "profesional", "sillon", "prestacion", "paciente")
+
+
+def ajustar_secuencias(sesion: Session) -> None:
+    """Avanza la secuencia de ``id`` de cada tabla sembrada hasta su máximo (design I13).
+
+    El seed asigna los identificadores a mano y en PostgreSQL eso no mueve la secuencia: el
+    primer alta sin identificador explícito chocaría con el 1. En SQLite no hace falta.
+    """
+    if sesion.get_bind().dialect.name != "postgresql":
+        return
+    for tabla in _TABLAS_SEMBRADAS:
+        sesion.execute(
+            text(
+                f"SELECT setval(pg_get_serial_sequence('{tabla}', 'id'), "
+                f"(SELECT max(id) FROM {tabla}))"
             )
         )
     sesion.commit()
