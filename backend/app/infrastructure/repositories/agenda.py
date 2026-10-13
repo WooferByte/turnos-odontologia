@@ -4,7 +4,7 @@ from dataclasses import replace
 from typing import Literal
 
 from sqlalchemy import or_, select
-from sqlalchemy.exc import IntegrityError
+from sqlalchemy.exc import DBAPIError
 from sqlalchemy.orm import Session
 
 from app.application.puertos import OcupadosEnElIntervalo, SolapamientoEnLaBase
@@ -23,6 +23,7 @@ from app.infrastructure.db.modelos import (
 )
 
 
+SQLSTATE_INTERBLOQUEO = "40P01"  # deadlock_detected (design I7)
 RECURSO_POR_RESTRICCION: dict[str, Literal["profesional", "sillon"]] = {
     "ex_turno_profesional_sin_solapamiento": "profesional",
     "ex_turno_sillon_sin_solapamiento": "sillon",
@@ -111,8 +112,12 @@ class RepositorioAgendaSqlAlchemy:
         self._sesion.add(modelo)
         try:
             self._sesion.flush()  # asigna el id sin confirmar; el commit es de la unidad de trabajo
-        except IntegrityError as error:
-            # getattr: en SQLite no hay ``diag`` y el error se deja subir tal cual (design I7).
+        except DBAPIError as error:
+            # getattr: en SQLite no hay ``diag`` ni ``sqlstate`` y el error sube tal cual (design I7).
+            if getattr(error.orig, "sqlstate", None) == SQLSTATE_INTERBLOQUEO:
+                # Dos inserciones simultáneas se esperan al comprobar la exclusión y PostgreSQL
+                # aborta una: es la misma carrera que 23P01, sin restricción que nombrar.
+                raise SolapamientoEnLaBase() from error
             restriccion = getattr(getattr(error.orig, "diag", None), "constraint_name", None)
             recurso = RECURSO_POR_RESTRICCION.get(restriccion)
             if recurso is None:

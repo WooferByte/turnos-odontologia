@@ -59,8 +59,12 @@ class SolapamientoEnLaBase(Exception):
     """La base rechazó el alta porque otra transacción ocupó el hueco (RN-AG-10c, design I7).
 
     No es un error de dominio ni lleva código RN: el caso de uso la reevalúa con el dominio.
+    recurso dice qué recurso chocó cuando la base lo informa (rechazo de la restricción de
+    exclusión, 23P01); es None cuando no hay dato fiable, como en un interbloqueo (40P01):
+    ahí PostgreSQL aborta una de dos transacciones que se esperan y no nombra ninguna restricción.
     """
 
-    def __init__(self, recurso: Literal["profesional", "sillon"]) -> None:
+    def __init__(self, recurso: Literal["profesional", "sillon"] | None = None) -> None:
         self.recurso = recurso
-        super().__init__(f"La base rechazó el turno por solapamiento del {recurso}.")
+        detalle = f" del {recurso}" if recurso else ""
+        super().__init__(f"La base rechazó el turno por solapamiento{detalle}.")
