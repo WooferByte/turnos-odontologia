@@ -1,11 +1,20 @@
 """Puertos que la capa de aplicación necesita; los implementa ``infrastructure`` (D12)."""
 from collections.abc import Sequence
+from dataclasses import dataclass
 from typing import Literal, Protocol
 
 from app.domain.agenda.intervalo import Intervalo
 from app.domain.agenda.recursos import Paciente, Prestacion, Profesional, Sillon
 from app.domain.agenda.solapamiento import TurnoOcupado
 from app.domain.turnos.turno import Turno
+
+
+@dataclass(frozen=True)
+class OcupadosEnElIntervalo:
+    """Los turnos que intersecan un intervalo, separados por el recurso con el que chocan."""
+
+    del_profesional: Sequence[TurnoOcupado]
+    del_sillon: Sequence[TurnoOcupado]
 
 
 class RepositorioAgenda(Protocol):
@@ -23,10 +32,14 @@ class RepositorioAgenda(Protocol):
 
     def zona_horaria(self, consultorio_id: int) -> str: ...
 
-    def turnos_que_intersecan(
-        self, recurso: Literal["profesional", "sillon"], recurso_id: int, intervalo: Intervalo
-    ) -> Sequence[TurnoOcupado]:
-        """Turnos del recurso en cualquier estado; la regla la decide el dominio (D12)."""
+    def ocupados_en_el_intervalo(
+        self, profesional_id: int, sillon_id: int, intervalo: Intervalo
+    ) -> "OcupadosEnElIntervalo":
+        """Turnos del profesional y del sillón en cualquier estado, leídos con UNA sentencia.
+
+        La regla la decide el dominio (D12). Una sola lectura evita que una reserva confirmada
+        entre dos consultas deje ver un solo choque donde hay dos (E11, design I8).
+        """
         ...
 
     def agregar(self, turno: Turno) -> Turno:

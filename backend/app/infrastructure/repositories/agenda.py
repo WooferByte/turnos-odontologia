@@ -3,11 +3,11 @@ from collections.abc import Sequence
 from dataclasses import replace
 from typing import Literal
 
-from sqlalchemy import select
+from sqlalchemy import or_, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.application.puertos import SolapamientoEnLaBase
+from app.application.puertos import OcupadosEnElIntervalo, SolapamientoEnLaBase
 from app.domain.agenda.intervalo import Intervalo
 from app.domain.agenda.recursos import Paciente, Prestacion, Profesional, Sillon
 from app.domain.agenda.solapamiento import TurnoOcupado
@@ -74,21 +74,26 @@ class RepositorioAgendaSqlAlchemy:
     def zona_horaria(self, consultorio_id: int) -> str:
         return self._sesion.get_one(ConsultorioModelo, consultorio_id).zona_horaria
 
-    def turnos_que_intersecan(
-        self, recurso: Literal["profesional", "sillon"], recurso_id: int, intervalo: Intervalo
-    ) -> Sequence[TurnoOcupado]:
-        # Recorte por rango para no traer toda la agenda (D12). Devuelve turnos de cualquier
-        # estado: qué estados bloquean y la regla de solapamiento las decide el dominio.
-        columna = TurnoModelo.profesional_id if recurso == "profesional" else TurnoModelo.sillon_id
+    def ocupados_en_el_intervalo(
+        self, profesional_id: int, sillon_id: int, intervalo: Intervalo
+    ) -> OcupadosEnElIntervalo:
+        # Una sola sentencia (profesional O sillón) para que ambos recursos se lean del mismo
+        # estado de la base (E11, design I8). Recorte por rango para no traer toda la agenda
+        # (D12); turnos de cualquier estado: la regla de solapamiento la decide el dominio.
         consulta = select(TurnoModelo).where(
-            columna == recurso_id,
+            or_(TurnoModelo.profesional_id == profesional_id, TurnoModelo.sillon_id == sillon_id),
             TurnoModelo.inicio < intervalo.fin,
             TurnoModelo.fin > intervalo.inicio,
         )
         modelos = self._sesion.scalars(consulta).all()
-        return [
-            TurnoOcupado(m.id, Intervalo(m.inicio, m.fin), EstadoTurno(m.estado)) for m in modelos
-        ]
+
+        def ocupado(m: TurnoModelo) -> TurnoOcupado:
+            return TurnoOcupado(m.id, Intervalo(m.inicio, m.fin), EstadoTurno(m.estado))
+
+        return OcupadosEnElIntervalo(
+            del_profesional=[ocupado(m) for m in modelos if m.profesional_id == profesional_id],
+            del_sillon=[ocupado(m) for m in modelos if m.sillon_id == sillon_id],
+        )
 
     def agregar(self, turno: Turno) -> Turno:
         modelo = TurnoModelo(

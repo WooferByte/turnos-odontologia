@@ -117,16 +117,13 @@ def _intentar_crear_turno(
         profesional, prestacion, sillon = _validar_entrada(comando, uow)
         zona = uow.agenda.zona_horaria(profesional.consultorio_id)
         intervalo = Intervalo.para_turno(comando.inicio, prestacion.duracion_minutos, zona)
-        ocupados_profesional = uow.agenda.turnos_que_intersecan(
-            "profesional", profesional.id, intervalo
-        )
-        ocupados_sillon = uow.agenda.turnos_que_intersecan("sillon", sillon.id, intervalo)
+        ocupados = uow.agenda.ocupados_en_el_intervalo(profesional.id, sillon.id, intervalo)
         conflictos = detectar_conflictos(
             intervalo,
             profesional.id,
-            ocupados_profesional,
+            ocupados.del_profesional,
             sillon.id,
-            ocupados_sillon,
+            ocupados.del_sillon,
         )
         if conflictos:
             raise ErrorDeSolapamiento(conflictos)
