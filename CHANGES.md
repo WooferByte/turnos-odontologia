@@ -285,7 +285,7 @@ Primer change: `/opsx:propose crear-turno-sin-solapamientos`.
 ## FASE 1 — Change de la consigna (orden 1)
 
 ### [C-01] `crear-turno-sin-solapamientos`
-- **Estado**: `[ ]` pendiente · **Orden**: 1 · **Gobernanza**: MEDIO
+- **Estado**: `[x]` archivado · **Orden**: 1 · **Gobernanza**: MEDIO
 - **Objetivo** (US-010): crear un turno `reservado` para un paciente, una prestación, un profesional y un sillón, rechazando el solapamiento con turnos activos del profesional (RN-AG-05) y del sillón (RN-AG-08). Es el change de la consigna y el hito de entrega: al archivarlo se pone la etiqueta Git.
 - **Alcance — dentro**: `Intervalo` semiabierto, `detectar_conflictos` y errores de dominio con código RN; caso de uso `crear_turno` con reloj inyectable y recursos por defecto (RN-AG-14); `POST /turnos` sin autenticación (DD-14) con cuerpo RFC 7807; tablas `Consultorio`, `Profesional`, `Sillon`, `Prestacion`, `Paciente` y `Turno` con `create_all` sobre SQLite en memoria; test unitario de `Intervalo` (E8, RN-AG-10d), test de ida y vuelta de zonas horarias, test de imports de `backend/app/domain` y test guard de fechas; archivo único de dependencias con versiones exactas (D116); README con el límite conocido.
 - **Alcance — fuera**: historial `EventoTurno` (E9), horario y bloqueos (E10), concurrencia (E11), autenticación, interfaz gráfica, Alembic, PostgreSQL y Redis.
