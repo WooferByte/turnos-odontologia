@@ -24,7 +24,7 @@ Reglas de trabajo para todos los grupos (no son tareas):
 ## 2. PostgreSQL con Docker Compose
 
 - [x] 2.1 Crear en la raíz `.env.example` (design I11), `docker-compose.yml` con **solo** el servicio `postgres` (design I10, imagen con etiqueta y digest de I2) y `docker/postgres-init/01_base_de_tests.sql`. Copiar `.env.example` a `.env`. Verificación (V3, V4, V5): `docker compose config` no da errores; `docker compose up -d postgres` deja el servicio `healthy` en `docker compose ps`; `docker compose exec postgres psql -U app -d turnos -c "\l"` lista `turnos` y `turnos_test`; con `TEST_DATABASE_URL` definida, `python -m pytest -m postgres` da «1 passed»; `git status` no muestra `.env` y `git check-ignore .env` lo devuelve.
-- [ ] 2.2 Agregar al `README.md` la sección «Perfil opcional con PostgreSQL» (design I14): requisito de Docker Desktop solo para esto, cómo levantar la base, el comando exacto para PowerShell y para bash, y qué se ve si PostgreSQL no está disponible. Verificación: los comandos de la sección, copiados tal cual en una terminal nueva, dan el resultado que la sección dice; la sección de tests sin Docker no cambió.
+- [x] 2.2 Agregar al `README.md` la sección «Perfil opcional con PostgreSQL» (design I14): requisito de Docker Desktop solo para esto, cómo levantar la base, el comando exacto para PowerShell y para bash, y qué se ve si PostgreSQL no está disponible. Verificación: los comandos de la sección, copiados tal cual en una terminal nueva, dan el resultado que la sección dice; la sección de tests sin Docker no cambió.
 
 ## 3. Configuración y engine
 

@@ -87,6 +87,40 @@ Cada escenario del change tiene un test titular de integración (caso de uso rea
 
 Además, E1, E4 y E12 se prueban por HTTP en `backend/tests/api/test_post_turnos.py` (`test_e1_post_turnos_responde_201`, `test_e4_post_turnos_responde_409_con_los_dos_codigos`, `test_e12_post_turnos_responde_422_con_rn_gl_04`), y las reglas puras tienen tests unitarios sin base de datos en `backend/tests/unit/`.
 
+## Perfil opcional con PostgreSQL
+
+Una parte de los tests (la que prueba lo que solo PostgreSQL garantiza) está fuera de la corrida por defecto y lleva el marcador `postgres`. **Docker Desktop hace falta solo para esto**: la instalación y los tests de las secciones anteriores no lo usan.
+
+1. Desde la raíz del repositorio, copiá `.env.example` a `.env` (si no existe) y levantá la base. Queda publicada en `127.0.0.1:5434` (el puerto 5434 del host tiene que estar libre) y crea las bases `turnos` y `turnos_test`:
+
+   ```
+   docker compose up -d postgres
+   docker compose ps
+   ```
+
+   Esperá a que `postgres` figure como `healthy`.
+
+2. Desde `backend/`, con el entorno activado, definí `TEST_DATABASE_URL` en esa terminal y corré el perfil. La base tiene que terminar en `_test`: el perfil **borra y recrea** su esquema `public`.
+
+   PowerShell:
+
+   ```
+   $env:TEST_DATABASE_URL = "postgresql+psycopg://app:app@127.0.0.1:5434/turnos_test"
+   python -m pytest -m postgres
+   ```
+
+   bash:
+
+   ```
+   TEST_DATABASE_URL=postgresql+psycopg://app:app@127.0.0.1:5434/turnos_test python -m pytest -m postgres
+   ```
+
+   Se usa `127.0.0.1` y no `localhost`: en Windows `localhost` resuelve primero a IPv6 y la conexión espera varios segundos antes de caer a IPv4.
+
+Con la base levantada, la corrida termina con tests en verde (hoy, «1 passed»). **Si PostgreSQL no está disponible** (Docker apagado, `TEST_DATABASE_URL` sin definir o base que no responde), los tests del perfil **se omiten con el motivo en el resumen** (`skipped`) y la corrida termina con código de salida 0. Si la base de `TEST_DATABASE_URL` no termina en `_test`, el perfil falla a propósito para no borrar otra base.
+
+Para detener la base: `docker compose down` (conserva los datos); `docker compose down -v` los borra.
+
 ## Levantar la API y probarla a mano
 
 Desde `backend/`, con el entorno activado:
