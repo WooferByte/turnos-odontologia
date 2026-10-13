@@ -153,7 +153,8 @@ def crear_turno(comando: CrearTurnoComando, uow: UnidadDeTrabajo, reloj: Reloj =
     reserva del mismo recurso espera y ya ve el turno confirmado: el reintento es la red para
     escrituras que no pasan por acá. El ganador ya confirmó cuando la base devuelve la violación
     (23P01), así que el intento siguiente lo encuentra y levanta el ``ErrorDeSolapamiento`` de
-    siempre (design I8). Si todos los intentos chocan, ``SolapamientoEnLaBase`` sube sin traducir: dominio y base no coinciden.
+    siempre (design I8). Si todos los intentos chocan, ``SolapamientoEnLaBase`` sube sin traducir:
+    dominio y base no coinciden.
     """
     for _ in range(INTENTOS_ANTE_CARRERA - 1):
         try:
