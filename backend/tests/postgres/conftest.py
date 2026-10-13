@@ -14,7 +14,7 @@ from sqlalchemy.exc import OperationalError
 VARIABLE = "TEST_DATABASE_URL"
 COMO_LEVANTARLO = (
     "levantá la base con 'docker compose up -d postgres' y definí "
-    f"{VARIABLE}=postgresql+psycopg://app:app@localhost:5432/turnos_test"
+    f"{VARIABLE}=postgresql+psycopg://app:app@127.0.0.1:5434/turnos_test"
 )
 
 
