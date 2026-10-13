@@ -117,6 +117,9 @@ def _intentar_crear_turno(
         profesional, prestacion, sillon = _validar_entrada(comando, uow)
         zona = uow.agenda.zona_horaria(profesional.consultorio_id)
         intervalo = Intervalo.para_turno(comando.inicio, prestacion.duracion_minutos, zona)
+        # Serializa por recurso: la reserva que llega segunda espera acá y, al seguir, lee el
+        # turno que la primera ya confirmó (E11, design I8).
+        uow.agenda.bloquear_recursos(profesional.id, sillon.id)
         ocupados = uow.agenda.ocupados_en_el_intervalo(profesional.id, sillon.id, intervalo)
         conflictos = detectar_conflictos(
             intervalo,
