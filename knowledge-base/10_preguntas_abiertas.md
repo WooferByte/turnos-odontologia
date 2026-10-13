@@ -6,23 +6,23 @@
 
 ### IN-01 — Conteo de sistemas por grupo
 **`docs/discovery/informe-discovery.md` dice**: 31 sistemas = 13 argentinos (9 con módulo odontológico + 4 multirrubro), 9 latinoamericanos/hispanohablantes y 9 internacionales.
-**`discovery/discovery.md` (punto 4) dice**: 9 de Argentina, 8 de Latinoamérica, 8 internacionales y 6 regionales o con presencia local sin evidencia.
+**`docs/discovery/discovery.md` (punto 4) dice**: 9 de Argentina, 8 de Latinoamérica, 8 internacionales y 6 regionales o con presencia local sin evidencia.
 **Impacto**: bajo; confunde al lector del entregable.
 **Resolución propuesta**: tomar el informe (segunda pasada, prevalece) y corregir `discovery.md`.
-**Resuelta (2026-10-02)**: prevalece el conteo del informe (31 = 13 argentinos + 9 latinoamericanos/hispanohablantes + 9 internacionales); se corrigió `discovery/discovery.md`.
+**Resuelta (2026-10-02)**: prevalece el conteo del informe (31 = 13 argentinos + 9 latinoamericanos/hispanohablantes + 9 internacionales); se corrigió `docs/discovery/discovery.md`.
 
 ### IN-02 — Historial de cambios de turno en competidores
 **Informe (C.3.3)**: la trazabilidad de cambios de turno "solo aparece en Naclix (auditoría [C])".
 **`discovery.md` (punto 11)**: "Historial de cambios de agenda: no evidenciado".
 **Impacto**: matiza el diferenciador "horario recurrente + trazabilidad".
 **Resolución propuesta**: la auditoría de Naclix está comprobada en su **política de privacidad** (auditoría e historial de versiones), no como historial de cambios de turno visible en la agenda. Redactar: "historial de cambios de turno: no evidenciado como función de agenda; Naclix declara auditoría en su política [C]". Confianza: **media-baja**.
-**Resuelta (2026-10-02)**: se aplicó la redacción propuesta en el informe (C.3.3) y en `discovery/discovery.md` (punto 11).
+**Resuelta (2026-10-02)**: se aplicó la redacción propuesta en el informe (C.3.3) y en `docs/discovery/discovery.md` (punto 11).
 
 ### IN-03 — Confianza de Naclix y DentalCore
 **Informe (A.1/B)**: Naclix y DentalCore con confianza **Medio**.
 **`discovery.md` (punto 4)**: Naclix "—", DentalCore "baja".
 **Resolución propuesta**: usar los valores del informe (más recientes y con criterio documentado).
-**Resuelta (2026-10-02)**: se usan los niveles del informe (Naclix y DentalCore: Medio); se corrigió `discovery/discovery.md`.
+**Resuelta (2026-10-02)**: se usan los niveles del informe (Naclix y DentalCore: Medio); se corrigió `docs/discovery/discovery.md`.
 
 ### IN-04 — Indicador de la encuesta RePEc
 **Informe**: "66% no usa software de **gestión**". **`discovery.md`**: "66% no usa software de **diagnóstico**".
