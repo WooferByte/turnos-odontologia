@@ -4,8 +4,10 @@ from dataclasses import replace
 from typing import Literal
 
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.application.puertos import SolapamientoEnLaBase
 from app.domain.agenda.intervalo import Intervalo
 from app.domain.agenda.recursos import Paciente, Prestacion, Profesional, Sillon
 from app.domain.agenda.solapamiento import TurnoOcupado
@@ -19,6 +21,12 @@ from app.infrastructure.db.modelos import (
     SillonModelo,
     TurnoModelo,
 )
+
+
+RECURSO_POR_RESTRICCION: dict[str, Literal["profesional", "sillon"]] = {
+    "ex_turno_profesional_sin_solapamiento": "profesional",
+    "ex_turno_sillon_sin_solapamiento": "sillon",
+}
 
 
 class RepositorioAgendaSqlAlchemy:
@@ -96,5 +104,13 @@ class RepositorioAgendaSqlAlchemy:
             creado_en=turno.creado_en,
         )
         self._sesion.add(modelo)
-        self._sesion.flush()  # asigna el id sin confirmar; el commit es de la unidad de trabajo
+        try:
+            self._sesion.flush()  # asigna el id sin confirmar; el commit es de la unidad de trabajo
+        except IntegrityError as error:
+            # getattr: en SQLite no hay ``diag`` y el error se deja subir tal cual (design I7).
+            restriccion = getattr(getattr(error.orig, "diag", None), "constraint_name", None)
+            recurso = RECURSO_POR_RESTRICCION.get(restriccion)
+            if recurso is None:
+                raise
+            raise SolapamientoEnLaBase(recurso) from error
         return replace(turno, id=modelo.id)

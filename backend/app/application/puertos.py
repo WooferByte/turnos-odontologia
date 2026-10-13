@@ -40,3 +40,14 @@ class UnidadDeTrabajo(Protocol):
     def __enter__(self) -> "UnidadDeTrabajo": ...
 
     def __exit__(self, tipo, valor, traza) -> None: ...
+
+
+class SolapamientoEnLaBase(Exception):
+    """La base rechazó el alta porque otra transacción ocupó el hueco (RN-AG-10c, design I7).
+
+    No es un error de dominio ni lleva código RN: el caso de uso la reevalúa con el dominio.
+    """
+
+    def __init__(self, recurso: Literal["profesional", "sillon"]) -> None:
+        self.recurso = recurso
+        super().__init__(f"La base rechazó el turno por solapamiento del {recurso}.")
