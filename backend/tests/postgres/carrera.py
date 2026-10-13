@@ -8,6 +8,10 @@ el dominio rechaza al segundo y la restricción nunca se ejercita. La carrera se
    queda esperando a la transacción del ganador;
 3. se espera, mirando ``pg_stat_activity``, a que alguna sesión esté bloqueada (con tope);
 4. el ganador confirma y el perdedor recibe la violación de la restricción.
+
+Ese es el camino de la última defensa (escrituras que no toman el bloqueo de fila). Si el ganador
+toma ``bloquear_recursos`` antes de insertar, el perdedor espera en el bloqueo, antes de leer, y
+recibe el rechazo del dominio sin llegar a insertar (design I8).
 """
 import time
 from collections.abc import Callable
