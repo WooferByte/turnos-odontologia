@@ -3,21 +3,24 @@
 Los turnos se guardan directamente con las fábricas, sin pasar por el caso de uso: lo que se
 prueba es la base, no la validación de dominio.
 """
+from concurrent.futures import ThreadPoolExecutor
 from datetime import timedelta
+from threading import Barrier
 
 import pytest
-from sqlalchemy import func, select
+from sqlalchemy import Engine, func, select
 from sqlalchemy.exc import IntegrityError
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, sessionmaker
 
 from app.application.puertos import SolapamientoEnLaBase
 from app.domain.turnos.estados import ESTADOS_ACTIVOS, EstadoTurno
 from app.domain.turnos.turno import Turno
 from app.infrastructure.db.modelos import TurnoModelo
+from app.infrastructure.repositories.agenda import RepositorioAgendaSqlAlchemy
 from app.infrastructure.unidad_de_trabajo import UnidadDeTrabajoSqlAlchemy
 from tests.conftest import RELOJ_FIJO, a_las
 from tests.factories import un_turno
-from tests.postgres.carrera import Escenario, crear_escenario
+from tests.postgres.carrera import TOPE_DE_ESPERA, Escenario, crear_escenario, turno_sin_confirmar
 
 pytestmark = pytest.mark.postgres
 
@@ -172,3 +175,50 @@ def test_otro_error_de_integridad_no_se_traduce(
 
     assert capturado.value.orig.sqlstate == "23503"
     assert cantidad_de_turnos(sesion) == 0
+
+
+def test_e11_el_interbloqueo_se_traduce_a_solapamiento_en_la_base(
+    engine: Engine, sesion: Session, escenario: Escenario
+) -> None:
+    """Dos transacciones que se esperan mutuamente: PostgreSQL aborta una con 40P01 (design I7).
+
+    Cada transacción inserta primero un turno propio y sin conflicto, y después uno que choca
+    con el primero de la otra. Con ambos primeros ya escritos, las dos segundas inserciones se
+    esperan entre sí: el interbloqueo se produce siempre y no depende de la velocidad de los hilos.
+    """
+    e = escenario
+    fabrica = sessionmaker(bind=engine, expire_on_commit=False)
+    primeros_escritos = Barrier(2, timeout=TOPE_DE_ESPERA)
+    # (primer turno propio, segundo turno que choca con el primero de la otra transacción)
+    guiones = [
+        (
+            (e.profesional_a, e.sillon_1, a_las(10)),
+            un_turno_de_dominio(e, e.profesional_b, e.sillon_1, a_las(11)),
+        ),
+        (
+            (e.profesional_b, e.sillon_2, a_las(11)),
+            un_turno_de_dominio(e, e.profesional_a, e.sillon_2, a_las(10)),
+        ),
+    ]
+
+    def transaccion(primero, segundo: Turno) -> Exception | None:
+        with fabrica() as sesion_propia:
+            turno_sin_confirmar(sesion_propia, e, *primero)
+            primeros_escritos.wait()
+            try:
+                RepositorioAgendaSqlAlchemy(sesion_propia).agregar(segundo)
+            except Exception as error:
+                sesion_propia.rollback()  # suelta a la otra transacción
+                return error
+            sesion_propia.commit()
+            return None
+
+    with ThreadPoolExecutor(max_workers=2) as hilos:
+        futuros = [hilos.submit(transaccion, *guion) for guion in guiones]
+        resultados = [f.result(timeout=TOPE_DE_ESPERA * 2) for f in futuros]
+
+    abortadas = [r for r in resultados if r is not None]
+    assert len(abortadas) == 1, resultados
+    assert isinstance(abortadas[0], SolapamientoEnLaBase), repr(abortadas[0])
+    assert abortadas[0].recurso is None  # el interbloqueo no dice qué recurso chocó
+    assert cantidad_de_turnos(sesion) == 2  # solo los dos de la transacción que sobrevivió
