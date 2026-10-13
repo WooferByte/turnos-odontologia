@@ -32,6 +32,15 @@ class RepositorioAgenda(Protocol):
 
     def zona_horaria(self, consultorio_id: int) -> str: ...
 
+    def bloquear_recursos(self, profesional_id: int, sillon_id: int) -> None:
+        """Toma, hasta que termine la transacción, el bloqueo del profesional y después el del sillón.
+
+        Serializa las reservas del mismo recurso: la segunda espera, y al continuar lee el turno
+        que la primera ya confirmó (E11, design I8). El orden es siempre el mismo: así dos
+        reservas con recursos cruzados no se interbloquean entre sí.
+        """
+        ...
+
     def ocupados_en_el_intervalo(
         self, profesional_id: int, sillon_id: int, intervalo: Intervalo
     ) -> "OcupadosEnElIntervalo":

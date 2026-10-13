@@ -75,6 +75,22 @@ class RepositorioAgendaSqlAlchemy:
     def zona_horaria(self, consultorio_id: int) -> str:
         return self._sesion.get_one(ConsultorioModelo, consultorio_id).zona_horaria
 
+    def bloquear_recursos(self, profesional_id: int, sillon_id: int) -> None:
+        # Dos sentencias, siempre en este orden (primero el profesional): con el orden fijo dos
+        # reservas con recursos cruzados no se interbloquean (E11, design I8). key_share=True
+        # emite FOR NO KEY UPDATE en PostgreSQL: se excluye con otro igual, pero no frena un
+        # INSERT que solo referencia la fila por clave foránea. SQLite omite la cláusula.
+        self._sesion.execute(
+            select(ProfesionalModelo.id)
+            .where(ProfesionalModelo.id == profesional_id)
+            .with_for_update(key_share=True)
+        )
+        self._sesion.execute(
+            select(SillonModelo.id)
+            .where(SillonModelo.id == sillon_id)
+            .with_for_update(key_share=True)
+        )
+
     def ocupados_en_el_intervalo(
         self, profesional_id: int, sillon_id: int, intervalo: Intervalo
     ) -> OcupadosEnElIntervalo:
