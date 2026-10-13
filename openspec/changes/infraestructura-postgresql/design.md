@@ -4,6 +4,8 @@ Fecha del design: **2026-10-13**. Gobernanza **ALTO**: nada de esto se implement
 
 **Revisión del autor (2026-10-13): aprobado tal cual.** Las decisiones marcadas «Propuesta» (I1 a I16) quedan confirmadas sin cambios, incluidas las 28 tareas como excepción de tamaño y el criterio de commits de I16. Su registro en `knowledge-base/10_preguntas_abiertas.md` y el cierre de los huecos de la sección «Contradicciones y huecos» se hacen al terminar el Apply, en un commit `docs(kb)` aparte.
 
+**Ajuste del autor durante el Apply (2026-10-13): el contenedor se publica en el puerto 5434 del host.** Al empezar el grupo 2 se encontró el puerto 5432 ocupado por un PostgreSQL instalado en Windows como servicio (y el 5433 por el contenedor de otro proyecto). El autor eligió publicar en `127.0.0.1:5434:5432`: cambia el mapeo de I10 y la `TEST_DATABASE_URL` de I9 e I11 (`localhost:5434`). Dentro de la red de Compose la API sigue usando `postgres:5432`. Motivo adicional: el perfil de tests borra y recrea el esquema `public`, y no debe poder apuntar por accidente a una base local ajena.
+
 Las decisiones de este documento se numeran **I1 a I16** («I» de infraestructura) para no confundirlas con las D1..D141 de `knowledge-base/10_preguntas_abiertas.md` ni con las D1..D20 del design de C-01. Cuando se cita «D» seguido de un número mayor que 20 es una decisión de la KB; «design C-01 D12» es del design archivado.
 
 Cada decisión dice si es **Decisión del autor** (ya tomada en la KB), **Propuesta** (elección de este design, a confirmar por el autor) o **A verificar en el change** (comprobación técnica pendiente, con su «antes de qué»).
@@ -323,11 +325,11 @@ Esa secuencia vive en `tests/postgres/carrera.py` y la usan el escenario princip
 
 ```
 # PowerShell
-$env:TEST_DATABASE_URL = "postgresql+psycopg://app:app@localhost:5432/turnos_test"
+$env:TEST_DATABASE_URL = "postgresql+psycopg://app:app@localhost:5434/turnos_test"
 python -m pytest -m postgres
 
 # bash
-TEST_DATABASE_URL=postgresql+psycopg://app:app@localhost:5432/turnos_test python -m pytest -m postgres
+TEST_DATABASE_URL=postgresql+psycopg://app:app@localhost:5434/turnos_test python -m pytest -m postgres
 ```
 
 Los tests corren en el entorno virtual de la máquina, contra el PostgreSQL del contenedor. No hace falta construir la imagen de la API para correrlos.
@@ -349,7 +351,7 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
       POSTGRES_DB: ${POSTGRES_DB}
     ports:
-      - "127.0.0.1:5432:5432"
+      - "127.0.0.1:5434:5432"
     volumes:
       - datos_postgres:/var/lib/postgresql/data
       - ./docker/postgres-init:/docker-entrypoint-initdb.d:ro
@@ -395,7 +397,7 @@ volumes:
 |---|---|---|
 | `DATABASE_URL` | La API (`crear_app_desde_entorno`), Alembic y la carga del seed | `postgresql+psycopg://app:app@postgres:5432/turnos` (dentro de Compose) |
 | `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` | La imagen oficial de PostgreSQL y `docker-compose.yml` | `app`, `app`, `turnos` |
-| `TEST_DATABASE_URL` | Solo el perfil `postgres` de pytest | `postgresql+psycopg://app:app@localhost:5432/turnos_test` |
+| `TEST_DATABASE_URL` | Solo el perfil `postgres` de pytest | `postgresql+psycopg://app:app@localhost:5434/turnos_test` |
 
 Las `POSTGRES_*` son los nombres que exige la imagen oficial: no se pueden elegir.
 
@@ -447,7 +449,7 @@ Se conserva todo lo que hay. Cambia o se agrega:
 - **Sección nueva «Levantar la API con PostgreSQL»**: copiar `.env.example` a `.env`, `docker compose up --build`, Swagger en el mismo puerto, los mismos identificadores y recorrido, cómo detener (`docker compose down`) y cómo borrar los datos (`docker compose down -v`).
 - **Variables de entorno**: la tabla de I11.
 - **Migraciones**: cómo aplicarlas y cómo crear una nueva.
-- **Límites conocidos**: se quita «no hay control de concurrencia» y «no hay PostgreSQL, Docker ni migraciones»; se agregan los de este design (la equivalencia de INF-1 y la concurrencia solo se prueban en el perfil opcional; el puerto 5432 tiene que estar libre; las credenciales del ejemplo son de prueba; sigue sin autenticación).
+- **Límites conocidos**: se quita «no hay control de concurrencia» y «no hay PostgreSQL, Docker ni migraciones»; se agregan los de este design (la equivalencia de INF-1 y la concurrencia solo se prueban en el perfil opcional; el puerto 5434 del host tiene que estar libre; las credenciales del ejemplo son de prueba; sigue sin autenticación).
 
 ### I15. Cómo se verifica cada tarea, con Docker apagado o encendido — Propuesta
 
@@ -494,7 +496,7 @@ No se resolvió ninguno en silencio: cada uno tiene una propuesta marcada arriba
 - **[La lista de estados activos está escrita dos veces]**, en el dominio y en la migración `0002` → Los tests de INF-2 e INF-3 recorren los estados del dominio contra la base: si se desalinean, fallan. Agregar un estado activo exige una migración nueva.
 - **[Identificadores fijos del seed y secuencias]** → `ajustar_secuencias`, con su test en el perfil (I13).
 - **[Migrar al arrancar el contenedor]** → Válido con una sola instancia de la API. Con más de una habría que separar la migración.
-- **[El puerto 5432 puede estar ocupado]** por un PostgreSQL local → `docker compose up` falla con un mensaje claro; el README dice cómo cambiar el mapeo y la URL de tests.
+- **[El puerto 5434 del host puede estar ocupado]** por otro servicio (se eligió el 5434 y no el 5432 para no chocar con un PostgreSQL local) → `docker compose up` falla con un mensaje claro; el README dice cómo cambiar el mapeo y la URL de tests.
 - **[Etiquetas de Docker mutables]** → Se fija el digest (I2). Si Docker Hub retira ese digest, hay que actualizar el pin con un nuevo design.
 - **[`alembic` 1.20.0 es una versión menor de un mes]** → Cumple D133. Alternativa verificada: 1.19.2 (2026-09-04).
 - **[Reiniciar el esquema por test es lento]** → Pocos tests y solo en el perfil opcional. Si crece, se migra una vez por sesión y se vacían las tablas entre tests.
