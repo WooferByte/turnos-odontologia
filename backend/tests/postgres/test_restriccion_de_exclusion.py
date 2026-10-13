@@ -3,7 +3,6 @@
 Los turnos se guardan directamente con las fábricas, sin pasar por el caso de uso: lo que se
 prueba es la base, no la validación de dominio.
 """
-from dataclasses import dataclass
 from datetime import timedelta
 
 import pytest
@@ -14,23 +13,11 @@ from sqlalchemy.orm import Session
 from app.application.puertos import SolapamientoEnLaBase
 from app.domain.turnos.estados import ESTADOS_ACTIVOS, EstadoTurno
 from app.domain.turnos.turno import Turno
-from app.infrastructure.db.modelos import (
-    PacienteModelo,
-    PrestacionModelo,
-    ProfesionalModelo,
-    SillonModelo,
-    TurnoModelo,
-)
-from tests.conftest import RELOJ_FIJO, a_las
+from app.infrastructure.db.modelos import TurnoModelo
 from app.infrastructure.unidad_de_trabajo import UnidadDeTrabajoSqlAlchemy
-from tests.factories import (
-    un_consultorio,
-    un_paciente,
-    un_profesional,
-    una_prestacion,
-    un_sillon,
-    un_turno,
-)
+from tests.conftest import RELOJ_FIJO, a_las
+from tests.factories import un_turno
+from tests.postgres.carrera import Escenario, crear_escenario
 
 pytestmark = pytest.mark.postgres
 
@@ -38,27 +25,9 @@ SQLSTATE_EXCLUSION = "23P01"
 ESTADOS_NO_ACTIVOS = sorted(set(EstadoTurno) - ESTADOS_ACTIVOS)
 
 
-@dataclass
-class Escenario:
-    paciente: PacienteModelo
-    prestacion: PrestacionModelo
-    profesional_a: ProfesionalModelo
-    profesional_b: ProfesionalModelo
-    sillon_1: SillonModelo
-    sillon_2: SillonModelo
-
-
 @pytest.fixture
 def escenario(sesion: Session) -> Escenario:
-    consultorio = un_consultorio(sesion)
-    return Escenario(
-        paciente=un_paciente(sesion, consultorio),
-        prestacion=una_prestacion(sesion, consultorio),
-        profesional_a=un_profesional(sesion, consultorio, nombre="Profesional A"),
-        profesional_b=un_profesional(sesion, consultorio, nombre="Profesional B"),
-        sillon_1=un_sillon(sesion, consultorio, nombre="Sillón 1"),
-        sillon_2=un_sillon(sesion, consultorio, nombre="Sillón 2"),
-    )
+    return crear_escenario(sesion)
 
 
 def guardar(sesion: Session, e: Escenario, profesional, sillon, inicio, estado="reservado"):
