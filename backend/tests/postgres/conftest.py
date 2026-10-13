@@ -5,8 +5,11 @@ Redefine ``engine``; ``fabrica_sesiones``, ``sesion`` y ``uow`` de
 """
 import os
 from collections.abc import Iterator
+from pathlib import Path
 
 import pytest
+from alembic import command
+from alembic.config import Config
 from sqlalchemy import Engine, text
 from sqlalchemy.engine import make_url
 from sqlalchemy.exc import OperationalError
@@ -16,10 +19,18 @@ from app.infrastructure.db.motor import crear_engine
 VARIABLE = "TEST_DATABASE_URL"
 # En Windows psycopg no falla ante un puerto cerrado: sin tope la corrida se cuelga (INF-4).
 TIEMPO_DE_ESPERA = 5
+ALEMBIC_INI = Path(__file__).resolve().parents[2] / "alembic.ini"
 COMO_LEVANTARLO = (
     "levantá la base con 'docker compose up -d postgres' y definí "
     f"{VARIABLE}=postgresql+psycopg://app:app@127.0.0.1:5434/turnos_test"
 )
+
+
+def configuracion_alembic(url: str) -> Config:
+    """Configuración de Alembic apuntando a ``url`` (la ini no lleva ninguna, design I6)."""
+    configuracion = Config(str(ALEMBIC_INI))
+    configuracion.set_main_option("sqlalchemy.url", url.replace("%", "%%"))
+    return configuracion
 
 
 @pytest.fixture
@@ -40,5 +51,12 @@ def engine() -> Iterator[Engine]:
     except OperationalError as error:
         engine.dispose()
         pytest.skip(f"PostgreSQL no disponible ({type(error.orig).__name__}); {COMO_LEVANTARLO}")
+    # El esquema de los tests del perfil sale siempre de las migraciones, nunca de create_all (I9).
+    command.upgrade(configuracion_alembic(engine.url.render_as_string(hide_password=False)), "head")
     yield engine
     engine.dispose()
+
+
+@pytest.fixture
+def config_alembic(engine: Engine) -> Config:
+    return configuracion_alembic(engine.url.render_as_string(hide_password=False))
