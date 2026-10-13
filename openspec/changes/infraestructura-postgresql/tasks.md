@@ -28,8 +28,8 @@ Reglas de trabajo para todos los grupos (no son tareas):
 
 ## 3. Configuración y engine
 
-- [ ] 3.1 RED (INF-4; design I11, I12). Escribir `tests/unit/test_configuracion.py`: `leer_database_url` devuelve el valor de `DATABASE_URL` de un diccionario dado; si falta levanta `ConfiguracionInvalida` y el mensaje nombra la variable; si está vacía, también. Verificación: falla porque no existe `app.infrastructure.configuracion`.
-- [ ] 3.2 GREEN. Crear `app/infrastructure/configuracion.py` y agregar `crear_engine(url)` a `app/infrastructure/db/motor.py`; hacer que el fixture `engine` de `tests/postgres/conftest.py` use `crear_engine`. Verificación: los tests de 3.1 pasan; la suite por defecto y el perfil siguen en verde; `test_imports_dominio` sigue pasando.
+- [x] 3.1 RED (INF-4; design I11, I12). Escribir `tests/unit/test_configuracion.py`: `leer_database_url` devuelve el valor de `DATABASE_URL` de un diccionario dado; si falta levanta `ConfiguracionInvalida` y el mensaje nombra la variable; si está vacía, también. Verificación: falla porque no existe `app.infrastructure.configuracion`.
+- [x] 3.2 GREEN. Crear `app/infrastructure/configuracion.py` y agregar `crear_engine(url)` a `app/infrastructure/db/motor.py`; hacer que el fixture `engine` de `tests/postgres/conftest.py` use `crear_engine`. Verificación: los tests de 3.1 pasan; la suite por defecto y el perfil siguen en verde; `test_imports_dominio` sigue pasando.
 
 ## 4. Migraciones y esquema inicial (INF-1)
 

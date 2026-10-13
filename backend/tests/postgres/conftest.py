@@ -7,9 +7,11 @@ import os
 from collections.abc import Iterator
 
 import pytest
-from sqlalchemy import Engine, create_engine, text
+from sqlalchemy import Engine, text
 from sqlalchemy.engine import make_url
 from sqlalchemy.exc import OperationalError
+
+from app.infrastructure.db.motor import crear_engine
 
 VARIABLE = "TEST_DATABASE_URL"
 # En Windows psycopg no falla ante un puerto cerrado: sin tope la corrida se cuelga (INF-4).
@@ -29,7 +31,8 @@ def engine() -> Iterator[Engine]:
     if not base.endswith("_test"):
         # No es "PostgreSQL no disponible": borraría una base que no es de tests.
         pytest.fail(f"{VARIABLE} apunta a la base '{base}', que no termina en _test")
-    engine = create_engine(url, pool_pre_ping=True, connect_args={"connect_timeout": TIEMPO_DE_ESPERA})
+    url_con_tope = make_url(url).update_query_dict({"connect_timeout": str(TIEMPO_DE_ESPERA)})
+    engine = crear_engine(url_con_tope.render_as_string(hide_password=False))
     try:
         with engine.begin() as conexion:
             conexion.execute(text("DROP SCHEMA IF EXISTS public CASCADE"))
