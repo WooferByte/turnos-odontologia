@@ -3,6 +3,7 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict
 
+from app.domain.turnos.eventos import EventoTurno
 from app.domain.turnos.turno import Turno
 
 
@@ -53,6 +54,34 @@ class TurnoSalida(BaseModel):
             duracion_minutos=turno.duracion_minutos,
             estado=turno.estado.value,
             creado_en=turno.creado_en,
+        )
+
+
+class EventoTurnoSalida(BaseModel):
+    """Un evento del historial del turno: los nueve campos del modelo (``04``, EventoTurno)."""
+
+    id: int
+    turno_id: int
+    tipo: str
+    actor_tipo: str
+    actor_id: str | None
+    ocurrido_en: datetime
+    antes: dict[str, object] | None
+    despues: dict[str, object] | None
+    motivo: str | None
+
+    @classmethod
+    def desde_evento(cls, evento: EventoTurno) -> "EventoTurnoSalida":
+        return cls(
+            id=evento.id,
+            turno_id=evento.turno_id,
+            tipo=evento.tipo.value,
+            actor_tipo=evento.actor_tipo.value,
+            actor_id=evento.actor_id,
+            ocurrido_en=evento.ocurrido_en,
+            antes=evento.antes,
+            despues=evento.despues,
+            motivo=evento.motivo,
         )
 
 

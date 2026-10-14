@@ -10,6 +10,7 @@ from app.domain.errors import (
     ErrorDeSolapamiento,
     FechaNoUTC,
     IntervaloInvalido,
+    TurnoNoEncontrado,
 )
 
 MEDIA_TYPE_PROBLEMA = "application/problem+json"
@@ -22,6 +23,7 @@ _CLASES_DE_ERROR: dict[type[ErrorDeDominio], tuple[int, str, str]] = {
     ErrorDeSolapamiento: (409, "/errores/solapamiento-turno", "Turno solapado"),
     IntervaloInvalido: (422, "/errores/intervalo-invalido", "Intervalo inválido"),
     EntradaInvalida: (422, "/errores/entrada-invalida", "Entrada inválida"),
+    TurnoNoEncontrado: (404, "/errores/recurso-no-encontrado", "Recurso no encontrado"),
 }
 
 
@@ -83,6 +85,12 @@ def _problema_de(error: ErrorDeDominio, estado: int, tipo: str, titulo: str, rut
         return Problema(**base, detail=_detalle_de_solapamiento(error), conflictos=conflictos)
     if isinstance(error, EntradaInvalida):
         return _problema_de_entrada(base, error)
+    if isinstance(error, TurnoNoEncontrado):
+        referencias = [
+            ReferenciaSalida(recurso=r.recurso, recurso_id=r.recurso_id, motivo=r.motivo)
+            for r in error.referencias
+        ]
+        return Problema(**base, detail=error.mensaje, referencias=referencias)
     return Problema(**base, detail="El turno no puede cruzar la medianoche del consultorio.")
 
 
