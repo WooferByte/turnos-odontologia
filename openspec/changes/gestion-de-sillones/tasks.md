@@ -54,7 +54,7 @@ Reglas de trabajo para todos los grupos (no son tareas):
 
 ## 7. Perfil `postgres`
 
-- [ ] 7.1 RED y GREEN (CA-2 borde; D157, ajustar_secuencias). En `tests/postgres/test_seed_y_api.py`, agregar `test_ca2_el_alta_de_un_sillon_tras_el_seed_no_choca_con_el_id_fijo` (API sobre PostgreSQL con el seed: `POST /sillones` → `201` con id distinto de 1, y `GET /sillones` lo lista junto a «Sillón 1»). Verificación: con PostgreSQL levantado, falla antes del grupo 5 (ruta inexistente) y pasa después; comprobar V3; perfil y suite por defecto en verde.
+- [x] 7.1 RED y GREEN (CA-2 borde; D157, ajustar_secuencias). En `tests/postgres/test_seed_y_api.py`, agregar `test_ca2_el_alta_de_un_sillon_tras_el_seed_no_choca_con_el_id_fijo` (API sobre PostgreSQL con el seed: `POST /sillones` → `201` con id distinto de 1, y `GET /sillones` lo lista junto a «Sillón 1»). Verificación: con PostgreSQL levantado, falla antes del grupo 5 (ruta inexistente) y pasa después; comprobar V3; perfil y suite por defecto en verde.
 
 ## 8. README
 

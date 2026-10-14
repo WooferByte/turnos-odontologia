@@ -47,3 +47,22 @@ def test_la_peticion_de_ejemplo_del_readme_responde_201_sobre_postgresql(
     assert primera.json()["sillon_id"] == 1
     assert repetida.status_code == 409
     assert repetida.json()["codigos"] == ["RN-AG-05", "RN-AG-08"]
+
+
+def test_ca2_el_alta_de_un_sillon_tras_el_seed_no_choca_con_el_id_fijo(
+    engine: Engine, sesion: Session
+):
+    cargar_demo_si_falta(sesion)
+    ajustar_secuencias(sesion)
+    url = engine.url.render_as_string(hide_password=False)
+    cliente = TestClient(crear_app_desde_entorno({"DATABASE_URL": url}))
+
+    alta = cliente.post("/sillones", json={"nombre": "Sillón 2"})
+    listado = cliente.get("/sillones")
+
+    assert alta.status_code == 201
+    assert alta.json()["id"] != 1  # el seed fijó el id 1: sin ajustar la secuencia chocaría
+    assert [(s["id"], s["nombre"], s["activo"]) for s in listado.json()] == [
+        (1, "Sillón 1", True),
+        (alta.json()["id"], "Sillón 2", True),
+    ]
