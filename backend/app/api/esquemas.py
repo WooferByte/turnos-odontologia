@@ -97,8 +97,21 @@ def _nombre_normalizado(nombre: str) -> str:
     return normalizado
 
 
-NombreDePrestacion = Annotated[str, AfterValidator(_nombre_normalizado)]
+NombreNormalizado = Annotated[str, AfterValidator(_nombre_normalizado)]
 ColorHexadecimal = Annotated[str, Field(pattern=r"^#[0-9A-Fa-f]{6}$")]
+
+
+class EntradaDeEdicion(BaseModel):
+    """Base de los ``PATCH`` de los catálogos: un ``null`` explícito es de formato (D178)."""
+
+    @field_validator("*", mode="before")
+    @classmethod
+    def _sin_nulos(cls, valor: Any) -> Any:
+        # Solo corre con los campos que llegan: un campo omitido no se valida ni entra en
+        # ``model_fields_set``; un ``null`` explícito se rechaza nombrando el campo (V2).
+        if valor is None:
+            raise ValueError("El campo no admite null; omitilo para no cambiarlo.")
+        return valor
 
 
 class CrearPrestacionEntrada(BaseModel):
@@ -111,13 +124,13 @@ class CrearPrestacionEntrada(BaseModel):
         },
     )
 
-    nombre: NombreDePrestacion
+    nombre: NombreNormalizado
     duracion_minutos: int
     color: ColorHexadecimal
     reservable_online: bool = False
 
 
-class EditarPrestacionEntrada(BaseModel):
+class EditarPrestacionEntrada(EntradaDeEdicion):
     """Cuerpo de ``PATCH /prestaciones/{id}``: todo opcional; un ``null`` explícito es de formato."""
 
     model_config = ConfigDict(
@@ -125,20 +138,11 @@ class EditarPrestacionEntrada(BaseModel):
         json_schema_extra={"examples": [{"color": "#112233"}]},
     )
 
-    nombre: NombreDePrestacion | None = None
+    nombre: NombreNormalizado | None = None
     duracion_minutos: int | None = None
     color: ColorHexadecimal | None = None
     reservable_online: bool | None = None
     activa: bool | None = None
-
-    @field_validator("*", mode="before")
-    @classmethod
-    def _sin_nulos(cls, valor: Any) -> Any:
-        # Solo corre con los campos que llegan: un campo omitido no se valida ni entra en
-        # ``model_fields_set``; un ``null`` explícito se rechaza nombrando el campo (V2).
-        if valor is None:
-            raise ValueError("El campo no admite null; omitilo para no cambiarlo.")
-        return valor
 
 
 class PrestacionSalida(BaseModel):
@@ -172,10 +176,10 @@ class CrearSillonEntrada(BaseModel):
         json_schema_extra={"examples": [{"nombre": "Sillón 2"}]},
     )
 
-    nombre: NombreDePrestacion
+    nombre: NombreNormalizado
 
 
-class EditarSillonEntrada(BaseModel):
+class EditarSillonEntrada(EntradaDeEdicion):
     """Cuerpo de ``PATCH /sillones/{id}``: ``nombre`` y ``activo``, opcionales; ``{}`` es válido."""
 
     model_config = ConfigDict(
@@ -183,15 +187,8 @@ class EditarSillonEntrada(BaseModel):
         json_schema_extra={"examples": [{"activo": False}]},
     )
 
-    nombre: NombreDePrestacion | None = None
+    nombre: NombreNormalizado | None = None
     activo: bool | None = None
-
-    @field_validator("*", mode="before")
-    @classmethod
-    def _sin_nulos(cls, valor: Any) -> Any:
-        if valor is None:
-            raise ValueError("El campo no admite null; omitilo para no cambiarlo.")
-        return valor
 
 
 class SillonSalida(BaseModel):
