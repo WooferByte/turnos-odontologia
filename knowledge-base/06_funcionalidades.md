@@ -29,12 +29,12 @@ Los criterios de US-010 usan IDs estables `E1..E12` (compartidos con `07_flujos_
 
 ### US-001 — Tabla de prestaciones
 **Como** odontólogo **quiero** definir prestaciones con nombre, duración por defecto y color **para** que cada turno ocupe el tiempo real que necesita.
-- [ ] CA-1: puedo crear, editar y desactivar prestaciones; el nombre es único en el consultorio.
+- [ ] CA-1: puedo crear, editar y desactivar prestaciones; el nombre es único en el consultorio, sin distinguir mayúsculas, tildes ni espacios de más (una prestación inactiva sigue ocupando su nombre); si se repite, se rechaza con `409` y el error de dominio `RN-AG-15` (D171, D172). **Implementada en C-04** como API: `GET/POST /prestaciones` y `PATCH /prestaciones/{id}` (desactivar es `activa: false`), sin autenticación hasta C-07 y sobre el único consultorio de la instalación (D173); la pantalla llega con el panel.
 - [ ] CA-2: la duración debe ser > 0 y múltiplo de la granularidad; si no, se rechaza con el error de dominio `RN-AG-01`. Hasta US-005 la granularidad es la constante por defecto de 5 minutos (referencia hacia adelante, D99).
 - [ ] CA-3: cambiar la duración no modifica turnos existentes.
 **Orden**: 2
 **Depende de**: Ninguna
-**Reglas**: RN-AG-01, RN-AG-02, RN-GL-03
+**Reglas**: RN-AG-01, RN-AG-02, RN-AG-15, RN-GL-03
 
 ### US-002 — Horario recurrente
 **Como** odontólogo **quiero** configurar mis días y franjas de atención **para** que solo se ofrezcan turnos dentro de ese horario.

@@ -136,15 +136,15 @@ Los plazos de seña y de oferta son **valores de diseño del autor, no de mercad
 | `activo` | bool | NN | Default `true`; un sillón inactivo no admite turnos nuevos (RN-AG-07) |
 
 ### Prestacion
-**Change que la crea:** primer change con `nombre`, `duracion_minutos` y `activa`; `color` y `reservable_online` los agrega el change de configuración de agenda (US-001). La duración es **por defecto**: el turno guarda su propia duración y fin (RN-AG-02).
+**Change que la crea:** primer change con `nombre`, `duracion_minutos` y `activa`; `color` y `reservable_online` los agregó C-04 `gestion-de-prestaciones` (US-001, migración `0005`, 2026-10-14; las filas existentes quedaron con `#9E9E9E` y `false`, D174). La duración es **por defecto**: el turno guarda su propia duración y fin (RN-AG-02).
 
 | Campo | Tipo | Null | Restricciones / FK / nota |
 |---|---|---|---|
 | `id` | entero | NN | PK |
 | `consultorio_id` | entero | NN | FK → Consultorio |
-| `nombre` | texto | NN | `UNIQUE(consultorio_id, nombre)` |
+| `nombre` | texto | NN | `UNIQUE(consultorio_id, nombre)`. La unicidad **sin mayúsculas, tildes ni espacios de más** se valida en el dominio (RN-AG-15, D172); la restricción exacta es la red de seguridad. Se guarda sin espacios de más |
 | `duracion_minutos` | entero | NN | `CHECK > 0`; múltiplo de la granularidad (validado en el dominio, RN-AG-01) |
-| `color` | texto | NN | Hex `#RRGGBB` (formato validado en la API †) |
+| `color` | texto | NN | Hex `#RRGGBB` (formato validado en la API †); sin default en la base (la API lo exige) |
 | `reservable_online` | bool | NN | Default `false` (†); solo estas se ofrecen en la reserva pública (RN-TD-06) |
 | `activa` | bool | NN | Default `true` |
 
@@ -506,7 +506,7 @@ Todos los datos son **ficticios** (RN-PR-01). El seed del primer change incluye 
 - 1 `Usuario` con roles `odontologo` + `dueno` (credenciales de prueba definidas en un archivo de ejemplo de entorno, nunca reales). No va en el primer change: lo carga el change de usuarios y acceso.
 - 1 `Profesional` vinculado a ese usuario (el vínculo, `usuario_id`, llega con el change de usuarios; el primer change carga el profesional sin vínculo).
 - 1 `Sillon` ("Sillón 1") — el recurso por defecto del MVP: el único activo (RN-AG-14).
-- Prestaciones de ejemplo (**datos ilustrativos confirmados por el autor el 2026-10-05, D56**, sin fuente de mercado): Consulta / control 30 min; Limpieza 45 min; Obturación 60 min; Extracción 45 min; Urgencia 30 min. Cada una con un color (el `color` lo agrega US-001: el primer change carga las prestaciones sin él, D130).
+- Prestaciones de ejemplo (**datos ilustrativos confirmados por el autor el 2026-10-05, D56**, sin fuente de mercado): Consulta / control 30 min; Limpieza 45 min; Obturación 60 min; Extracción 45 min; Urgencia 30 min. Cada una con un color (el `color` lo agregó C-04: el primer change cargó las prestaciones sin él, D130; **colores ilustrativos de D174**: Consulta / control `#1E88E5`, Limpieza `#43A047`, Obturación `#FB8C00`, Extracción `#E53935`, Urgencia `#8E24AA`, todas con `reservable_online` en `false`).
 - Horario recurrente de ejemplo: lunes a viernes 09:00-13:00 y 15:00-19:00 (dato ilustrativo confirmado por el autor el 2026-10-05, D56, sin fuente de mercado). No va en el primer change: lo carga el change de horario.
 - 2-3 pacientes ficticios (nombres inventados, teléfonos con prefijo de prueba, sin DNI real).
 
