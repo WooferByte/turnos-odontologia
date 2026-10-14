@@ -175,3 +175,12 @@ def test_ca2_la_duracion_invalida_se_informa_antes_que_el_nombre_repetido(sesion
         crear_prestacion(_alta("Limpieza", duracion_minutos=47), uow)
 
     assert excinfo.value.codigos == ["RN-AG-01"]
+
+
+def test_ca2_cinco_minutos_es_el_minimo_aceptado(sesion, uow) -> None:
+    un_consultorio(sesion)
+
+    creada = crear_prestacion(_alta(duracion_minutos=5), uow)
+    editada = editar_prestacion(creada.id, EditarPrestacionComando(duracion_minutos=5), uow)
+
+    assert (creada.duracion_minutos, editada.duracion_minutos) == (5, 5)

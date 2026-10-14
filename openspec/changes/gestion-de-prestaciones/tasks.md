@@ -41,8 +41,8 @@ Reglas de trabajo para todos los grupos (no son tareas):
 
 ## 5. US-001 CA-2: la duración en el alta y en la edición
 
-- [ ] 5.1 RED (CA-2; RN-AG-01, RN-GL-02). Agregar a `tests/integration/test_prestaciones.py`: `test_ca2_crear_con_duracion_invalida_rechaza_con_rn_ag_01` (parametrizado 47, 0, -5: `EntradaInvalida` con `codigos` `["RN-AG-01"]` y el campo `duracion_minutos`; no se crea nada), `test_ca2_editar_con_duracion_invalida_rechaza_y_no_cambia` (50 se acepta; 52 rechaza y queda en 50) y `test_ca2_la_duracion_invalida_se_informa_antes_que_el_nombre_repetido` («Limpieza» con 47: solo `RN-AG-01`). Verificación: fallan porque los casos de uso todavía no validan la duración.
-- [ ] 5.2 GREEN y REFACTOR (design P8). Validar RN-AG-01 en `crear_prestacion` y `editar_prestacion` con `duracion_valida`, dentro de un `EntradaInvalida`, antes de buscar el nombre repetido y después de obtener la prestación de la URL. Verificación: los tests de 5.1 pasan; agregar `test_ca2_cinco_minutos_es_el_minimo_aceptado` (nace verde: se cambia la constante a 10, se comprueba que falla y se restaura); suite por defecto en verde.
+- [x] 5.1 RED (CA-2; RN-AG-01, RN-GL-02). Agregar a `tests/integration/test_prestaciones.py`: `test_ca2_crear_con_duracion_invalida_rechaza_con_rn_ag_01` (parametrizado 47, 0, -5: `EntradaInvalida` con `codigos` `["RN-AG-01"]` y el campo `duracion_minutos`; no se crea nada), `test_ca2_editar_con_duracion_invalida_rechaza_y_no_cambia` (50 se acepta; 52 rechaza y queda en 50) y `test_ca2_la_duracion_invalida_se_informa_antes_que_el_nombre_repetido` («Limpieza» con 47: solo `RN-AG-01`). Verificación: fallan porque los casos de uso todavía no validan la duración.
+- [x] 5.2 GREEN y REFACTOR (design P8). Validar RN-AG-01 en `crear_prestacion` y `editar_prestacion` con `duracion_valida`, dentro de un `EntradaInvalida`, antes de buscar el nombre repetido y después de obtener la prestación de la URL. Verificación: los tests de 5.1 pasan; agregar `test_ca2_cinco_minutos_es_el_minimo_aceptado` (nace verde: se cambia la constante a 10, se comprueba que falla y se restaura); suite por defecto en verde.
 
 ## 6. API: `/prestaciones`
 
