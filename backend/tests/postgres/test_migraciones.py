@@ -21,6 +21,12 @@ from tests.factories import (
 
 TABLAS_DE_C01 = {"consultorio", "profesional", "sillon", "prestacion", "paciente", "turno"}
 TABLAS_DEL_MODELO = set(Base.metadata.tables)
+# Funciones del esquema public que no son de una extensión (btree_gist deja las suyas, D145).
+FUNCIONES_DE_LA_APLICACION = text(
+    "SELECT p.proname FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace "
+    "WHERE n.nspname = 'public' AND NOT EXISTS "
+    "(SELECT 1 FROM pg_depend d WHERE d.objid = p.oid AND d.deptype = 'e')"
+)
 
 pytestmark = pytest.mark.postgres
 
@@ -56,6 +62,7 @@ def test_inf1_deshacer_las_migraciones_deja_la_base_vacia(engine: Engine, config
             )
         ).scalar_one()
         assert restricciones == 0
+        assert conexion.execute(FUNCIONES_DE_LA_APLICACION).all() == []
 
     command.upgrade(config_alembic, "head")
 
@@ -82,5 +89,6 @@ def test_inf1_deshacer_las_migraciones_del_historial_deja_el_esquema_de_c01(
 
     with engine.connect() as conexion:
         assert set(inspect(conexion).get_table_names()) == TABLAS_DE_C01 | {"alembic_version"}
+        assert conexion.execute(FUNCIONES_DE_LA_APLICACION).all() == []
     with Session(engine) as lectura:
         assert len(lectura.scalars(select(TurnoModelo)).all()) == 1
