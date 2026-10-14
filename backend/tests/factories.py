@@ -15,7 +15,9 @@ from app.infrastructure.db.modelos import (
     ProfesionalModelo,
     SillonModelo,
     TurnoModelo,
+    UsuarioModelo,
 )
+from app.infrastructure.seguridad.contrasenas import HasherBcrypt
 from tests.conftest import RELOJ_FIJO
 
 _secuencia = count(1)
@@ -103,3 +105,25 @@ def un_evento(sesion: Session, turno: TurnoModelo, **kw) -> EventoTurnoModelo:
         "motivo": None,
     }
     return _guardar(sesion, EventoTurnoModelo(turno_id=turno.id, **{**datos, **kw}))
+
+
+CONTRASENA_DE_PRUEBA = "contrasena-ficticia-1"
+
+
+def un_usuario(
+    sesion: Session,
+    consultorio: ConsultorioModelo,
+    contrasena: str = CONTRASENA_DE_PRUEBA,
+    activo: bool = True,
+    token_version: int = 0,
+    **kw,
+) -> UsuarioModelo:
+    """Usuario ficticio; el hash es bcrypt con 4 rondas para que la suite no tarde (design J17)."""
+    datos = {
+        "email": f"usuario{next(_secuencia)}@consultorio-demo.test",
+        "hash_password": HasherBcrypt(4).hashear(contrasena),
+        "activo": activo,
+        "token_version": token_version,
+        "creado_en": RELOJ_FIJO,
+    }
+    return _guardar(sesion, UsuarioModelo(consultorio_id=consultorio.id, **{**datos, **kw}))

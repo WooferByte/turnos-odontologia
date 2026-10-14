@@ -4,6 +4,7 @@ from dataclasses import dataclass
 from typing import Literal, Protocol
 
 from app.domain.acceso.sesion import ClaimsDeSesion
+from app.domain.acceso.usuarios import DatosUsuario
 from app.domain.agenda.intervalo import Intervalo
 from app.domain.agenda.prestaciones import DatosPrestacion
 from app.domain.agenda.recursos import Paciente, Prestacion, Profesional, Sillon
@@ -118,11 +119,24 @@ class RepositorioSillones(Protocol):
         ...
 
 
+class RepositorioUsuarios(Protocol):
+    """Usuarios del panel (design J6). El email se busca y se guarda normalizado (D199)."""
+
+    def por_email(self, email_normalizado: str) -> DatosUsuario | None: ...
+
+    def obtener(self, usuario_id: int) -> DatosUsuario | None: ...
+
+    def agregar(self, datos: DatosUsuario) -> DatosUsuario:
+        """Guarda al usuario con el email normalizado y lo devuelve con su id; levanta ``EmailRepetidoEnLaBase``."""
+        ...
+
+
 class UnidadDeTrabajo(Protocol):
     agenda: RepositorioAgenda
     historial: RepositorioHistorial
     prestaciones: RepositorioPrestaciones
     sillones: RepositorioSillones
+    usuarios: RepositorioUsuarios
 
     def __enter__(self) -> "UnidadDeTrabajo": ...
 
@@ -187,3 +201,14 @@ class FirmadorDeTokens(Protocol):
     def leer(self, token: str) -> ClaimsDeSesion:
         """Levanta ``TokenIlegible`` ante cualquier problema de forma, firma o contenido."""
         ...
+
+
+class EmailRepetidoEnLaBase(Exception):
+    """La base rechazó el email de un usuario porque ya existe (D199, design J3).
+
+    No es un error de dominio ni lleva código RN: en este change solo lo ven el seed y los tests
+    (no hay alta de usuarios hasta C-09).
+    """
+
+    def __init__(self) -> None:
+        super().__init__("La base rechazó el email del usuario porque ya existe.")

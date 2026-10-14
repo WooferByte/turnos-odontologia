@@ -117,3 +117,18 @@ class EventoTurnoModelo(Base):
     antes: Mapped[dict[str, object] | None] = mapped_column(JSON)
     despues: Mapped[dict[str, object] | None] = mapped_column(JSON)
     motivo: Mapped[str | None] = mapped_column(String)
+
+
+class UsuarioModelo(Base):
+    """Usuario del panel (design J3). El email se guarda normalizado (D199); sin roles hasta C-07."""
+
+    __tablename__ = "usuario"
+    __table_args__ = (UniqueConstraint("email"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    consultorio_id: Mapped[int] = mapped_column(_fk("consultorio"))
+    email: Mapped[str]
+    hash_password: Mapped[str]
+    activo: Mapped[bool] = mapped_column(default=True)
+    token_version: Mapped[int] = mapped_column(default=0)
+    creado_en: Mapped[datetime] = mapped_column(FechaHoraUTC)
