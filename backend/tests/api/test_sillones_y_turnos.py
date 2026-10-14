@@ -156,3 +156,39 @@ def test_ca1_sin_sillones_activos_responde_ninguno_activo(cliente, datos):
     assert respuesta.json()["referencias"] == [
         {"recurso": "sillon", "recurso_id": None, "motivo": "ninguno_activo"}
     ]
+
+
+def test_ca2_dos_profesionales_a_la_misma_hora_en_sillones_distintos(cliente, sesion, datos):
+    segundo = _alta_de_sillon(cliente)
+    otro = un_profesional(sesion, datos["consultorio"], nombre="Otro Profesional")
+
+    primero = _pedir_turno(
+        cliente, datos, "10:00", sillon_id=datos["sillon"].id, profesional_id=datos["profesional"].id
+    )
+    paralelo = _pedir_turno(cliente, datos, "10:00", sillon_id=segundo, profesional_id=otro.id)
+
+    assert primero.status_code == 201
+    assert paralelo.status_code == 201
+    assert (primero.json()["sillon_id"], paralelo.json()["sillon_id"]) == (datos["sillon"].id, segundo)
+
+
+def test_ca2_el_sillon_nuevo_tambien_se_ocupa(cliente, sesion, datos):
+    segundo = _alta_de_sillon(cliente)
+    otro = un_profesional(sesion, datos["consultorio"], nombre="Otro Profesional")
+    existente = _pedir_turno(
+        cliente, datos, "10:00", sillon_id=segundo, profesional_id=datos["profesional"].id
+    )
+
+    choque = _pedir_turno(cliente, datos, "10:00", sillon_id=segundo, profesional_id=otro.id)
+
+    assert existente.status_code == 201
+    assert choque.status_code == 409
+    assert choque.json()["codigos"] == ["RN-AG-08"]
+    assert choque.json()["conflictos"] == [
+        {
+            "codigo": "RN-AG-08",
+            "recurso": "sillon",
+            "recurso_id": segundo,
+            "turno_id": existente.json()["id"],
+        }
+    ]
