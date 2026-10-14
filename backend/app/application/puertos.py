@@ -6,6 +6,7 @@ from typing import Literal, Protocol
 from app.domain.agenda.intervalo import Intervalo
 from app.domain.agenda.prestaciones import DatosPrestacion
 from app.domain.agenda.recursos import Paciente, Prestacion, Profesional, Sillon
+from app.domain.agenda.sillones import DatosSillon
 from app.domain.agenda.solapamiento import TurnoOcupado
 from app.domain.turnos.eventos import EventoTurno
 from app.domain.turnos.turno import Turno
@@ -94,10 +95,33 @@ class RepositorioPrestaciones(Protocol):
         ...
 
 
+class RepositorioSillones(Protocol):
+    """Catálogo de sillones del consultorio (US-004; design S9)."""
+
+    def consultorio_unico(self) -> int:
+        """El id del único consultorio de la instalación (D173); si no hay uno solo, falla."""
+        ...
+
+    def del_consultorio(self, consultorio_id: int) -> Sequence[DatosSillon]:
+        """Los del consultorio, activos e inactivos, por ``id``."""
+        ...
+
+    def obtener(self, sillon_id: int) -> DatosSillon | None: ...
+
+    def agregar(self, datos: DatosSillon) -> DatosSillon:
+        """Guarda el sillón y lo devuelve con su id."""
+        ...
+
+    def guardar(self, datos: DatosSillon) -> DatosSillon:
+        """Actualiza la fila de ``datos.id``."""
+        ...
+
+
 class UnidadDeTrabajo(Protocol):
     agenda: RepositorioAgenda
     historial: RepositorioHistorial
     prestaciones: RepositorioPrestaciones
+    sillones: RepositorioSillones
 
     def __enter__(self) -> "UnidadDeTrabajo": ...
 

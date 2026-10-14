@@ -4,6 +4,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from app.infrastructure.repositories.agenda import RepositorioAgendaSqlAlchemy
 from app.infrastructure.repositories.historial import RepositorioHistorialSqlAlchemy
 from app.infrastructure.repositories.prestaciones import RepositorioPrestacionesSqlAlchemy
+from app.infrastructure.repositories.sillones import RepositorioSillonesSqlAlchemy
 
 
 class UnidadDeTrabajoSqlAlchemy:
@@ -13,12 +14,14 @@ class UnidadDeTrabajoSqlAlchemy:
         self.agenda: RepositorioAgendaSqlAlchemy
         self.historial: RepositorioHistorialSqlAlchemy
         self.prestaciones: RepositorioPrestacionesSqlAlchemy
+        self.sillones: RepositorioSillonesSqlAlchemy
 
     def __enter__(self) -> "UnidadDeTrabajoSqlAlchemy":
         self._sesion = self._fabrica_sesiones()
         self.agenda = RepositorioAgendaSqlAlchemy(self._sesion)
         self.historial = RepositorioHistorialSqlAlchemy(self._sesion)
         self.prestaciones = RepositorioPrestacionesSqlAlchemy(self._sesion)
+        self.sillones = RepositorioSillonesSqlAlchemy(self._sesion)
         return self
 
     def __exit__(self, tipo, valor, traza) -> None:
