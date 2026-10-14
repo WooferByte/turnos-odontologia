@@ -42,7 +42,7 @@ Reglas de trabajo para todos los grupos (no son tareas):
 ## 5. Consulta del historial y HIS-1
 
 - [x] 5.1 RED (HIS-1, US-015 CA-1; RN-GL-04). Agregar a `tests/integration/test_historial.py`: `test_ca1_consultar_historial_devuelve_los_eventos_del_turno` (turno creado con `crear_turno`: un evento `creado`) y `test_his1_turno_inexistente_rechaza_con_rn_gl_04` (`consultar_historial(999, uow)` levanta `TurnoNoEncontrado` con `codigos` `["RN-GL-04"]` y una referencia `turno` 999 `inexistente`). Verificación: falla porque no existen `app.application.historial` ni `TurnoNoEncontrado`.
-- [ ] 5.2 GREEN (design H9). Crear `app/application/historial.py` con `consultar_historial`, agregar `TurnoNoEncontrado` a `app/domain/errors.py` y `"turno"` a `ReferenciaInvalida.recurso`. Verificación: los tests de 5.1 pasan; `test_imports_dominio` sigue pasando; suite por defecto en verde.
+- [x] 5.2 GREEN (design H9). Crear `app/application/historial.py` con `consultar_historial`, agregar `TurnoNoEncontrado` a `app/domain/errors.py` y `"turno"` a `ReferenciaInvalida.recurso`. Verificación: los tests de 5.1 pasan; `test_imports_dominio` sigue pasando; suite por defecto en verde.
 - [ ] 5.3 TRIANGULATE (US-015 CA-1, bordes). Agregar `test_ca1_turno_sin_eventos_devuelve_lista_vacia` (turno de la factory, sin evento; design H14), `test_ca1_el_historial_no_mezcla_turnos` (dos turnos creados con `crear_turno`) y `test_ca1_consultar_historial_respeta_el_orden_cronologico` (eventos guardados con `un_evento` fuera de orden). Verificación: pasan; si nacen verdes, se quita el `order_by` del repositorio, se comprueba que falla el de orden y se restaura.
 
 ## 6. API: `GET /turnos/{id}/historial`

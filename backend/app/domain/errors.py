@@ -30,7 +30,7 @@ class FechaNoUTC(ErrorDeDominio):
 
 @dataclass(frozen=True)
 class ReferenciaInvalida:
-    recurso: Literal["prestacion", "paciente", "profesional", "sillon"]
+    recurso: Literal["prestacion", "paciente", "profesional", "sillon", "turno"]
     recurso_id: int | None
     motivo: Literal["inexistente", "inactivo", "ninguno_activo", "varios_activos"]
 
@@ -45,6 +45,17 @@ class RecursoNoEncontrado(ErrorDeDominio):
         self.referencias = referencias
         detalle = "; ".join(f"{r.recurso} {r.recurso_id} ({r.motivo})" for r in referencias)
         super().__init__(f"Referencias inválidas: {detalle}.")
+
+
+class TurnoNoEncontrado(ErrorDeDominio):
+    """El turno que nombra la URL no existe (RN-GL-04): sale como 404, no como 422."""
+
+    codigo = "RN-GL-04"
+    referencias: tuple[ReferenciaInvalida, ...]
+
+    def __init__(self, turno_id: int) -> None:
+        self.referencias = (ReferenciaInvalida("turno", turno_id, "inexistente"),)
+        super().__init__(f"No existe el turno {turno_id}.")
 
 
 class EntradaInvalida(ErrorDeDominio):
