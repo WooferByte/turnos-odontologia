@@ -4,7 +4,8 @@ from typing import Annotated, Any
 
 from pydantic import AfterValidator, BaseModel, ConfigDict, Field, field_validator
 
-from app.domain.agenda.prestaciones import DatosPrestacion, normalizar_espacios
+from app.domain.agenda.nombres import normalizar_espacios
+from app.domain.agenda.prestaciones import DatosPrestacion
 from app.domain.turnos.eventos import EventoTurno
 from app.domain.turnos.turno import Turno
 

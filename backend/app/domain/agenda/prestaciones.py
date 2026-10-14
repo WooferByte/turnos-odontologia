@@ -2,9 +2,10 @@
 
 Solo biblioteca estándar (regla dura 3, design P4).
 """
-import unicodedata
 from collections.abc import Iterable
 from dataclasses import dataclass
+
+from app.domain.agenda.nombres import clave_de_nombre
 
 GRANULARIDAD_MINUTOS = 5  # D99; C-22 la reemplaza por ConfiguracionReglas
 
@@ -24,17 +25,6 @@ class DatosPrestacion:
 
 def duracion_valida(minutos: int, granularidad: int = GRANULARIDAD_MINUTOS) -> bool:
     return minutos > 0 and minutos % granularidad == 0
-
-
-def normalizar_espacios(nombre: str) -> str:
-    """Quita los espacios de los extremos y colapsa los internos; es lo que se guarda."""
-    return " ".join(nombre.split())
-
-
-def clave_de_nombre(nombre: str) -> str:
-    """Clave para comparar nombres sin mayúsculas, acentos ni espacios de más; nunca se guarda."""
-    descompuesto = unicodedata.normalize("NFKD", normalizar_espacios(nombre).casefold())
-    return "".join(c for c in descompuesto if unicodedata.category(c) != "Mn")
 
 
 def nombre_repetido(

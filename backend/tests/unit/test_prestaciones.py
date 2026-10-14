@@ -1,13 +1,12 @@
 """Reglas puras de las prestaciones: duración (RN-AG-01) y nombre (RN-AG-15)."""
 import pytest
 
+from app.domain.agenda.nombres import clave_de_nombre, normalizar_espacios
 from app.domain.agenda.prestaciones import (
     GRANULARIDAD_MINUTOS,
     DatosPrestacion,
-    clave_de_nombre,
     duracion_valida,
     nombre_repetido,
-    normalizar_espacios,
 )
 from app.domain.errors import DuracionInvalida
 

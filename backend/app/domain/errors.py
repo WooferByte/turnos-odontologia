@@ -60,37 +60,35 @@ class RecursoNoEncontrado(ErrorDeDominio):
         super().__init__(f"Referencias inválidas: {detalle}.")
 
 
-class TurnoNoEncontrado(ErrorDeDominio):
-    """El turno que nombra la URL no existe (RN-GL-04): sale como 404, no como 422."""
+class RecursoDeLaUrlNoEncontrado(ErrorDeDominio):
+    """El recurso que nombra la URL no existe (RN-GL-04): sale como 404, no como 422."""
 
     codigo = "RN-GL-04"
     referencias: tuple[ReferenciaInvalida, ...]
 
+    def __init__(
+        self,
+        recurso: Literal["prestacion", "sillon", "turno"],
+        recurso_id: int,
+        mensaje: str,
+    ) -> None:
+        self.referencias = (ReferenciaInvalida(recurso, recurso_id, "inexistente"),)
+        super().__init__(mensaje)
+
+
+class TurnoNoEncontrado(RecursoDeLaUrlNoEncontrado):
     def __init__(self, turno_id: int) -> None:
-        self.referencias = (ReferenciaInvalida("turno", turno_id, "inexistente"),)
-        super().__init__(f"No existe el turno {turno_id}.")
+        super().__init__("turno", turno_id, f"No existe el turno {turno_id}.")
 
 
-class PrestacionNoEncontrada(ErrorDeDominio):
-    """La prestación que nombra la URL no existe (RN-GL-04): sale como 404, no como 422."""
-
-    codigo = "RN-GL-04"
-    referencias: tuple[ReferenciaInvalida, ...]
-
+class PrestacionNoEncontrada(RecursoDeLaUrlNoEncontrado):
     def __init__(self, prestacion_id: int) -> None:
-        self.referencias = (ReferenciaInvalida("prestacion", prestacion_id, "inexistente"),)
-        super().__init__(f"No existe la prestación {prestacion_id}.")
+        super().__init__("prestacion", prestacion_id, f"No existe la prestación {prestacion_id}.")
 
 
-class SillonNoEncontrado(ErrorDeDominio):
-    """El sillón que nombra la URL no existe (RN-GL-04): sale como 404, no como 422."""
-
-    codigo = "RN-GL-04"
-    referencias: tuple[ReferenciaInvalida, ...]
-
+class SillonNoEncontrado(RecursoDeLaUrlNoEncontrado):
     def __init__(self, sillon_id: int) -> None:
-        self.referencias = (ReferenciaInvalida("sillon", sillon_id, "inexistente"),)
-        super().__init__(f"No existe el sillón {sillon_id}.")
+        super().__init__("sillon", sillon_id, f"No existe el sillón {sillon_id}.")
 
 
 class EntradaInvalida(ErrorDeDominio):
