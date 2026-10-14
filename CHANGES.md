@@ -330,7 +330,7 @@ Primer change: `/opsx:propose crear-turno-sin-solapamientos`.
   - `knowledge-base/02_descripcion_general.md` §«API REST (resumen)», fila Historial · `knowledge-base/03_actores_y_roles.md` matriz, fila «Historial de cambios de turno»
 
 ### [C-04] `gestion-de-prestaciones`
-- **Estado**: `[ ]` pendiente · **Orden**: 2 · **Gobernanza**: BAJO
+- **Estado**: `[x]` archivado · **Orden**: 2 · **Gobernanza**: BAJO
 - **Objetivo** (US-001): dar de alta, editar y desactivar prestaciones con nombre único, duración por defecto y color (parte de API).
 - **Alcance — dentro**: `GET/POST /prestaciones` y `PATCH /prestaciones/{id}` (sin borrado); migración con `Prestacion.color` y `reservable_online`; duración mayor que 0 y múltiplo de la constante de 5 minutos (RN-AG-01, D99); cambiar la duración no toca turnos existentes; sin autenticación hasta C-07.
 - **Alcance — fuera**: pantalla (C-11); granularidad configurable (C-22); efecto de `reservable_online` (C-24).
@@ -339,7 +339,7 @@ Primer change: `/opsx:propose crear-turno-sin-solapamientos`.
 - **Leer antes**:
   - `knowledge-base/06_funcionalidades.md` §US-001 y nota de orden (D99)
   - `knowledge-base/04_modelo_de_datos.md` §Prestacion
-  - `knowledge-base/05_reglas_de_negocio.md` RN-AG-01, RN-AG-02, RN-GL-03, RN-GL-04
+  - `knowledge-base/05_reglas_de_negocio.md` RN-AG-01, RN-AG-02, RN-AG-15, RN-GL-03, RN-GL-04 · `knowledge-base/10_preguntas_abiertas.md` (ya implementado, D171 a D182)
   - `knowledge-base/02_descripcion_general.md` §«API REST (resumen)», fila Prestaciones
 
 ### [C-05] `gestion-de-sillones`
@@ -960,7 +960,7 @@ Primer change: `/opsx:propose crear-turno-sin-solapamientos`.
 
 ## Verificación cruzada
 
-**Fecha de la verificación: 2026-10-14** (tercera corrida, posterior a C-01, C-02 y C-03 archivados y a las decisiones de la knowledge-base hasta D170; las anteriores fueron del 2026-10-05). Se hizo con un script que lee este archivo y la knowledge-base tal como estaban ese día y compara los identificadores uno por uno; el script no modifica nada y no forma parte del repositorio. **Hay que repetirla cada vez que se edite este archivo o los archivos 02 a 06, 09 o 10 de la knowledge-base**: el resultado vale solo para el contenido verificado.
+**Fecha de la verificación: 2026-10-14** (cuarta corrida, posterior a C-01, C-02, C-03 y C-04 archivados y a las decisiones de la knowledge-base hasta D182; las anteriores fueron del 2026-10-05). Se hizo con un script que lee este archivo y la knowledge-base tal como estaban ese día y compara los identificadores uno por uno; el script no modifica nada y no forma parte del repositorio. **Hay que repetirla cada vez que se edite este archivo o los archivos 02 a 06, 09 o 10 de la knowledge-base**: el resultado vale solo para el contenido verificado.
 
 Qué compara cada fila: las cinco primeras son las verificaciones pedidas por el autor (la tercera se muestra separada en reglas, decisiones y escenarios); las marcadas «Adicional» se agregaron para cubrir el resto del índice.
 
@@ -968,15 +968,15 @@ Qué compara cada fila: las cinco primeras son las verificaciones pedidas por el
 |---|---|---|---|
 | 1 | Dependencias: cada dependencia citada en una entrada es un change que existe en este archivo, y ningún change depende de uno de orden posterior | 104 dependencias en 48 changes | sin diferencias |
 | 2 | Historias: cada US-NNN de `06_funcionalidades.md` (v1) tiene exactamente una fila y un change titular en «Mapeo historia → change»; las historias del Objetivo de cada entrada coinciden con ese mapeo; toda US citada existe en 06 | 30 historias de 06; 30 citadas | sin diferencias |
-| 3a | Reglas: cada RN-XX-NN citada está definida en `05_reglas_de_negocio.md` | 78 reglas distintas (05 define 80) | sin diferencias |
+| 3a | Reglas: cada RN-XX-NN citada está definida en `05_reglas_de_negocio.md` | 79 reglas distintas (05 define 81) | sin diferencias |
 | 3b | Decisiones: cada DD-NN citada existe en `09_decisiones_y_supuestos.md` | 17 decisiones distintas (09 define 19) | sin diferencias |
 | 3c | Escenarios: cada E# citado existe en la tabla de US-010 de 06 | 12 escenarios distintos (06 define 12) | sin diferencias |
 | 4 | Rutas: cada ruta HTTP citada (método y ruta) existe en `02_descripcion_general.md` o en `03_actores_y_roles.md` | 67 rutas citadas (02 y 03 listan 69, dos de ellas de Fase 2) | sin diferencias |
 | 5 | Tablas: cada entidad de `04_modelo_de_datos.md` tiene un change que la crea en «Tablas del modelo → change que las crea», ese change implementa la historia que nombra la columna «Change que la crea» de 04 y su entrada nombra la tabla | 23 tablas | sin diferencias |
 | 6 | Adicional: cada criterio CA-n citado como escenario, o como criterio que se completa en otro change, existe en su historia de 06 | 178 criterios | sin diferencias |
-| 7 | Adicional: cada decisión D-NN citada figura en el registro de `10_preguntas_abiertas.md`, cada SU-NN en 09 y cada P-NN en 10 | 59 D, 3 SU y 2 P | sin diferencias |
+| 7 | Adicional: cada decisión D-NN citada figura en el registro de `10_preguntas_abiertas.md`, cada SU-NN en 09 y cada P-NN en 10 | 61 D, 3 SU y 2 P | sin diferencias |
 | 8 | Adicional: cada ruta de la v1 listada en 02 y 03 está citada en alguna entrada (ninguna ruta queda sin change) | 67 rutas de la v1 | sin diferencias |
-| 9 | Adicional: cada sección («…», §), flujo e ID de «Leer antes» aparece en el archivo de la KB que la entrada indica, y el archivo existe | 511 referencias | sin diferencias |
+| 9 | Adicional: cada sección («…», §), flujo e ID de «Leer antes» aparece en el archivo de la KB que la entrada indica, y el archivo existe | 514 referencias | sin diferencias |
 | 10 | Adicional: el árbol por bloques muestra el mismo nombre, bloque y dependencias que cada entrada, y las puertas nombran los 48 changes | 48 nodos | sin diferencias |
 | 11 | Adicional: el camino crítico es una cadena de dependencias directas y es la más larga hasta un change del MVP | 15 changes | sin diferencias |
 | 12 | Adicional, formato: códigos consecutivos, nombres kebab-case únicos, 12 líneas como máximo por entrada, 3 a 6 escenarios (8 en C-01), 3 o 4 líneas de «Leer antes», sin emoji | 48 entradas | sin diferencias |
