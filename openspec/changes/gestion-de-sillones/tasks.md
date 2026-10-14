@@ -37,7 +37,7 @@ Reglas de trabajo para todos los grupos (no son tareas):
 ## 4. US-004 CA-3: alta, listado y edición en los casos de uso
 
 - [x] 4.1 RED (CA-3; RN-AG-06, RN-GL-04). Escribir `tests/integration/test_sillones.py`: `test_ca3_crear_sillon_lo_guarda_activo` («Sillón 2»), `test_ca3_listar_sillones_incluye_los_inactivos` (por `id`) y `test_ca3_editar_sillon_inexistente_rechaza_con_rn_gl_04` (`SillonNoEncontrado`, referencia `sillon` / 999 / `inexistente`). Verificación: falla porque no existe `app.application.sillones`.
-- [ ] 4.2 GREEN (design S3, S8). Crear `app/application/sillones.py` con `CrearSillonComando`, `EditarSillonComando`, `listar_sillones`, `crear_sillon` y `editar_sillon`. Verificación: los tests de 4.1 pasan; suite por defecto en verde.
+- [x] 4.2 GREEN (design S3, S8). Crear `app/application/sillones.py` con `CrearSillonComando`, `EditarSillonComando`, `listar_sillones`, `crear_sillon` y `editar_sillon`. Verificación: los tests de 4.1 pasan; suite por defecto en verde.
 - [ ] 4.3 TRIANGULATE (CA-3 bordes; RN-AG-07). Agregar `test_ca3_renombrar_cambia_solo_el_nombre`, `test_ca3_desactivar_y_reactivar` (parametrizado `false` → `true`), `test_ca3_edicion_sin_campos_no_cambia_nada` y `test_ca3_desactivar_no_modifica_los_turnos_del_sillon` (un turno `reservado` en ese sillón: otra sesión lo lee con el mismo `estado`, `inicio`, `fin` y `sillon_id`). Verificación: pasan; para los que nacen verdes, se ignora `activo` en `editar_sillon`, se comprueba que fallan y se restaura; suite por defecto en verde.
 
 ## 5. API: `/sillones`
