@@ -169,7 +169,11 @@ def test_ca1_el_historial_no_mezcla_turnos(sesion, uow):
     assert del_segundo[0].despues["inicio"] == "2026-11-02T15:00:00Z"
 
 
-def test_ca1_consultar_historial_respeta_el_orden_cronologico(sesion, uow):
+def test_ca1_consultar_historial_respeta_el_orden_cronologico(sesion, engine, uow):
+    # Sin el índice (turno_id, ocurrido_en) SQLite recorre la tabla en orden de inserción; con él,
+    # lo devolvería ya ordenado y el test pasaría aunque faltara el order_by del repositorio.
+    with engine.begin() as conexion:
+        conexion.exec_driver_sql("DROP INDEX ix_evento_turno_turno_id_ocurrido_en")
     datos = _escenario(sesion)
     turno = un_turno(
         sesion,

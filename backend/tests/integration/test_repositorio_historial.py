@@ -80,7 +80,13 @@ def test_registrar_devuelve_el_evento_con_id_y_otra_sesion_lo_lee_igual(
     assert leidos[0].despues == {"estado": "reservado", "duracion_minutos": 30}
 
 
-def test_ca1_del_turno_ordena_por_ocurrido_en_y_por_registro(sesion: Session, mundo: dict) -> None:
+def test_ca1_del_turno_ordena_por_ocurrido_en_y_por_registro(
+    sesion: Session, engine, mundo: dict
+) -> None:
+    # Sin el índice (turno_id, ocurrido_en) SQLite recorre la tabla en orden de inserción; con él,
+    # lo devolvería ya ordenado y el test pasaría aunque faltara el order_by del repositorio.
+    with engine.begin() as conexion:
+        conexion.exec_driver_sql("DROP INDEX ix_evento_turno_turno_id_ocurrido_en")
     turno = _turno(sesion, mundo)
     repositorio = RepositorioHistorialSqlAlchemy(sesion)
     primero = repositorio.registrar(_evento(turno.id, datetime(2026, 10, 7, 12, 0, tzinfo=UTC)))
