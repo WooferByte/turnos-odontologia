@@ -6,6 +6,7 @@ from typing import Literal, Protocol
 from app.domain.agenda.intervalo import Intervalo
 from app.domain.agenda.recursos import Paciente, Prestacion, Profesional, Sillon
 from app.domain.agenda.solapamiento import TurnoOcupado
+from app.domain.turnos.eventos import EventoTurno
 from app.domain.turnos.turno import Turno
 
 
@@ -55,9 +56,24 @@ class RepositorioAgenda(Protocol):
         """Guarda el turno y lo devuelve con su id."""
         ...
 
+    def existe_turno(self, turno_id: int) -> bool: ...
+
+
+class RepositorioHistorial(Protocol):
+    """Historial de solo inserción: registrar y leer, nada más (RN-AG-11, design H7)."""
+
+    def registrar(self, evento: EventoTurno) -> EventoTurno:
+        """Guarda el evento y lo devuelve con su id."""
+        ...
+
+    def del_turno(self, turno_id: int) -> Sequence[EventoTurno]:
+        """Los eventos del turno, por ``ocurrido_en`` y, a igual momento, por orden de registro."""
+        ...
+
 
 class UnidadDeTrabajo(Protocol):
     agenda: RepositorioAgenda
+    historial: RepositorioHistorial
 
     def __enter__(self) -> "UnidadDeTrabajo": ...
 

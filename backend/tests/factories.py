@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.infrastructure.db.modelos import (
     ConsultorioModelo,
+    EventoTurnoModelo,
     PacienteModelo,
     PrestacionModelo,
     ProfesionalModelo,
@@ -88,3 +89,16 @@ def un_turno(
             **{**datos, **kw},
         ),
     )
+
+
+def un_evento(sesion: Session, turno: TurnoModelo, **kw) -> EventoTurnoModelo:
+    datos = {
+        "tipo": "creado",
+        "actor_tipo": "usuario",
+        "actor_id": None,
+        "ocurrido_en": RELOJ_FIJO,
+        "antes": None,
+        "despues": {"estado": turno.estado},
+        "motivo": None,
+    }
+    return _guardar(sesion, EventoTurnoModelo(turno_id=turno.id, **{**datos, **kw}))

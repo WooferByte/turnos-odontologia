@@ -2,6 +2,7 @@
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.infrastructure.repositories.agenda import RepositorioAgendaSqlAlchemy
+from app.infrastructure.repositories.historial import RepositorioHistorialSqlAlchemy
 
 
 class UnidadDeTrabajoSqlAlchemy:
@@ -9,10 +10,12 @@ class UnidadDeTrabajoSqlAlchemy:
         self._fabrica_sesiones = fabrica_sesiones
         self._sesion: Session | None = None
         self.agenda: RepositorioAgendaSqlAlchemy
+        self.historial: RepositorioHistorialSqlAlchemy
 
     def __enter__(self) -> "UnidadDeTrabajoSqlAlchemy":
         self._sesion = self._fabrica_sesiones()
         self.agenda = RepositorioAgendaSqlAlchemy(self._sesion)
+        self.historial = RepositorioHistorialSqlAlchemy(self._sesion)
         return self
 
     def __exit__(self, tipo, valor, traza) -> None:

@@ -140,3 +140,6 @@ class RepositorioAgendaSqlAlchemy:
                 raise
             raise SolapamientoEnLaBase(recurso) from error
         return replace(turno, id=modelo.id)
+
+    def existe_turno(self, turno_id: int) -> bool:
+        return self._sesion.get(TurnoModelo, turno_id) is not None
