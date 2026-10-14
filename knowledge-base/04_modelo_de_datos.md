@@ -126,7 +126,7 @@ Los plazos de seña y de oferta son **valores de diseño del autor, no de mercad
 | `activo` | bool | NN | Default `true` |
 
 ### Sillon (recurso)
-**Change que la crea:** primer change. **MVP: un único sillón creado por seed; todo turno se asigna a él por defecto** (RN-AG-06) porque es el único activo (RN-AG-14, D125); el modelo no tiene una columna de «sillón por defecto».
+**Change que la crea:** primer change. **MVP: un único sillón creado por seed; todo turno se asigna a él por defecto** (RN-AG-06) porque es el único activo (RN-AG-14, D125); el modelo no tiene una columna de «sillón por defecto». **Gestión en C-05** (US-004, 2026-10-14, sin migración): el nombre **no es único** en el consultorio (sin `UNIQUE`, D183) y se guarda sin espacios de más.
 
 | Campo | Tipo | Null | Restricciones / FK / nota |
 |---|---|---|---|

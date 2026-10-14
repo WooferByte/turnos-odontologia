@@ -56,7 +56,7 @@ Los criterios de US-010 usan IDs estables `E1..E12` (compartidos con `07_flujos_
 **Como** odontólogo **quiero** que el consultorio tenga un sillón por defecto **para** que la agenda controle su ocupación sin configuración extra.
 - [ ] CA-1: el seed crea "Sillón 1"; todo turno sin sillón explícito se asigna a él mientras sea el único sillón activo (RN-AG-14, D125; con más de uno activo hay que indicarlo).
 - [ ] CA-2: el modelo admite agregar más sillones (la UI multi-sillón es Fase 2).
-- [ ] CA-3: puedo dar de alta un sillón y desactivarlo (`POST /sillones`, `PATCH /sillones/{id}`); un sillón inactivo no admite turnos nuevos (RN-AG-07). CA-1 ya lo cumple el primer change; este change agrega la gestión.
+- [ ] CA-3: puedo dar de alta un sillón y desactivarlo (`POST /sillones`, `PATCH /sillones/{id}`); un sillón inactivo no admite turnos nuevos (RN-AG-07). CA-1 ya lo cumple el primer change; este change agrega la gestión. **Implementada en C-05** como API: `GET/POST /sillones` y `PATCH /sillones/{id}` con `nombre` y `activo` (desactivar es `activo: false`; también se reactiva, D185); el nombre no es único (D183) y se puede desactivar el último sillón activo (D184, después un turno sin sillón se rechaza con `ninguno_activo`); sin autenticación hasta C-07 y sobre el único consultorio de la instalación (D187); la pantalla multi-sillón es Fase 2.
 **Orden**: 2
 **Depende de**: Ninguna
 **Reglas**: RN-AG-06, RN-AG-07

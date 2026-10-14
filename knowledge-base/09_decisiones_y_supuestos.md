@@ -64,9 +64,9 @@
 **Contexto**: la seña con MP es estándar en las agendas argentinas (Turnito [C], SimpleTurno Pro [C], Neocita pago [C]) pero no está evidenciada en los sistemas clínicos DentalCore ni Bilog (vacío C.3.4).
 **Trade-offs aceptados**: la retención de la seña requiere revisión legal; no se cobra dinero real.
 
-### DD-08 — Sillón como recurso con valor 1 por defecto
+### DD-08 — Sillón como recurso con sillón por defecto
 **Decisión**: `Sillon` es entidad de primer nivel; todo turno referencia un sillón; el seed crea uno.
-**Justificación**: el change "crear turno sin solapamientos por profesional y por sillón" encaja sin ampliar el MVP, y la Fase 2 multi-sillón no requiere rediseño.
+**Justificación**: el change "crear turno sin solapamientos por profesional y por sillón" encaja sin ampliar el MVP, y la Fase 2 multi-sillón no requiere rediseño. **El sillón por defecto no es un id fijo** (D125): es el único activo del consultorio (RN-AG-14); con más de uno activo hay que indicarlo. **Gestión en C-05 (2026-10-14):** alta, listado, renombre, desactivación y reactivación por API (`gestion-de-sillones`, D183 a D194), sin cambios de esquema.
 
 ### DD-09 — Intervalos semiabiertos `[inicio, fin)` y fechas en UTC
 **Decisión**: turnos como intervalos semiabiertos; persistencia en UTC con zona; reglas de horario en `America/Argentina/Buenos_Aires`.
