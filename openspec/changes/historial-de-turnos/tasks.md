@@ -17,7 +17,7 @@ Reglas de trabajo para todos los grupos (no son tareas):
 
 ## 1. Preparación
 
-- [ ] 1.1 Red de seguridad. Correr `python -m pytest` y, con PostgreSQL levantado (`docker compose up -d postgres`) y `TEST_DATABASE_URL` definida, `python -m pytest -m postgres`; anotar las dos líneas finales. Verificación: las dos corridas en verde; `git status` limpio; `pyproject.toml` sin cambios (no se agrega ninguna dependencia, design H2).
+- [x] 1.1 Red de seguridad. Correr `python -m pytest` y, con PostgreSQL levantado (`docker compose up -d postgres`) y `TEST_DATABASE_URL` definida, `python -m pytest -m postgres`; anotar las dos líneas finales. Verificación: las dos corridas en verde; `git status` limpio; `pyproject.toml` sin cambios (no se agrega ninguna dependencia, design H2).
 
 ## 2. Dominio: el evento `creado` (E9)
 
