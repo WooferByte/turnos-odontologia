@@ -25,7 +25,7 @@ Reglas de trabajo para todos los grupos (no son tareas):
 ## 2. Dominio: error del sillón de la URL y base común de los `404`
 
 - [x] 2.1 RED (CA-3; RN-GL-04, D166). Escribir `tests/unit/test_errores_de_url.py`: `test_ca3_sillon_no_encontrado_lleva_rn_gl_04_y_la_referencia` (`SillonNoEncontrado(999)`: `codigos` `["RN-GL-04"]`, referencia `sillon` / 999 / `inexistente`, mensaje «No existe el sillón 999.»). Verificación: falla porque no existe `SillonNoEncontrado` (error de recolección, que cuenta como RED).
-- [ ] 2.2 GREEN (design S5). Agregar `SillonNoEncontrado` a `app/domain/errors.py`, con la misma forma que `PrestacionNoEncontrada`. Verificación: los tests de 2.1 pasan; `tests/unit/test_imports_dominio.py` sigue pasando.
+- [x] 2.2 GREEN (design S5). Agregar `SillonNoEncontrado` a `app/domain/errors.py`, con la misma forma que `PrestacionNoEncontrada`. Verificación: los tests de 2.1 pasan; `tests/unit/test_imports_dominio.py` sigue pasando.
 - [ ] 2.3 TRIANGULATE y REFACTOR (RN-GL-04; regla de tres). Agregar `test_los_tres_no_encontrado_comparten_la_base_y_el_codigo` (parametrizado con `TurnoNoEncontrado`, `PrestacionNoEncontrada` y `SillonNoEncontrado`: instancia de `RecursoDeLaUrlNoEncontrado`, `RN-GL-04`, el recurso y el id en la referencia) y `test_recurso_no_encontrado_del_cuerpo_no_es_de_la_url`. Hacer el REFACTOR de S5 en `errors.py` (base `RecursoDeLaUrlNoEncontrado`, tres subclases) y mover `normalizar_espacios` y `clave_de_nombre` a `app/domain/agenda/nombres.py` (S4), ajustando solo el `import` de `tests/unit/test_prestaciones.py`. Verificación: pasan; todos los tests de C-03 y C-04 en verde sin tocarlos; suite por defecto en verde.
 
 ## 3. Persistencia: repositorio de sillones y unidad de trabajo

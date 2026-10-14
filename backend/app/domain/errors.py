@@ -82,6 +82,17 @@ class PrestacionNoEncontrada(ErrorDeDominio):
         super().__init__(f"No existe la prestación {prestacion_id}.")
 
 
+class SillonNoEncontrado(ErrorDeDominio):
+    """El sillón que nombra la URL no existe (RN-GL-04): sale como 404, no como 422."""
+
+    codigo = "RN-GL-04"
+    referencias: tuple[ReferenciaInvalida, ...]
+
+    def __init__(self, sillon_id: int) -> None:
+        self.referencias = (ReferenciaInvalida("sillon", sillon_id, "inexistente"),)
+        super().__init__(f"No existe el sillón {sillon_id}.")
+
+
 class EntradaInvalida(ErrorDeDominio):
     """Toda la validación de entrada junta: ``FechaNoUTC``, ``DuracionInvalida`` y/o ``RecursoNoEncontrado`` (D6)."""
 
