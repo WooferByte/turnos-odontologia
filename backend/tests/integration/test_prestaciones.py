@@ -8,7 +8,12 @@ from app.application.prestaciones import (
     editar_prestacion,
     listar_prestaciones,
 )
-from app.domain.errors import NombreDePrestacionRepetido, PrestacionNoEncontrada
+from app.domain.errors import (
+    DuracionInvalida,
+    EntradaInvalida,
+    NombreDePrestacionRepetido,
+    PrestacionNoEncontrada,
+)
 from tests.factories import un_consultorio, una_prestacion
 
 
@@ -132,3 +137,41 @@ def test_ca1_editar_prestacion_inexistente_rechaza_con_rn_gl_04(sesion, uow) -> 
         999,
         "inexistente",
     )
+
+
+@pytest.mark.parametrize("duracion", [47, 0, -5])
+def test_ca2_crear_con_duracion_invalida_rechaza_con_rn_ag_01(sesion, uow, duracion: int) -> None:
+    un_consultorio(sesion)
+
+    with pytest.raises(EntradaInvalida) as excinfo:
+        crear_prestacion(_alta(duracion_minutos=duracion), uow)
+
+    assert excinfo.value.codigos == ["RN-AG-01"]
+    (error,) = excinfo.value.errores
+    assert isinstance(error, DuracionInvalida)
+    assert error.campo == "duracion_minutos"
+    assert listar_prestaciones(uow) == []
+
+
+def test_ca2_editar_con_duracion_invalida_rechaza_y_no_cambia(sesion, uow) -> None:
+    consultorio = un_consultorio(sesion)
+    prestacion = una_prestacion(sesion, consultorio, duracion_minutos=30)
+
+    aceptada = editar_prestacion(prestacion.id, EditarPrestacionComando(duracion_minutos=50), uow)
+    assert aceptada.duracion_minutos == 50
+
+    with pytest.raises(EntradaInvalida) as excinfo:
+        editar_prestacion(prestacion.id, EditarPrestacionComando(duracion_minutos=52), uow)
+
+    assert excinfo.value.codigos == ["RN-AG-01"]
+    assert [p.duracion_minutos for p in listar_prestaciones(uow)] == [50]
+
+
+def test_ca2_la_duracion_invalida_se_informa_antes_que_el_nombre_repetido(sesion, uow) -> None:
+    consultorio = un_consultorio(sesion)
+    una_prestacion(sesion, consultorio, nombre="Limpieza")
+
+    with pytest.raises(EntradaInvalida) as excinfo:
+        crear_prestacion(_alta("Limpieza", duracion_minutos=47), uow)
+
+    assert excinfo.value.codigos == ["RN-AG-01"]
