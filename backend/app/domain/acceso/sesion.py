@@ -9,6 +9,7 @@ from enum import Enum
 
 from app.domain.acceso.usuarios import DatosUsuario
 from app.domain.errors import SesionInvalida
+from app.domain.tiempo import exigir_utc
 
 
 class TipoDeToken(str, Enum):
@@ -23,6 +24,10 @@ class ClaimsDeSesion:
     tipo: TipoDeToken
     emitido_en: datetime
     vence_en: datetime
+
+    def __post_init__(self) -> None:
+        exigir_utc(self.emitido_en, "emitido_en")
+        exigir_utc(self.vence_en, "vence_en")
 
 
 def claims_para(

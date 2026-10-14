@@ -1,6 +1,6 @@
 """Reglas de la sesión del panel en el dominio: claims, vigencia y token válido (US-090, US-094; RN-AU-03, RN-AU-04)."""
 from dataclasses import replace
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 import pytest
 
@@ -12,7 +12,7 @@ from app.domain.acceso.sesion import (
     exigir_token_valido,
 )
 from app.domain.acceso.usuarios import DatosUsuario, normalizar_email
-from app.domain.errors import SesionInvalida
+from app.domain.errors import CredencialesInvalidas, ErrorDeDominio, FechaNoUTC, SesionInvalida
 from app.domain.tiempo import UTC
 
 LAS_12 = datetime(2026, 10, 7, 12, 0, tzinfo=UTC)
@@ -93,3 +93,45 @@ def test_us094_ca3_token_valido_exige_usuario_activo_y_misma_version(
 
 def test_us090_ca1_normalizar_email() -> None:
     assert normalizar_email(" Odontologa@Consultorio-Demo.TEST ") == "odontologa@consultorio-demo.test"
+
+
+def test_us094_ca1_token_vigente_de_usuario_activo_pasa() -> None:
+    usuario = un_usuario_de_dominio(token_version=2)
+    claims = claims_para(usuario, TipoDeToken.REFRESH, LAS_12, SIETE_DIAS)
+
+    exigir_token_valido(claims, TipoDeToken.REFRESH, usuario, LAS_12 + timedelta(days=3))
+
+
+def test_us094_ca3_reactivado_con_version_nueva_rechaza_el_token_viejo() -> None:
+    antes = un_usuario_de_dominio(token_version=0)
+    claims = claims_para(antes, TipoDeToken.REFRESH, LAS_12, SIETE_DIAS)
+    reactivado = replace(antes, activo=True, token_version=1)
+
+    with pytest.raises(SesionInvalida):
+        exigir_token_valido(claims, TipoDeToken.REFRESH, reactivado, LAS_12)
+
+
+@pytest.mark.parametrize("campo", ["emitido_en", "vence_en"])
+@pytest.mark.parametrize(
+    "fecha",
+    [datetime(2026, 10, 7, 12, 0), datetime(2026, 10, 7, 12, 0, tzinfo=timezone(timedelta(hours=-3)))],
+    ids=["naive", "con_desfase"],
+)
+def test_claims_rechazan_fechas_no_utc(campo: str, fecha: datetime) -> None:
+    valores = {"emitido_en": LAS_12, "vence_en": LAS_12 + QUINCE_MINUTOS, campo: fecha}
+
+    with pytest.raises(FechaNoUTC) as error:
+        ClaimsDeSesion(usuario_id=1, token_version=0, tipo=TipoDeToken.ACCESS, **valores)
+
+    assert error.value.codigos == ["RN-GL-01"]
+    assert error.value.campo == campo
+
+
+@pytest.mark.parametrize("error", [CredencialesInvalidas(), SesionInvalida()])
+def test_us090_ca2_errores_de_acceso_no_nombran_al_usuario(error: ErrorDeDominio) -> None:
+    usuario = un_usuario_de_dominio()
+
+    assert usuario.email not in error.mensaje
+    assert str(usuario.id) not in error.mensaje
+    assert error.mensaje == type(error)().mensaje
+    assert error.codigos == [type(error).codigo]
