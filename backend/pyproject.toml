@@ -16,6 +16,9 @@ app = [
     "tzdata==2026.4",
     "psycopg[binary]==3.3.6",
     "alembic==1.20.0",
+    # C-06: PyJWT y bcrypt consultadas en PyPI el 2026-10-14; ninguna publicada el 2026-10-07 o después (D133).
+    "PyJWT==2.15.1",
+    "bcrypt==5.0.0",
 ]
 test = [
     {include-group = "app"},

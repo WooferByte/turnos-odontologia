@@ -19,7 +19,7 @@ Reglas de trabajo para todos los grupos (no son tareas):
 ## 1. Preparación
 
 - [x] 1.1 Red de seguridad. Correr `python -m pytest` y, con PostgreSQL levantado (`docker compose up -d postgres`) y `TEST_DATABASE_URL` definida, `python -m pytest -m postgres`; anotar las dos líneas finales. Verificación: las dos corridas en verde; `git status` limpio; `openspec status --change sesion-con-jwt` con las cuatro piezas hechas.
-- [ ] 1.2 Dependencias (design J2). Agregar `"PyJWT==2.15.1"` y `"bcrypt==5.0.0"` al grupo `app` de `pyproject.toml`, con la línea de comentario de la fecha de consulta (2026-10-14), e instalar con `python -m pip install --group test`. Verificación: `python -m pip show PyJWT bcrypt` muestra esas versiones; `python -m pip check` sin conflictos; la suite por defecto sigue en verde.
+- [x] 1.2 Dependencias (design J2). Agregar `"PyJWT==2.15.1"` y `"bcrypt==5.0.0"` al grupo `app` de `pyproject.toml`, con la línea de comentario de la fecha de consulta (2026-10-14), e instalar con `python -m pip install --group test`. Verificación: `python -m pip show PyJWT bcrypt` muestra esas versiones; `python -m pip check` sin conflictos; la suite por defecto sigue en verde.
 
 ## 2. Dominio de acceso
 
