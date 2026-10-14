@@ -84,3 +84,18 @@ def test_el_seed_de_la_demo_deja_tres_pacientes_y_ninguno_mas(paciente_id):
     assert inexistente.json()["referencias"] == [
         {"recurso": "paciente", "recurso_id": 4, "motivo": "inexistente"}
     ]
+
+
+def test_la_demo_lista_las_cinco_prestaciones_con_su_color():
+    cliente = TestClient(crear_app_demo())
+
+    respuesta = cliente.get("/prestaciones")
+
+    assert respuesta.status_code == 200
+    assert [(p["id"], p["nombre"], p["color"]) for p in respuesta.json()] == [
+        (1, "Consulta / control", "#1E88E5"),
+        (2, "Limpieza", "#43A047"),
+        (3, "Obturación", "#FB8C00"),
+        (4, "Extracción", "#E53935"),
+        (5, "Urgencia", "#8E24AA"),
+    ]
