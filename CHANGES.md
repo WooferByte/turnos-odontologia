@@ -317,16 +317,16 @@ Primer change: `/opsx:propose crear-turno-sin-solapamientos`.
   - `knowledge-base/08_arquitectura_propuesta.md` §«Estrategia de tests» (perfil opcional con PostgreSQL), «Variables de entorno», «Versiones y dependencias», «Estructura de directorios»
 
 ### [C-03] `historial-de-turnos`
-- **Estado**: `[ ]` pendiente · **Orden**: 2 · **Gobernanza**: CRITICO
+- **Estado**: `[x]` archivado · **Orden**: 2 · **Gobernanza**: CRITICO
 - **Objetivo** (US-015): registrar todo cambio de turno en un historial inmutable y exponerlo en solo lectura (RN-AG-11).
 - **Alcance — dentro**: tabla `EventoTurno` (solo inserción) con su migración; `crear_turno` registra el evento `creado` en la misma transacción (E9 de US-010); `GET /turnos/{id}/historial`, sin autenticación hasta C-07; `404` para un id inexistente en la URL.
 - **Alcance — fuera**: pantalla del historial (C-15); eventos de reprogramación, cancelación, marcado y seña (los agrega cada change); `EventoPaciente` (C-21).
 - **Depende de**: C-01, C-02
-- **Escenarios mínimos**: E9; US-015: CA-1; HIS-1 (un id de turno inexistente en la URL responde `404`, RN-GL-04)
+- **Escenarios mínimos**: E9; US-015: CA-1; HIS-1 (un id de turno inexistente en la URL responde `404`, RN-GL-04). Se implementó con 24 tareas: cuarta excepción registrada al «alrededor de 20» (D161)
 - **Leer antes**:
   - `knowledge-base/06_funcionalidades.md` §US-015 y §US-010 (E9)
   - `knowledge-base/04_modelo_de_datos.md` §EventoTurno y «Regla de reparto entre `EventoTurno` y `EventoPaciente`»
-  - `knowledge-base/05_reglas_de_negocio.md` RN-AG-11, RN-GL-04
+  - `knowledge-base/05_reglas_de_negocio.md` RN-AG-11, RN-GL-04 · `knowledge-base/10_preguntas_abiertas.md` (ya implementado, D158 a D170)
   - `knowledge-base/02_descripcion_general.md` §«API REST (resumen)», fila Historial · `knowledge-base/03_actores_y_roles.md` matriz, fila «Historial de cambios de turno»
 
 ### [C-04] `gestion-de-prestaciones`
