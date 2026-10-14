@@ -48,3 +48,7 @@ DIA_DE_PRUEBA = (2026, 11, 2)  # horario compartido por los tests de agenda
 def a_las(hora: int, minuto: int = 0) -> datetime:
     """Instante UTC de ``DIA_DE_PRUEBA`` a esa hora y minuto."""
     return datetime(*DIA_DE_PRUEBA, hora, minuto, tzinfo=UTC)
+
+
+# Secreto ficticio de los tests de la sesión (C-06, design J10): 32 bytes o más, nunca real.
+SECRETO_DE_PRUEBA = "secreto-ficticio-solo-para-los-tests-0123456789"
