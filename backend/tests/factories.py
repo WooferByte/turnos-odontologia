@@ -50,6 +50,7 @@ def una_prestacion(sesion: Session, consultorio: ConsultorioModelo, **kw) -> Pre
     datos = {
         "nombre": f"Prestación de Prueba {next(_secuencia)}",
         "duracion_minutos": 30,
+        "color": "#9E9E9E",
         "activa": True,
     }
     return _guardar(sesion, PrestacionModelo(consultorio_id=consultorio.id, **{**datos, **kw}))

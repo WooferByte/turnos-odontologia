@@ -17,11 +17,11 @@ from app.infrastructure.db.modelos import (
 
 # Prestaciones y duraciones de 04_modelo_de_datos.md, «Seed data inicial» (D56).
 _PRESTACIONES = (
-    (1, "Consulta / control", 30),
-    (2, "Limpieza", 45),
-    (3, "Obturación", 60),
-    (4, "Extracción", 45),
-    (5, "Urgencia", 30),
+    (1, "Consulta / control", 30, "#1E88E5"),
+    (2, "Limpieza", 45, "#43A047"),
+    (3, "Obturación", 60, "#FB8C00"),
+    (4, "Extracción", 45, "#E53935"),
+    (5, "Urgencia", 30, "#8E24AA"),
 )
 
 # Nombres inventados; el bloque 5555-01xx hace de «prefijo de prueba».
@@ -44,10 +44,16 @@ def cargar_demo(sesion: Session) -> None:
     )
     sesion.add(ProfesionalModelo(id=1, consultorio_id=1, nombre="Dra. Demo Ficticia", activo=True))
     sesion.add(SillonModelo(id=1, consultorio_id=1, nombre="Sillón 1", activo=True))
-    for id_, nombre, duracion in _PRESTACIONES:
+    for id_, nombre, duracion, color in _PRESTACIONES:
         sesion.add(
             PrestacionModelo(
-                id=id_, consultorio_id=1, nombre=nombre, duracion_minutos=duracion, activa=True
+                id=id_,
+                consultorio_id=1,
+                nombre=nombre,
+                duracion_minutos=duracion,
+                color=color,
+                reservable_online=False,
+                activa=True,
             )
         )
     for id_, nombre, apellido, telefono in _PACIENTES:

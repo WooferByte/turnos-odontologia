@@ -64,6 +64,8 @@ class PrestacionModelo(Base):
     consultorio_id: Mapped[int] = mapped_column(_fk("consultorio"))
     nombre: Mapped[str]
     duracion_minutos: Mapped[int]
+    color: Mapped[str]
+    reservable_online: Mapped[bool] = mapped_column(default=False)
     activa: Mapped[bool] = mapped_column(default=True)
 
 
