@@ -9,6 +9,8 @@ Sistema de gestión de turnos y agenda para odontólogos independientes y consul
 
 - `historial-de-turnos` (C-03): `GET /turnos/{id}/historial` devuelve los eventos del turno en orden cronológico. `POST /turnos` registra el evento `creado` en la misma transacción que el turno (si el evento no se guarda, el turno tampoco), y en PostgreSQL la base rechaza modificar o borrar un evento (el historial es de solo inserción).
 
+- `gestion-de-prestaciones` (C-04): `GET /prestaciones`, `POST /prestaciones` y `PATCH /prestaciones/{id}` para mantener el catálogo del consultorio (nombre único, duración múltiplo de 5, color, si se ofrece en la reserva online, activa o inactiva). Editar una prestación no cambia los turnos ya creados, y una prestación inactiva no admite turnos nuevos. La migración `0005` agrega `color` y `reservable_online`.
+
 No hay interfaz gráfica. La API se puede probar sin instalar nada más que Python (base SQLite en memoria) o sobre PostgreSQL con Docker.
 
 > Todos los datos del proyecto, de los tests y de la demo son **ficticios**. No hay datos reales de pacientes ni secretos.
@@ -85,7 +87,7 @@ python -m pytest
 
 Los tests corren con **SQLite en memoria**: no necesitan Docker, PostgreSQL ni Redis, ni ningún archivo de base de datos.
 
-La corrida termina con **«193 passed, 37 deselected, 1 warning»**. Los 37 «deselected» son los del perfil opcional con PostgreSQL (más abajo), que la corrida por defecto excluye a propósito. El warning es un aviso de deprecación interno de Starlette (`starlette/testclient.py`, sobre `anyio.abc.BlockingPortal`): viene de una dependencia con versión fijada, no del código del proyecto, y no indica ningún problema.
+La corrida termina con **«257 passed, 38 deselected, 1 warning»**. Los 38 «deselected» son los del perfil opcional con PostgreSQL (más abajo), que la corrida por defecto excluye a propósito. El warning es un aviso de deprecación interno de Starlette (`starlette/testclient.py`, sobre `anyio.abc.BlockingPortal`): viene de una dependencia con versión fijada, no del código del proyecto, y no indica ningún problema.
 
 ### Escenario → test
 
@@ -115,6 +117,27 @@ Los escenarios del historial (`historial-de-turnos`, C-03) están en `openspec/c
 | US-015 CA-1 | La ruta del historial no admite modificaciones (`405`) | `test_ca1_la_ruta_del_historial_no_admite_modificaciones` (parametrizado) |
 | HIS-1 | Un turno inexistente rechaza con `RN-GL-04` (`404` por HTTP) | `test_his1_turno_inexistente_rechaza_con_rn_gl_04`, `test_his1_get_historial_de_turno_inexistente_responde_404` |
 | HIS-1 | Un id que no es número responde `422` sin código | `test_his1_id_que_no_es_numero_responde_422_sin_codigo` |
+
+Los escenarios de la gestión de prestaciones (`gestion-de-prestaciones`, C-04) están en `openspec/changes/gestion-de-prestaciones/specs/` y se prueban en la suite por defecto: las reglas puras en `backend/tests/unit/test_prestaciones.py`, el repositorio en `backend/tests/integration/test_repositorio_prestaciones.py`, los casos de uso en `backend/tests/integration/test_prestaciones.py` y HTTP en `backend/tests/api/test_prestaciones.py`:
+
+| Escenario | Qué verifica | Test titular |
+|---|---|---|
+| US-001 CA-1 | El alta responde `201` con los seis campos; nace activa y no reservable | `test_ca1_post_prestaciones_responde_201_con_los_seis_campos` (HTTP), `test_ca1_crear_prestacion_la_guarda_activa_y_no_reservable` |
+| US-001 CA-1 | El nombre se guarda sin espacios de más y acepta `reservable_online` | `test_ca1_post_prestaciones_guarda_sin_espacios_de_mas_y_acepta_reservable_online` |
+| US-001 CA-1 | El listado incluye las inactivas, por id; vacío si no hay ninguna | `test_ca1_get_prestaciones_lista_activas_e_inactivas_por_id`, `test_ca1_get_prestaciones_sin_ninguna_responde_lista_vacia` |
+| US-001 CA-1 | Un cuerpo mal formado responde `422` sin código; una edición mal formada no cambia nada | `test_ca1_post_mal_formado_responde_422_sin_codigo` (parametrizado), `test_ca1_patch_mal_formado_no_cambia_nada` |
+| US-001 CA-1 | Nombre repetido: `409` con `RN-AG-15` | `test_ca1_post_con_nombre_repetido_responde_409_con_rn_ag_15` (HTTP), `test_ca1_nombre_repetido_rechaza_con_rn_ag_15` |
+| US-001 CA-1 | El nombre repetido ignora mayúsculas y acentos, también entre inactivas | `test_ca1_nombre_repetido_sin_mayusculas_ni_acentos_y_entre_inactivas`, `test_ca1_clave_de_nombre_ignora_mayusculas_acentos_y_espacios` (unitario) |
+| US-001 CA-1 | Renombrar con el nombre de otra rechaza; con el propio, se acepta | `test_ca1_renombrar_con_el_nombre_de_otra_rechaza_y_no_cambia_nada`, `test_ca1_renombrar_con_su_propio_nombre_se_acepta` |
+| US-001 CA-1 | Editar el color deja lo demás igual | `test_ca1_patch_del_color_responde_200_y_deja_lo_demas_igual` |
+| US-001 CA-1 | Una prestación inexistente en la URL: `404` con `RN-GL-04` | `test_ca1_patch_de_una_prestacion_inexistente_responde_404_con_rn_gl_04` |
+| US-001 CA-1 | Una prestación desactivada no admite turnos nuevos (`422`, `inactivo`) y se reactiva | `test_ca1_una_prestacion_desactivada_no_admite_turnos_nuevos` |
+| US-001 CA-2 | Duración 47: `422` con `RN-AG-01`; se informa antes que el nombre repetido | `test_ca2_post_con_duracion_47_responde_422_con_rn_ag_01` (HTTP), `test_ca2_crear_con_duracion_invalida_rechaza_con_rn_ag_01` (parametrizado), `test_ca2_la_duracion_invalida_se_informa_antes_que_el_nombre_repetido` |
+| US-001 CA-2 | La edición valida la duración igual que el alta; 5 minutos es el mínimo | `test_ca2_patch_con_duracion_invalida_responde_422`, `test_ca2_cinco_minutos_es_el_minimo_aceptado` |
+| US-001 CA-3 | Alargar la duración no cambia el turno existente; el nuevo usa la duración nueva | `test_ca3_alargar_la_duracion_no_cambia_el_turno_existente` (HTTP), `test_ca3_editar_la_prestacion_no_modifica_la_fila_del_turno` |
+| US-001 CA-3 | Acortarla no libera el horario del turno viejo (`409`) | `test_ca3_acortar_la_duracion_no_libera_el_horario` |
+| US-001 CA-3 | Editar la prestación no agrega eventos al historial | `test_ca3_editar_la_prestacion_no_agrega_eventos_al_historial` |
+| Seed de la demo | La demo lista las cinco prestaciones con su color | `test_la_demo_lista_las_cinco_prestaciones_con_su_color` (`backend/tests/api/test_demo.py`) |
 
 Además, E1, E4 y E12 se prueban por HTTP en `backend/tests/api/test_post_turnos.py` (`test_e1_post_turnos_responde_201`, `test_e4_post_turnos_responde_409_con_los_dos_codigos`, `test_e12_post_turnos_responde_422_con_rn_gl_04`), y las reglas puras tienen tests unitarios sin base de datos en `backend/tests/unit/`.
 
@@ -148,7 +171,7 @@ Una parte de los tests (la que prueba lo que solo PostgreSQL garantiza) está fu
 
    Se usa `127.0.0.1` y no `localhost`: en Windows `localhost` resuelve primero a IPv6 y la conexión espera varios segundos antes de caer a IPv4.
 
-Con la base levantada, la corrida termina con **«37 passed, 193 deselected, 1 warning»**. **Si PostgreSQL no está disponible** (Docker apagado, `TEST_DATABASE_URL` sin definir o base que no responde), los 37 tests del perfil **se omiten con el motivo en el resumen** (**«37 skipped, 193 deselected»**) y la corrida termina con código de salida 0. Si la base de `TEST_DATABASE_URL` no termina en `_test`, el perfil falla a propósito para no borrar otra base.
+Con la base levantada, la corrida termina con **«38 passed, 257 deselected, 1 warning»**. **Si PostgreSQL no está disponible** (Docker apagado, `TEST_DATABASE_URL` sin definir o base que no responde), los 38 tests del perfil **se omiten con el motivo en el resumen** (**«38 skipped, 257 deselected»**) y la corrida termina con código de salida 0. Si la base de `TEST_DATABASE_URL` no termina en `_test`, el perfil falla a propósito para no borrar otra base.
 
 El esquema de estos tests sale siempre de las migraciones, nunca de `create_all`. Por eso el perfil también comprueba que las migraciones y los modelos coinciden (INF-1): si alguien cambia un modelo sin escribir su migración, ese test se pone en rojo. **La suite por defecto no avisa de esto**: hay que correr el perfil cada vez que se toque el esquema.
 
@@ -160,9 +183,10 @@ Los escenarios están en `openspec/changes/infraestructura-postgresql/specs/pers
 
 | Escenario | Qué verifica | Test titular |
 |---|---|---|
-| INF-1 | Una base vacía migrada queda con el esquema de los modelos (siete tablas desde C-03), sin diferencias | `test_inf1_base_vacia_migrada_queda_con_el_esquema_del_modelo` (`test_migraciones.py`) |
+| INF-1 | Una base vacía migrada queda con el esquema de los modelos (siete tablas desde C-03; con `color` y `reservable_online` desde C-04), sin diferencias | `test_inf1_base_vacia_migrada_queda_con_el_esquema_del_modelo` (`test_migraciones.py`) |
 | INF-1 | Deshacer las migraciones deja la base vacía | `test_inf1_deshacer_las_migraciones_deja_la_base_vacia` (`test_migraciones.py`) |
 | INF-1 | Deshacer solo las migraciones del historial deja el esquema de C-01 | `test_inf1_deshacer_las_migraciones_del_historial_deja_el_esquema_de_c01` (`test_migraciones.py`) |
+| INF-1 | La migración `0005` completa las prestaciones existentes con gris (`#9E9E9E`) y `reservable_online` en `false` (D174) | `test_inf1_la_migracion_0005_completa_las_prestaciones_existentes` (`test_migraciones.py`) |
 | INF-2 | La base rechaza el solapamiento por profesional (E2) y por sillón (E3) | `test_inf2_la_base_rechaza_el_solapamiento_de_e2`, `test_inf2_la_base_rechaza_el_solapamiento_de_e3` (`test_restriccion_de_exclusion.py`) |
 | INF-2 | Cualquier estado activo bloquea | `test_inf2_cualquier_estado_activo_bloquea` (parametrizado) |
 | INF-3 | La base acepta el turno contiguo (E5) y un turno no activo no bloquea (E6) | `test_inf3_la_base_acepta_el_turno_contiguo_de_e5`, `test_inf3_un_turno_no_activo_no_bloquea` (parametrizado) |
@@ -186,14 +210,14 @@ python -m uvicorn app.main:crear_app_demo --factory
 
 Swagger queda en <http://127.0.0.1:8000/docs>. Para detener el servidor, `Ctrl+C`.
 
-La demo usa una base SQLite en memoria con datos ficticios. Cada arranque parte de los mismos datos y al reiniciar se pierden los turnos creados. El único endpoint de lectura es el del historial de un turno, así que los identificadores de los demás recursos son fijos:
+La demo usa una base SQLite en memoria con datos ficticios. Cada arranque parte de los mismos datos y al reiniciar se pierden los turnos creados. Los endpoints de lectura son el historial de un turno y el listado de prestaciones; el resto de los identificadores son fijos:
 
 | Qué | Identificadores |
 |---|---|
 | Consultorio | 1 — «Consultorio Demo» |
 | Profesional | 1 — «Dra. Demo Ficticia» |
 | Sillón | 1 — «Sillón 1» |
-| Prestaciones | 1 «Consulta / control» (30 min), 2 «Limpieza» (45 min), 3 «Obturación» (60 min), 4 «Extracción» (45 min), 5 «Urgencia» (30 min) |
+| Prestaciones | 1 «Consulta / control» (30 min, `#1E88E5`), 2 «Limpieza» (45 min, `#43A047`), 3 «Obturación» (60 min, `#FB8C00`), 4 «Extracción» (45 min, `#E53935`), 5 «Urgencia» (30 min, `#8E24AA`); ninguna es reservable online |
 | Pacientes | 1 «Ana Ejemplo», 2 «Bruno Ficticio», 3 «Carla Inventada» |
 
 El profesional y el sillón se pueden omitir en la petición: como la demo tiene uno solo de cada uno, se usan esos.
@@ -224,6 +248,37 @@ curl -i http://127.0.0.1:8000/turnos/1/historial
 ```
 
 La demo parte siempre sin turnos, así que el primero que se crea es el `1`. En la API sobre PostgreSQL el id lo asigna la base y puede ser otro: usá el `id` que devolvió el `201`.
+
+### Prestaciones
+
+Las tres rutas no tienen autenticación y trabajan sobre el único consultorio de la instalación (el cuerpo no lleva `consultorio_id`). Con la demo levantada, en Swagger o con `curl`:
+
+1. `GET /prestaciones` → `200`, con las cinco prestaciones de la tabla de arriba, ordenadas por `id`, cada una con `id`, `nombre`, `duracion_minutos`, `color`, `reservable_online` (`false`) y `activa` (`true`). Incluye las inactivas.
+2. `POST /prestaciones` con `{"nombre": "Blanqueamiento", "duracion_minutos": 60, "color": "#3A7BD5"}` → `201`, con `id` 6, `reservable_online` `false` y `activa` `true`.
+3. El mismo `POST` otra vez, o con `"nombre": "blanqueamiento"` (se ignoran mayúsculas, acentos y espacios de más; también cuenta entre las inactivas) → `409`, con `codigos` igual a `["RN-AG-15"]`.
+4. `POST /prestaciones` con `{"nombre": "Prueba", "duracion_minutos": 47, "color": "#3A7BD5"}` → `422`, con `codigos` igual a `["RN-AG-01"]` (la duración tiene que ser mayor que 0 y múltiplo de 5).
+5. `PATCH /prestaciones/2` con `{"color": "#000000"}` → `200`, con la Limpieza igual que antes salvo el color. En el `PATCH` solo se cambia lo que viene en el cuerpo.
+6. `PATCH /prestaciones/999` con `{"color": "#000000"}` → `404`, con `codigos` igual a `["RN-GL-04"]`.
+
+Editar la duración no toca los turnos ya creados (CA-3):
+
+1. `POST /turnos` con `{"paciente_id": 1, "prestacion_id": 1, "inicio": "2026-11-02T13:00:00Z"}` → `201`, `duracion_minutos` 30 y `fin` `2026-11-02T13:30:00Z`.
+2. `PATCH /prestaciones/1` con `{"duracion_minutos": 60}` → `200`.
+3. `POST /turnos` con `{"paciente_id": 2, "prestacion_id": 1, "inicio": "2026-11-02T13:30:00Z"}` → `201`, `duracion_minutos` 60 y `fin` `2026-11-02T14:30:00Z`: el turno viejo sigue terminando a las 13:30, así que el nuevo cabe pegado.
+
+Y una prestación inactiva no admite turnos nuevos:
+
+1. `PATCH /prestaciones/5` con `{"activa": false}` → `200`.
+2. `POST /turnos` con `{"paciente_id": 1, "prestacion_id": 5, "inicio": "2026-11-03T13:00:00Z"}` → `422`, con `codigos` igual a `["RN-GL-04"]` y en `referencias` `{"recurso": "prestacion", "recurso_id": 5, "motivo": "inactivo"}`. Con `{"activa": true}` se reactiva.
+
+Con `curl` (el alta y la edición del color):
+
+```
+curl -i -X POST http://127.0.0.1:8000/prestaciones -H "Content-Type: application/json" -d "{\"nombre\": \"Blanqueamiento\", \"duracion_minutos\": 60, \"color\": \"#3A7BD5\"}"
+curl -i -X PATCH http://127.0.0.1:8000/prestaciones/2 -H "Content-Type: application/json" -d "{\"color\": \"#000000\"}"
+```
+
+En la API sobre PostgreSQL el id de la prestación nueva lo asigna la base (mayor que 5) y los de la 1 a la 5 son los del seed.
 
 ## Levantar la API con PostgreSQL
 
@@ -266,13 +321,13 @@ python -m uvicorn app.main:crear_app_desde_entorno --factory
 
 ### Migraciones
 
-El esquema de PostgreSQL sale solo de migraciones (`backend/app/infrastructure/db/migraciones/versions/`: `0001` crea las seis tablas, `0002` agrega las restricciones de exclusión, `0003` crea la tabla `evento_turno` del historial y `0004` agrega los disparadores que hacen que la base rechace `UPDATE`, `DELETE` y `TRUNCATE` sobre esa tabla). Son solo para PostgreSQL; la suite por defecto crea el esquema con `create_all` sobre SQLite. Desde `backend/`, con `DATABASE_URL` definida como arriba:
+El esquema de PostgreSQL sale solo de migraciones (`backend/app/infrastructure/db/migraciones/versions/`: `0001` crea las seis tablas, `0002` agrega las restricciones de exclusión, `0003` crea la tabla `evento_turno` del historial y `0004` agrega los disparadores que hacen que la base rechace `UPDATE`, `DELETE` y `TRUNCATE` sobre esa tabla, y `0005` agrega `color` y `reservable_online` a `prestacion`: completa las filas que ya existían con gris `#9E9E9E` y `false`, y después quita esos valores por defecto porque la API exige el color). Son solo para PostgreSQL; la suite por defecto crea el esquema con `create_all` sobre SQLite. Desde `backend/`, con `DATABASE_URL` definida como arriba:
 
 ```
 python -m alembic current
 python -m alembic upgrade head
 python -m alembic downgrade base
-python -m alembic revision --autogenerate --rev-id 0005 -m "descripcion"
+python -m alembic revision --autogenerate --rev-id 0006 -m "descripcion"
 ```
 
 La migración autogenerada **se revisa a mano** antes de usarla, y cada change que toque un modelo agrega la suya y corre el perfil opcional (INF-1).
@@ -282,6 +337,8 @@ La migración autogenerada **se revisa a mano** antes de usarla, y cada change q
 - **`POST /turnos` no tiene autenticación** en este change (DD-14). Es aceptable porque solo hay datos ficticios y ningún despliegue público; por eso los puertos se publican solo en `127.0.0.1`.
 - Los datos de la demo sin Docker viven en memoria y se pierden al reiniciar; los de la API sobre PostgreSQL persisten en el volumen de Docker.
 - La coincidencia entre migraciones y modelos (INF-1), la protección ante reservas simultáneas (E11, y el evento único de E9 con ocho reservas) y la garantía de que la base rechaza modificar o borrar un evento (US-015 CA-1, migración `0004`) **solo se prueban en el perfil opcional con PostgreSQL**: la suite por defecto no las ejerce. En SQLite (demo y suite por defecto) la inmutabilidad del historial se garantiza solo desde la aplicación: no hay métodos para modificarlo y la ruta responde `405`.
+- **`GET /prestaciones`, `POST /prestaciones` y `PATCH /prestaciones/{id}` no tienen autenticación** (DD-14), por el mismo motivo: datos ficticios y puertos solo en `127.0.0.1`. Trabajan sobre el único consultorio de la instalación (D173).
+- Un volumen de PostgreSQL sembrado antes de la migración `0005` (por ejemplo, el de las pruebas manuales de C-02 y C-03) **no se vuelve a sembrar**: sus cinco prestaciones quedan con el color gris `#9E9E9E` hasta que se edite cada una con `PATCH /prestaciones/{id}` (D174). Con `docker compose down -v` la base arranca vacía y el seed trae los colores de la demo.
 - **`GET /turnos/{id}/historial` no tiene autenticación** (DD-14): cualquiera que llegue a la API ve el historial de cualquier turno. Es aceptable por el mismo motivo que `POST /turnos`: datos ficticios y puertos solo en `127.0.0.1`.
 - Los eventos `creado` anteriores a C-07 tienen `actor_tipo` `usuario` y **`actor_id` vacío para siempre** (D159): todavía no hay usuarios autenticados y completarlo después sería modificar el historial.
 - Los turnos guardados antes de la migración `0003` (por ejemplo, los de la prueba manual de C-02 en el volumen de PostgreSQL) **no tienen historial**: la consulta devuelve `200` con `[]` (D160). La migración no inventa eventos del pasado.
