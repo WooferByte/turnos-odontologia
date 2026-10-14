@@ -14,7 +14,16 @@ from app.domain.errors import (
     NombreDePrestacionRepetido,
     PrestacionNoEncontrada,
 )
-from tests.factories import un_consultorio, una_prestacion
+from app.infrastructure.db.modelos import TurnoModelo
+from tests.conftest import a_las
+from tests.factories import (
+    un_consultorio,
+    un_paciente,
+    un_profesional,
+    una_prestacion,
+    un_sillon,
+    un_turno,
+)
 
 
 def _alta(nombre: str = "Blanqueamiento", **kw) -> CrearPrestacionComando:
@@ -184,3 +193,26 @@ def test_ca2_cinco_minutos_es_el_minimo_aceptado(sesion, uow) -> None:
     editada = editar_prestacion(creada.id, EditarPrestacionComando(duracion_minutos=5), uow)
 
     assert (creada.duracion_minutos, editada.duracion_minutos) == (5, 5)
+
+
+def test_ca3_editar_la_prestacion_no_modifica_la_fila_del_turno(sesion, uow, fabrica_sesiones) -> None:
+    consultorio = un_consultorio(sesion)
+    prestacion = una_prestacion(sesion, consultorio, duracion_minutos=30)
+    turno = un_turno(
+        sesion,
+        paciente=un_paciente(sesion, consultorio),
+        profesional=un_profesional(sesion, consultorio),
+        sillon=un_sillon(sesion, consultorio),
+        prestacion=prestacion,
+        inicio=a_las(10),
+    )
+
+    editar_prestacion(prestacion.id, EditarPrestacionComando(duracion_minutos=60, activa=False), uow)
+
+    with fabrica_sesiones() as otra:
+        guardado = otra.get(TurnoModelo, turno.id)
+        assert (guardado.inicio, guardado.fin, guardado.duracion_minutos) == (
+            a_las(10),
+            a_las(10, 30),
+            30,
+        )

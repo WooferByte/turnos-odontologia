@@ -2,11 +2,23 @@
 
 Sin dobles: la sesión y los repositorios son los reales, sobre el engine SQLite del test.
 """
+from datetime import datetime
+
 import pytest
 from fastapi.testclient import TestClient
 
+from app.api.deps import get_reloj
+from app.infrastructure.db.modelos import TurnoModelo
 from app.main import crear_app
-from tests.factories import un_consultorio, una_prestacion
+from tests.conftest import a_las, reloj_fijo
+from tests.factories import (
+    un_consultorio,
+    un_paciente,
+    un_profesional,
+    una_prestacion,
+    un_sillon,
+    un_turno,
+)
 
 CAMPOS_DE_PRESTACION_SALIDA = {"id", "nombre", "duracion_minutos", "color", "reservable_online", "activa"}
 PROBLEMA_JSON = "application/problem+json"
@@ -14,7 +26,33 @@ PROBLEMA_JSON = "application/problem+json"
 
 @pytest.fixture
 def cliente(engine) -> TestClient:
-    return TestClient(crear_app(engine))
+    app = crear_app(engine)
+    app.dependency_overrides[get_reloj] = lambda: reloj_fijo
+    return TestClient(app)
+
+
+def _escenario(sesion, duracion_minutos: int) -> dict:
+    """Consultorio con un profesional, un sillón y un paciente, y una prestación de esa duración."""
+    consultorio = un_consultorio(sesion)
+    return {
+        "paciente": un_paciente(sesion, consultorio),
+        "profesional": un_profesional(sesion, consultorio),
+        "sillon": un_sillon(sesion, consultorio),
+        "prestacion": una_prestacion(sesion, consultorio, duracion_minutos=duracion_minutos),
+    }
+
+
+def _pedir_turno(cliente, datos: dict, inicio: str):
+    return cliente.post(
+        "/turnos",
+        json={
+            "paciente_id": datos["paciente"].id,
+            "prestacion_id": datos["prestacion"].id,
+            "inicio": inicio,
+            "profesional_id": datos["profesional"].id,
+            "sillon_id": datos["sillon"].id,
+        },
+    )
 
 
 def test_ca1_post_prestaciones_responde_201_con_los_seis_campos(cliente, sesion):
@@ -239,3 +277,31 @@ def test_openapi_declara_los_errores_de_prestaciones_con_el_esquema_problema(eng
                 "$ref": "#/components/schemas/Problema"
             }
     assert "HTTPValidationError" not in openapi["components"]["schemas"]
+
+
+def test_ca3_alargar_la_duracion_no_cambia_el_turno_existente(cliente, sesion):
+    datos = _escenario(sesion, duracion_minutos=30)
+    un_turno(sesion, **{k: datos[k] for k in ("paciente", "profesional", "sillon", "prestacion")}, inicio=a_las(10))
+
+    editada = cliente.patch(f"/prestaciones/{datos['prestacion'].id}", json={"duracion_minutos": 60})
+    contiguo = _pedir_turno(cliente, datos, "2026-11-02T10:30:00Z")
+
+    assert editada.status_code == 200
+    # El turno de 10:00-10:30 conserva su fin: el contiguo de 10:30 cabe y nace con 60 minutos.
+    assert contiguo.status_code == 201
+    cuerpo = contiguo.json()
+    assert cuerpo["duracion_minutos"] == 60
+    assert datetime.fromisoformat(cuerpo["fin"]) == a_las(11, 30)
+
+
+def test_ca3_acortar_la_duracion_no_libera_el_horario(cliente, sesion):
+    datos = _escenario(sesion, duracion_minutos=60)
+    un_turno(sesion, **{k: datos[k] for k in ("paciente", "profesional", "sillon", "prestacion")}, inicio=a_las(10))
+
+    editada = cliente.patch(f"/prestaciones/{datos['prestacion'].id}", json={"duracion_minutos": 30})
+    solapado = _pedir_turno(cliente, datos, "2026-11-02T10:30:00Z")
+
+    assert editada.status_code == 200
+    # El turno de 10:00-11:00 conserva su fin: las 10:30 siguen ocupadas.
+    assert solapado.status_code == 409
+    assert solapado.json()["codigos"] == ["RN-AG-05", "RN-AG-08"]
