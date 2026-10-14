@@ -8,6 +8,7 @@ from datetime import datetime
 import pytest
 from fastapi.testclient import TestClient
 
+from app.infrastructure.db.seed_demo import CONTRASENA_DEMO
 from app.main import crear_app_demo
 
 PETICION_DE_EJEMPLO = {"paciente_id": 1, "prestacion_id": 1, "inicio": "2026-11-02T13:00:00Z"}
@@ -99,3 +100,20 @@ def test_la_demo_lista_las_cinco_prestaciones_con_su_color():
         (4, "Extracción", "#E53935"),
         (5, "Urgencia", "#8E24AA"),
     ]
+
+
+def test_us090_ca1_la_demo_inicia_sesion_con_el_usuario_del_seed():
+    cliente = TestClient(crear_app_demo())
+
+    correcta = cliente.post(
+        "/auth/login",
+        json={"email": "odontologa@consultorio-demo.test", "contrasena": CONTRASENA_DEMO},
+    )
+    incorrecta = cliente.post(
+        "/auth/login",
+        json={"email": "odontologa@consultorio-demo.test", "contrasena": "otra-contrasena-ficticia"},
+    )
+
+    assert correcta.status_code == 200
+    assert set(correcta.json()) >= {"access_token", "refresh_token", "token_type", "expires_in"}
+    assert incorrecta.status_code == 401
