@@ -305,3 +305,41 @@ def test_ca3_acortar_la_duracion_no_libera_el_horario(cliente, sesion):
     # El turno de 10:00-11:00 conserva su fin: las 10:30 siguen ocupadas.
     assert solapado.status_code == 409
     assert solapado.json()["codigos"] == ["RN-AG-05", "RN-AG-08"]
+
+
+def test_ca1_una_prestacion_desactivada_no_admite_turnos_nuevos(cliente, sesion, fabrica_sesiones):
+    datos = _escenario(sesion, duracion_minutos=45)
+    existente = un_turno(
+        sesion, **{k: datos[k] for k in ("paciente", "profesional", "sillon", "prestacion")}, inicio=a_las(10)
+    )
+    ruta = f"/prestaciones/{datos['prestacion'].id}"
+
+    desactivada = cliente.patch(ruta, json={"activa": False})
+    rechazado = _pedir_turno(cliente, datos, "2026-11-02T11:00:00Z")
+
+    assert desactivada.status_code == 200
+    assert rechazado.status_code == 422
+    cuerpo = rechazado.json()
+    assert cuerpo["codigos"] == ["RN-GL-04"]
+    assert cuerpo["referencias"] == [
+        {"recurso": "prestacion", "recurso_id": datos["prestacion"].id, "motivo": "inactivo"}
+    ]
+    with fabrica_sesiones() as otra:
+        turno = otra.get(TurnoModelo, existente.id)
+        assert (turno.inicio, turno.fin, turno.estado) == (existente.inicio, existente.fin, "reservado")
+    reactivada = cliente.patch(ruta, json={"activa": True})
+    aceptado = _pedir_turno(cliente, datos, "2026-11-02T11:00:00Z")
+    assert reactivada.status_code == 200
+    assert aceptado.status_code == 201
+
+
+def test_ca3_editar_la_prestacion_no_agrega_eventos_al_historial(cliente, sesion):
+    datos = _escenario(sesion, duracion_minutos=30)
+    turno_id = _pedir_turno(cliente, datos, "2026-11-02T10:00:00Z").json()["id"]
+    antes = cliente.get(f"/turnos/{turno_id}/historial").json()
+
+    cliente.patch(f"/prestaciones/{datos['prestacion'].id}", json={"duracion_minutos": 60, "activa": False})
+    despues = cliente.get(f"/turnos/{turno_id}/historial").json()
+
+    assert len(antes) == 1
+    assert despues == antes
