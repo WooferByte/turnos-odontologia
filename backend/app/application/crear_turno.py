@@ -17,6 +17,7 @@ from app.domain.errors import (
 )
 from app.domain.tiempo import Reloj, exigir_utc, utc_now
 from app.domain.turnos.estados import EstadoTurno
+from app.domain.turnos.eventos import ACTOR_PANEL_SIN_AUTENTICAR, Actor, evento_creado
 from app.domain.turnos.turno import Turno
 
 
@@ -111,7 +112,7 @@ def _validar_entrada(
 
 
 def _intentar_crear_turno(
-    comando: CrearTurnoComando, uow: UnidadDeTrabajo, reloj: Reloj
+    comando: CrearTurnoComando, uow: UnidadDeTrabajo, reloj: Reloj, actor: Actor
 ) -> Turno:
     with uow:
         profesional, prestacion, sillon = _validar_entrada(comando, uow)
@@ -130,7 +131,7 @@ def _intentar_crear_turno(
         )
         if conflictos:
             raise ErrorDeSolapamiento(conflictos)
-        return uow.agenda.agregar(
+        turno = uow.agenda.agregar(
             Turno(
                 consultorio_id=profesional.consultorio_id,
                 paciente_id=comando.paciente_id,
@@ -144,9 +145,17 @@ def _intentar_crear_turno(
                 creado_en=reloj(),
             )
         )
+        # Mismo ``with uow:``: el turno y su evento ``creado`` se confirman juntos o ninguno (E9).
+        uow.historial.registrar(evento_creado(turno, actor))
+        return turno
 
 
-def crear_turno(comando: CrearTurnoComando, uow: UnidadDeTrabajo, reloj: Reloj = utc_now) -> Turno:
+def crear_turno(
+    comando: CrearTurnoComando,
+    uow: UnidadDeTrabajo,
+    reloj: Reloj = utc_now,
+    actor: Actor = ACTOR_PANEL_SIN_AUTENTICAR,
+) -> Turno:
     """Crea el turno; si la base lo rechaza por una carrera (E11), reevalúa con el dominio.
 
     Antes de leer los ocupados toma el bloqueo del profesional y del sillón, así que la segunda
@@ -158,7 +167,7 @@ def crear_turno(comando: CrearTurnoComando, uow: UnidadDeTrabajo, reloj: Reloj =
     """
     for _ in range(INTENTOS_ANTE_CARRERA - 1):
         try:
-            return _intentar_crear_turno(comando, uow, reloj)
+            return _intentar_crear_turno(comando, uow, reloj, actor)
         except SolapamientoEnLaBase:
             continue  # otra transacción ganó el hueco: ahora el dominio ya la ve
-    return _intentar_crear_turno(comando, uow, reloj)
+    return _intentar_crear_turno(comando, uow, reloj, actor)
