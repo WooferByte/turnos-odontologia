@@ -4,13 +4,11 @@ from alembic import command
 from alembic.autogenerate import compare_metadata
 from alembic.config import Config
 from alembic.migration import MigrationContext
-from sqlalchemy import Engine, inspect, text
-from datetime import datetime
-
-from sqlalchemy import select
+from sqlalchemy import DateTime, Engine, inspect, select, text
 from sqlalchemy.orm import Session
 
 from app.infrastructure.db.modelos import Base, TurnoModelo
+from app.infrastructure.db.tipos import FechaHoraUTC
 from tests.conftest import a_las
 from tests.factories import (
     un_consultorio,
@@ -42,7 +40,7 @@ def test_inf1_base_vacia_migrada_queda_con_el_esquema_del_modelo(engine: Engine)
         for tabla in Base.metadata.sorted_tables:
             columnas = {c["name"]: c["type"] for c in inspector.get_columns(tabla.name)}
             for columna in tabla.columns:
-                if columna.type.python_type is datetime:
+                if isinstance(columna.type, (DateTime, FechaHoraUTC)):
                     assert columnas[columna.name].timezone is True, f"{tabla.name}.{columna.name}"
 
 
