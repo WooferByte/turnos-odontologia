@@ -6,7 +6,13 @@ from sqlalchemy import func, select
 from sqlalchemy.exc import DBAPIError
 
 from app.application.crear_turno import CrearTurnoComando, crear_turno
-from app.domain.errors import EntradaInvalida, ErrorDeSolapamiento
+from app.application.historial import consultar_historial
+from app.domain.errors import (
+    EntradaInvalida,
+    ErrorDeSolapamiento,
+    ReferenciaInvalida,
+    TurnoNoEncontrado,
+)
 from app.domain.turnos.eventos import ActorTipo, TipoEvento
 from app.infrastructure.db.modelos import EventoTurnoModelo, TurnoModelo
 from app.infrastructure.repositories.historial import RepositorioHistorialSqlAlchemy
@@ -110,3 +116,24 @@ def test_e9_si_el_evento_no_se_guarda_no_queda_el_turno(sesion, engine, fabrica_
 
     assert _cantidad(fabrica_sesiones, TurnoModelo) == 0
     assert _cantidad(fabrica_sesiones, EventoTurnoModelo) == 0
+
+
+def test_ca1_consultar_historial_devuelve_los_eventos_del_turno(sesion, uow):
+    datos = _escenario(sesion)
+    turno = crear_turno(_comando(datos, a_las(10)), uow, reloj_fijo)
+
+    eventos = consultar_historial(turno.id, uow)
+
+    assert len(eventos) == 1
+    assert eventos[0].turno_id == turno.id
+    assert eventos[0].tipo is TipoEvento.CREADO
+    assert eventos[0].actor_tipo is ActorTipo.USUARIO
+    assert eventos[0].ocurrido_en == RELOJ_FIJO
+
+
+def test_his1_turno_inexistente_rechaza_con_rn_gl_04(uow):
+    with pytest.raises(TurnoNoEncontrado) as excinfo:
+        consultar_historial(999, uow)
+
+    assert excinfo.value.codigos == ["RN-GL-04"]
+    assert excinfo.value.referencias == (ReferenciaInvalida("turno", 999, "inexistente"),)
