@@ -4,7 +4,7 @@ Los identificadores se asignan a mano para que sean fijos y el README pueda docu
 Hay un solo profesional y un solo sillón a propósito: así omitirlos funciona (RN-AG-14) y un
 segundo turno a la misma hora muestra el ``409`` con los dos códigos (E4).
 """
-from sqlalchemy import text
+from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
 from app.infrastructure.db.modelos import (
@@ -13,7 +13,9 @@ from app.infrastructure.db.modelos import (
     PrestacionModelo,
     ProfesionalModelo,
     SillonModelo,
+    UsuarioModelo,
 )
+from app.domain.tiempo import utc_now
 
 # Prestaciones y duraciones de 04_modelo_de_datos.md, «Seed data inicial» (D56).
 _PRESTACIONES = (
@@ -30,6 +32,11 @@ _PACIENTES = (
     (2, "Bruno", "Ficticio", "+5491155550102"),
     (3, "Carla", "Inventada", "+5491155550103"),
 )
+
+# Usuario ficticio del panel (design J11, D197, D202): sin roles hasta C-07. La contraseña es
+# solo de la demo en memoria; en PostgreSQL la define SEED_USUARIO_PASSWORD.
+EMAIL_DEMO = "odontologa@consultorio-demo.test"
+CONTRASENA_DEMO = "demo-consultorio-2026"
 
 
 def cargar_demo(sesion: Session) -> None:
@@ -77,6 +84,34 @@ def cargar_demo_si_falta(sesion: Session) -> bool:
     if sesion.get(ConsultorioModelo, 1) is not None:
         return False
     cargar_demo(sesion)
+    return True
+
+
+def cargar_usuario_demo(sesion: Session, hash_password: str) -> None:
+    """Carga el usuario del seed (id 1, consultorio 1) con el hash ya calculado y confirma."""
+    sesion.add(
+        UsuarioModelo(
+            id=1,
+            consultorio_id=1,
+            email=EMAIL_DEMO,
+            hash_password=hash_password,
+            activo=True,
+            token_version=0,
+            creado_en=utc_now(),
+        )
+    )
+    sesion.commit()
+
+
+def cargar_usuario_demo_si_falta(sesion: Session, hash_password: str) -> bool:
+    """Carga el usuario solo si no hay uno con ese email; devuelve si cargó (design J11).
+
+    Va aparte de ``cargar_demo_si_falta``: un volumen sembrado antes de C-06 ya tiene el
+    consultorio 1 y aun así tiene que recibir el usuario.
+    """
+    if sesion.scalar(select(UsuarioModelo.id).where(UsuarioModelo.email == EMAIL_DEMO)) is not None:
+        return False
+    cargar_usuario_demo(sesion, hash_password)
     return True
 
 

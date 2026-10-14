@@ -6,10 +6,13 @@ from dataclasses import dataclass, field
 
 VARIABLE_DATABASE_URL = "DATABASE_URL"
 VARIABLE_JWT_SECRET = "JWT_SECRET"
+VARIABLE_SEED_USUARIO_PASSWORD = "SEED_USUARIO_PASSWORD"
 VARIABLE_JWT_ACCESS_MINUTES = "JWT_ACCESS_MINUTES"
 VARIABLE_JWT_REFRESH_DAYS = "JWT_REFRESH_DAYS"
 
 MINIMO_DE_BYTES_DEL_SECRETO = 32  # D198: clave de 256 bits para HS256 (RFC 7518 §3.2)
+MINIMO_DE_CARACTERES_DE_CONTRASENA = 10  # RN-AU-07
+MAXIMO_DE_BYTES_DE_CONTRASENA = 72  # límite de bcrypt (J6)
 MINUTOS_ACCESS_POR_DEFECTO = 15
 DIAS_REFRESH_POR_DEFECTO = 7
 RONDAS_BCRYPT = 12  # el valor por defecto de bcrypt; no es variable de entorno (J10)
@@ -65,6 +68,21 @@ def leer_configuracion_de_sesion(entorno: Mapping[str, str] = os.environ) -> Con
         minutos_access=_entero_positivo(entorno, VARIABLE_JWT_ACCESS_MINUTES, MINUTOS_ACCESS_POR_DEFECTO),
         dias_refresh=_entero_positivo(entorno, VARIABLE_JWT_REFRESH_DAYS, DIAS_REFRESH_POR_DEFECTO),
     )
+
+
+def leer_contrasena_del_seed(entorno: Mapping[str, str] = os.environ) -> str:
+    """Lee ``SEED_USUARIO_PASSWORD``: de 10 caracteres a 72 bytes (RN-AU-07); el error no muestra el valor."""
+    contrasena = entorno.get(VARIABLE_SEED_USUARIO_PASSWORD, "")
+    if not contrasena:
+        raise ConfiguracionInvalida(
+            f"Falta la variable de entorno {VARIABLE_SEED_USUARIO_PASSWORD} o está vacía"
+        )
+    if len(contrasena) < MINIMO_DE_CARACTERES_DE_CONTRASENA or len(contrasena.encode("utf-8")) > MAXIMO_DE_BYTES_DE_CONTRASENA:
+        raise ConfiguracionInvalida(
+            f"La variable de entorno {VARIABLE_SEED_USUARIO_PASSWORD} debe tener entre "
+            f"{MINIMO_DE_CARACTERES_DE_CONTRASENA} caracteres y {MAXIMO_DE_BYTES_DE_CONTRASENA} bytes"
+        )
+    return contrasena
 
 
 def secreto_efimero() -> str:

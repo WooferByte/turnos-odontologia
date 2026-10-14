@@ -5,6 +5,7 @@ from app.infrastructure.configuracion import (
     ConfiguracionDeSesion,
     ConfiguracionInvalida,
     leer_configuracion_de_sesion,
+    leer_contrasena_del_seed,
     leer_database_url,
     secreto_efimero,
 )
@@ -89,3 +90,10 @@ def test_secreto_efimero_cumple_el_minimo_y_cambia_cada_vez() -> None:
 
     assert len(primero.encode()) >= 32
     assert primero != segundo
+
+
+@pytest.mark.parametrize("contrasena", ["a" * 10, "a" * 72, "ñ" * 36])
+def test_leer_contrasena_del_seed_acepta_de_10_caracteres_a_72_bytes(contrasena):
+    entorno = {"SEED_USUARIO_PASSWORD": contrasena}
+
+    assert leer_contrasena_del_seed(entorno) == contrasena
