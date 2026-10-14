@@ -87,7 +87,7 @@ python -m pytest
 
 Los tests corren con **SQLite en memoria**: no necesitan Docker, PostgreSQL ni Redis, ni ningún archivo de base de datos.
 
-La corrida termina con **«257 passed, 38 deselected, 1 warning»**. Los 38 «deselected» son los del perfil opcional con PostgreSQL (más abajo), que la corrida por defecto excluye a propósito. El warning es un aviso de deprecación interno de Starlette (`starlette/testclient.py`, sobre `anyio.abc.BlockingPortal`): viene de una dependencia con versión fijada, no del código del proyecto, y no indica ningún problema.
+La corrida termina con **«303 passed, 39 deselected, 1 warning»**. Los 39 «deselected» son los del perfil opcional con PostgreSQL (más abajo), que la corrida por defecto excluye a propósito. El warning es un aviso de deprecación interno de Starlette (`starlette/testclient.py`, sobre `anyio.abc.BlockingPortal`): viene de una dependencia con versión fijada, no del código del proyecto, y no indica ningún problema.
 
 ### Escenario → test
 
@@ -139,6 +139,23 @@ Los escenarios de la gestión de prestaciones (`gestion-de-prestaciones`, C-04) 
 | US-001 CA-3 | Editar la prestación no agrega eventos al historial | `test_ca3_editar_la_prestacion_no_agrega_eventos_al_historial` |
 | Seed de la demo | La demo lista las cinco prestaciones con su color | `test_la_demo_lista_las_cinco_prestaciones_con_su_color` (`backend/tests/api/test_demo.py`) |
 
+Los escenarios de la gestión de sillones (`gestion-de-sillones`, C-05) están en `openspec/changes/gestion-de-sillones/specs/` y se prueban en la suite por defecto: el repositorio en `backend/tests/integration/test_repositorio_sillones.py`, los casos de uso en `backend/tests/integration/test_sillones.py` y HTTP en `backend/tests/api/test_sillones.py` (las rutas) y `backend/tests/api/test_sillones_y_turnos.py` (los sillones y `POST /turnos` juntos):
+
+| Escenario | Qué verifica | Test titular |
+|---|---|---|
+| US-004 CA-3 | El alta responde `201` con `id`, `nombre` y `activo`; nace activo y el nombre se guarda sin espacios de más | `test_ca3_post_sillones_responde_201_con_id_nombre_y_activo`, `test_ca3_post_sillones_guarda_el_nombre_sin_espacios_de_mas` (HTTP), `test_ca3_crear_sillon_lo_guarda_activo` |
+| US-004 CA-3 | El listado incluye los inactivos, por id; vacío si no hay ninguno | `test_ca3_get_sillones_lista_activos_e_inactivos_por_id`, `test_ca3_get_sillones_sin_sillones_responde_lista_vacia` |
+| US-004 CA-3 | Un cuerpo mal formado responde `422` sin código; una edición mal formada no cambia nada; una edición vacía responde el sillón sin cambios | `test_ca3_post_mal_formado_responde_422_sin_codigo` (parametrizado), `test_ca3_patch_mal_formado_no_cambia_nada`, `test_ca3_patch_vacio_responde_200_sin_cambios` |
+| US-004 CA-3 | Renombrar deja `activo` igual; `activo` `false` desactiva y el sillón sigue en el listado | `test_ca3_patch_del_nombre_conserva_activo`, `test_ca3_patch_activo_false_desactiva_el_sillon`, `test_ca3_renombrar_cambia_solo_el_nombre` |
+| US-004 CA-3 | Un sillón inexistente en la URL: `404` con `RN-GL-04` | `test_ca3_patch_de_sillon_inexistente_responde_404_con_rn_gl_04` (HTTP), `test_ca3_editar_sillon_inexistente_rechaza_con_rn_gl_04` |
+| US-004 CA-3 | Un sillón desactivado no admite turnos nuevos (`422`, `inactivo`), conserva los existentes y se reactiva | `test_ca3_un_sillon_desactivado_no_admite_turnos_nuevos`, `test_ca3_desactivar_no_modifica_los_turnos_del_sillon`, `test_ca3_reactivar_vuelve_a_admitir_turnos` |
+| US-004 CA-3 | El sillón inactivo se informa junto con otra referencia inválida, en un solo `422` | `test_ca3_el_sillon_inactivo_se_informa_junto_con_otra_referencia` |
+| US-004 CA-1 | Con un único sillón activo, el turno sin sillón va a ese | `test_ca1_con_un_unico_sillon_activo_el_turno_sin_sillon_va_a_ese` |
+| US-004 CA-1 | Con dos activos, omitir el sillón responde `422` con `varios_activos` | `test_ca1_con_dos_sillones_activos_omitirlo_responde_varios_activos` |
+| US-004 CA-1 | El sillón por defecto no es un id fijo; sin ninguno activo, `ninguno_activo` | `test_ca1_el_por_defecto_no_es_un_id_fijo`, `test_ca1_sin_sillones_activos_responde_ninguno_activo` |
+| US-004 CA-2 | Dos profesionales a la misma hora en sillones distintos se admiten; el sillón nuevo también se ocupa (`409`, `RN-AG-08`) | `test_ca2_dos_profesionales_a_la_misma_hora_en_sillones_distintos`, `test_ca2_el_sillon_nuevo_tambien_se_ocupa` |
+| Contrato | `/docs` declara los errores de `/sillones` con el esquema de problema | `test_openapi_declara_los_errores_de_sillones_con_el_esquema_problema` |
+
 Además, E1, E4 y E12 se prueban por HTTP en `backend/tests/api/test_post_turnos.py` (`test_e1_post_turnos_responde_201`, `test_e4_post_turnos_responde_409_con_los_dos_codigos`, `test_e12_post_turnos_responde_422_con_rn_gl_04`), y las reglas puras tienen tests unitarios sin base de datos en `backend/tests/unit/`.
 
 ## Perfil opcional con PostgreSQL
@@ -171,7 +188,7 @@ Una parte de los tests (la que prueba lo que solo PostgreSQL garantiza) está fu
 
    Se usa `127.0.0.1` y no `localhost`: en Windows `localhost` resuelve primero a IPv6 y la conexión espera varios segundos antes de caer a IPv4.
 
-Con la base levantada, la corrida termina con **«38 passed, 257 deselected, 1 warning»**. **Si PostgreSQL no está disponible** (Docker apagado, `TEST_DATABASE_URL` sin definir o base que no responde), los 38 tests del perfil **se omiten con el motivo en el resumen** (**«38 skipped, 257 deselected»**) y la corrida termina con código de salida 0. Si la base de `TEST_DATABASE_URL` no termina en `_test`, el perfil falla a propósito para no borrar otra base.
+Con la base levantada, la corrida termina con **«39 passed, 303 deselected, 1 warning»**. **Si PostgreSQL no está disponible** (Docker apagado, `TEST_DATABASE_URL` sin definir o base que no responde), los 39 tests del perfil **se omiten con el motivo en el resumen** (**«39 skipped, 303 deselected»**) y la corrida termina con código de salida 0. Si la base de `TEST_DATABASE_URL` no termina en `_test`, el perfil falla a propósito para no borrar otra base.
 
 El esquema de estos tests sale siempre de las migraciones, nunca de `create_all`. Por eso el perfil también comprueba que las migraciones y los modelos coinciden (INF-1): si alguien cambia un modelo sin escribir su migración, ese test se pone en rojo. **La suite por defecto no avisa de esto**: hay que correr el perfil cada vez que se toque el esquema.
 
@@ -196,6 +213,7 @@ Los escenarios están en `openspec/changes/infraestructura-postgresql/specs/pers
 | E9 | Ocho reservas simultáneas dejan un solo turno y un solo evento `creado` | `test_e9_de_ocho_reservas_simultaneas_queda_un_solo_evento` (`test_reservas_simultaneas.py`) |
 | US-015 CA-1 | La base rechaza `UPDATE`, `DELETE` y `TRUNCATE` sobre un evento | `test_ca1_la_base_rechaza_modificar_o_borrar_un_evento` (parametrizado: `update_del_tipo`, `delete`, `truncate`; `test_historial_inmutable.py`) |
 | US-015 CA-1 | La base acepta un evento nuevo del mismo turno | `test_ca1_la_base_acepta_un_evento_nuevo_del_mismo_turno` (`test_historial_inmutable.py`) |
+| US-004 CA-2 | El alta de un sillón tras el seed no choca con el id fijo: la secuencia de `sillon` queda ajustada y el primer `POST /sillones` recibe un `id` distinto de 1 | `test_ca2_el_alta_de_un_sillon_tras_el_seed_no_choca_con_el_id_fijo` (`test_seed_y_api.py`) |
 | INF-4 | La suite por defecto corre sin PostgreSQL y el perfil se omite | Ningún test: se comprueba con los dos comandos de esta sección y de «Tests» (arriba) en una máquina sin Docker ni variables de entorno |
 
 `crear_turno` toma un bloqueo de fila sobre el profesional y el sillón antes de leer los turnos ocupados (`SELECT ... FOR NO KEY UPDATE`): la segunda reserva del mismo recurso espera, ve el turno ya confirmado y responde su `409` sin reintentar. La restricción de exclusión de la base sigue siendo la última defensa.
@@ -210,7 +228,7 @@ python -m uvicorn app.main:crear_app_demo --factory
 
 Swagger queda en <http://127.0.0.1:8000/docs>. Para detener el servidor, `Ctrl+C`.
 
-La demo usa una base SQLite en memoria con datos ficticios. Cada arranque parte de los mismos datos y al reiniciar se pierden los turnos creados. Los endpoints de lectura son el historial de un turno y el listado de prestaciones; el resto de los identificadores son fijos:
+La demo usa una base SQLite en memoria con datos ficticios. Cada arranque parte de los mismos datos y al reiniciar se pierden los turnos creados. Los endpoints de lectura son el historial de un turno y los listados de prestaciones y de sillones; el resto de los identificadores son fijos:
 
 | Qué | Identificadores |
 |---|---|
@@ -220,7 +238,7 @@ La demo usa una base SQLite en memoria con datos ficticios. Cada arranque parte 
 | Prestaciones | 1 «Consulta / control» (30 min, `#1E88E5`), 2 «Limpieza» (45 min, `#43A047`), 3 «Obturación» (60 min, `#FB8C00`), 4 «Extracción» (45 min, `#E53935`), 5 «Urgencia» (30 min, `#8E24AA`); ninguna es reservable online |
 | Pacientes | 1 «Ana Ejemplo», 2 «Bruno Ficticio», 3 «Carla Inventada» |
 
-El profesional y el sillón se pueden omitir en la petición: como la demo tiene uno solo de cada uno, se usan esos.
+El profesional y el sillón se pueden omitir en la petición: como la demo tiene uno solo de cada uno, se usan esos. Si se da de alta un segundo sillón activo, omitir el sillón deja de funcionar (ver «Sillones» más abajo).
 
 ### Petición de ejemplo
 
@@ -280,6 +298,31 @@ curl -i -X PATCH http://127.0.0.1:8000/prestaciones/2 -H "Content-Type: applicat
 
 En la API sobre PostgreSQL el id de la prestación nueva lo asigna la base (mayor que 5) y los de la 1 a la 5 son los del seed.
 
+### Sillones
+
+Las tres rutas no tienen autenticación y trabajan sobre el único consultorio de la instalación (el cuerpo no lleva `consultorio_id`). El nombre del sillón no es único (D183). Con la demo **recién arrancada** (los pasos dependen unos de otros y el reinicio los reinicia), en Swagger o con `curl`:
+
+1. `GET /sillones` → `200`, con `[{"id": 1, "nombre": "Sillón 1", "activo": true}]`. Incluye los inactivos, ordenados por `id`.
+2. `POST /sillones` con `{"nombre": "Sillón 2"}` → `201`, con `{"id": 2, "nombre": "Sillón 2", "activo": true}`. El alta recibe solo el nombre.
+3. El `POST /turnos` de la petición de ejemplo (sin `sillon_id`) → `422`, con `codigos` igual a `["RN-GL-04"]` y en `referencias` `{"recurso": "sillon", "recurso_id": null, "motivo": "varios_activos"}`: con dos sillones activos hay que indicar cuál. No se crea ningún turno.
+4. La misma con `"sillon_id": 2` → `201`, con el turno en el sillón 2.
+5. `PATCH /sillones/2` con `{"activo": false}` → `200`, con `activo` `false`; el sillón sigue en `GET /sillones` y el turno del paso 4 sigue `reservado`.
+6. `POST /turnos` con `{"paciente_id": 2, "prestacion_id": 1, "inicio": "2026-11-02T14:00:00Z"}` (sin `sillon_id`) → `201`, en el sillón 1: el único activo vuelve a ser el de por defecto. Con `"sillon_id": 2` → `422`, con `referencias` `{"recurso": "sillon", "recurso_id": 2, "motivo": "inactivo"}`. Con `{"activo": true}` en el `PATCH` se reactiva.
+7. Sin ningún sillón activo (`PATCH /sillones/1` con `{"activo": false}` estando el 2 inactivo), `POST /turnos` sin `sillon_id` → `422`, con `recurso_id` `null` y `motivo` `ninguno_activo`. Se desactiva el último sillón a propósito (D184); `PATCH /sillones/1` con `{"activo": true}` lo reactiva.
+8. `PATCH /sillones/999` con `{"activo": true}` → `404`, con `codigos` igual a `["RN-GL-04"]`.
+9. `PATCH /sillones/1` con `{"nombre": "Sillón principal", "activo": true}` → `200`, con el nombre nuevo. El `PATCH` acepta `nombre` y `activo` (D185) y solo cambia lo que viene en el cuerpo.
+
+Con `curl` (el alta, la edición y el turno sin sillón; en el JSON, `ó` es la «ó», para que la consola de Windows no altere el cuerpo):
+
+```
+curl -i http://127.0.0.1:8000/sillones
+curl -i -X POST http://127.0.0.1:8000/sillones -H "Content-Type: application/json" -d "{\"nombre\": \"Sillón 2\"}"
+curl -i -X POST http://127.0.0.1:8000/turnos -H "Content-Type: application/json" -d "{\"paciente_id\": 1, \"prestacion_id\": 1, \"inicio\": \"2026-11-02T13:00:00Z\"}"
+curl -i -X PATCH http://127.0.0.1:8000/sillones/2 -H "Content-Type: application/json" -d "{\"activo\": false}"
+```
+
+En la API sobre PostgreSQL el id del sillón nuevo lo asigna la base: el seed deja la secuencia ajustada y el primer alta recibe el 2, pero si ya hubo otras altas será mayor; usá el `id` que devolvió el `201`.
+
 ## Levantar la API con PostgreSQL
 
 Necesita Docker Desktop. Los datos son los mismos de la demo y todos son ficticios.
@@ -338,6 +381,9 @@ La migración autogenerada **se revisa a mano** antes de usarla, y cada change q
 - Los datos de la demo sin Docker viven en memoria y se pierden al reiniciar; los de la API sobre PostgreSQL persisten en el volumen de Docker.
 - La coincidencia entre migraciones y modelos (INF-1), la protección ante reservas simultáneas (E11, y el evento único de E9 con ocho reservas) y la garantía de que la base rechaza modificar o borrar un evento (US-015 CA-1, migración `0004`) **solo se prueban en el perfil opcional con PostgreSQL**: la suite por defecto no las ejerce. En SQLite (demo y suite por defecto) la inmutabilidad del historial se garantiza solo desde la aplicación: no hay métodos para modificarlo y la ruta responde `405`.
 - **`GET /prestaciones`, `POST /prestaciones` y `PATCH /prestaciones/{id}` no tienen autenticación** (DD-14), por el mismo motivo: datos ficticios y puertos solo en `127.0.0.1`. Trabajan sobre el único consultorio de la instalación (D173).
+- **`GET /sillones`, `POST /sillones` y `PATCH /sillones/{id}` no tienen autenticación** (DD-14), por el mismo motivo: datos ficticios y puertos solo en `127.0.0.1`. Cualquiera que llegue a la API puede dar de alta o desactivar un sillón; C-07 las protege.
+- **El estado de los sillones cambia el resultado del recorrido de la demo**: con un segundo sillón activo, `POST /turnos` sin `sillon_id` responde `422` con `varios_activos` (RN-AG-14), y sin ninguno activo, `ninguno_activo`. En PostgreSQL los sillones persisten, así que un sillón dado de alta en una prueba sigue ahí en la siguiente: desactivalo con `PATCH` o usá `docker compose down -v`.
+- Desactivar un sillón y crear un turno en él **al mismo tiempo** puede dejar un turno nuevo en un sillón recién desactivado: `crear_turno` valida el sillón antes de tomar el bloqueo de fila (S15). Sin usuarios ni panel todavía, se acepta; el turno queda igual de válido y no se cancela.
 - Un volumen de PostgreSQL sembrado antes de la migración `0005` (por ejemplo, el de las pruebas manuales de C-02 y C-03) **no se vuelve a sembrar**: sus cinco prestaciones quedan con el color gris `#9E9E9E` hasta que se edite cada una con `PATCH /prestaciones/{id}` (D174). Con `docker compose down -v` la base arranca vacía y el seed trae los colores de la demo.
 - **`GET /turnos/{id}/historial` no tiene autenticación** (DD-14): cualquiera que llegue a la API ve el historial de cualquier turno. Es aceptable por el mismo motivo que `POST /turnos`: datos ficticios y puertos solo en `127.0.0.1`.
 - Los eventos `creado` anteriores a C-07 tienen `actor_tipo` `usuario` y **`actor_id` vacío para siempre** (D159): todavía no hay usuarios autenticados y completarlo después sería modificar el historial.

@@ -58,7 +58,7 @@ Reglas de trabajo para todos los grupos (no son tareas):
 
 ## 8. README
 
-- [ ] 8.1 Completar el `README.md` (design S13): sección «Sillones» con los tres endpoints y sus peticiones de ejemplo sobre la demo, el efecto de un segundo sillón activo en el recorrido (`422` con `varios_activos`; con `"sillon_id": 2`, `201`; desactivado el 2, vuelve a funcionar), la tabla escenario → test de CA-1, CA-2 y CA-3 (y el test del perfil), el resultado real de las dos corridas y los dos límites conocidos nuevos (S11, rutas sin autenticación). Verificación: cada comando y petición nueva del README se ejecutó tal cual y dio lo que el README dice; la sección de instalación y tests sin Docker no cambió.
+- [x] 8.1 Completar el `README.md` (design S13): sección «Sillones» con los tres endpoints y sus peticiones de ejemplo sobre la demo, el efecto de un segundo sillón activo en el recorrido (`422` con `varios_activos`; con `"sillon_id": 2`, `201`; desactivado el 2, vuelve a funcionar), la tabla escenario → test de CA-1, CA-2 y CA-3 (y el test del perfil), el resultado real de las dos corridas y los dos límites conocidos nuevos (S11, rutas sin autenticación). Verificación: cada comando y petición nueva del README se ejecutó tal cual y dio lo que el README dice; la sección de instalación y tests sin Docker no cambió.
 
 ## 9. Prueba en el navegador
 
