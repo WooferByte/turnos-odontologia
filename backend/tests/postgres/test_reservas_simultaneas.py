@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session, sessionmaker
 from app.api.deps import get_reloj
 from app.application.crear_turno import CrearTurnoComando, crear_turno
 from app.domain.errors import ErrorDeSolapamiento
-from app.infrastructure.db.modelos import TurnoModelo
+from app.infrastructure.db.modelos import EventoTurnoModelo, TurnoModelo
 from app.infrastructure.repositories.agenda import RepositorioAgendaSqlAlchemy
 from app.infrastructure.unidad_de_trabajo import UnidadDeTrabajoSqlAlchemy
 from app.main import crear_app
@@ -100,6 +100,32 @@ def test_e11_de_ocho_peticiones_a_la_vez_se_crea_un_solo_turno(
     assert creados[0].estado == "reservado"
     assert len(rechazos) == peticiones - 1
     assert all(r.codigos == ["RN-AG-05", "RN-AG-08"] for r in rechazos)
+    assert cantidad_de_turnos(sesion) == 1
+
+
+def test_e9_de_ocho_reservas_simultaneas_queda_un_solo_evento(
+    engine: Engine, sesion: Session, escenario: Escenario
+) -> None:
+    peticiones = 8
+    fabrica = sessionmaker(bind=engine, expire_on_commit=False)
+    pedido = comando(escenario, escenario.profesional_a, escenario.sillon_1, a_las(10))
+    largada = Barrier(peticiones, timeout=10)
+
+    def pedir():
+        largada.wait()
+        try:
+            return crear_turno(pedido, UnidadDeTrabajoSqlAlchemy(fabrica), reloj_fijo)
+        except ErrorDeSolapamiento as error:
+            return error
+
+    with ThreadPoolExecutor(max_workers=peticiones) as hilos:
+        futuros = [hilos.submit(pedir) for _ in range(peticiones)]
+        resultados = [f.result(timeout=30) for f in futuros]
+
+    creados = [r for r in resultados if not isinstance(r, ErrorDeSolapamiento)]
+    assert len(creados) == 1
+    eventos = sesion.scalars(select(EventoTurnoModelo)).all()
+    assert [(e.turno_id, e.tipo) for e in eventos] == [(creados[0].id, "creado")]
     assert cantidad_de_turnos(sesion) == 1
 
 
