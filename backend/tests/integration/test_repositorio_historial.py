@@ -159,3 +159,13 @@ def test_la_unidad_de_trabajo_confirma_el_turno_y_su_evento_juntos(
 
     with fabrica_sesiones() as lectura:
         assert RepositorioHistorialSqlAlchemy(lectura).del_turno(turno.id) == [registrado]
+
+
+def test_ca1_el_repositorio_del_historial_solo_registra_y_lee() -> None:
+    publicos = {
+        nombre
+        for nombre in vars(RepositorioHistorialSqlAlchemy)
+        if not nombre.startswith("_")
+    }
+
+    assert publicos == {"registrar", "del_turno"}
