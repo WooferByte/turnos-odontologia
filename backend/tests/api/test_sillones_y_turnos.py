@@ -111,3 +111,48 @@ def test_ca3_el_sillon_inactivo_se_informa_junto_con_otra_referencia(cliente, da
         {"recurso": "prestacion", "recurso_id": 999, "motivo": "inexistente"},
         {"recurso": "sillon", "recurso_id": segundo, "motivo": "inactivo"},
     ]
+
+
+def test_ca1_con_un_unico_sillon_activo_el_turno_sin_sillon_va_a_ese(cliente, datos):
+    respuesta = _pedir_turno(cliente, datos, "10:00")
+
+    assert respuesta.status_code == 201
+    assert respuesta.json()["sillon_id"] == datos["sillon"].id
+
+
+def test_ca1_con_dos_sillones_activos_omitirlo_responde_varios_activos(cliente, sesion, datos):
+    segundo = _alta_de_sillon(cliente)
+
+    omitido = _pedir_turno(cliente, datos, "10:00")
+    elegido = _pedir_turno(cliente, datos, "10:00", sillon_id=segundo)
+
+    assert omitido.status_code == 422
+    assert omitido.json()["codigos"] == ["RN-GL-04"]
+    assert omitido.json()["referencias"] == [
+        {"recurso": "sillon", "recurso_id": None, "motivo": "varios_activos"}
+    ]
+    assert elegido.status_code == 201
+    assert elegido.json()["sillon_id"] == segundo
+    assert sesion.query(TurnoModelo).count() == 1  # el rechazado no creó turno
+
+
+def test_ca1_el_por_defecto_no_es_un_id_fijo(cliente, datos):
+    segundo = _alta_de_sillon(cliente)
+    _desactivar(cliente, datos["sillon"].id)
+
+    respuesta = _pedir_turno(cliente, datos, "10:00")
+
+    assert respuesta.status_code == 201
+    assert respuesta.json()["sillon_id"] == segundo
+
+
+def test_ca1_sin_sillones_activos_responde_ninguno_activo(cliente, datos):
+    _desactivar(cliente, datos["sillon"].id)
+
+    respuesta = _pedir_turno(cliente, datos, "10:00")
+
+    assert respuesta.status_code == 422
+    assert respuesta.json()["codigos"] == ["RN-GL-04"]
+    assert respuesta.json()["referencias"] == [
+        {"recurso": "sillon", "recurso_id": None, "motivo": "ninguno_activo"}
+    ]
