@@ -312,11 +312,11 @@ Las tres rutas no tienen autenticación y trabajan sobre el único consultorio d
 8. `PATCH /sillones/999` con `{"activo": true}` → `404`, con `codigos` igual a `["RN-GL-04"]`.
 9. `PATCH /sillones/1` con `{"nombre": "Sillón principal", "activo": true}` → `200`, con el nombre nuevo. El `PATCH` acepta `nombre` y `activo` (D185) y solo cambia lo que viene en el cuerpo.
 
-Con `curl` (el alta, la edición y el turno sin sillón; en el JSON, `ó` es la «ó», para que la consola de Windows no altere el cuerpo):
+Con `curl` (el alta, la edición y el turno sin sillón; en el JSON, `\u00f3` es la «ó», para que la consola de Windows no altere el cuerpo):
 
 ```
 curl -i http://127.0.0.1:8000/sillones
-curl -i -X POST http://127.0.0.1:8000/sillones -H "Content-Type: application/json" -d "{\"nombre\": \"Sillón 2\"}"
+curl -i -X POST http://127.0.0.1:8000/sillones -H "Content-Type: application/json" -d "{\"nombre\": \"Sill\u00f3n 2\"}"
 curl -i -X POST http://127.0.0.1:8000/turnos -H "Content-Type: application/json" -d "{\"paciente_id\": 1, \"prestacion_id\": 1, \"inicio\": \"2026-11-02T13:00:00Z\"}"
 curl -i -X PATCH http://127.0.0.1:8000/sillones/2 -H "Content-Type: application/json" -d "{\"activo\": false}"
 ```
