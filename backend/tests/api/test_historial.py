@@ -7,13 +7,14 @@ from fastapi.testclient import TestClient
 
 from app.api.deps import get_reloj
 from app.main import crear_app
-from tests.conftest import reloj_fijo
+from tests.conftest import a_las, reloj_fijo
 from tests.factories import (
     un_consultorio,
     un_paciente,
     un_profesional,
     una_prestacion,
     un_sillon,
+    un_turno,
 )
 
 CAMPOS_DE_EVENTO_SALIDA = {
@@ -100,3 +101,65 @@ def test_his1_get_historial_de_turno_inexistente_responde_404(cliente):
     assert cuerpo["referencias"] == [{"recurso": "turno", "recurso_id": 999, "motivo": "inexistente"}]
     assert cuerpo["status"] == 404
     assert cuerpo["instance"] == "/turnos/999/historial"
+
+
+def test_his1_id_que_no_es_numero_responde_422_sin_codigo(cliente):
+    respuesta = cliente.get("/turnos/abc/historial")
+
+    assert respuesta.status_code == 422
+    assert respuesta.headers["content-type"] == "application/problem+json"
+    cuerpo = respuesta.json()
+    assert cuerpo["codigos"] == []
+    assert cuerpo["detail"] == (
+        "La petición tiene 1 problema de entrada: la ruta no tiene el formato esperado."
+    )
+    assert cuerpo["instance"] == "/turnos/abc/historial"
+    assert len(cuerpo["errores"]) == 1
+    assert cuerpo["errores"][0]["campo"] == "turno_id"
+    assert cuerpo["errores"][0]["codigo"] is None
+
+
+@pytest.mark.parametrize("metodo", ["POST", "PUT", "PATCH", "DELETE"])
+def test_ca1_la_ruta_del_historial_no_admite_modificaciones(cliente, sesion, metodo):
+    datos = _escenario(sesion)
+    turno_id = cliente.post("/turnos", json=_pedido(datos)).json()["id"]
+    antes = cliente.get(f"/turnos/{turno_id}/historial").json()
+
+    respuesta = cliente.request(metodo, f"/turnos/{turno_id}/historial")
+
+    assert respuesta.status_code == 405
+    despues = cliente.get(f"/turnos/{turno_id}/historial")
+    assert despues.status_code == 200
+    assert despues.json() == antes
+    assert len(antes) == 1
+
+
+def test_ca1_get_historial_de_turno_sin_eventos_responde_lista_vacia(cliente, sesion):
+    datos = _escenario(sesion)
+    turno = un_turno(  # la factory no registra evento: turno anterior a la migración (H14)
+        sesion,
+        paciente=datos["paciente"],
+        profesional=datos["profesional"],
+        sillon=datos["sillon"],
+        prestacion=datos["prestacion"],
+        inicio=a_las(10),
+    )
+
+    respuesta = cliente.get(f"/turnos/{turno.id}/historial")
+
+    assert respuesta.status_code == 200
+    assert respuesta.json() == []
+
+
+def test_openapi_declara_404_y_422_del_historial_con_el_esquema_problema(engine):
+    openapi = crear_app(engine).openapi()
+
+    respuestas = openapi["paths"]["/turnos/{turno_id}/historial"]["get"]["responses"]
+
+    assert {"200", "404", "422"} <= set(respuestas)
+    for estado in ("404", "422"):
+        contenido = respuestas[estado]["content"]
+        assert contenido["application/problem+json"]["schema"] == {
+            "$ref": "#/components/schemas/Problema"
+        }
+    assert "HTTPValidationError" not in openapi["components"]["schemas"]

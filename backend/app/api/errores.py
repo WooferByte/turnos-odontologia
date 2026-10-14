@@ -111,8 +111,8 @@ def _manejar_error_de_dominio(request: Request, error: ErrorDeDominio) -> JSONRe
 
 
 def _campo_de(ubicacion: tuple) -> str | None:
-    """Ubicación de Pydantic sin el prefijo body, unida con puntos; None si es del cuerpo entero."""
-    partes = [str(parte) for parte in ubicacion if parte != "body"]
+    """Ubicación de Pydantic sin el prefijo body ni path, unida con puntos; None si es del cuerpo."""
+    partes = [str(parte) for parte in ubicacion if parte not in ("body", "path")]
     return ".".join(partes) or None
 
 
@@ -127,6 +127,7 @@ def _manejar_cuerpo_mal_formado(request: Request, error: RequestValidationError)
         for e in error.errors()
     ]
     estado, tipo, titulo = _CLASES_DE_ERROR[EntradaInvalida]
+    origen = "el cuerpo" if any(e["loc"][0] == "body" for e in error.errors()) else "la ruta"
     return _responder(
         Problema(
             type=tipo,
@@ -134,7 +135,7 @@ def _manejar_cuerpo_mal_formado(request: Request, error: RequestValidationError)
             status=estado,
             detail=(
                 f"La petición tiene {_problemas(len(errores))} de entrada: "
-                "el cuerpo no tiene el formato esperado."
+                f"{origen} no tiene el formato esperado."
             ),
             instance=request.url.path,
             codigos=[],

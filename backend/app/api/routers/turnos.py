@@ -1,4 +1,4 @@
-"""``POST /turnos`` (D4) y ``GET /turnos/{id}/historial`` (H9). El endpoint es síncrono (``def``), como pide D12."""
+"""``POST /turnos`` (D4) y ``GET /turnos/{id}/historial`` (H9). Endpoints síncronos (``def``, D12)."""
 from typing import Annotated
 
 from fastapi import APIRouter, Depends
@@ -17,17 +17,19 @@ router = APIRouter(prefix="/turnos", tags=["turnos"])
 _PROBLEMA_JSON = {
     "application/problem+json": {"schema": {"$ref": "#/components/schemas/Problema"}}
 }
+
+
+def _respuesta_de_error(descripcion: str) -> dict:
+    return {"description": descripcion, "model": Problema, "content": _PROBLEMA_JSON}
+
+
 RESPUESTAS_DE_ERROR = {
-    409: {
-        "description": "Solapamiento con un turno activo",
-        "model": Problema,
-        "content": _PROBLEMA_JSON,
-    },
-    422: {
-        "description": "Entrada inválida o intervalo inválido",
-        "model": Problema,
-        "content": _PROBLEMA_JSON,
-    },
+    409: _respuesta_de_error("Solapamiento con un turno activo"),
+    422: _respuesta_de_error("Entrada inválida o intervalo inválido"),
+}
+RESPUESTAS_DEL_HISTORIAL = {
+    404: _respuesta_de_error("El turno no existe (RN-GL-04)"),
+    422: _respuesta_de_error("El identificador del turno no es un número entero"),
 }
 
 
@@ -44,18 +46,7 @@ def post_turnos(
 @router.get(
     "/{turno_id}/historial",
     response_model=list[EventoTurnoSalida],
-    responses={
-        404: {
-            "description": "El turno no existe (RN-GL-04)",
-            "model": Problema,
-            "content": _PROBLEMA_JSON,
-        },
-        422: {
-            "description": "El identificador del turno no es un número entero",
-            "model": Problema,
-            "content": _PROBLEMA_JSON,
-        },
-    },
+    responses=RESPUESTAS_DEL_HISTORIAL,
 )
 def get_historial(
     turno_id: int, uow: Annotated[UnidadDeTrabajo, Depends(get_uow)]
