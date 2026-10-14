@@ -92,3 +92,41 @@ def test_inf1_deshacer_las_migraciones_del_historial_deja_el_esquema_de_c01(
         assert conexion.execute(FUNCIONES_DE_LA_APLICACION).all() == []
     with Session(engine) as lectura:
         assert len(lectura.scalars(select(TurnoModelo)).all()) == 1
+
+
+def test_inf1_la_migracion_0005_completa_las_prestaciones_existentes(
+    engine: Engine, config_alembic: Config
+) -> None:
+    command.downgrade(config_alembic, "0004")
+    with engine.begin() as conexion:
+        conexion.execute(
+            text(
+                "INSERT INTO consultorio (id, nombre, slug, zona_horaria) "
+                "VALUES (1, 'Consultorio de Prueba', 'consultorio-prueba', 'America/Argentina/Buenos_Aires')"
+            )
+        )
+        conexion.execute(
+            text(
+                "INSERT INTO prestacion (id, consultorio_id, nombre, duracion_minutos, activa) "
+                "VALUES (1, 1, 'Limpieza', 45, true)"
+            )
+        )
+
+    command.upgrade(config_alembic, "head")
+
+    with engine.connect() as conexion:
+        fila = conexion.execute(
+            text("SELECT nombre, duracion_minutos, color, reservable_online FROM prestacion")
+        ).one()
+        assert tuple(fila) == ("Limpieza", 45, "#9E9E9E", False)
+        columnas = {c["name"]: c for c in inspect(conexion).get_columns("prestacion")}
+        assert columnas["color"]["nullable"] is False
+        assert columnas["color"]["default"] is None  # el relleno no queda como default (design P12)
+        assert columnas["reservable_online"]["default"] is None
+
+    command.downgrade(config_alembic, "0004")
+
+    with engine.connect() as conexion:
+        columnas = {c["name"] for c in inspect(conexion).get_columns("prestacion")}
+        assert "color" not in columnas and "reservable_online" not in columnas
+        assert conexion.execute(text("SELECT nombre FROM prestacion")).scalar_one() == "Limpieza"
