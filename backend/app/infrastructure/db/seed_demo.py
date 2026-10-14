@@ -81,7 +81,7 @@ def cargar_demo_si_falta(sesion: Session) -> bool:
 
 
 # Tablas con identificador fijo en el seed.
-_TABLAS_SEMBRADAS = ("consultorio", "profesional", "sillon", "prestacion", "paciente")
+_TABLAS_SEMBRADAS = ("consultorio", "profesional", "sillon", "prestacion", "paciente", "usuario")
 
 
 def ajustar_secuencias(sesion: Session) -> None:
