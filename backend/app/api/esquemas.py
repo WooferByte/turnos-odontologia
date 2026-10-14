@@ -1,4 +1,4 @@
-"""Esquemas HTTP de ``/turnos`` (D4) y ``/prestaciones`` (C-04). Es la única capa que conoce Pydantic."""
+"""Esquemas HTTP de ``/turnos`` (D4), ``/prestaciones`` (C-04) y ``/sillones`` (C-05). Es la única capa que conoce Pydantic."""
 from datetime import datetime
 from typing import Annotated, Any
 
@@ -6,6 +6,7 @@ from pydantic import AfterValidator, BaseModel, ConfigDict, Field, field_validat
 
 from app.domain.agenda.nombres import normalizar_espacios
 from app.domain.agenda.prestaciones import DatosPrestacion
+from app.domain.agenda.sillones import DatosSillon
 from app.domain.turnos.eventos import EventoTurno
 from app.domain.turnos.turno import Turno
 
@@ -161,6 +162,49 @@ class PrestacionSalida(BaseModel):
             reservable_online=datos.reservable_online,
             activa=datos.activa,
         )
+
+
+class CrearSillonEntrada(BaseModel):
+    """Cuerpo de ``POST /sillones``: solo el nombre; el sillón nace activo (``activo`` es campo de más)."""
+
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={"examples": [{"nombre": "Sillón 2"}]},
+    )
+
+    nombre: NombreDePrestacion
+
+
+class EditarSillonEntrada(BaseModel):
+    """Cuerpo de ``PATCH /sillones/{id}``: ``nombre`` y ``activo``, opcionales; ``{}`` es válido."""
+
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={"examples": [{"activo": False}]},
+    )
+
+    nombre: NombreDePrestacion | None = None
+    activo: bool | None = None
+
+    @field_validator("*", mode="before")
+    @classmethod
+    def _sin_nulos(cls, valor: Any) -> Any:
+        if valor is None:
+            raise ValueError("El campo no admite null; omitilo para no cambiarlo.")
+        return valor
+
+
+class SillonSalida(BaseModel):
+    """Un sillón del catálogo, sin ``consultorio_id`` (en la v1 hay un solo consultorio, S3)."""
+
+    id: int
+    nombre: str
+    activo: bool
+
+    @classmethod
+    def desde_datos(cls, datos: DatosSillon) -> "SillonSalida":
+        assert datos.id is not None
+        return cls(id=datos.id, nombre=datos.nombre, activo=datos.activo)
 
 
 class ConflictoSalida(BaseModel):

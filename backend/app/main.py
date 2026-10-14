@@ -7,7 +7,7 @@ from sqlalchemy import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.api.errores import registrar_manejadores
-from app.api.routers import prestaciones, turnos
+from app.api.routers import prestaciones, sillones, turnos
 from app.infrastructure.db.modelos import Base
 from app.infrastructure.configuracion import leer_database_url
 from app.infrastructure.db.motor import crear_engine, crear_engine_en_memoria
@@ -20,6 +20,7 @@ def crear_app(engine: Engine) -> FastAPI:
     app.state.fabrica_sesiones = sessionmaker(bind=engine, expire_on_commit=False)
     app.include_router(turnos.router)
     app.include_router(prestaciones.router)
+    app.include_router(sillones.router)
     registrar_manejadores(app)
     return app
 

@@ -12,8 +12,7 @@ from app.domain.errors import (
     FechaNoUTC,
     IntervaloInvalido,
     NombreDePrestacionRepetido,
-    PrestacionNoEncontrada,
-    TurnoNoEncontrado,
+    RecursoDeLaUrlNoEncontrado,
 )
 
 MEDIA_TYPE_PROBLEMA = "application/problem+json"
@@ -26,8 +25,7 @@ _CLASES_DE_ERROR: dict[type[ErrorDeDominio], tuple[int, str, str]] = {
     ErrorDeSolapamiento: (409, "/errores/solapamiento-turno", "Turno solapado"),
     IntervaloInvalido: (422, "/errores/intervalo-invalido", "Intervalo inválido"),
     EntradaInvalida: (422, "/errores/entrada-invalida", "Entrada inválida"),
-    TurnoNoEncontrado: (404, "/errores/recurso-no-encontrado", "Recurso no encontrado"),
-    PrestacionNoEncontrada: (404, "/errores/recurso-no-encontrado", "Recurso no encontrado"),
+    RecursoDeLaUrlNoEncontrado: (404, "/errores/recurso-no-encontrado", "Recurso no encontrado"),
     NombreDePrestacionRepetido: (409, "/errores/nombre-repetido", "Nombre repetido"),
 }
 
@@ -99,7 +97,7 @@ def _problema_de(error: ErrorDeDominio, estado: int, tipo: str, titulo: str, rut
         return Problema(**base, detail=_detalle_de_solapamiento(error), conflictos=conflictos)
     if isinstance(error, EntradaInvalida):
         return _problema_de_entrada(base, error)
-    if isinstance(error, (TurnoNoEncontrado, PrestacionNoEncontrada)):
+    if isinstance(error, RecursoDeLaUrlNoEncontrado):
         referencias = [
             ReferenciaSalida(recurso=r.recurso, recurso_id=r.recurso_id, motivo=r.motivo)
             for r in error.referencias
@@ -119,7 +117,8 @@ def _responder(problema: Problema) -> JSONResponse:
 
 
 def _manejar_error_de_dominio(request: Request, error: ErrorDeDominio) -> JSONResponse:
-    clase = _CLASES_DE_ERROR.get(type(error))
+    # La primera clase de la cadena de herencia que esté en el mapa: las subclases resuelven como su base.
+    clase = next((_CLASES_DE_ERROR[c] for c in type(error).__mro__ if c in _CLASES_DE_ERROR), None)
     if clase is None:
         raise error  # error de programación: se deja subir (500), no se inventa un estado
     estado, tipo, titulo = clase
