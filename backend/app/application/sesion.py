@@ -3,10 +3,10 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from datetime import datetime, timedelta
 
-from app.application.puertos import FirmadorDeTokens, HasherDeContrasenas, UnidadDeTrabajo
-from app.domain.acceso.sesion import TipoDeToken, claims_para
+from app.application.puertos import FirmadorDeTokens, HasherDeContrasenas, TokenIlegible, UnidadDeTrabajo
+from app.domain.acceso.sesion import TipoDeToken, claims_para, exigir_token_valido
 from app.domain.acceso.usuarios import normalizar_email
-from app.domain.errors import CredencialesInvalidas
+from app.domain.errors import CredencialesInvalidas, SesionInvalida
 
 
 @dataclass(frozen=True)
@@ -19,6 +19,11 @@ class IniciarSesionComando:
 class TokensDeSesion:
     access_token: str
     refresh_token: str
+
+
+@dataclass(frozen=True)
+class AccessToken:
+    access_token: str
 
 
 @dataclass(frozen=True)
@@ -48,4 +53,25 @@ def iniciar_sesion(
     return TokensDeSesion(
         access_token=firmador.firmar(claims_para(usuario, TipoDeToken.ACCESS, ahora, vigencias.access)),
         refresh_token=firmador.firmar(claims_para(usuario, TipoDeToken.REFRESH, ahora, vigencias.refresh)),
+    )
+
+
+def renovar_sesion(
+    token: str,
+    uow: UnidadDeTrabajo,
+    firmador: FirmadorDeTokens,
+    vigencias: Vigencias,
+    reloj: Callable[[], datetime],
+) -> AccessToken:
+    """Un access nuevo si el refresh sirve; no hay rotación del refresh (D201). Todo rechazo es ``SesionInvalida``."""
+    try:
+        claims = firmador.leer(token)
+    except TokenIlegible as causa:
+        raise SesionInvalida() from causa
+    with uow:
+        usuario = uow.usuarios.obtener(claims.usuario_id)
+    ahora = reloj()
+    exigir_token_valido(claims, TipoDeToken.REFRESH, usuario, ahora)
+    return AccessToken(
+        access_token=firmador.firmar(claims_para(usuario, TipoDeToken.ACCESS, ahora, vigencias.access))
     )
