@@ -1,14 +1,22 @@
 """Hasher de contraseñas con bcrypt (design J6). El hash lleva su sal y su costo; nunca se guarda la contraseña."""
+from functools import cache
+
 import bcrypt
 
 MAXIMO_DE_BYTES = 72  # bcrypt 5 levanta ValueError con más; nunca puede coincidir con un hash guardado
+
+
+@cache
+def _hash_de_relleno(rondas: int) -> str:
+    """Un hash de relleno por costo y por proceso: crear la app no paga bcrypt cada vez (design J8)."""
+    return bcrypt.hashpw(b"relleno-para-igualar-tiempos", bcrypt.gensalt(rondas)).decode("ascii")
 
 
 class HasherBcrypt:
     def __init__(self, rondas: int = 12) -> None:
         self._rondas = rondas
         # Hash de relleno con el mismo costo: el email inexistente tarda lo mismo que el existente (J8).
-        self._hash_de_relleno = self.hashear("relleno-para-igualar-tiempos")
+        self._hash_de_relleno = _hash_de_relleno(rondas)
 
     def hashear(self, contrasena: str) -> str:
         return bcrypt.hashpw(contrasena.encode("utf-8"), bcrypt.gensalt(self._rondas)).decode("ascii")

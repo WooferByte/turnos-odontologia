@@ -1,23 +1,37 @@
 """Punto de entrada de la API (D3). Sin variable ``app`` a nivel de módulo."""
 import os
 from collections.abc import Mapping
+from datetime import timedelta
 
 from fastapi import FastAPI
 from sqlalchemy import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.api.errores import registrar_manejadores
-from app.api.routers import prestaciones, sillones, turnos
+from app.api.routers import auth, prestaciones, sillones, turnos
+from app.application.sesion import Vigencias
 from app.infrastructure.db.modelos import Base
-from app.infrastructure.configuracion import leer_database_url
+from app.infrastructure.configuracion import ConfiguracionDeSesion, leer_database_url, secreto_efimero
 from app.infrastructure.db.motor import crear_engine, crear_engine_en_memoria
 from app.infrastructure.db.seed_demo import cargar_demo
+from app.infrastructure.seguridad.contrasenas import HasherBcrypt
+from app.infrastructure.seguridad.tokens import FirmadorJwtHs256
 
 
-def crear_app(engine: Engine) -> FastAPI:
-    """Aplicación sobre el engine dado; la usan los tests de API con el engine del test."""
+def crear_app(engine: Engine, sesion: ConfiguracionDeSesion | None = None) -> FastAPI:
+    """Aplicación sobre el engine dado; la usan los tests de API con el engine del test.
+
+    Sin ``sesion`` usa un secreto efímero (D196): los tokens mueren con el proceso.
+    """
+    sesion = sesion or ConfiguracionDeSesion(secreto_efimero())
     app = FastAPI(title="Turnos Odontológicos AR")
     app.state.fabrica_sesiones = sessionmaker(bind=engine, expire_on_commit=False)
+    app.state.firmador = FirmadorJwtHs256(sesion.secreto)
+    app.state.hasher = HasherBcrypt(sesion.rondas_bcrypt)
+    app.state.vigencias = Vigencias(
+        access=timedelta(minutes=sesion.minutos_access), refresh=timedelta(days=sesion.dias_refresh)
+    )
+    app.include_router(auth.router)
     app.include_router(turnos.router)
     app.include_router(prestaciones.router)
     app.include_router(sillones.router)

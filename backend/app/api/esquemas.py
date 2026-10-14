@@ -204,6 +204,43 @@ class SillonSalida(BaseModel):
         return cls(id=datos.id, nombre=datos.nombre, activo=datos.activo)
 
 
+class LoginEntrada(BaseModel):
+    """Cuerpo de ``POST /auth/login``. El email no se valida como formato: uno mal escrito es solo inexistente (J12)."""
+
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "examples": [{"email": "odontologa@consultorio-demo.test", "contrasena": "demo-consultorio-2026"}]
+        },
+    )
+
+    email: Annotated[str, Field(min_length=1, max_length=254)]
+    contrasena: Annotated[str, Field(min_length=1)]
+
+
+class TokensSalida(BaseModel):
+    """Respuesta de ``POST /auth/login``; los nombres siguen RFC 6749 §5.1 (design J12)."""
+
+    access_token: str
+    refresh_token: str
+    token_type: str = "bearer"
+    expires_in: int
+
+
+class RefreshEntrada(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    refresh_token: Annotated[str, Field(min_length=1)]
+
+
+class AccessSalida(BaseModel):
+    """Respuesta de ``POST /auth/refresh``: solo un access nuevo, sin refresh nuevo (D201)."""
+
+    access_token: str
+    token_type: str = "bearer"
+    expires_in: int
+
+
 class ConflictoSalida(BaseModel):
     codigo: str
     recurso: str

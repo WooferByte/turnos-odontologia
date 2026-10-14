@@ -5,6 +5,7 @@ from fastapi.responses import JSONResponse
 
 from app.api.esquemas import ConflictoSalida, ErrorDeCampoSalida, Problema, ReferenciaSalida
 from app.domain.errors import (
+    CredencialesInvalidas,
     DuracionInvalida,
     EntradaInvalida,
     ErrorDeDominio,
@@ -13,6 +14,7 @@ from app.domain.errors import (
     IntervaloInvalido,
     NombreDePrestacionRepetido,
     RecursoDeLaUrlNoEncontrado,
+    SesionInvalida,
 )
 
 MEDIA_TYPE_PROBLEMA = "application/problem+json"
@@ -27,7 +29,12 @@ _CLASES_DE_ERROR: dict[type[ErrorDeDominio], tuple[int, str, str]] = {
     EntradaInvalida: (422, "/errores/entrada-invalida", "Entrada inválida"),
     RecursoDeLaUrlNoEncontrado: (404, "/errores/recurso-no-encontrado", "Recurso no encontrado"),
     NombreDePrestacionRepetido: (409, "/errores/nombre-repetido", "Nombre repetido"),
+    CredencialesInvalidas: (401, "/errores/credenciales-invalidas", "Credenciales inválidas"),
+    SesionInvalida: (401, "/errores/sesion-invalida", "Sesión inválida"),
 }
+# Los dos 401 llevan RFC 6750 §3 y un texto fijo que no depende de la causa (design J13).
+_CABECERAS_DE_NO_AUTENTICADO = {"WWW-Authenticate": "Bearer"}
+_ERRORES_DE_TEXTO_FIJO = (NombreDePrestacionRepetido, CredencialesInvalidas, SesionInvalida)
 
 
 def _problemas(cantidad: int) -> str:
@@ -103,16 +110,17 @@ def _problema_de(error: ErrorDeDominio, estado: int, tipo: str, titulo: str, rut
             for r in error.referencias
         ]
         return Problema(**base, detail=error.mensaje, referencias=referencias)
-    if isinstance(error, NombreDePrestacionRepetido):
+    if isinstance(error, _ERRORES_DE_TEXTO_FIJO):
         return Problema(**base, detail=error.mensaje)
     return Problema(**base, detail="El turno no puede cruzar la medianoche del consultorio.")
 
 
-def _responder(problema: Problema) -> JSONResponse:
+def _responder(problema: Problema, cabeceras: dict[str, str] | None = None) -> JSONResponse:
     return JSONResponse(
         status_code=problema.status,
         content=problema.model_dump(exclude_unset=True),
         media_type=MEDIA_TYPE_PROBLEMA,
+        headers=cabeceras,
     )
 
 
@@ -122,7 +130,8 @@ def _manejar_error_de_dominio(request: Request, error: ErrorDeDominio) -> JSONRe
     if clase is None:
         raise error  # error de programación: se deja subir (500), no se inventa un estado
     estado, tipo, titulo = clase
-    return _responder(_problema_de(error, estado, tipo, titulo, request.url.path))
+    cabeceras = _CABECERAS_DE_NO_AUTENTICADO if estado == 401 else None
+    return _responder(_problema_de(error, estado, tipo, titulo, request.url.path), cabeceras)
 
 
 def _campo_de(ubicacion: tuple) -> str | None:
