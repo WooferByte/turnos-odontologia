@@ -5,7 +5,8 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.domain.agenda.sillones import DatosSillon
-from app.infrastructure.db.modelos import ConsultorioModelo, SillonModelo
+from app.infrastructure.db.modelos import SillonModelo
+from app.infrastructure.repositories.consultorio import consultorio_unico
 
 
 def _a_dominio(modelo: SillonModelo) -> DatosSillon:
@@ -22,7 +23,7 @@ class RepositorioSillonesSqlAlchemy:
         self._sesion = sesion
 
     def consultorio_unico(self) -> int:
-        return self._sesion.scalars(select(ConsultorioModelo.id)).one()
+        return consultorio_unico(self._sesion)
 
     def del_consultorio(self, consultorio_id: int) -> Sequence[DatosSillon]:
         consulta = (

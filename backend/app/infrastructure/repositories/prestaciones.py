@@ -7,7 +7,8 @@ from sqlalchemy.orm import Session
 
 from app.application.puertos import NombreRepetidoEnLaBase
 from app.domain.agenda.prestaciones import DatosPrestacion
-from app.infrastructure.db.modelos import ConsultorioModelo, PrestacionModelo
+from app.infrastructure.db.modelos import PrestacionModelo
+from app.infrastructure.repositories.consultorio import consultorio_unico
 
 SQLSTATE_UNICIDAD = "23505"  # unique_violation
 RESTRICCION_DE_NOMBRE = "uq_prestacion_consultorio_id_nombre"
@@ -39,7 +40,7 @@ class RepositorioPrestacionesSqlAlchemy:
         self._sesion = sesion
 
     def consultorio_unico(self) -> int:
-        return self._sesion.scalars(select(ConsultorioModelo.id)).one()
+        return consultorio_unico(self._sesion)
 
     def del_consultorio(self, consultorio_id: int) -> Sequence[DatosPrestacion]:
         consulta = (
