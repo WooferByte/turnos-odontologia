@@ -19,10 +19,12 @@ from app.infrastructure.repositories.historial import RepositorioHistorialSqlAlc
 from tests.conftest import RELOJ_FIJO, a_las, reloj_fijo
 from tests.factories import (
     un_consultorio,
+    un_evento,
     un_paciente,
     un_profesional,
     una_prestacion,
     un_sillon,
+    un_turno,
 )
 
 
@@ -137,3 +139,51 @@ def test_his1_turno_inexistente_rechaza_con_rn_gl_04(uow):
 
     assert excinfo.value.codigos == ["RN-GL-04"]
     assert excinfo.value.referencias == (ReferenciaInvalida("turno", 999, "inexistente"),)
+
+
+def test_ca1_turno_sin_eventos_devuelve_lista_vacia(sesion, uow):
+    datos = _escenario(sesion)
+    turno = un_turno(  # la factory no registra evento: es un turno anterior a la migración (H14)
+        sesion,
+        paciente=datos["paciente"],
+        profesional=datos["profesional"],
+        sillon=datos["sillon"],
+        prestacion=datos["prestacion"],
+        inicio=a_las(10),
+    )
+
+    assert consultar_historial(turno.id, uow) == []
+
+
+def test_ca1_el_historial_no_mezcla_turnos(sesion, uow):
+    datos = _escenario(sesion)
+    primero = crear_turno(_comando(datos, a_las(10)), uow, reloj_fijo)
+    segundo = crear_turno(_comando(datos, a_las(15)), uow, reloj_fijo)
+
+    del_primero = consultar_historial(primero.id, uow)
+    del_segundo = consultar_historial(segundo.id, uow)
+
+    assert [e.turno_id for e in del_primero] == [primero.id]
+    assert [e.turno_id for e in del_segundo] == [segundo.id]
+    assert del_primero[0].despues["inicio"] == "2026-11-02T10:00:00Z"
+    assert del_segundo[0].despues["inicio"] == "2026-11-02T15:00:00Z"
+
+
+def test_ca1_consultar_historial_respeta_el_orden_cronologico(sesion, uow):
+    datos = _escenario(sesion)
+    turno = un_turno(
+        sesion,
+        paciente=datos["paciente"],
+        profesional=datos["profesional"],
+        sillon=datos["sillon"],
+        prestacion=datos["prestacion"],
+        inicio=a_las(10),
+    )
+    # Guardados fuera de orden: el último en ocurrir se inserta primero.
+    un_evento(sesion, turno, motivo="tercero", ocurrido_en=a_las(9, 30))
+    un_evento(sesion, turno, motivo="primero", ocurrido_en=a_las(8))
+    un_evento(sesion, turno, motivo="segundo", ocurrido_en=a_las(9))
+
+    eventos = consultar_historial(turno.id, uow)
+
+    assert [e.motivo for e in eventos] == ["primero", "segundo", "tercero"]
