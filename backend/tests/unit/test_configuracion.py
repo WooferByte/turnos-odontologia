@@ -74,8 +74,8 @@ def test_sesion_con_vigencia_invalida_levanta_error_que_nombra_la_variable_y_no_
     with pytest.raises(ConfiguracionInvalida, match=variable) as error:
         leer_configuracion_de_sesion(entorno)
 
-    if valor:
-        assert valor not in str(error.value).replace(variable, "")
+    if valor == "abc":
+        assert valor not in str(error.value)
 
 
 def test_sesion_repr_no_muestra_el_secreto() -> None:

@@ -3,6 +3,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Literal, Protocol
 
+from app.domain.acceso.sesion import ClaimsDeSesion
 from app.domain.agenda.intervalo import Intervalo
 from app.domain.agenda.prestaciones import DatosPrestacion
 from app.domain.agenda.recursos import Paciente, Prestacion, Profesional, Sillon
@@ -152,3 +153,37 @@ class NombreRepetidoEnLaBase(Exception):
 
     def __init__(self) -> None:
         super().__init__("La base rechazó el nombre de la prestación porque ya existe.")
+
+
+class HasherDeContrasenas(Protocol):
+    """Hash y comparación de contraseñas; el algoritmo vive en ``infrastructure`` (design J6)."""
+
+    def hashear(self, contrasena: str) -> str: ...
+
+    def verificar(self, contrasena: str, hash_guardado: str) -> bool:
+        """``False`` si no coincide, también con una contraseña que ningún hash puede tener."""
+        ...
+
+    def verificar_sin_usuario(self, contrasena: str) -> bool:
+        """Compara contra un hash de relleno con el mismo costo y siempre da ``False`` (design J8)."""
+        ...
+
+
+class TokenIlegible(Exception):
+    """El texto no es un token que este firmador haya emitido: forma, firma, algoritmo o claims.
+
+    No es un error de dominio ni lleva código RN: el caso de uso lo convierte en ``SesionInvalida``.
+    """
+
+    def __init__(self) -> None:
+        super().__init__("El token no se pudo leer.")
+
+
+class FirmadorDeTokens(Protocol):
+    """Firma y lee los tokens de sesión; no decide la vigencia, eso es del dominio (design J7)."""
+
+    def firmar(self, claims: ClaimsDeSesion) -> str: ...
+
+    def leer(self, token: str) -> ClaimsDeSesion:
+        """Levanta ``TokenIlegible`` ante cualquier problema de forma, firma o contenido."""
+        ...

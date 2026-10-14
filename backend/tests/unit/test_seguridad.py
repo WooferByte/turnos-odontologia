@@ -1,4 +1,5 @@
 """Adaptadores de seguridad: hasher bcrypt y firmador JWT HS256 (US-090 CA-2 y CA-4, US-094 CA-2; design J6, J7)."""
+import warnings
 from datetime import datetime, timedelta
 
 import jwt
@@ -82,7 +83,9 @@ def test_firmador_usa_hs256_y_los_claims_del_design() -> None:
 
 
 def _token_de(payload: dict, secreto: str = SECRETO_DE_PRUEBA, algoritmo: str = "HS256") -> str:
-    return jwt.encode(payload, secreto, algorithm=algoritmo)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", jwt.warnings.InsecureKeyLengthWarning)  # HS512 con un secreto de HS256
+        return jwt.encode(payload, secreto, algorithm=algoritmo)
 
 
 def _sin(campo: str) -> dict:
@@ -108,7 +111,6 @@ def _con_contenido_alterado() -> str:
         _con_firma_ajena(),
         _con_contenido_alterado(),
         jwt.encode(PAYLOAD_VALIDO, None, algorithm="none"),
-        _token_de(PAYLOAD_VALIDO, algoritmo="HS512"),
         _token_de(_sin("token_version")),
         _token_de(_sin("typ")),
         _token_de({**PAYLOAD_VALIDO, "sub": "abc"}),
@@ -117,7 +119,7 @@ def _con_contenido_alterado() -> str:
         "",
     ],
     ids=[
-        "otro_secreto", "firma_ajena", "contenido_alterado", "alg_none", "hs512",
+        "otro_secreto", "firma_ajena", "contenido_alterado", "alg_none",
         "sin_token_version", "sin_typ", "sub_no_entero", "typ_desconocido", "texto_cualquiera", "vacio",
     ],
 )
@@ -144,3 +146,12 @@ def test_firmador_acepta_un_secreto_de_32_bytes() -> None:
     firmador = FirmadorJwtHs256("s" * 32)
 
     assert firmador.leer(firmador.firmar(CLAIMS)) == CLAIMS
+
+
+def test_us094_ca2_token_hs512_firmado_con_el_mismo_secreto_se_rechaza() -> None:
+    # Secreto de 64 bytes: así HS512 no cae por el largo de la clave sino solo por la lista cerrada de algoritmos.
+    secreto = "s" * 64
+    token = _token_de(PAYLOAD_VALIDO, secreto=secreto, algoritmo="HS512")
+
+    with pytest.raises(TokenIlegible):
+        FirmadorJwtHs256(secreto).leer(token)
