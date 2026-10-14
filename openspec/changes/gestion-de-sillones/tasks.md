@@ -20,7 +20,7 @@ Reglas de trabajo para todos los grupos (no son tareas):
 
 ## 1. Preparación
 
-- [ ] 1.1 Red de seguridad. Correr `python -m pytest` y, con PostgreSQL levantado (`docker compose up -d postgres`) y `TEST_DATABASE_URL` definida, `python -m pytest -m postgres`; anotar las dos líneas finales (al archivar C-04: «257 passed, 38 deselected» y «38 passed»). Verificación: las dos corridas en verde; `git status` sin cambios propios (el cambio sin commitear de `CHANGES.md` de otro agente no se toca); `openspec status --change gestion-de-sillones` con las cuatro piezas hechas.
+- [x] 1.1 Red de seguridad. Correr `python -m pytest` y, con PostgreSQL levantado (`docker compose up -d postgres`) y `TEST_DATABASE_URL` definida, `python -m pytest -m postgres`; anotar las dos líneas finales (al archivar C-04: «257 passed, 38 deselected» y «38 passed»). Verificación: las dos corridas en verde; `git status` sin cambios propios (el cambio sin commitear de `CHANGES.md` de otro agente no se toca); `openspec status --change gestion-de-sillones` con las cuatro piezas hechas.
 
 ## 2. Dominio: error del sillón de la URL y base común de los `404`
 
