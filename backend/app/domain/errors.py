@@ -154,3 +154,22 @@ class ErrorDeSolapamiento(ErrorDeDominio):
     @property
     def codigos(self) -> list[str]:
         return [c.codigo for c in self.conflictos]
+
+
+# --- Acceso (US-090, US-094): el mensaje es fijo y no nombra al usuario ni la causa (D200) ---
+class CredencialesInvalidas(ErrorDeDominio):
+    """Email o contraseña incorrectos, o usuario inactivo: no se distinguen (RN-AU-04)."""
+
+    codigo = "RN-AU-04"
+
+    def __init__(self) -> None:
+        super().__init__("El email o la contraseña no son correctos.")
+
+
+class SesionInvalida(ErrorDeDominio):
+    """El token no sirve: ilegible, vencido, de otro tipo o de un usuario que ya no puede (RN-AU-03)."""
+
+    codigo = "RN-AU-03"
+
+    def __init__(self) -> None:
+        super().__init__("La sesión no es válida o venció. Iniciá sesión de nuevo.")
