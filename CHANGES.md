@@ -343,7 +343,7 @@ Primer change: `/opsx:propose crear-turno-sin-solapamientos`.
   - `knowledge-base/02_descripcion_general.md` §«API REST (resumen)», fila Prestaciones
 
 ### [C-05] `gestion-de-sillones`
-- **Estado**: `[ ]` pendiente · **Orden**: 2 · **Gobernanza**: BAJO
+- **Estado**: `[x]` archivado · **Orden**: 2 · **Gobernanza**: BAJO
 - **Objetivo** (US-004): gestionar el sillón como recurso, con alta y desactivación; el sillón por defecto es el único activo (RN-AG-14), no un sillón fijo.
 - **Alcance — dentro**: `GET/POST /sillones` y `PATCH /sillones/{id}` (desactivar); un sillón inactivo rechaza turnos nuevos con RN-GL-04 y motivo `inactivo` (RN-AG-07); el turno sin sillón explícito usa el único sillón activo y, con más de uno activo, la petición debe indicarlo o se rechaza con RN-GL-04 (RN-AG-14, D138); sin autenticación hasta C-07.
 - **Alcance — fuera**: interfaz (US-004 no tiene; la agenda multi-sillón es Fase 2); cambios de esquema (la tabla `Sillon` ya existe).
@@ -351,7 +351,7 @@ Primer change: `/opsx:propose crear-turno-sin-solapamientos`.
 - **Escenarios mínimos**: US-004: CA-1, CA-2, CA-3
 - **Leer antes**:
   - `knowledge-base/06_funcionalidades.md` §US-004
-  - `knowledge-base/05_reglas_de_negocio.md` RN-AG-06, RN-AG-07, RN-AG-14, RN-GL-04
+  - `knowledge-base/05_reglas_de_negocio.md` RN-AG-06, RN-AG-07, RN-AG-14, RN-GL-04 · `knowledge-base/10_preguntas_abiertas.md` (ya implementado, D183 a D194)
   - `knowledge-base/04_modelo_de_datos.md` §Sillon · `knowledge-base/09_decisiones_y_supuestos.md` DD-08
   - `knowledge-base/02_descripcion_general.md` §«API REST (resumen)», fila Sillones
 
@@ -960,7 +960,7 @@ Primer change: `/opsx:propose crear-turno-sin-solapamientos`.
 
 ## Verificación cruzada
 
-**Fecha de la verificación: 2026-10-14** (cuarta corrida, posterior a C-01, C-02, C-03 y C-04 archivados y a las decisiones de la knowledge-base hasta D182; las anteriores fueron del 2026-10-05). Se hizo con un script que lee este archivo y la knowledge-base tal como estaban ese día y compara los identificadores uno por uno; el script no modifica nada y no forma parte del repositorio. **Hay que repetirla cada vez que se edite este archivo o los archivos 02 a 06, 09 o 10 de la knowledge-base**: el resultado vale solo para el contenido verificado.
+**Fecha de la verificación: 2026-10-14** (quinta corrida, posterior a C-01, C-02, C-03, C-04 y C-05 archivados y a las decisiones de la knowledge-base hasta D194; las anteriores fueron del 2026-10-05). Se hizo con un script que lee este archivo y la knowledge-base tal como estaban ese día y compara los identificadores uno por uno; el script no modifica nada y no forma parte del repositorio. **Hay que repetirla cada vez que se edite este archivo o los archivos 02 a 06, 09 o 10 de la knowledge-base**: el resultado vale solo para el contenido verificado.
 
 Qué compara cada fila: las cinco primeras son las verificaciones pedidas por el autor (la tercera se muestra separada en reglas, decisiones y escenarios); las marcadas «Adicional» se agregaron para cubrir el resto del índice. En la fila 6 «criterio» es un par (historia, CA-n) distinto y «cita» cada aparición en el archivo; no se cuentan solo las de «Escenarios mínimos» (178 citas, 158 pares), que es lo que midió por error la corrida del 2026-10-14 anterior a esta aclaración.
 
@@ -974,9 +974,9 @@ Qué compara cada fila: las cinco primeras son las verificaciones pedidas por el
 | 4 | Rutas: cada ruta HTTP citada (método y ruta) existe en `02_descripcion_general.md` o en `03_actores_y_roles.md` | 67 rutas citadas (02 y 03 listan 69, dos de ellas de Fase 2) | sin diferencias |
 | 5 | Tablas: cada entidad de `04_modelo_de_datos.md` tiene un change que la crea en «Tablas del modelo → change que las crea», ese change implementa la historia que nombra la columna «Change que la crea» de 04 y su entrada nombra la tabla | 23 tablas | sin diferencias |
 | 6 | Adicional: cada criterio CA-n citado como escenario, o como criterio que se completa en otro change, existe en su historia de 06 | 165 criterios distintos (pares historia y CA), en 260 citas de todo el índice (incluye «Leer antes» y el mapeo) | sin diferencias |
-| 7 | Adicional: cada decisión D-NN citada figura en el registro de `10_preguntas_abiertas.md`, cada SU-NN en 09 y cada P-NN en 10 | 61 D, 3 SU y 2 P | sin diferencias |
+| 7 | Adicional: cada decisión D-NN citada figura en el registro de `10_preguntas_abiertas.md`, cada SU-NN en 09 y cada P-NN en 10 | 63 D, 3 SU y 2 P | sin diferencias |
 | 8 | Adicional: cada ruta de la v1 listada en 02 y 03 está citada en alguna entrada (ninguna ruta queda sin change) | 67 rutas de la v1 | sin diferencias |
-| 9 | Adicional: cada sección («…», §), flujo e ID de «Leer antes» aparece en el archivo de la KB que la entrada indica, y el archivo existe | 514 referencias | sin diferencias |
+| 9 | Adicional: cada sección («…», §), flujo e ID de «Leer antes» aparece en el archivo de la KB que la entrada indica, y el archivo existe | 516 referencias | sin diferencias |
 | 10 | Adicional: el árbol por bloques muestra el mismo nombre, bloque y dependencias que cada entrada, y las puertas nombran los 48 changes | 48 nodos | sin diferencias |
 | 11 | Adicional: el camino crítico es una cadena de dependencias directas y es la más larga hasta un change del MVP | 15 changes | sin diferencias |
 | 12 | Adicional, formato: códigos consecutivos, nombres kebab-case únicos, 12 líneas como máximo por entrada, 3 a 6 escenarios (8 en C-01), 3 o 4 líneas de «Leer antes», sin emoji | 48 entradas | sin diferencias |
