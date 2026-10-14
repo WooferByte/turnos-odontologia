@@ -12,6 +12,7 @@ from app.infrastructure.db.tipos import FechaHoraUTC
 from tests.conftest import a_las
 from tests.factories import (
     un_consultorio,
+    un_evento,
     un_paciente,
     un_profesional,
     una_prestacion,
@@ -130,3 +131,32 @@ def test_inf1_la_migracion_0005_completa_las_prestaciones_existentes(
         columnas = {c["name"] for c in inspect(conexion).get_columns("prestacion")}
         assert "color" not in columnas and "reservable_online" not in columnas
         assert conexion.execute(text("SELECT nombre FROM prestacion")).scalar_one() == "Limpieza"
+
+
+def test_inf1_deshacer_solo_la_migracion_de_usuarios_deja_el_esquema_anterior(
+    engine: Engine, config_alembic: Config, sesion: Session
+) -> None:
+    consultorio = un_consultorio(sesion)
+    turno = un_turno(
+        sesion,
+        paciente=un_paciente(sesion, consultorio),
+        profesional=un_profesional(sesion, consultorio),
+        sillon=un_sillon(sesion, consultorio),
+        prestacion=una_prestacion(sesion, consultorio),
+        inicio=a_las(10),
+    )
+    un_evento(sesion, turno)
+    with engine.connect() as conexion:
+        assert "usuario" in inspect(conexion).get_table_names()
+
+    command.downgrade(config_alembic, "0005")
+
+    with engine.connect() as conexion:
+        assert set(inspect(conexion).get_table_names()) == (TABLAS_DEL_MODELO - {"usuario"}) | {"alembic_version"}
+        assert conexion.execute(text("SELECT count(*) FROM turno")).scalar_one() == 1
+        assert conexion.execute(text("SELECT count(*) FROM evento_turno")).scalar_one() == 1
+
+    command.upgrade(config_alembic, "head")
+
+    with engine.connect() as conexion:
+        assert "usuario" in inspect(conexion).get_table_names()
