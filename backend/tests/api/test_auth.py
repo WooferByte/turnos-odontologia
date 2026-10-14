@@ -121,3 +121,48 @@ def test_us094_ca3_refresh_con_token_version_cambiada_responde_401(cliente, sesi
 
     assert respuesta.status_code == 401
     assert respuesta.json()["codigos"] == ["RN-AU-03"]
+
+
+@pytest.mark.parametrize(
+    "cuerpo",
+    [
+        {"email": "odontologa@consultorio-demo.test"},
+        {"email": "odontologa@consultorio-demo.test", "contrasena": ""},
+        {"email": "odontologa@consultorio-demo.test", "contrasena": "x", "recordarme": True},
+        {"email": 123, "contrasena": "x"},
+        {"email": "", "contrasena": "x"},
+    ],
+    ids=["sin_contrasena", "contrasena_vacia", "campo_de_mas", "email_numerico", "email_vacio"],
+)
+def test_us090_ca1_login_mal_formado_responde_422_sin_codigo(cliente, cuerpo):
+    respuesta = cliente.post("/auth/login", json=cuerpo)
+
+    assert respuesta.status_code == 422
+    assert respuesta.headers["content-type"].startswith(PROBLEMA_JSON)
+    assert respuesta.json()["codigos"] == []
+    assert "www-authenticate" not in respuesta.headers
+
+
+def test_us090_ca1_login_con_json_roto_responde_422_sin_codigo(cliente):
+    respuesta = cliente.post("/auth/login", content="{no es json", headers={"content-type": "application/json"})
+
+    assert respuesta.status_code == 422
+    assert respuesta.json()["codigos"] == []
+
+
+@pytest.mark.parametrize("cuerpo", [{}, {"refresh_token": ""}], ids=["sin_refresh_token", "refresh_token_vacio"])
+def test_us094_ca2_refresh_mal_formado_responde_422_sin_codigo(cliente, cuerpo):
+    respuesta = cliente.post("/auth/refresh", json=cuerpo)
+
+    assert respuesta.status_code == 422
+    assert respuesta.headers["content-type"].startswith(PROBLEMA_JSON)
+    assert respuesta.json()["codigos"] == []
+
+
+@pytest.mark.parametrize("ruta", ["/auth/login", "/auth/refresh"])
+def test_openapi_declara_401_y_422_de_auth_con_el_esquema_problema(cliente, ruta):
+    respuestas = cliente.get("/openapi.json").json()["paths"][ruta]["post"]["responses"]
+
+    for estado in ("401", "422"):
+        esquema = respuestas[estado]["content"]["application/problem+json"]["schema"]
+        assert esquema == {"$ref": "#/components/schemas/Problema"}
