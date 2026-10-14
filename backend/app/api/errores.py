@@ -5,11 +5,14 @@ from fastapi.responses import JSONResponse
 
 from app.api.esquemas import ConflictoSalida, ErrorDeCampoSalida, Problema, ReferenciaSalida
 from app.domain.errors import (
+    DuracionInvalida,
     EntradaInvalida,
     ErrorDeDominio,
     ErrorDeSolapamiento,
     FechaNoUTC,
     IntervaloInvalido,
+    NombreDePrestacionRepetido,
+    PrestacionNoEncontrada,
     TurnoNoEncontrado,
 )
 
@@ -24,6 +27,8 @@ _CLASES_DE_ERROR: dict[type[ErrorDeDominio], tuple[int, str, str]] = {
     IntervaloInvalido: (422, "/errores/intervalo-invalido", "Intervalo inválido"),
     EntradaInvalida: (422, "/errores/entrada-invalida", "Entrada inválida"),
     TurnoNoEncontrado: (404, "/errores/recurso-no-encontrado", "Recurso no encontrado"),
+    PrestacionNoEncontrada: (404, "/errores/recurso-no-encontrado", "Recurso no encontrado"),
+    NombreDePrestacionRepetido: (409, "/errores/nombre-repetido", "Nombre repetido"),
 }
 
 
@@ -48,17 +53,26 @@ def _texto_de_referencia(referencia: ReferenciaSalida) -> str:
     return f"{recurso} ({referencia.motivo})"
 
 
+def _error_de_campo(error: FechaNoUTC | DuracionInvalida) -> ErrorDeCampoSalida:
+    """Cada error de campo lleva su propio mensaje (design P5)."""
+    mensaje = MENSAJE_FECHA_NO_UTC if isinstance(error, FechaNoUTC) else error.mensaje
+    return ErrorDeCampoSalida(campo=error.campo, codigo=error.codigo, mensaje=mensaje)
+
+
+def _texto_de_error_de_campo(error: FechaNoUTC | DuracionInvalida) -> str:
+    if isinstance(error, FechaNoUTC):
+        return f"{error.campo} debe tener zona y estar en UTC"
+    return f"{error.campo} debe ser mayor que 0 y múltiplo de {error.granularidad} minutos"
+
+
 def _problema_de_entrada(problema: dict, error: EntradaInvalida) -> Problema:
-    errores = [
-        ErrorDeCampoSalida(campo=e.campo, codigo=e.codigo, mensaje=MENSAJE_FECHA_NO_UTC)
-        for e in error.errores
-        if isinstance(e, FechaNoUTC)
-    ]
+    de_campo = [e for e in error.errores if isinstance(e, (FechaNoUTC, DuracionInvalida))]
+    errores = [_error_de_campo(e) for e in de_campo]
     referencias = [
         ReferenciaSalida(recurso=r.recurso, recurso_id=r.recurso_id, motivo=r.motivo)
         for r in error.referencias
     ]
-    partes = [f"{e.campo} debe tener zona y estar en UTC" for e in errores] + [
+    partes = [_texto_de_error_de_campo(e) for e in de_campo] + [
         _texto_de_referencia(r) for r in referencias
     ]
     problema["detail"] = (
@@ -85,12 +99,14 @@ def _problema_de(error: ErrorDeDominio, estado: int, tipo: str, titulo: str, rut
         return Problema(**base, detail=_detalle_de_solapamiento(error), conflictos=conflictos)
     if isinstance(error, EntradaInvalida):
         return _problema_de_entrada(base, error)
-    if isinstance(error, TurnoNoEncontrado):
+    if isinstance(error, (TurnoNoEncontrado, PrestacionNoEncontrada)):
         referencias = [
             ReferenciaSalida(recurso=r.recurso, recurso_id=r.recurso_id, motivo=r.motivo)
             for r in error.referencias
         ]
         return Problema(**base, detail=error.mensaje, referencias=referencias)
+    if isinstance(error, NombreDePrestacionRepetido):
+        return Problema(**base, detail=error.mensaje)
     return Problema(**base, detail="El turno no puede cruzar la medianoche del consultorio.")
 
 

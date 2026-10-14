@@ -1,8 +1,10 @@
-"""Esquemas HTTP de ``POST /turnos`` (D4). Es la única capa que conoce Pydantic."""
+"""Esquemas HTTP de ``/turnos`` (D4) y ``/prestaciones`` (C-04). Es la única capa que conoce Pydantic."""
 from datetime import datetime
+from typing import Annotated, Any
 
-from pydantic import BaseModel, ConfigDict
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field, field_validator
 
+from app.domain.agenda.prestaciones import DatosPrestacion, normalizar_espacios
 from app.domain.turnos.eventos import EventoTurno
 from app.domain.turnos.turno import Turno
 
@@ -82,6 +84,81 @@ class EventoTurnoSalida(BaseModel):
             antes=evento.antes,
             despues=evento.despues,
             motivo=evento.motivo,
+        )
+
+
+def _nombre_normalizado(nombre: str) -> str:
+    """Guarda el nombre sin espacios de más; uno vacío después de normalizar es de formato (design P9)."""
+    normalizado = normalizar_espacios(nombre)
+    if not normalizado:
+        raise ValueError("El nombre no puede estar vacío.")
+    return normalizado
+
+
+NombreDePrestacion = Annotated[str, AfterValidator(_nombre_normalizado)]
+ColorHexadecimal = Annotated[str, Field(pattern=r"^#[0-9A-Fa-f]{6}$")]
+
+
+class CrearPrestacionEntrada(BaseModel):
+    """Cuerpo de ``POST /prestaciones``. La duración la valida el dominio (RN-AG-01), no Pydantic."""
+
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "examples": [{"nombre": "Blanqueamiento", "duracion_minutos": 60, "color": "#3A7BD5"}]
+        },
+    )
+
+    nombre: NombreDePrestacion
+    duracion_minutos: int
+    color: ColorHexadecimal
+    reservable_online: bool = False
+
+
+class EditarPrestacionEntrada(BaseModel):
+    """Cuerpo de ``PATCH /prestaciones/{id}``: todo opcional; un ``null`` explícito es de formato."""
+
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={"examples": [{"color": "#112233"}]},
+    )
+
+    nombre: NombreDePrestacion | None = None
+    duracion_minutos: int | None = None
+    color: ColorHexadecimal | None = None
+    reservable_online: bool | None = None
+    activa: bool | None = None
+
+    @field_validator("*", mode="before")
+    @classmethod
+    def _sin_nulos(cls, valor: Any) -> Any:
+        # Solo corre con los campos que llegan: un campo omitido no se valida ni entra en
+        # ``model_fields_set``; un ``null`` explícito se rechaza nombrando el campo (V2).
+        if valor is None:
+            raise ValueError("El campo no admite null; omitilo para no cambiarlo.")
+        return valor
+
+
+class PrestacionSalida(BaseModel):
+    """Una prestación del catálogo, sin ``consultorio_id`` (en la v1 hay un solo consultorio, P3)."""
+
+    id: int
+    nombre: str
+    duracion_minutos: int
+    color: str
+    reservable_online: bool
+    activa: bool
+
+    @classmethod
+    def desde_datos(cls, datos: DatosPrestacion) -> "PrestacionSalida":
+        assert datos.id is not None
+        return cls(
+            id=datos.id,
+            nombre=datos.nombre,
+            duracion_minutos=datos.duracion_minutos,
+            color=datos.color,
+            reservable_online=datos.reservable_online,
+            activa=datos.activa,
         )
 
 

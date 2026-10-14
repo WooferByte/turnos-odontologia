@@ -35,6 +35,7 @@ class DuracionInvalida(ErrorDeDominio):
 
     def __init__(self, granularidad: int, campo: str = "duracion_minutos") -> None:
         self.campo = campo
+        self.granularidad = granularidad
         super().__init__(
             f"El campo '{campo}' debe ser mayor que 0 y múltiplo de {granularidad} minutos."
         )
