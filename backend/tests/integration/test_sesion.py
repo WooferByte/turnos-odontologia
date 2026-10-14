@@ -4,7 +4,8 @@ from datetime import datetime, timedelta
 import pytest
 
 from app.application.sesion import IniciarSesionComando, Vigencias, iniciar_sesion, renovar_sesion
-from app.domain.errors import CredencialesInvalidas
+from app.domain.acceso.sesion import ClaimsDeSesion
+from app.domain.errors import CredencialesInvalidas, SesionInvalida
 from app.domain.acceso.sesion import TipoDeToken
 from app.domain.tiempo import UTC
 from app.infrastructure.seguridad.contrasenas import HasherBcrypt
@@ -154,3 +155,100 @@ def test_us094_ca1_un_segundo_antes_de_vencer_sigue_sirviendo(sesion, uow, hashe
     nuevo = renovar_sesion(tokens.refresh_token, uow, firmador, VIGENCIAS, _reloj_en(antes_de_vencer))
 
     assert firmador.leer(nuevo.access_token).emitido_en == antes_de_vencer
+
+
+def _renovar(uow, firmador, token: str, ahora: datetime = RELOJ_FIJO + timedelta(hours=1)):
+    return renovar_sesion(token, uow, firmador, VIGENCIAS, _reloj_en(ahora))
+
+
+def _alterar_la_firma(token: str) -> str:
+    encabezado, contenido, firma = token.split(".")
+    medio = len(firma) // 2
+    cambiado = "A" if firma[medio] != "A" else "B"
+    return ".".join([encabezado, contenido, firma[:medio] + cambiado + firma[medio + 1:]])
+
+
+def test_us094_ca2_refresh_vencido_en_el_instante_exacto(sesion, uow, hasher, firmador) -> None:
+    usuario = un_usuario(sesion, un_consultorio(sesion))
+    tokens = _iniciar(uow, hasher, firmador, usuario.email, CONTRASENA_DE_PRUEBA)
+
+    with pytest.raises(SesionInvalida) as excinfo:
+        _renovar(uow, firmador, tokens.refresh_token, RELOJ_FIJO + VIGENCIAS.refresh)
+
+    assert excinfo.value.codigos == ["RN-AU-03"]
+
+
+@pytest.mark.parametrize("como", ["otro_secreto", "firma_alterada"])
+def test_us094_ca2_refresh_de_otro_secreto_o_alterado(sesion, uow, hasher, firmador, como) -> None:
+    usuario = un_usuario(sesion, un_consultorio(sesion))
+    tokens = _iniciar(uow, hasher, firmador, usuario.email, CONTRASENA_DE_PRUEBA)
+    if como == "otro_secreto":
+        claims = firmador.leer(tokens.refresh_token)
+        token = FirmadorJwtHs256("otro-secreto-ficticio-de-mas-de-32-bytes-0123").firmar(claims)
+    else:
+        token = _alterar_la_firma(tokens.refresh_token)
+
+    with pytest.raises(SesionInvalida):
+        _renovar(uow, firmador, token)
+
+
+def test_us094_ca2_access_token_no_sirve_como_refresh(sesion, uow, hasher, firmador) -> None:
+    usuario = un_usuario(sesion, un_consultorio(sesion))
+    tokens = _iniciar(uow, hasher, firmador, usuario.email, CONTRASENA_DE_PRUEBA)
+
+    with pytest.raises(SesionInvalida):
+        _renovar(uow, firmador, tokens.access_token, RELOJ_FIJO)
+
+
+def test_us094_ca2_texto_que_no_es_jwt(uow, firmador) -> None:
+    with pytest.raises(SesionInvalida) as excinfo:
+        _renovar(uow, firmador, "abc")
+
+    assert excinfo.value.codigos == ["RN-AU-03"]
+
+
+def test_us094_ca3_usuario_desactivado_despues_del_login(sesion, uow, hasher, firmador) -> None:
+    usuario = un_usuario(sesion, un_consultorio(sesion))
+    tokens = _iniciar(uow, hasher, firmador, usuario.email, CONTRASENA_DE_PRUEBA)
+    usuario.activo = False
+    sesion.commit()
+
+    with pytest.raises(SesionInvalida):
+        _renovar(uow, firmador, tokens.refresh_token)
+
+
+def test_us094_ca3_token_version_cambiada(sesion, uow, hasher, firmador) -> None:
+    usuario = un_usuario(sesion, un_consultorio(sesion))
+    tokens = _iniciar(uow, hasher, firmador, usuario.email, CONTRASENA_DE_PRUEBA)
+    usuario.token_version += 1
+    sesion.commit()
+
+    with pytest.raises(SesionInvalida):
+        _renovar(uow, firmador, tokens.refresh_token)
+
+
+def test_us094_ca3_reactivado_no_revive_el_token_viejo(sesion, uow, hasher, firmador) -> None:
+    usuario = un_usuario(sesion, un_consultorio(sesion))
+    viejos = _iniciar(uow, hasher, firmador, usuario.email, CONTRASENA_DE_PRUEBA)
+    usuario.activo = False
+    sesion.commit()
+    usuario.activo = True
+    usuario.token_version += 1
+    sesion.commit()
+
+    with pytest.raises(SesionInvalida):
+        _renovar(uow, firmador, viejos.refresh_token)
+    nuevos = _iniciar(uow, hasher, firmador, usuario.email, CONTRASENA_DE_PRUEBA)
+    renovado = _renovar(uow, firmador, nuevos.refresh_token)
+    assert firmador.leer(renovado.access_token).token_version == 1
+
+
+def test_us094_ca3_usuario_inexistente(sesion, uow, firmador) -> None:
+    un_consultorio(sesion)
+    claims = ClaimsDeSesion(
+        usuario_id=999, token_version=0, tipo=TipoDeToken.REFRESH,
+        emitido_en=RELOJ_FIJO, vence_en=RELOJ_FIJO + VIGENCIAS.refresh,
+    )
+
+    with pytest.raises(SesionInvalida):
+        _renovar(uow, firmador, firmador.firmar(claims))
