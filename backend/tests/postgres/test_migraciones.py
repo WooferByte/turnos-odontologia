@@ -5,11 +5,24 @@ from alembic.autogenerate import compare_metadata
 from alembic.config import Config
 from alembic.migration import MigrationContext
 from sqlalchemy import Engine, inspect, text
+from datetime import datetime
+
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
-from app.infrastructure.db.modelos import Base
+from app.infrastructure.db.modelos import Base, TurnoModelo
+from tests.conftest import a_las
+from tests.factories import (
+    un_consultorio,
+    un_paciente,
+    un_profesional,
+    una_prestacion,
+    un_sillon,
+    un_turno,
+)
 
 TABLAS_DE_C01 = {"consultorio", "profesional", "sillon", "prestacion", "paciente", "turno"}
+TABLAS_DEL_MODELO = set(Base.metadata.tables)
 
 pytestmark = pytest.mark.postgres
 
@@ -18,17 +31,19 @@ def test_el_perfil_se_conecta_a_postgresql(sesion: Session) -> None:
     assert sesion.execute(text("SELECT 1")).scalar_one() == 1
 
 
-def test_inf1_base_vacia_migrada_queda_con_el_esquema_de_c01(engine: Engine) -> None:
+def test_inf1_base_vacia_migrada_queda_con_el_esquema_del_modelo(engine: Engine) -> None:
     with engine.connect() as conexion:
         inspector = inspect(conexion)
-        assert set(inspector.get_table_names()) == TABLAS_DE_C01 | {"alembic_version"}
+        assert set(inspector.get_table_names()) == TABLAS_DEL_MODELO | {"alembic_version"}
 
         contexto = MigrationContext.configure(conexion, opts={"compare_type": True})
         assert compare_metadata(contexto, Base.metadata) == []
 
-        columnas = {c["name"]: c["type"] for c in inspector.get_columns("turno")}
-        for nombre in ("inicio", "fin", "creado_en"):
-            assert columnas[nombre].timezone is True, nombre
+        for tabla in Base.metadata.sorted_tables:
+            columnas = {c["name"]: c["type"] for c in inspector.get_columns(tabla.name)}
+            for columna in tabla.columns:
+                if columna.type.python_type is datetime:
+                    assert columnas[columna.name].timezone is True, f"{tabla.name}.{columna.name}"
 
 
 def test_inf1_deshacer_las_migraciones_deja_la_base_vacia(engine: Engine, config_alembic: Config) -> None:
@@ -47,4 +62,27 @@ def test_inf1_deshacer_las_migraciones_deja_la_base_vacia(engine: Engine, config
     command.upgrade(config_alembic, "head")
 
     with engine.connect() as conexion:
+        assert set(inspect(conexion).get_table_names()) == TABLAS_DEL_MODELO | {"alembic_version"}
+
+
+def test_inf1_deshacer_las_migraciones_del_historial_deja_el_esquema_de_c01(
+    engine: Engine, config_alembic: Config, sesion: Session
+) -> None:
+    consultorio = un_consultorio(sesion)
+    un_turno(
+        sesion,
+        paciente=un_paciente(sesion, consultorio),
+        profesional=un_profesional(sesion, consultorio),
+        sillon=un_sillon(sesion, consultorio),
+        prestacion=una_prestacion(sesion, consultorio),
+        inicio=a_las(10),
+    )
+    with engine.connect() as conexion:
+        assert "evento_turno" in inspect(conexion).get_table_names()
+
+    command.downgrade(config_alembic, "0002")
+
+    with engine.connect() as conexion:
         assert set(inspect(conexion).get_table_names()) == TABLAS_DE_C01 | {"alembic_version"}
+    with Session(engine) as lectura:
+        assert len(lectura.scalars(select(TurnoModelo)).all()) == 1
