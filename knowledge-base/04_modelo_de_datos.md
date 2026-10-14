@@ -292,21 +292,21 @@ DD-04 confirmada por el autor (2026-10-02). **Decidido el qué (2026-10-05, D75)
 Los estados terminales no tienen transiciones de salida, **salvo la corrección entre `atendido` y `ausente`** (dos últimas filas con condición). El momento del marcado original sale del historial `EventoTurno`; la seña no acompaña la corrección (RN-SP-10). Marcar `atendido` o `ausente` solo es posible si `ahora >= inicio` del turno (RN-AG-13). El rechazo de la aprobación manual (RN-TD-05) lleva a `cancelado_profesional`, sin estado nuevo (decisión del autor 2026-10-05, D76). Los vencimientos se evalúan al consultar y los persiste la tarea periódica o, antes, la escritura que depende de ellos (RN-GL-05, D92).
 
 ### EventoTurno (historial de cambios)
-**Change que la crea:** historial de cambios de turno (US-015); **no entra en el primer change** (decisión del autor 2026-10-03). **Inmutable**: solo inserción (RN-AG-11). Registra todo hecho que tiene un turno; lo que le pasa al paciente sin un turno va en `EventoPaciente` (regla de reparto en esa entidad, D111).
+**Change que la crea:** historial de cambios de turno (US-015), C-03 `historial-de-turnos` (2026-10-14; no entró en el primer change, decisión del autor 2026-10-03). **Inmutable**: solo inserción (RN-AG-11). **Construido en C-03:** solo el tipo `creado`; los demás tipos los agrega el change que los produce. Registra todo hecho que tiene un turno; lo que le pasa al paciente sin un turno va en `EventoPaciente` (regla de reparto en esa entidad, D111).
 
 | Campo | Tipo | Null | Restricciones / FK / nota |
 |---|---|---|---|
 | `id` | entero | NN | PK |
-| `turno_id` | entero | NN | FK → Turno |
+| `turno_id` | entero | NN | FK → Turno, `ON DELETE RESTRICT`: un turno con historial no se borra (D164) |
 | `tipo` | texto | NN | Valores: `creado`, `reprogramado`, `confirmado`, `cancelado`, `estado_cambiado`, `sena_acreditada`, `sena_retenida`, `sena_devuelta`, `nota` |
 | `actor_tipo` | texto | NN | Valores: `usuario`, `paciente`, `sistema`, `webhook_mp`. `webhook_wa` se agrega en Fase 2 |
-| `actor_id` | texto | null | Id del usuario o del token, según `actor_tipo` |
+| `actor_id` | texto | null | Id del usuario o del token, según `actor_tipo`. **Vacío mientras no haya autenticación:** los eventos `creado` anteriores a C-07 llevan `actor_tipo = usuario` y `actor_id` nulo para siempre (D159) |
 | `ocurrido_en` | fecha-hora | NN | — |
-| `antes` | json | null | Estado previo (horario, estado). En una corrección de marcado, el valor anterior (`atendido` o `ausente`) |
-| `despues` | json | null | Estado nuevo. En el evento `creado` de una reserva con menos antelación que la ventana de cancelación, registra además la **aceptación explícita** del paciente (RN-TD-10, D87) |
+| `antes` | json (`JSON`, no `JSONB`; D164) | null | Estado previo (horario, estado). En una corrección de marcado, el valor anterior (`atendido` o `ausente`) |
+| `despues` | json (`JSON`, no `JSONB`; D164) | null | Estado nuevo. En el evento `creado` de C-03 es la foto completa del turno al nacer (`estado`, `inicio`, `fin`, `duracion_minutos`, `paciente_id`, `prestacion_id`, `profesional_id`, `sillon_id`; fechas ISO 8601 UTC con `Z`; D163). En el evento `creado` de una reserva con menos antelación que la ventana de cancelación, registra además la **aceptación explícita** del paciente (RN-TD-10, D87) |
 | `motivo` | texto | null | — |
 
-Índice: `(turno_id, ocurrido_en)`. Ni la aplicación ni la base exponen `UPDATE` ni `DELETE` sobre esta tabla.
+Índice: `ix_evento_turno_turno_id_ocurrido_en` sobre `(turno_id, ocurrido_en)`. Ni la aplicación ni la base exponen `UPDATE` ni `DELETE` sobre esta tabla: la aplicación no tiene métodos de modificación (D167) y, en PostgreSQL, la migración `0004` agrega un disparador que rechaza `UPDATE`, `DELETE` y `TRUNCATE` (D168); SQLite (tests) no lo tiene. Los turnos guardados antes de la migración `0003` no tienen eventos (D160). Sin `CHECK` sobre `tipo` ni `actor_tipo` (D164).
 
 ### EntradaListaEspera
 **Change que la crea:** lista de espera (US-021).
