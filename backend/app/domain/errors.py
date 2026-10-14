@@ -28,6 +28,18 @@ class FechaNoUTC(ErrorDeDominio):
         )
 
 
+class DuracionInvalida(ErrorDeDominio):
+    """La duración no es mayor que 0 o no es múltiplo de la granularidad (RN-AG-01)."""
+
+    codigo = "RN-AG-01"
+
+    def __init__(self, granularidad: int, campo: str = "duracion_minutos") -> None:
+        self.campo = campo
+        super().__init__(
+            f"El campo '{campo}' debe ser mayor que 0 y múltiplo de {granularidad} minutos."
+        )
+
+
 @dataclass(frozen=True)
 class ReferenciaInvalida:
     recurso: Literal["prestacion", "paciente", "profesional", "sillon", "turno"]
@@ -58,8 +70,19 @@ class TurnoNoEncontrado(ErrorDeDominio):
         super().__init__(f"No existe el turno {turno_id}.")
 
 
+class PrestacionNoEncontrada(ErrorDeDominio):
+    """La prestación que nombra la URL no existe (RN-GL-04): sale como 404, no como 422."""
+
+    codigo = "RN-GL-04"
+    referencias: tuple[ReferenciaInvalida, ...]
+
+    def __init__(self, prestacion_id: int) -> None:
+        self.referencias = (ReferenciaInvalida("prestacion", prestacion_id, "inexistente"),)
+        super().__init__(f"No existe la prestación {prestacion_id}.")
+
+
 class EntradaInvalida(ErrorDeDominio):
-    """Toda la validación de entrada junta: ``FechaNoUTC`` y/o ``RecursoNoEncontrado`` (D6)."""
+    """Toda la validación de entrada junta: ``FechaNoUTC``, ``DuracionInvalida`` y/o ``RecursoNoEncontrado`` (D6)."""
 
     errores: tuple[ErrorDeDominio, ...]
 
@@ -82,6 +105,16 @@ class EntradaInvalida(ErrorDeDominio):
 
 
 # --- Reglas de negocio (de a una) ---
+class NombreDePrestacionRepetido(ErrorDeDominio):
+    """El nombre ya lo usa otra prestación del consultorio, activa o inactiva (RN-AG-15)."""
+
+    codigo = "RN-AG-15"
+
+    def __init__(self, nombre_existente: str) -> None:
+        self.nombre_existente = nombre_existente
+        super().__init__(f"Ya existe una prestación llamada «{nombre_existente}».")
+
+
 class IntervaloInvalido(ErrorDeDominio):
     codigo = "RN-AG-10d"
 
