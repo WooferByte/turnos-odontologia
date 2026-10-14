@@ -9,7 +9,7 @@ from app.api.esquemas import (
     EditarPrestacionEntrada,
     PrestacionSalida,
 )
-from app.api.routers.turnos import _respuesta_de_error
+from app.api.respuestas import _respuesta_de_error
 from app.application.prestaciones import (
     CrearPrestacionComando,
     EditarPrestacionComando,

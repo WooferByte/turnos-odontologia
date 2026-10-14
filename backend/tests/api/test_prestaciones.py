@@ -146,3 +146,96 @@ def test_ca1_patch_de_una_prestacion_inexistente_responde_404_con_rn_gl_04(clien
     assert cuerpo["referencias"] == [
         {"recurso": "prestacion", "recurso_id": 999, "motivo": "inexistente"}
     ]
+
+
+@pytest.mark.parametrize(
+    "cuerpo",
+    [
+        {"nombre": "Blanqueamiento", "duracion_minutos": 60, "color": "azul"},
+        {"duracion_minutos": 60, "color": "#3A7BD5"},
+        {"nombre": "   ", "duracion_minutos": 60, "color": "#3A7BD5"},
+        {"nombre": "Blanqueamiento", "duracion_minutos": 60, "color": "#3A7BD5", "activa": False},
+    ],
+    ids=["color_sin_formato", "sin_nombre", "nombre_en_blanco", "campo_de_mas"],
+)
+def test_ca1_post_mal_formado_responde_422_sin_codigo(cliente, sesion, cuerpo):
+    un_consultorio(sesion)
+
+    respuesta = cliente.post("/prestaciones", json=cuerpo)
+
+    assert respuesta.status_code == 422
+    assert respuesta.headers["content-type"].startswith(PROBLEMA_JSON)
+    assert respuesta.json()["codigos"] == []
+    assert cliente.get("/prestaciones").json() == []
+
+
+@pytest.mark.parametrize(
+    ("ruta", "cuerpo"),
+    [
+        ("/prestaciones/{id}", {"activa": False, "extra": 1}),
+        ("/prestaciones/{id}", {"nombre": None}),
+        ("/prestaciones/abc", {"color": "#112233"}),
+    ],
+    ids=["campo_de_mas", "nombre_nulo", "id_no_entero"],
+)
+def test_ca1_patch_mal_formado_no_cambia_nada(cliente, sesion, ruta, cuerpo):
+    consultorio = un_consultorio(sesion)
+    original = una_prestacion(sesion, consultorio, nombre="Limpieza")
+    antes = cliente.get("/prestaciones").json()
+
+    respuesta = cliente.patch(ruta.format(id=original.id), json=cuerpo)
+
+    assert respuesta.status_code == 422
+    assert respuesta.json()["codigos"] == []
+    assert cliente.get("/prestaciones").json() == antes
+
+
+def test_ca1_patch_con_nombre_nulo_nombra_el_campo(cliente, sesion):
+    consultorio = un_consultorio(sesion)
+    original = una_prestacion(sesion, consultorio)
+
+    respuesta = cliente.patch(f"/prestaciones/{original.id}", json={"nombre": None})
+
+    assert [e["campo"] for e in respuesta.json()["errores"]] == ["nombre"]
+
+
+def test_ca1_patch_vacio_responde_200_sin_cambios(cliente, sesion):
+    consultorio = un_consultorio(sesion)
+    original = una_prestacion(sesion, consultorio, nombre="Limpieza", duracion_minutos=45)
+    antes = cliente.get("/prestaciones").json()
+
+    respuesta = cliente.patch(f"/prestaciones/{original.id}", json={})
+
+    assert respuesta.status_code == 200
+    assert [respuesta.json()] == antes
+
+
+def test_ca2_patch_con_duracion_invalida_responde_422(cliente, sesion):
+    consultorio = un_consultorio(sesion)
+    original = una_prestacion(sesion, consultorio, duracion_minutos=45)
+
+    respuesta = cliente.patch(f"/prestaciones/{original.id}", json={"duracion_minutos": 52})
+
+    assert respuesta.status_code == 422
+    cuerpo = respuesta.json()
+    assert cuerpo["codigos"] == ["RN-AG-01"]
+    assert [e["campo"] for e in cuerpo["errores"]] == ["duracion_minutos"]
+    assert "múltiplo de 5" in cuerpo["detail"]
+    assert cliente.get("/prestaciones").json()[0]["duracion_minutos"] == 45
+
+
+def test_openapi_declara_los_errores_de_prestaciones_con_el_esquema_problema(engine):
+    openapi = crear_app(engine).openapi()
+
+    esperados = {
+        ("/prestaciones", "post"): {"201", "409", "422"},
+        ("/prestaciones/{prestacion_id}", "patch"): {"200", "404", "409", "422"},
+    }
+    for (ruta, metodo), estados in esperados.items():
+        respuestas = openapi["paths"][ruta][metodo]["responses"]
+        assert estados <= set(respuestas)
+        for estado in estados - {"200", "201"}:
+            assert respuestas[estado]["content"]["application/problem+json"]["schema"] == {
+                "$ref": "#/components/schemas/Problema"
+            }
+    assert "HTTPValidationError" not in openapi["components"]["schemas"]

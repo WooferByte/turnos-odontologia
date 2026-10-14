@@ -4,24 +4,14 @@ from typing import Annotated
 from fastapi import APIRouter, Depends
 
 from app.api.deps import get_reloj, get_uow
-from app.api.esquemas import CrearTurnoEntrada, EventoTurnoSalida, Problema, TurnoSalida
+from app.api.esquemas import CrearTurnoEntrada, EventoTurnoSalida, TurnoSalida
+from app.api.respuestas import _respuesta_de_error
 from app.application.crear_turno import CrearTurnoComando, crear_turno
 from app.application.historial import consultar_historial
 from app.application.puertos import UnidadDeTrabajo
 from app.domain.tiempo import Reloj
 
 router = APIRouter(prefix="/turnos", tags=["turnos"])
-
-# Los errores salen como application/problem+json (RFC 7807). "model" registra el esquema
-# Problema; FastAPI lo publica además bajo application/json, que acá no se usa.
-_PROBLEMA_JSON = {
-    "application/problem+json": {"schema": {"$ref": "#/components/schemas/Problema"}}
-}
-
-
-def _respuesta_de_error(descripcion: str) -> dict:
-    return {"description": descripcion, "model": Problema, "content": _PROBLEMA_JSON}
-
 
 RESPUESTAS_DE_ERROR = {
     409: _respuesta_de_error("Solapamiento con un turno activo"),
