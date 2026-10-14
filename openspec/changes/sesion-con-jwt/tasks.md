@@ -64,7 +64,7 @@ Reglas de trabajo para todos los grupos (no son tareas):
 
 ## 9. README
 
-- [ ] 9.1 Completar el `README.md` (design J18): sección «Sesión del panel» con `POST /auth/login` y `POST /auth/refresh` sobre la demo (usuario `odontologa@consultorio-demo.test` y su contraseña de prueba), las variables nuevas en «Variables de entorno», `0006` en «Migraciones», los pins nuevos en «Versiones fijadas», la tabla escenario → test (US-090 CA-1 a CA-4, US-094 CA-1 a CA-3, INF-1 y los del perfil), el resultado real de las dos corridas y los límites conocidos nuevos. Verificación: cada comando y petición nueva del README se ejecutó tal cual y dio lo que el README dice; la instalación y los tests sin Docker no cambiaron salvo los pins.
+- [x] 9.1 Completar el `README.md` (design J18): sección «Sesión del panel» con `POST /auth/login` y `POST /auth/refresh` sobre la demo (usuario `odontologa@consultorio-demo.test` y su contraseña de prueba), las variables nuevas en «Variables de entorno», `0006` en «Migraciones», los pins nuevos en «Versiones fijadas», la tabla escenario → test (US-090 CA-1 a CA-4, US-094 CA-1 a CA-3, INF-1 y los del perfil), el resultado real de las dos corridas y los límites conocidos nuevos. Verificación: cada comando y petición nueva del README se ejecutó tal cual y dio lo que el README dice; la instalación y los tests sin Docker no cambiaron salvo los pins.
 
 ## 10. Prueba en el navegador
 

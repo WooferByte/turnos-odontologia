@@ -11,6 +11,8 @@ Sistema de gestión de turnos y agenda para odontólogos independientes y consul
 
 - `gestion-de-prestaciones` (C-04): `GET /prestaciones`, `POST /prestaciones` y `PATCH /prestaciones/{id}` para mantener el catálogo del consultorio (nombre único, duración múltiplo de 5, color, si se ofrece en la reserva online, activa o inactiva). Editar una prestación no cambia los turnos ya creados, y una prestación inactiva no admite turnos nuevos. La migración `0005` agrega `color` y `reservable_online`.
 
+- `sesion-con-jwt` (C-06): `POST /auth/login` y `POST /auth/refresh`. Con el email y la contraseña de un usuario activo, el login devuelve un token de acceso (15 minutos) y uno de renovación (7 días), firmados con HS256; el refresh cambia el de renovación por un acceso nuevo, sin rotarlo. Cualquier rechazo del login es el mismo `401` (`RN-AU-04`) y cualquier rechazo del refresh, el mismo `401` (`RN-AU-03`). La migración `0006` crea la tabla `usuario` y el seed trae un usuario ficticio. **Todavía ninguna ruta exige el token**: eso llega en C-07.
+
 No hay interfaz gráfica. La API se puede probar sin instalar nada más que Python (base SQLite en memoria) o sobre PostgreSQL con Docker.
 
 > Todos los datos del proyecto, de los tests y de la demo son **ficticios**. No hay datos reales de pacientes ni secretos.
@@ -63,6 +65,8 @@ Las versiones exactas viven en `backend/pyproject.toml`:
 | `tzdata` | 2026.4 |
 | `psycopg[binary]` | 3.3.6 |
 | `alembic` | 1.20.0 |
+| `PyJWT` | 2.15.1 |
+| `bcrypt` | 5.0.0 |
 | `pytest` | 9.1.1 |
 | `httpx` | 0.28.1 |
 
@@ -87,7 +91,7 @@ python -m pytest
 
 Los tests corren con **SQLite en memoria**: no necesitan Docker, PostgreSQL ni Redis, ni ningún archivo de base de datos.
 
-La corrida termina con **«303 passed, 39 deselected, 1 warning»**. Los 39 «deselected» son los del perfil opcional con PostgreSQL (más abajo), que la corrida por defecto excluye a propósito. El warning es un aviso de deprecación interno de Starlette (`starlette/testclient.py`, sobre `anyio.abc.BlockingPortal`): viene de una dependencia con versión fijada, no del código del proyecto, y no indica ningún problema.
+La corrida termina con **«416 passed, 42 deselected, 1 warning»**. Los 42 «deselected» son los del perfil opcional con PostgreSQL (más abajo), que la corrida por defecto excluye a propósito. El warning es un aviso de deprecación interno de Starlette (`starlette/testclient.py`, sobre `anyio.abc.BlockingPortal`): viene de una dependencia con versión fijada, no del código del proyecto, y no indica ningún problema.
 
 ### Escenario → test
 
@@ -156,6 +160,28 @@ Los escenarios de la gestión de sillones (`gestion-de-sillones`, C-05) están e
 | US-004 CA-2 | Dos profesionales a la misma hora en sillones distintos se admiten; el sillón nuevo también se ocupa (`409`, `RN-AG-08`) | `test_ca2_dos_profesionales_a_la_misma_hora_en_sillones_distintos`, `test_ca2_el_sillon_nuevo_tambien_se_ocupa` |
 | Contrato | `/docs` declara los errores de `/sillones` con el esquema de problema | `test_openapi_declara_los_errores_de_sillones_con_el_esquema_problema` |
 
+Los escenarios de la sesión del panel (`sesion-con-jwt`, C-06) están en `openspec/changes/sesion-con-jwt/specs/` y se prueban en la suite por defecto: las reglas puras en `backend/tests/unit/test_sesion.py`, el hasher y el firmador en `backend/tests/unit/test_seguridad.py`, la configuración en `backend/tests/unit/test_configuracion.py`, el repositorio en `backend/tests/integration/test_repositorio_usuarios.py`, los casos de uso en `backend/tests/integration/test_sesion.py`, el seed en `backend/tests/integration/test_seed_demo.py` y HTTP en `backend/tests/api/test_auth.py` (más `backend/tests/api/test_demo.py`):
+
+| Escenario | Qué verifica | Test titular |
+|---|---|---|
+| US-090 CA-1 | Con credenciales válidas, el login devuelve el acceso y la renovación (`200`, `token_type` `bearer`, `expires_in` 900) | `test_us090_ca1_login_valido_responde_200_con_dos_tokens` (HTTP), `test_us090_ca1_credenciales_validas_devuelven_access_y_refresh` |
+| US-090 CA-1 | El email se normaliza (mayúsculas y espacios) | `test_us090_ca1_email_con_mayusculas_y_espacios_inicia_sesion`, `test_us090_ca1_normalizar_email` (unitario) |
+| US-090 CA-1 | El acceso vence a los 15 minutos y la renovación a los 7 días | `test_us090_ca4_claims_de_access_vencen_a_los_15_minutos`, `test_us090_ca4_claims_de_refresh_vencen_a_los_7_dias` |
+| US-090 CA-1 | La demo inicia sesión con el usuario del seed | `test_us090_ca1_la_demo_inicia_sesion_con_el_usuario_del_seed` (`test_demo.py`) |
+| US-090 CA-1 | Un cuerpo mal formado o un JSON roto responde `422` sin código | `test_us090_ca1_login_mal_formado_responde_422_sin_codigo` (parametrizado), `test_us090_ca1_login_con_json_roto_responde_422_sin_codigo` |
+| US-090 CA-2 | Contraseña incorrecta, email inexistente y usuario inactivo: el mismo `401` con `RN-AU-04` | `test_us090_ca2_los_tres_rechazos_del_login_son_el_mismo_401` (HTTP), `test_us090_ca2_email_inexistente_rechaza_con_rn_au_04`, `test_us090_ca2_contrasena_incorrecta_rechaza_con_rn_au_04` |
+| US-090 CA-2 | Siempre se compara una contraseña (aunque el email no exista) y una de más de 72 bytes se rechaza sin error | `test_us090_ca2_siempre_se_compara_una_contrasena` (parametrizado), `test_us090_ca2_contrasena_de_73_bytes_rechaza_sin_error` |
+| US-090 CA-3 | Un usuario inactivo no inicia sesión, ni con la contraseña correcta | `test_us090_ca3_usuario_inactivo_rechaza_con_rn_au_04` (parametrizado) |
+| US-090 CA-4 | El hash es bcrypt y no la contraseña; el repositorio guarda el email normalizado y no admite uno repetido | `test_us090_ca4_el_hash_no_es_la_contrasena_y_usa_bcrypt_con_las_rondas_dadas`, `test_us090_ca4_agregar_guarda_el_email_normalizado_y_devuelve_el_usuario_con_id`, `test_us090_ca4_email_repetido_sin_distinguir_mayusculas` |
+| US-090 CA-4 | El usuario de la demo tiene hash bcrypt y no se duplica | `test_us090_ca4_usuario_de_la_demo_con_hash_bcrypt`, `test_cargar_usuario_demo_si_falta_no_duplica` |
+| US-094 CA-1 | Un refresh válido devuelve un acceso nuevo, sin refresh nuevo | `test_us094_ca1_refresh_valido_responde_200_sin_refresh_token` (HTTP), `test_us094_ca1_refresh_valido_devuelve_un_access_nuevo` |
+| US-094 CA-2 | Refresh vencido (borde semiabierto), de otro secreto, alterado o ilegible: `401` con `RN-AU-03` | `test_us094_ca2_los_rechazos_del_refresh_son_el_mismo_401` (HTTP), `test_us094_ca2_refresh_vencido_en_el_instante_exacto`, `test_us094_ca2_refresh_de_otro_secreto_o_alterado`, `test_us094_ca2_vigencia_semiabierta` |
+| US-094 CA-2 | Un acceso no sirve como refresh; un token con otro algoritmo (HS512) se rechaza | `test_us094_ca2_access_token_no_sirve_como_refresh`, `test_us094_ca2_token_hs512_firmado_con_el_mismo_secreto_se_rechaza` |
+| US-094 CA-2 | Un refresh mal formado responde `422` sin código | `test_us094_ca2_refresh_mal_formado_responde_422_sin_codigo` (parametrizado) |
+| US-094 CA-3 | Usuario desactivado, inexistente o con `token_version` distinta: `401`; reactivar no revive el token viejo | `test_us094_ca3_refresh_con_token_version_cambiada_responde_401` (HTTP), `test_us094_ca3_usuario_desactivado_despues_del_login`, `test_us094_ca3_token_version_cambiada`, `test_us094_ca3_reactivado_no_revive_el_token_viejo`, `test_us094_ca3_usuario_inexistente` |
+| Configuración | `JWT_SECRET` de 32 bytes como mínimo; vigencias válidas; el repr no muestra el secreto; `SEED_USUARIO_PASSWORD` de 10 caracteres a 72 bytes | `test_sesion_con_secreto_ausente_vacio_o_corto_levanta_error_que_nombra_la_variable`, `test_sesion_con_vigencia_invalida_levanta_error_que_nombra_la_variable_y_no_su_valor`, `test_sesion_repr_no_muestra_el_secreto`, `test_leer_contrasena_del_seed_acepta_de_10_caracteres_a_72_bytes` |
+| Contrato | `/docs` declara los `401` y `422` de `/auth` con el esquema de problema | `test_openapi_declara_401_y_422_de_auth_con_el_esquema_problema` |
+
 Además, E1, E4 y E12 se prueban por HTTP en `backend/tests/api/test_post_turnos.py` (`test_e1_post_turnos_responde_201`, `test_e4_post_turnos_responde_409_con_los_dos_codigos`, `test_e12_post_turnos_responde_422_con_rn_gl_04`), y las reglas puras tienen tests unitarios sin base de datos en `backend/tests/unit/`.
 
 ## Perfil opcional con PostgreSQL
@@ -188,7 +214,7 @@ Una parte de los tests (la que prueba lo que solo PostgreSQL garantiza) está fu
 
    Se usa `127.0.0.1` y no `localhost`: en Windows `localhost` resuelve primero a IPv6 y la conexión espera varios segundos antes de caer a IPv4.
 
-Con la base levantada, la corrida termina con **«39 passed, 303 deselected, 1 warning»**. **Si PostgreSQL no está disponible** (Docker apagado, `TEST_DATABASE_URL` sin definir o base que no responde), los 39 tests del perfil **se omiten con el motivo en el resumen** (**«39 skipped, 303 deselected»**) y la corrida termina con código de salida 0. Si la base de `TEST_DATABASE_URL` no termina en `_test`, el perfil falla a propósito para no borrar otra base.
+Con la base levantada, la corrida termina con **«42 passed, 416 deselected, 1 warning»**. **Si PostgreSQL no está disponible** (Docker apagado, `TEST_DATABASE_URL` sin definir o base que no responde), los 42 tests del perfil **se omiten con el motivo en el resumen** (**«42 skipped, 416 deselected»**) y la corrida termina con código de salida 0. Si la base de `TEST_DATABASE_URL` no termina en `_test`, el perfil falla a propósito para no borrar otra base.
 
 El esquema de estos tests sale siempre de las migraciones, nunca de `create_all`. Por eso el perfil también comprueba que las migraciones y los modelos coinciden (INF-1): si alguien cambia un modelo sin escribir su migración, ese test se pone en rojo. **La suite por defecto no avisa de esto**: hay que correr el perfil cada vez que se toque el esquema.
 
@@ -200,10 +226,13 @@ Los escenarios están en `openspec/changes/infraestructura-postgresql/specs/pers
 
 | Escenario | Qué verifica | Test titular |
 |---|---|---|
-| INF-1 | Una base vacía migrada queda con el esquema de los modelos (siete tablas desde C-03; con `color` y `reservable_online` desde C-04), sin diferencias | `test_inf1_base_vacia_migrada_queda_con_el_esquema_del_modelo` (`test_migraciones.py`) |
+| INF-1 | Una base vacía migrada queda con el esquema de los modelos (siete tablas desde C-03; con `color` y `reservable_online` desde C-04; ocho con `usuario` desde C-06), sin diferencias | `test_inf1_base_vacia_migrada_queda_con_el_esquema_del_modelo` (`test_migraciones.py`) |
 | INF-1 | Deshacer las migraciones deja la base vacía | `test_inf1_deshacer_las_migraciones_deja_la_base_vacia` (`test_migraciones.py`) |
 | INF-1 | Deshacer solo las migraciones del historial deja el esquema de C-01 | `test_inf1_deshacer_las_migraciones_del_historial_deja_el_esquema_de_c01` (`test_migraciones.py`) |
 | INF-1 | La migración `0005` completa las prestaciones existentes con gris (`#9E9E9E`) y `reservable_online` en `false` (D174) | `test_inf1_la_migracion_0005_completa_las_prestaciones_existentes` (`test_migraciones.py`) |
+| INF-1 | La migración `0006` crea la tabla `usuario` (ocho tablas desde C-06); deshacer solo esa migración deja el esquema anterior | `test_inf1_deshacer_solo_la_migracion_de_usuarios_deja_el_esquema_anterior` (`test_migraciones.py`) |
+| US-090 CA-4 | Un volumen ya sembrado sin usuario recibe el usuario del seed | `test_us090_ca4_volumen_sembrado_sin_usuario_recibe_el_usuario` (`test_seed_y_api.py`) |
+| US-090 CA-1 | El seed sobre PostgreSQL permite iniciar sesión (`200`) y rechaza otra contraseña (`401`) | `test_us090_ca1_inicio_de_sesion_sobre_postgresql` (`test_seed_y_api.py`) |
 | INF-2 | La base rechaza el solapamiento por profesional (E2) y por sillón (E3) | `test_inf2_la_base_rechaza_el_solapamiento_de_e2`, `test_inf2_la_base_rechaza_el_solapamiento_de_e3` (`test_restriccion_de_exclusion.py`) |
 | INF-2 | Cualquier estado activo bloquea | `test_inf2_cualquier_estado_activo_bloquea` (parametrizado) |
 | INF-3 | La base acepta el turno contiguo (E5) y un turno no activo no bloquea (E6) | `test_inf3_la_base_acepta_el_turno_contiguo_de_e5`, `test_inf3_un_turno_no_activo_no_bloquea` (parametrizado) |
@@ -323,6 +352,29 @@ curl -i -X PATCH http://127.0.0.1:8000/sillones/2 -H "Content-Type: application/
 
 En la API sobre PostgreSQL el id del sillón nuevo lo asigna la base: el seed deja la secuencia ajustada y el primer alta recibe el 2, pero si ya hubo otras altas será mayor; usá el `id` que devolvió el `201`.
 
+## Sesión del panel
+
+`POST /auth/login` y `POST /auth/refresh` están en la demo y en la API sobre PostgreSQL. **Ninguna otra ruta exige el token todavía**: se protegen en C-07. El usuario del seed no tiene roles hasta C-07 (D202).
+
+El usuario ficticio de la demo es `odontologa@consultorio-demo.test`, con la contraseña de prueba `demo-consultorio-2026`. En PostgreSQL el email es el mismo y la contraseña es la de `SEED_USUARIO_PASSWORD`. Con la demo levantada, en Swagger o con `curl`:
+
+1. `POST /auth/login` con `{"email": "odontologa@consultorio-demo.test", "contrasena": "demo-consultorio-2026"}` → `200`, con `access_token`, `refresh_token`, `token_type` `bearer` y `expires_in` `900` (segundos), y la cabecera `Cache-Control: no-store`. El email se compara sin mayúsculas ni espacios de más.
+2. El mismo `POST` con otra contraseña, o con `"email": "nadie@consultorio-demo.test"` → `401`, con `application/problem+json`, la cabecera `WWW-Authenticate: Bearer` y `codigos` igual a `["RN-AU-04"]`. Los dos casos (y el de un usuario inactivo) devuelven exactamente el mismo cuerpo: no se revela si el email existe.
+3. `POST /auth/refresh` con `{"refresh_token": "<el refresh_token del paso 1>"}` → `200`, con un `access_token` nuevo, `token_type` `bearer` y `expires_in` `900`. **No** devuelve un refresh nuevo: el de renovación no rota (D201) y sigue valiendo hasta su vencimiento.
+4. `POST /auth/refresh` con el `access_token` del paso 1 en lugar del refresh → `401`, con `WWW-Authenticate: Bearer` y `codigos` igual a `["RN-AU-03"]`. Con `{"refresh_token": "abc"}` (o uno vencido, alterado, de un usuario desactivado o de una versión anterior) → el mismo `401`.
+5. Un cuerpo mal formado (por ejemplo, el login sin `contrasena`) → `422`, con `codigos` igual a `[]` y el detalle en `errores`: la validación de entrada no lleva código de regla.
+
+Los dos tokens son JWT firmados con HS256. El acceso vale 15 minutos y el de renovación 7 días (`JWT_ACCESS_MINUTES` y `JWT_REFRESH_DAYS`). Para ver el vencimiento, pegá la parte del medio del token (entre los dos puntos) en un decodificador de base64 y leé `exp` (segundos desde 1970 en UTC) junto con `iat`, `typ` (`access` o `refresh`) y `token_version`.
+
+Con `curl` (en cmd; en el segundo comando se pega el `refresh_token` del primero):
+
+```
+curl -i -X POST http://127.0.0.1:8000/auth/login -H "Content-Type: application/json" -d "{\"email\": \"odontologa@consultorio-demo.test\", \"contrasena\": \"demo-consultorio-2026\"}"
+curl -i -X POST http://127.0.0.1:8000/auth/refresh -H "Content-Type: application/json" -d "{\"refresh_token\": \"PEGAR_EL_REFRESH_TOKEN\"}"
+```
+
+Los tokens de la demo dejan de valer al reiniciarla: cada arranque genera un secreto efímero (D196). En la API sobre PostgreSQL el secreto sale de `JWT_SECRET` (32 bytes como mínimo) y los tokens sobreviven a un reinicio.
+
 ## Levantar la API con PostgreSQL
 
 Necesita Docker Desktop. Los datos son los mismos de la demo y todos son ficticios.
@@ -349,14 +401,19 @@ Para detener: `docker compose down` (conserva los datos); `docker compose down -
 | `POSTGRES_USER`, `POSTGRES_PASSWORD`, `POSTGRES_DB` | La imagen de PostgreSQL y `docker-compose.yml` | `app`, `app`, `turnos` |
 | `DATABASE_URL` | La API (`crear_app_desde_entorno`), Alembic y la carga del seed | Dentro de Compose la arma `docker-compose.yml`: `postgresql+psycopg://app:app@postgres:5432/turnos`. Desde tu máquina: `postgresql+psycopg://app:app@127.0.0.1:5434/turnos` |
 | `TEST_DATABASE_URL` | Solo el perfil `postgres` de pytest | `postgresql+psycopg://app:app@127.0.0.1:5434/turnos_test` |
+| `JWT_SECRET` | La API (`crear_app_desde_entorno`) | Secreto de prueba de 32 bytes como mínimo; está en `.env.example`. Sin él, la API sobre PostgreSQL no arranca |
+| `JWT_ACCESS_MINUTES`, `JWT_REFRESH_DAYS` | La API | `15` y `7` (los valores por defecto si faltan) |
+| `SEED_USUARIO_PASSWORD` | La carga del seed (`cargar_seed`) | Contraseña de prueba del usuario del seed, de 10 caracteres a 72 bytes; está en `.env.example`. Sin ella, el seed no corre |
 
-Si falta `DATABASE_URL`, la API sin Docker (`crear_app_desde_entorno`) **no cae a SQLite**: falla con un mensaje que nombra la variable. Las credenciales son de prueba.
+Si falta `DATABASE_URL`, la API sin Docker (`crear_app_desde_entorno`) **no cae a SQLite**: falla con un mensaje que nombra la variable; lo mismo pasa con `JWT_SECRET` y `SEED_USUARIO_PASSWORD`. Las credenciales y los secretos son de prueba. `docker-compose.yml` pasa las cuatro variables nuevas al servicio `api`.
 
 Para levantar la API sobre PostgreSQL sin construir la imagen (con la base ya levantada, desde `backend/`):
 
 ```
 # PowerShell
 $env:DATABASE_URL = "postgresql+psycopg://app:app@127.0.0.1:5434/turnos"
+$env:JWT_SECRET = "<un secreto de prueba de 32 bytes como mínimo>"
+$env:SEED_USUARIO_PASSWORD = "<una contraseña de prueba de 10 caracteres como mínimo>"
 python -m alembic upgrade head
 python -m app.infrastructure.db.cargar_seed
 python -m uvicorn app.main:crear_app_desde_entorno --factory
@@ -364,13 +421,13 @@ python -m uvicorn app.main:crear_app_desde_entorno --factory
 
 ### Migraciones
 
-El esquema de PostgreSQL sale solo de migraciones (`backend/app/infrastructure/db/migraciones/versions/`: `0001` crea las seis tablas, `0002` agrega las restricciones de exclusión, `0003` crea la tabla `evento_turno` del historial y `0004` agrega los disparadores que hacen que la base rechace `UPDATE`, `DELETE` y `TRUNCATE` sobre esa tabla, y `0005` agrega `color` y `reservable_online` a `prestacion`: completa las filas que ya existían con gris `#9E9E9E` y `false`, y después quita esos valores por defecto porque la API exige el color). Son solo para PostgreSQL; la suite por defecto crea el esquema con `create_all` sobre SQLite. Desde `backend/`, con `DATABASE_URL` definida como arriba:
+El esquema de PostgreSQL sale solo de migraciones (`backend/app/infrastructure/db/migraciones/versions/`: `0001` crea las seis tablas, `0002` agrega las restricciones de exclusión, `0003` crea la tabla `evento_turno` del historial y `0004` agrega los disparadores que hacen que la base rechace `UPDATE`, `DELETE` y `TRUNCATE` sobre esa tabla, `0005` agrega `color` y `reservable_online` a `prestacion`: completa las filas que ya existían con gris `#9E9E9E` y `false`, y después quita esos valores por defecto porque la API exige el color, y `0006` crea la tabla `usuario` del panel: email único en minúsculas, hash bcrypt, `activo` y `token_version`). Son solo para PostgreSQL; la suite por defecto crea el esquema con `create_all` sobre SQLite. Desde `backend/`, con `DATABASE_URL` definida como arriba:
 
 ```
 python -m alembic current
 python -m alembic upgrade head
 python -m alembic downgrade base
-python -m alembic revision --autogenerate --rev-id 0006 -m "descripcion"
+python -m alembic revision --autogenerate --rev-id 0007 -m "descripcion"
 ```
 
 La migración autogenerada **se revisa a mano** antes de usarla, y cada change que toque un modelo agrega la suya y corre el perfil opcional (INF-1).
@@ -388,10 +445,16 @@ La migración autogenerada **se revisa a mano** antes de usarla, y cada change q
 - **`GET /turnos/{id}/historial` no tiene autenticación** (DD-14): cualquiera que llegue a la API ve el historial de cualquier turno. Es aceptable por el mismo motivo que `POST /turnos`: datos ficticios y puertos solo en `127.0.0.1`.
 - Los eventos `creado` anteriores a C-07 tienen `actor_tipo` `usuario` y **`actor_id` vacío para siempre** (D159): todavía no hay usuarios autenticados y completarlo después sería modificar el historial.
 - Los turnos guardados antes de la migración `0003` (por ejemplo, los de la prueba manual de C-02 en el volumen de PostgreSQL) **no tienen historial**: la consulta devuelve `200` con `[]` (D160). La migración no inventa eventos del pasado.
+- **Las rutas de la agenda siguen sin exigir el token** hasta C-07: `/auth/login` y `/auth/refresh` ya emiten tokens, pero ninguna otra ruta los valida (ver los límites de autenticación de arriba).
+- **`/auth/login` no tiene límite de peticiones** (D195): cualquiera que llegue a la API puede probar contraseñas. Se acepta porque la API se publica solo en `127.0.0.1` y bcrypt con 12 rondas ya frena cada intento; el límite se decide en el change de la reserva pública. Tampoco hay registro de eventos de seguridad.
+- **El usuario del seed no tiene roles** hasta C-07 (D202). Con `activo` en `false` o con un `token_version` mayor, sus tokens dejan de valer, pero todavía no hay ruta para hacerlo: se cambia en la base.
+- **No hay cierre de sesión en el servidor** ni revocación de un token puntual (RN-AU-03): un refresh vale hasta su vencimiento o hasta que cambie la `token_version` del usuario.
+- **Dónde guarda el panel los tokens** (memoria, `sessionStorage` o cookie) se decide en C-08; si fuera una cookie, el contrato de `/auth/refresh` cambiaría.
+- Un volumen de PostgreSQL sembrado antes de C-06 recibe el usuario del seed al próximo arranque, pero **un usuario ya sembrado no cambia su contraseña** aunque cambie `SEED_USUARIO_PASSWORD`. Con `docker compose down -v` la base arranca vacía.
 - El puerto 5434 (PostgreSQL) y el 8000 (API) del host tienen que estar libres.
 - El proyecto de Compose tiene nombre fijo (`turnos-odontologia`): **dos copias del repositorio en la misma máquina comparten contenedores y volumen**, y un `docker compose down -v` en una borra los datos de la otra. Para levantar una segunda copia aparte, usá otro nombre de proyecto en todos los comandos: `docker compose -p otro-nombre up -d`.
 - En Windows, si el repositorio está en una ruta muy larga (más de unos 200 caracteres), el perfil opcional falla al importar `psycopg` con «El nombre del archivo o la extensión es demasiado largo». Cloná en una ruta corta.
-- Las credenciales de los ejemplos y de `.env.example` son de prueba. No hay configuración de producción: TLS, copias de respaldo, roles con privilegios mínimos ni ajuste del pool.
+- Las credenciales, la contraseña del usuario del seed y el `JWT_SECRET` de los ejemplos y de `.env.example` son de prueba. No hay configuración de producción: TLS, copias de respaldo, roles con privilegios mínimos ni ajuste del pool.
 - La API migra al arrancar el contenedor: sirve para una sola réplica.
 - No se valida el horario de atención del profesional ni del consultorio.
 - No hay interfaz gráfica ni Redis: llegan en changes posteriores.
