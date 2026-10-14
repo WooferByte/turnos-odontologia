@@ -3,7 +3,7 @@ from datetime import datetime, timedelta
 
 import pytest
 
-from app.application.sesion import IniciarSesionComando, Vigencias, iniciar_sesion
+from app.application.sesion import IniciarSesionComando, Vigencias, iniciar_sesion, renovar_sesion
 from app.domain.errors import CredencialesInvalidas
 from app.domain.acceso.sesion import TipoDeToken
 from app.domain.tiempo import UTC
@@ -126,3 +126,31 @@ def test_us090_ca3_usuario_inactivo_rechaza_con_rn_au_04(sesion, uow, hasher, fi
         _iniciar(uow, hasher, firmador, usuario.email, contrasena)
 
     assert excinfo.value.codigos == ["RN-AU-04"]
+
+
+def _reloj_en(instante: datetime):
+    return lambda: instante
+
+
+def test_us094_ca1_refresh_valido_devuelve_un_access_nuevo(sesion, uow, hasher, firmador) -> None:
+    usuario = un_usuario(sesion, un_consultorio(sesion), token_version=3)
+    tokens = _iniciar(uow, hasher, firmador, usuario.email, CONTRASENA_DE_PRUEBA)
+    una_hora_despues = RELOJ_FIJO + timedelta(hours=1)
+
+    nuevo = renovar_sesion(tokens.refresh_token, uow, firmador, VIGENCIAS, _reloj_en(una_hora_despues))
+
+    claims = firmador.leer(nuevo.access_token)
+    assert (claims.tipo, claims.usuario_id, claims.token_version) == (TipoDeToken.ACCESS, usuario.id, 3)
+    assert claims.emitido_en == una_hora_despues
+    assert claims.vence_en == datetime(2026, 10, 7, 13, 15, tzinfo=UTC)
+    assert not hasattr(nuevo, "refresh_token")
+
+
+def test_us094_ca1_un_segundo_antes_de_vencer_sigue_sirviendo(sesion, uow, hasher, firmador) -> None:
+    usuario = un_usuario(sesion, un_consultorio(sesion))
+    tokens = _iniciar(uow, hasher, firmador, usuario.email, CONTRASENA_DE_PRUEBA)
+    antes_de_vencer = RELOJ_FIJO + VIGENCIAS.refresh - timedelta(seconds=1)
+
+    nuevo = renovar_sesion(tokens.refresh_token, uow, firmador, VIGENCIAS, _reloj_en(antes_de_vencer))
+
+    assert firmador.leer(nuevo.access_token).emitido_en == antes_de_vencer
