@@ -38,7 +38,7 @@ def test_ca1_normalizar_espacios_quita_los_de_mas() -> None:
     assert normalizar_espacios("  Control   de ortodoncia ") == "Control de ortodoncia"
 
 
-@pytest.mark.parametrize("variante", ["obturacion", " OBTURACIÓN ", "Obturación", "obtu\u0072acio\u0301n"])
+@pytest.mark.parametrize("variante", ["obturacion", " OBTURACIÓN ", "Obturación", "obturacio\u0301n"])
 def test_ca1_clave_de_nombre_ignora_mayusculas_acentos_y_espacios(variante: str) -> None:
     assert clave_de_nombre(variante) == clave_de_nombre("Obturación")
 
