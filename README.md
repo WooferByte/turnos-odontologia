@@ -195,6 +195,8 @@ Una parte de los tests (la que prueba lo que solo PostgreSQL garantiza) está fu
    docker compose ps
    ```
 
+   Si tenés otra copia del repositorio con su Compose en la misma máquina, agregá `-p otro-nombre` a **todos** los comandos de `docker compose` de esta sección (por ejemplo, `docker compose -p otro-nombre up -d postgres`) y detené antes el de la otra copia, porque los puertos son los mismos. Sin `-p`, las dos copias comparten contenedores y volumen (ver «Límites conocidos»).
+
    Esperá a que `postgres` figure como `healthy`.
 
 2. Desde `backend/`, con el entorno activado, definí `TEST_DATABASE_URL` en esa terminal y corré el perfil. La base tiene que terminar en `_test`: el perfil **borra y recrea** su esquema `public`.
@@ -356,7 +358,7 @@ En la API sobre PostgreSQL el id del sillón nuevo lo asigna la base: el seed de
 
 `POST /auth/login` y `POST /auth/refresh` están en la demo y en la API sobre PostgreSQL. **Ninguna otra ruta exige el token todavía**: se protegen en C-07. El usuario del seed no tiene roles hasta C-07 (D202).
 
-El usuario ficticio de la demo es `odontologa@consultorio-demo.test`, con la contraseña de prueba `demo-consultorio-2026`. En PostgreSQL el email es el mismo y la contraseña es la de `SEED_USUARIO_PASSWORD`. Con la demo levantada, en Swagger o con `curl`:
+El usuario ficticio de la demo es `odontologa@consultorio-demo.test`, con la contraseña de prueba `demo-consultorio-2026`. En PostgreSQL el email es el mismo y la contraseña es la de `SEED_USUARIO_PASSWORD`: con el `.env` copiado tal cual de `.env.example`, es la misma `demo-consultorio-2026`, así que el recorrido de abajo vale sin cambios. Si cambiaste esa variable, usá tu valor (y mirá en «Límites conocidos» qué pasa con un usuario ya sembrado). Con la demo levantada, en Swagger o con `curl`:
 
 1. `POST /auth/login` con `{"email": "odontologa@consultorio-demo.test", "contrasena": "demo-consultorio-2026"}` → `200`, con `access_token`, `refresh_token`, `token_type` `bearer` y `expires_in` `900` (segundos), y la cabecera `Cache-Control: no-store`. El email se compara sin mayúsculas ni espacios de más.
 2. El mismo `POST` con otra contraseña, o con `"email": "nadie@consultorio-demo.test"` → `401`, con `application/problem+json`, la cabecera `WWW-Authenticate: Bearer` y `codigos` igual a `["RN-AU-04"]`. Los dos casos (y el de un usuario inactivo) devuelven exactamente el mismo cuerpo: no se revela si el email existe.
@@ -386,6 +388,8 @@ Necesita Docker Desktop. Los datos son los mismos de la demo y todos son fictici
    docker compose up --build -d
    docker compose ps
    ```
+
+   Con otra copia del repositorio en la misma máquina, usá `-p otro-nombre` en **todos** los comandos de `docker compose` de esta sección (`up`, `ps`, `logs`, `restart`, `down`), por ejemplo `docker compose -p otro-nombre up --build -d`, y detené antes el Compose de la otra copia, porque los puertos son los mismos.
 
    Esperá a que `postgres` y `api` figuren como `healthy`. Al arrancar, el contenedor de la API aplica las migraciones (`alembic upgrade head`), carga el seed ficticio si falta y recién entonces levanta el servidor: `docker compose logs api` lo muestra. Una segunda vez el log dice «El seed ya estaba cargado: no hizo falta.». Esto vale para una sola réplica de la API.
 3. Swagger queda en <http://127.0.0.1:8000/docs>, con los mismos identificadores, la misma petición de ejemplo y el mismo recorrido de la sección anterior. A diferencia de la demo, los turnos **persisten**: tras `docker compose restart api`, repetir la primera petición devuelve `409`.
