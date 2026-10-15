@@ -4,12 +4,12 @@ from alembic import command
 from alembic.autogenerate import compare_metadata
 from alembic.config import Config
 from alembic.migration import MigrationContext
-from sqlalchemy import DateTime, Engine, inspect, select, text
+from sqlalchemy import DateTime, Engine, inspect, text
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.domain.acceso.roles import Rol
-from app.infrastructure.db.modelos import Base, TurnoModelo
+from app.infrastructure.db.modelos import Base
 from app.infrastructure.db.tipos import FechaHoraUTC
 from tests.conftest import a_las
 from tests.factories import (
@@ -94,8 +94,8 @@ def test_inf1_deshacer_las_migraciones_del_historial_deja_el_esquema_de_c01(
     with engine.connect() as conexion:
         assert set(inspect(conexion).get_table_names()) == TABLAS_DE_C01 | {"alembic_version"}
         assert conexion.execute(FUNCIONES_DE_LA_APLICACION).all() == []
-    with Session(engine) as lectura:
-        assert len(lectura.scalars(select(TurnoModelo)).all()) == 1
+    with engine.connect() as conexion:  # SQL directo: el modelo ya tiene columnas que 0002 no conoce
+        assert conexion.execute(text("SELECT count(*) FROM turno")).scalar_one() == 1
 
 
 def test_inf1_la_migracion_0005_completa_las_prestaciones_existentes(
