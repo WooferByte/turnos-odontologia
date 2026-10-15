@@ -17,7 +17,7 @@ from app.domain.errors import (
 )
 from app.domain.tiempo import Reloj, exigir_utc, utc_now
 from app.domain.turnos.estados import EstadoTurno
-from app.domain.turnos.eventos import ACTOR_PANEL_SIN_AUTENTICAR, Actor, evento_creado
+from app.domain.turnos.eventos import Actor, evento_creado
 from app.domain.turnos.turno import Turno
 
 
@@ -112,7 +112,7 @@ def _validar_entrada(
 
 
 def _intentar_crear_turno(
-    comando: CrearTurnoComando, uow: UnidadDeTrabajo, reloj: Reloj, actor: Actor
+    comando: CrearTurnoComando, uow: UnidadDeTrabajo, reloj: Reloj, actor: Actor, creado_por: int
 ) -> Turno:
     with uow:
         profesional, prestacion, sillon = _validar_entrada(comando, uow)
@@ -143,6 +143,7 @@ def _intentar_crear_turno(
                 duracion_minutos=prestacion.duracion_minutos,
                 estado=EstadoTurno.RESERVADO,
                 creado_en=reloj(),
+                creado_por=creado_por,
             )
         )
         # Mismo ``with uow:``: el turno y su evento ``creado`` se confirman juntos o ninguno (E9).
@@ -154,9 +155,13 @@ def crear_turno(
     comando: CrearTurnoComando,
     uow: UnidadDeTrabajo,
     reloj: Reloj = utc_now,
-    actor: Actor = ACTOR_PANEL_SIN_AUTENTICAR,
+    *,
+    actor: Actor,
+    creado_por: int,
 ) -> Turno:
-    """Crea el turno; si la base lo rechaza por una carrera (E11), reevalúa con el dominio.
+    """Crea el turno a nombre de ``actor`` y ``creado_por`` (obligatorios, D210); ante una carrera (E11) reevalúa.
+
+    Si la base lo rechaza por una carrera, reevalúa con el dominio.
 
     Antes de leer los ocupados toma el bloqueo del profesional y del sillón, así que la segunda
     reserva del mismo recurso espera y ya ve el turno confirmado: el reintento es la red para
@@ -167,7 +172,7 @@ def crear_turno(
     """
     for _ in range(INTENTOS_ANTE_CARRERA - 1):
         try:
-            return _intentar_crear_turno(comando, uow, reloj, actor)
+            return _intentar_crear_turno(comando, uow, reloj, actor, creado_por)
         except SolapamientoEnLaBase:
             continue  # otra transacción ganó el hueco: ahora el dominio ya la ve
-    return _intentar_crear_turno(comando, uow, reloj, actor)
+    return _intentar_crear_turno(comando, uow, reloj, actor, creado_por)

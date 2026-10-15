@@ -7,13 +7,16 @@ from app.domain.errors import FechaNoUTC
 from app.domain.tiempo import a_texto_utc
 from app.domain.turnos.estados import EstadoTurno
 from app.domain.turnos.eventos import (
-    ACTOR_PANEL_SIN_AUTENTICAR,
+    Actor,
     ActorTipo,
     TipoEvento,
     evento_creado,
 )
 from app.domain.turnos.turno import Turno
 from tests.conftest import RELOJ_FIJO, a_las
+
+
+ACTOR_DE_PRUEBA = Actor(ActorTipo.USUARIO, "7")
 
 
 def un_turno_de_dominio(**kw) -> Turno:
@@ -54,12 +57,12 @@ def un_turno_de_dominio(**kw) -> Turno:
     ],
 )
 def test_e9_evento_creado_toma_los_datos_del_turno(turno, inicio_esperado, fin_esperado):
-    evento = evento_creado(turno, ACTOR_PANEL_SIN_AUTENTICAR)
+    evento = evento_creado(turno, ACTOR_DE_PRUEBA)
 
     assert evento.turno_id == turno.id
     assert evento.tipo is TipoEvento.CREADO
     assert evento.actor_tipo is ActorTipo.USUARIO
-    assert evento.actor_id is None
+    assert evento.actor_id == "7"
     assert evento.ocurrido_en == turno.creado_en
     assert evento.antes is None
     assert evento.motivo is None
@@ -78,7 +81,7 @@ def test_e9_evento_creado_toma_los_datos_del_turno(turno, inicio_esperado, fin_e
 
 def test_evento_creado_exige_un_turno_guardado():
     with pytest.raises(ValueError):
-        evento_creado(un_turno_de_dominio(id=None), ACTOR_PANEL_SIN_AUTENTICAR)
+        evento_creado(un_turno_de_dominio(id=None), ACTOR_DE_PRUEBA)
 
 
 @pytest.mark.parametrize(

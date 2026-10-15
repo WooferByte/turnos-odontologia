@@ -10,8 +10,9 @@ from app.api.seguridad import requiere
 from app.application.crear_turno import CrearTurnoComando, crear_turno
 from app.application.historial import consultar_historial
 from app.application.puertos import UnidadDeTrabajo
-from app.domain.acceso.roles import Permiso
+from app.domain.acceso.roles import Permiso, UsuarioDelPanel
 from app.domain.tiempo import Reloj
+from app.domain.turnos.eventos import Actor, ActorTipo
 
 router = APIRouter(prefix="/turnos", tags=["turnos"])
 
@@ -32,15 +33,18 @@ RESPUESTAS_DEL_HISTORIAL = {
     status_code=201,
     response_model=TurnoSalida,
     responses=RESPUESTAS_DE_ERROR,
-    dependencies=[Depends(requiere(Permiso.TURNOS_CREAR))],
 )
 def post_turnos(
     entrada: CrearTurnoEntrada,
     uow: Annotated[UnidadDeTrabajo, Depends(get_uow)],
     reloj: Annotated[Reloj, Depends(get_reloj)],
+    usuario: Annotated[UsuarioDelPanel, Depends(requiere(Permiso.TURNOS_CREAR))],
 ) -> TurnoSalida:
     comando = CrearTurnoComando(**entrada.model_dump())
-    return TurnoSalida.desde_turno(crear_turno(comando, uow, reloj))
+    actor = Actor(ActorTipo.USUARIO, str(usuario.id))  # el id va como texto decimal (D209)
+    return TurnoSalida.desde_turno(
+        crear_turno(comando, uow, reloj, actor=actor, creado_por=usuario.id)
+    )
 
 
 @router.get(

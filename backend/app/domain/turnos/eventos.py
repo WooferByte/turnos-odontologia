@@ -21,10 +21,6 @@ class Actor:
     id: str | None = None
 
 
-# Hasta que C-07 proteja la ruta no se sabe qué usuario del panel creó el turno (D159).
-ACTOR_PANEL_SIN_AUTENTICAR = Actor(ActorTipo.USUARIO, None)
-
-
 @dataclass(frozen=True)
 class EventoTurno:
     turno_id: int

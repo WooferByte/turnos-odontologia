@@ -8,6 +8,7 @@ from itertools import count
 from sqlalchemy.orm import Session
 
 from app.domain.acceso.roles import Rol
+from app.domain.turnos.eventos import Actor, ActorTipo
 from app.infrastructure.db.modelos import (
     ConsultorioModelo,
     EventoTurnoModelo,
@@ -23,6 +24,10 @@ from app.infrastructure.seguridad.contrasenas import HasherBcrypt
 from tests.conftest import RELOJ_FIJO
 
 _secuencia = count(1)
+
+# Quién crea los turnos en los tests de casos de uso (D210): un id de usuario ficticio, como texto en el evento.
+ID_DE_USUARIO_DE_PRUEBA = 1
+ACTOR_DE_PRUEBA = Actor(ActorTipo.USUARIO, str(ID_DE_USUARIO_DE_PRUEBA))
 
 
 def _guardar(sesion: Session, modelo):

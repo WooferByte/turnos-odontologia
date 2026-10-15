@@ -18,6 +18,8 @@ from app.infrastructure.db.modelos import EventoTurnoModelo, TurnoModelo
 from app.infrastructure.repositories.historial import RepositorioHistorialSqlAlchemy
 from tests.conftest import RELOJ_FIJO, a_las, reloj_fijo
 from tests.factories import (
+    ACTOR_DE_PRUEBA,
+    ID_DE_USUARIO_DE_PRUEBA,
     un_consultorio,
     un_evento,
     un_paciente,
@@ -53,7 +55,7 @@ def _comando(datos: dict, inicio) -> CrearTurnoComando:
 def test_e9_crear_turno_registra_el_evento_creado(sesion, fabrica_sesiones, uow):
     datos = _escenario(sesion)
 
-    turno = crear_turno(_comando(datos, a_las(10)), uow, reloj_fijo)
+    turno = crear_turno(_comando(datos, a_las(10)), uow, reloj_fijo, actor=ACTOR_DE_PRUEBA, creado_por=ID_DE_USUARIO_DE_PRUEBA)
 
     with fabrica_sesiones() as otra_sesion:  # sesión nueva: lo que quedó confirmado en la base
         eventos = RepositorioHistorialSqlAlchemy(otra_sesion).del_turno(turno.id)
@@ -63,7 +65,7 @@ def test_e9_crear_turno_registra_el_evento_creado(sesion, fabrica_sesiones, uow)
     assert evento.tipo is TipoEvento.CREADO
     assert evento.ocurrido_en == RELOJ_FIJO == turno.creado_en
     assert evento.actor_tipo is ActorTipo.USUARIO
-    assert evento.actor_id is None
+    assert evento.actor_id == ACTOR_DE_PRUEBA.id
     assert evento.antes is None
     assert evento.motivo is None
     assert evento.despues == {
@@ -94,13 +96,16 @@ def test_e9_un_rechazo_no_registra_ningun_evento(
     sesion, fabrica_sesiones, uow, inicio, prestacion_inexistente, excepcion
 ):
     datos = _escenario(sesion)
-    crear_turno(_comando(datos, a_las(10)), uow, reloj_fijo)  # el turno existente, con su evento
+    crear_turno(
+        _comando(datos, a_las(10)), uow, reloj_fijo,
+        actor=ACTOR_DE_PRUEBA, creado_por=ID_DE_USUARIO_DE_PRUEBA,
+    )  # el turno existente, con su evento
     pedido = _comando(datos, inicio)
     if prestacion_inexistente:
         pedido = replace(pedido, prestacion_id=999)
 
     with pytest.raises(excepcion):
-        crear_turno(pedido, uow, reloj_fijo)
+        crear_turno(pedido, uow, reloj_fijo, actor=ACTOR_DE_PRUEBA, creado_por=ID_DE_USUARIO_DE_PRUEBA)
 
     assert _cantidad(fabrica_sesiones, EventoTurnoModelo) == 1
     assert _cantidad(fabrica_sesiones, TurnoModelo) == 1
@@ -115,7 +120,7 @@ def test_e9_si_el_evento_no_se_guarda_no_queda_el_turno(sesion, engine, fabrica_
         )
 
     with pytest.raises(DBAPIError, match="falla de prueba al registrar el evento"):
-        crear_turno(_comando(datos, a_las(10)), uow, reloj_fijo)
+        crear_turno(_comando(datos, a_las(10)), uow, reloj_fijo, actor=ACTOR_DE_PRUEBA, creado_por=ID_DE_USUARIO_DE_PRUEBA)
 
     assert _cantidad(fabrica_sesiones, TurnoModelo) == 0
     assert _cantidad(fabrica_sesiones, EventoTurnoModelo) == 0
@@ -123,7 +128,7 @@ def test_e9_si_el_evento_no_se_guarda_no_queda_el_turno(sesion, engine, fabrica_
 
 def test_ca1_consultar_historial_devuelve_los_eventos_del_turno(sesion, uow):
     datos = _escenario(sesion)
-    turno = crear_turno(_comando(datos, a_las(10)), uow, reloj_fijo)
+    turno = crear_turno(_comando(datos, a_las(10)), uow, reloj_fijo, actor=ACTOR_DE_PRUEBA, creado_por=ID_DE_USUARIO_DE_PRUEBA)
 
     eventos = consultar_historial(turno.id, uow)
 
@@ -158,8 +163,8 @@ def test_ca1_turno_sin_eventos_devuelve_lista_vacia(sesion, uow):
 
 def test_ca1_el_historial_no_mezcla_turnos(sesion, uow):
     datos = _escenario(sesion)
-    primero = crear_turno(_comando(datos, a_las(10)), uow, reloj_fijo)
-    segundo = crear_turno(_comando(datos, a_las(15)), uow, reloj_fijo)
+    primero = crear_turno(_comando(datos, a_las(10)), uow, reloj_fijo, actor=ACTOR_DE_PRUEBA, creado_por=ID_DE_USUARIO_DE_PRUEBA)
+    segundo = crear_turno(_comando(datos, a_las(15)), uow, reloj_fijo, actor=ACTOR_DE_PRUEBA, creado_por=ID_DE_USUARIO_DE_PRUEBA)
 
     del_primero = consultar_historial(primero.id, uow)
     del_segundo = consultar_historial(segundo.id, uow)

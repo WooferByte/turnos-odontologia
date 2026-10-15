@@ -29,6 +29,7 @@ from app.infrastructure.db.modelos import (
     ProfesionalModelo,
     SillonModelo,
     TurnoModelo,
+    UsuarioModelo,
 )
 from tests.conftest import RELOJ_FIJO
 from tests.factories import (
@@ -37,6 +38,7 @@ from tests.factories import (
     un_profesional,
     una_prestacion,
     un_sillon,
+    un_usuario,
 )
 
 T = TypeVar("T")
@@ -56,6 +58,7 @@ class Escenario:
     profesional_b: ProfesionalModelo
     sillon_1: SillonModelo
     sillon_2: SillonModelo
+    usuario: UsuarioModelo  # quien crea los turnos de los casos de uso (D210; creado_por tiene FK)
 
 
 def crear_escenario(sesion: Session) -> Escenario:
@@ -67,6 +70,7 @@ def crear_escenario(sesion: Session) -> Escenario:
         profesional_b=un_profesional(sesion, consultorio, nombre="Profesional B"),
         sillon_1=un_sillon(sesion, consultorio, nombre="Sillón 1"),
         sillon_2=un_sillon(sesion, consultorio, nombre="Sillón 2"),
+        usuario=un_usuario(sesion, consultorio),
     )
 
 

@@ -13,11 +13,13 @@ from sqlalchemy.orm import Session, sessionmaker
 from app.api.deps import get_reloj
 from app.application.crear_turno import CrearTurnoComando, crear_turno
 from app.domain.errors import ErrorDeSolapamiento
+from app.domain.turnos.eventos import Actor, ActorTipo
 from app.infrastructure.db.modelos import EventoTurnoModelo, TurnoModelo
 from app.infrastructure.repositories.agenda import RepositorioAgendaSqlAlchemy
 from app.infrastructure.unidad_de_trabajo import UnidadDeTrabajoSqlAlchemy
+from app.infrastructure.configuracion import ConfiguracionDeSesion
 from app.main import crear_app
-from tests.conftest import a_las, reloj_fijo
+from tests.conftest import SECRETO_DE_PRUEBA, a_las, con_token_del_panel, reloj_fijo
 from tests.postgres.carrera import Escenario, ReservaGanadora, carrera, crear_escenario
 
 pytestmark = pytest.mark.postgres
@@ -43,6 +45,11 @@ def comando(e: Escenario, profesional, sillon, inicio) -> CrearTurnoComando:
     )
 
 
+def quien(e: Escenario) -> dict:
+    """``actor`` y ``creado_por`` de ``crear_turno`` (D210): el usuario real del escenario."""
+    return {"actor": Actor(ActorTipo.USUARIO, str(e.usuario.id)), "creado_por": e.usuario.id}
+
+
 def cantidad_de_turnos(sesion: Session) -> int:
     return sesion.scalar(select(func.count()).select_from(TurnoModelo))
 
@@ -54,7 +61,7 @@ def test_e11_la_reserva_que_pierde_la_carrera_recibe_el_rechazo_por_solapamiento
     ganador = ReservaGanadora(escenario, escenario.profesional_a, escenario.sillon_1, a_las(10))
 
     with pytest.raises(ErrorDeSolapamiento) as capturado:
-        carrera(engine, ganador, lambda: crear_turno(pedido, uow))
+        carrera(engine, ganador, lambda: crear_turno(pedido, uow, **quien(escenario)))
 
     assert capturado.value.codigos == ["RN-AG-05", "RN-AG-08"]
     assert [c.turno_id for c in capturado.value.conflictos] == [ganador.id, ganador.id]
@@ -68,7 +75,7 @@ def test_e11_la_carrera_por_un_solo_recurso_informa_solo_ese_codigo(
     ganador = ReservaGanadora(escenario, escenario.profesional_a, escenario.sillon_1, a_las(10))
 
     with pytest.raises(ErrorDeSolapamiento) as capturado:
-        carrera(engine, ganador, lambda: crear_turno(pedido, uow))
+        carrera(engine, ganador, lambda: crear_turno(pedido, uow, **quien(escenario)))
 
     assert capturado.value.codigos == ["RN-AG-05"]
     assert [c.turno_id for c in capturado.value.conflictos] == [ganador.id]
@@ -86,7 +93,7 @@ def test_e11_de_ocho_peticiones_a_la_vez_se_crea_un_solo_turno(
     def pedir():
         largada.wait()
         try:
-            return crear_turno(pedido, UnidadDeTrabajoSqlAlchemy(fabrica))
+            return crear_turno(pedido, UnidadDeTrabajoSqlAlchemy(fabrica), **quien(escenario))
         except ErrorDeSolapamiento as error:
             return error
 
@@ -114,7 +121,7 @@ def test_e9_de_ocho_reservas_simultaneas_queda_un_solo_evento(
     def pedir():
         largada.wait()
         try:
-            return crear_turno(pedido, UnidadDeTrabajoSqlAlchemy(fabrica), reloj_fijo)
+            return crear_turno(pedido, UnidadDeTrabajoSqlAlchemy(fabrica), reloj_fijo, **quien(escenario))
         except ErrorDeSolapamiento as error:
             return error
 
@@ -132,9 +139,9 @@ def test_e9_de_ocho_reservas_simultaneas_queda_un_solo_evento(
 def test_e11_post_turnos_responde_409_al_que_pierde_la_carrera(
     engine: Engine, sesion: Session, escenario: Escenario
 ) -> None:
-    app = crear_app(engine)
+    app = crear_app(engine, ConfiguracionDeSesion(SECRETO_DE_PRUEBA, rondas_bcrypt=4))
     app.dependency_overrides[get_reloj] = lambda: reloj_fijo
-    cliente = TestClient(app)
+    cliente = con_token_del_panel(TestClient(app), engine)
     peticion = {
         "paciente_id": escenario.paciente.id,
         "prestacion_id": escenario.prestacion.id,
@@ -215,7 +222,7 @@ def test_e11_la_segunda_reserva_espera_el_bloqueo_y_se_rechaza_sin_reintento(
         carrera(
             engine,
             ganador_con_bloqueo,
-            lambda: crear_turno(pedido, _UnidadQueCuenta(fabrica, llamadas)),
+            lambda: crear_turno(pedido, _UnidadQueCuenta(fabrica, llamadas), **quien(escenario)),
         )
 
     assert capturado.value.codigos == ["RN-AG-05", "RN-AG-08"]

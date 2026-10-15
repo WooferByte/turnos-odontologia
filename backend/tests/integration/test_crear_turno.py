@@ -21,6 +21,8 @@ from app.domain.turnos.estados import EstadoTurno
 from app.infrastructure.db.modelos import TurnoModelo
 from tests.conftest import RELOJ_FIJO, a_las, reloj_fijo
 from tests.factories import (
+    ACTOR_DE_PRUEBA,
+    ID_DE_USUARIO_DE_PRUEBA,
     un_consultorio,
     un_paciente,
     un_profesional,
@@ -55,7 +57,7 @@ def _comando(datos: dict, inicio: datetime) -> CrearTurnoComando:
 def test_e1_feliz_crea_turno_reservado_con_fin_calculado(sesion, fabrica_sesiones, uow):
     datos = _escenario(sesion, duracion_minutos=30)
 
-    turno = crear_turno(_comando(datos, a_las(10)), uow, reloj_fijo)
+    turno = crear_turno(_comando(datos, a_las(10)), uow, reloj_fijo, actor=ACTOR_DE_PRUEBA, creado_por=ID_DE_USUARIO_DE_PRUEBA)
 
     assert turno.id is not None
     assert turno.estado == EstadoTurno.RESERVADO
@@ -85,7 +87,7 @@ def test_e1_fin_es_inicio_mas_la_duracion_de_la_prestacion(
 ):
     datos = _escenario(sesion, duracion_minutos=duracion_minutos)
 
-    turno = crear_turno(_comando(datos, a_las(10)), uow, reloj_fijo)
+    turno = crear_turno(_comando(datos, a_las(10)), uow, reloj_fijo, actor=ACTOR_DE_PRUEBA, creado_por=ID_DE_USUARIO_DE_PRUEBA)
 
     assert turno.fin == fin_esperado
     assert turno.duracion_minutos == duracion_minutos
@@ -98,7 +100,7 @@ def test_e1_si_el_caso_de_uso_falla_no_queda_ningun_turno(sesion, fabrica_sesion
     cruza_la_medianoche = datetime(2026, 11, 3, 2, 45, tzinfo=UTC)  # 23:45 a 00:15 en Buenos Aires
 
     with pytest.raises(IntervaloInvalido):
-        crear_turno(_comando(datos, cruza_la_medianoche), uow, reloj_fijo)
+        crear_turno(_comando(datos, cruza_la_medianoche), uow, reloj_fijo, actor=ACTOR_DE_PRUEBA, creado_por=ID_DE_USUARIO_DE_PRUEBA)
 
     with fabrica_sesiones() as otra_sesion:
         assert otra_sesion.scalars(select(TurnoModelo)).all() == []
@@ -138,7 +140,7 @@ def test_e2_profesional_ocupado_rechaza_con_rn_ag_05(
     )
 
     with pytest.raises(ErrorDeSolapamiento) as excinfo:
-        crear_turno(comando, uow, reloj_fijo)
+        crear_turno(comando, uow, reloj_fijo, actor=ACTOR_DE_PRUEBA, creado_por=ID_DE_USUARIO_DE_PRUEBA)
 
     assert excinfo.value.codigos == ["RN-AG-05"]
     assert excinfo.value.conflictos == (
@@ -173,7 +175,7 @@ def test_e3_sillon_ocupado_rechaza_con_rn_ag_08(sesion, fabrica_sesiones, uow):
     )
 
     with pytest.raises(ErrorDeSolapamiento) as excinfo:
-        crear_turno(comando, uow, reloj_fijo)
+        crear_turno(comando, uow, reloj_fijo, actor=ACTOR_DE_PRUEBA, creado_por=ID_DE_USUARIO_DE_PRUEBA)
 
     assert excinfo.value.codigos == ["RN-AG-08"]
     assert excinfo.value.conflictos == (
@@ -201,7 +203,7 @@ def test_e4_doble_conflicto_informa_los_dos_codigos(sesion, fabrica_sesiones, uo
     comando = _comando(datos, a_las(10, 15))
 
     with pytest.raises(ErrorDeSolapamiento) as excinfo:
-        crear_turno(comando, uow, reloj_fijo)
+        crear_turno(comando, uow, reloj_fijo, actor=ACTOR_DE_PRUEBA, creado_por=ID_DE_USUARIO_DE_PRUEBA)
 
     assert excinfo.value.codigos == ["RN-AG-05", "RN-AG-08"]
     assert excinfo.value.conflictos == (
@@ -246,7 +248,7 @@ def test_e4_cada_conflicto_lleva_su_propio_turno(sesion, fabrica_sesiones, uow):
     comando = _comando(datos, a_las(10))
 
     with pytest.raises(ErrorDeSolapamiento) as excinfo:
-        crear_turno(comando, uow, reloj_fijo)
+        crear_turno(comando, uow, reloj_fijo, actor=ACTOR_DE_PRUEBA, creado_por=ID_DE_USUARIO_DE_PRUEBA)
 
     assert excinfo.value.codigos == ["RN-AG-05", "RN-AG-08"]
     assert excinfo.value.conflictos == (
@@ -287,7 +289,7 @@ def test_e5_borde_contiguo_se_acepta(
         inicio=a_las(10),
     )
 
-    turno = crear_turno(_comando(datos, inicio_pedido), uow, reloj_fijo)
+    turno = crear_turno(_comando(datos, inicio_pedido), uow, reloj_fijo, actor=ACTOR_DE_PRUEBA, creado_por=ID_DE_USUARIO_DE_PRUEBA)
 
     assert turno.id is not None
     assert turno.inicio == inicio_pedido
@@ -329,7 +331,7 @@ def test_e3_profesional_con_turno_a_otra_hora_rechaza_solo_con_rn_ag_08(
     )
 
     with pytest.raises(ErrorDeSolapamiento) as excinfo:
-        crear_turno(comando, uow, reloj_fijo)
+        crear_turno(comando, uow, reloj_fijo, actor=ACTOR_DE_PRUEBA, creado_por=ID_DE_USUARIO_DE_PRUEBA)
 
     assert excinfo.value.codigos == ["RN-AG-08"]
     assert excinfo.value.conflictos == (
@@ -356,7 +358,7 @@ def test_e5_turno_entre_dos_existentes_contiguos_se_acepta(sesion, fabrica_sesio
             inicio=a_las(hora, minuto),
         )
 
-    turno = crear_turno(_comando(datos, a_las(10, 30)), uow, reloj_fijo)
+    turno = crear_turno(_comando(datos, a_las(10, 30)), uow, reloj_fijo, actor=ACTOR_DE_PRUEBA, creado_por=ID_DE_USUARIO_DE_PRUEBA)
 
     assert turno.inicio == a_las(10, 30)
     assert turno.fin == a_las(11)
@@ -384,7 +386,7 @@ def test_e7_borde_de_un_minuto_se_rechaza(sesion, fabrica_sesiones, uow):
     )
 
     with pytest.raises(ErrorDeSolapamiento) as excinfo:
-        crear_turno(comando, uow, reloj_fijo)
+        crear_turno(comando, uow, reloj_fijo, actor=ACTOR_DE_PRUEBA, creado_por=ID_DE_USUARIO_DE_PRUEBA)
 
     assert excinfo.value.codigos == ["RN-AG-05"]
     assert excinfo.value.conflictos == (
@@ -419,7 +421,7 @@ def test_e7_minuto_de_solape_del_otro_lado_se_rechaza(sesion, fabrica_sesiones, 
     )
 
     with pytest.raises(ErrorDeSolapamiento) as excinfo:
-        crear_turno(comando, uow, reloj_fijo)
+        crear_turno(comando, uow, reloj_fijo, actor=ACTOR_DE_PRUEBA, creado_por=ID_DE_USUARIO_DE_PRUEBA)
 
     assert excinfo.value.codigos == ["RN-AG-05"]
     assert excinfo.value.conflictos == (
@@ -454,7 +456,7 @@ def test_e7_borde_de_un_minuto_sobre_el_sillon_se_rechaza(sesion, fabrica_sesion
     )
 
     with pytest.raises(ErrorDeSolapamiento) as excinfo:
-        crear_turno(comando, uow, reloj_fijo)
+        crear_turno(comando, uow, reloj_fijo, actor=ACTOR_DE_PRUEBA, creado_por=ID_DE_USUARIO_DE_PRUEBA)
 
     assert excinfo.value.codigos == ["RN-AG-08"]
     assert excinfo.value.conflictos == (
@@ -485,7 +487,7 @@ def test_e6_estado_no_activo_no_bloquea(sesion, fabrica_sesiones, uow, estado):
         estado=estado,
     )
 
-    turno = crear_turno(_comando(datos, a_las(10)), uow, reloj_fijo)
+    turno = crear_turno(_comando(datos, a_las(10)), uow, reloj_fijo, actor=ACTOR_DE_PRUEBA, creado_por=ID_DE_USUARIO_DE_PRUEBA)
 
     assert turno.id is not None
     assert turno.estado == EstadoTurno.RESERVADO
@@ -506,7 +508,7 @@ def test_e12_recurso_no_encontrado_rechaza_con_rn_gl_04(sesion, fabrica_sesiones
     )
 
     with pytest.raises(EntradaInvalida) as excinfo:
-        crear_turno(comando, uow, reloj_fijo)
+        crear_turno(comando, uow, reloj_fijo, actor=ACTOR_DE_PRUEBA, creado_por=ID_DE_USUARIO_DE_PRUEBA)
 
     assert excinfo.value.codigos == ["RN-GL-04"]
     assert excinfo.value.referencias == (ReferenciaInvalida("prestacion", 999, "inexistente"),)
@@ -516,7 +518,7 @@ def test_e12_recurso_no_encontrado_rechaza_con_rn_gl_04(sesion, fabrica_sesiones
 
 def _rechazo_de_entrada(uow, comando: CrearTurnoComando) -> EntradaInvalida:
     with pytest.raises(EntradaInvalida) as excinfo:
-        crear_turno(comando, uow, reloj_fijo)
+        crear_turno(comando, uow, reloj_fijo, actor=ACTOR_DE_PRUEBA, creado_por=ID_DE_USUARIO_DE_PRUEBA)
     return excinfo.value
 
 
@@ -668,7 +670,7 @@ def test_e12_recurso_omitido_con_un_solo_activo_usa_ese_recurso(
     un_sillon(sesion, datos["consultorio"], activo=False)
     comando = replace(_comando(datos, a_las(10)), **{f"{r}_id": None for r in omitidos})
 
-    turno = crear_turno(comando, uow, reloj_fijo)
+    turno = crear_turno(comando, uow, reloj_fijo, actor=ACTOR_DE_PRUEBA, creado_por=ID_DE_USUARIO_DE_PRUEBA)
 
     assert turno.profesional_id == datos["profesional"].id
     assert turno.sillon_id == datos["sillon"].id
@@ -814,7 +816,7 @@ def test_cruce_de_medianoche_y_horario_ocupado_informa_solo_rn_ag_10d(
     comando = replace(_comando(datos, inicio), prestacion_id=prestacion_de_una_hora.id)
 
     with pytest.raises(IntervaloInvalido) as excinfo:  # y no ErrorDeSolapamiento
-        crear_turno(comando, uow, reloj_fijo)
+        crear_turno(comando, uow, reloj_fijo, actor=ACTOR_DE_PRUEBA, creado_por=ID_DE_USUARIO_DE_PRUEBA)
 
     assert excinfo.value.codigos == ["RN-AG-10d"]
     with fabrica_sesiones() as otra_sesion:
@@ -837,7 +839,7 @@ def test_e12_el_sillon_por_defecto_tambien_se_controla_por_solapamiento(
     comando = replace(_comando(datos, a_las(10)), sillon_id=None)  # el único sillón activo
 
     with pytest.raises(ErrorDeSolapamiento) as excinfo:
-        crear_turno(comando, uow, reloj_fijo)
+        crear_turno(comando, uow, reloj_fijo, actor=ACTOR_DE_PRUEBA, creado_por=ID_DE_USUARIO_DE_PRUEBA)
 
     assert excinfo.value.codigos == ["RN-AG-08"]
     assert excinfo.value.conflictos == (
@@ -864,7 +866,7 @@ def test_crear_turno_bloquea_el_profesional_y_el_sillon_antes_de_leer_los_ocupad
 
     event.listen(engine, "before_cursor_execute", registrar)
     try:
-        crear_turno(_comando(datos, a_las(10)), uow, reloj_fijo)
+        crear_turno(_comando(datos, a_las(10)), uow, reloj_fijo, actor=ACTOR_DE_PRUEBA, creado_por=ID_DE_USUARIO_DE_PRUEBA)
     finally:
         event.remove(engine, "before_cursor_execute", registrar)
 
