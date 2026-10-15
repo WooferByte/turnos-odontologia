@@ -3,7 +3,7 @@
 ## Flujo 1: Crear turno sin solapamientos (panel) — núcleo del change de la consigna
 
 **Disparador**: la recepcionista u odontólogo agenda un turno.
-**Actor**: `recepcionista` / `odontologo`. **En el primer change el endpoint va sin autenticación** (límite conocido, decisión del autor 2026-10-03, DD-14); con el change de usuarios y acceso exige JWT (US-092).
+**Actor**: `recepcionista` / `odontologo`. **En el primer change el endpoint va sin autenticación** (límite conocido, decisión del autor 2026-10-03, DD-14); con el change de usuarios y acceso exige JWT (US-092). **Desde C-07 (`roles-y-proteccion-del-panel`) la excepción ya no vale**: todas las rutas del panel exigen JWT y rol (D214).
 
 **Contrato del primer change:** la firma de la función pura de dominio, del caso de uso, del error de dominio y el mapeo a HTTP están en `08_arquitectura_propuesta.md` (sección «Contrato del primer change»). El primer change entrega el dominio, el caso de uso y el **endpoint `POST /turnos` (FastAPI)**, para probarlo desde Swagger (`/docs`) en el video (decisión del autor 2026-10-03). Sigue sin interfaz gráfica.
 
@@ -112,7 +112,7 @@ Cliente → API → CrearTurno → validar entrada ── falla → 422 {codigos
 
 ## Flujo 8: Autenticación del panel
 
-*(Change de usuarios y acceso, Épica 10. El primer change no lo usa: `POST /turnos` va sin autenticación, DD-14.)*
+*(Change de usuarios y acceso, Épica 10. El primer change no lo usa: `POST /turnos` va sin autenticación, DD-14.) **Desde C-07 (`roles-y-proteccion-del-panel`) la excepción ya no vale**: todas las rutas del panel exigen JWT y rol (D214).*
 
 1. `POST /auth/login` con email y contraseña → valida el hash → emite access token JWT (15 minutos, decisión del autor 2026-10-05, D74, SU-09) y refresh token (7 días, decisión del autor), ambos con el claim `token_version` del usuario.
 2. Cada request al panel envía `Authorization: Bearer <jwt>`; un dependency de FastAPI valida firma y expiración, lee los roles del usuario de la base en cada petición (RN-AU-02, D102), y verifica que el usuario siga `activo` y que `token_version` coincida con el del usuario (RN-AU-03, RN-AU-04; D43).

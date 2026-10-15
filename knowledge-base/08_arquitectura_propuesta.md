@@ -171,7 +171,7 @@ class EntradaInvalida(ErrorDeDominio):       # validación de entrada: se inform
 - Si nada falla, persiste el `Turno` en `reservado` con `creado_en = reloj()` y la unidad de trabajo hace commit.
 - No registra `EventoTurno` en C-01 (**desde C-03 sí:** registra el evento `creado` dentro del mismo intento y de la misma transacción, con `actor: Actor` opcional que por defecto es `usuario` sin id hasta C-07; D159, D165). La concurrencia (RN-AG-10c) no se resuelve en este change.
 
-**Endpoint** (decisión del autor 2026-10-03): el primer change expone `POST /turnos` con FastAPI, para probarlo desde Swagger (`/docs`) en el video. **Sin autenticación** en el primer change: es un **límite conocido** (DD-14); se protege con JWT en el change de usuarios y acceso (US-092). Sigue sin interfaz gráfica.
+**Endpoint** (decisión del autor 2026-10-03): el primer change expone `POST /turnos` con FastAPI, para probarlo desde Swagger (`/docs`) en el video. **Sin autenticación** en el primer change: es un **límite conocido** (DD-14); se protege con JWT en el change de usuarios y acceso (US-092). Sigue sin interfaz gráfica. **Desde C-07 (`roles-y-proteccion-del-panel`) la excepción ya no vale**: todas las rutas del panel exigen JWT y rol (D214).
 
 **Demo con Swagger** (decisión del autor 2026-10-07, D124): la API que se levanta para la prueba manual usa SQLite en memoria con datos ficticios cargados al arrancar; los identificadores son **fijos** y el README los documenta con un ejemplo de petición. **Límite:** son datos de demo, un reinicio los restablece y no se agregan endpoints de lectura para esto. El comando de arranque y el módulo de entrada se fijan en el design.
 
