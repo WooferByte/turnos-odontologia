@@ -2,8 +2,9 @@ schema: spec-driven
 
 # Project context
 # Restricciones que guían los artefactos y que un agente no puede inferir leyendo el código.
-# Fuente: knowledge-base/ (decisiones del autor 2026-10-02, 2026-10-03, 2026-10-05 y 2026-10-07; registro en
-# knowledge-base/10_preguntas_abiertas.md, D1..D141).
+# Fuente: knowledge-base/ (decisiones del autor del 2026-10-02 al 2026-10-14; registro en
+# knowledge-base/10_preguntas_abiertas.md, D1..D203). Actualizado el 2026-10-15, tras archivar C-06: lo que
+# era propio del primer change pasó a sus artefactos archivados y aquí queda lo que vale para todos.
 context: |
   Proyecto: sistema de turnos y agenda para consultorios odontológicos (Argentina). Trabajo universitario.
   Todos los artefactos (proposal, specs, design, tasks) se escriben en español.
@@ -30,20 +31,20 @@ context: |
   Única excepción al trabajo en UTC: un turno no puede cruzar la medianoche DEL CONSULTORIO (RN-AG-10d);
   esa regla convierte inicio y fin a Consultorio.zona_horaria, que Intervalo recibe como dato.
   Estados activos (ocupan horario): pendiente_aprobacion, pendiente_sena, reservado, confirmado. Desde que
-  exista la seña cuenta el estado efectivo evaluado al consultar (RN-GL-05); en el primer change no aplica.
+  exista la seña cuenta el estado efectivo evaluado al consultar (RN-GL-05); antes de la seña no aplica.
   Fuera de la v1: sobreturnos y excepción de horario. El paciente no tiene cuenta (gestiona su turno con token).
-  El autor implementará el proyecto completo antes de fin de año, change por change. El PRIMER change es:
-  crear turno sin solapamientos por profesional y por sillón, solo con estados activos; no valida horario ni
-  bloqueos; no registra historial (EventoTurno es del change siguiente); no incluye lista de espera, seña
-  ni WhatsApp. Expone el endpoint POST /turnos (FastAPI), SIN autenticación (límite conocido: se protege con
-  JWT en el change de usuarios y acceso) y SIN interfaz gráfica; se prueba desde Swagger (/docs), con SQLite
-  en memoria y datos ficticios cargados al arrancar, con identificadores fijos documentados en el README.
-  Escenarios del primer change: E1..E7 y E12 (knowledge-base/06_funcionalidades.md, US-010): son 8, excepción
-  registrada al "3 a 6" de CHANGES.md (D123). Segunda excepción, solo de ese change (D134): sus tareas superan
-  el "alrededor de 20" de CHANGES.md, con la condición de que vayan agrupadas por tema.
-  No valida el múltiplo de 5 de la duración de la prestación (RN-AG-01).
-  Alembic no se usa en el primer change (create_all en tests); se usa desde el change de infraestructura
-  con PostgreSQL. WhatsApp en la v1 = enlace wa.me (Cloud API en Fase 2).
+  El autor implementa el proyecto change por change, en el orden de CHANGES.md (índice, dependencias y
+  estado de cada uno). Lo que fijó cada change archivado está en openspec/specs/ y en su design dentro de
+  openspec/changes/archive/; este contexto no lo repite.
+  Infraestructura (desde C-02): PostgreSQL 17.10 con psycopg 3 y migraciones Alembic (los tests por defecto
+  siguen con create_all sobre SQLite); Docker Compose publica PostgreSQL en 127.0.0.1:5434 y la API en
+  127.0.0.1:8000. Lo que solo PostgreSQL garantiza se prueba en el perfil opcional `postgres`.
+  Sesión (desde C-06): JWT HS256 de acceso y de renovación y hash bcrypt; ninguna ruta exige el token
+  hasta el change de roles y protección del panel (C-07).
+  Cada change mantiene la demo sin Docker (SQLite en memoria, datos ficticios cargados al arrancar, con
+  identificadores fijos documentados en el README). Las fases 1 y 2 son solo API y se prueban desde
+  Swagger (/docs); la interfaz (React + TypeScript + Vite) empieza en la fase 3.
+  WhatsApp en la v1 = enlace wa.me (Cloud API en Fase 2).
   Todo rechazo lleva el código RN (p. ej. RN-AG-05, RN-AG-08, RN-GL-04). Hay dos clases (RN-GL-02, D135).
   VALIDACIÓN DE ENTRADA (referencias inválidas, RN-GL-04; fecha sin zona o con desfase distinto de UTC,
   RN-GL-01; cuerpo mal formado): todos los problemas de la petición se informan JUNTOS en un único 422, con
@@ -51,7 +52,8 @@ context: |
   (la petición está bien formada pero la agenda no la admite): se evalúa solo con la entrada válida y DE A
   UNA; la primera que falla es la única que se informa. El solapamiento es UNA regla que mira dos recursos:
   el doble conflicto (E4) informa RN-AG-05 y RN-AG-08 en un mismo 409 (lectura confirmada por el autor, D139).
-  Orden en el primer change: validación de entrada, RN-AG-10d, solapamiento.
+  Orden al crear un turno: validación de entrada, RN-AG-10d, solapamiento; un change que agregue reglas
+  fija en su design dónde entran en ese orden.
   Un recurso inexistente o inactivo referido en el CUERPO de la petición devuelve 422 (RN-GL-04); uno
   identificado en la URL devuelve 404. Un paciente solo puede ser inexistente: el paciente inactivo no existe
   en la v1 (Fase 2, D136); prestación, profesional y sillón sí pueden estar inactivos.
@@ -60,8 +62,8 @@ context: |
   (RN-AG-14). El consultorio del turno sale del profesional (v1: un profesional pertenece a un consultorio);
   una referencia de otro consultorio cuenta como inexistente. Si el candidato choca con varios turnos de un
   recurso, el Conflicto lleva el que empieza primero.
-  El primer change incluye un test de ida y vuelta de zonas horarias con SQLite (escribir aware UTC, leer
-  aware UTC) y un test que falla si backend/app/domain importa un módulo prohibido.
+  La suite conserva el test de ida y vuelta de zonas horarias con SQLite (escribir aware UTC, leer aware
+  UTC) y el que falla si backend/app/domain importa un módulo prohibido.
   Datos de pacientes siempre ficticios. Nunca versionar secretos ni .env.
 
 # Per-artifact rules
@@ -70,7 +72,7 @@ rules:
     - Incluir una sección "Fuera de alcance" que liste explícitamente lo que el change no hace.
     - Citar las historias (US-NNN) y los escenarios (E#) que cubre y los que deja fuera.
     - "Mantener el change chico: una sola capability."
-    - Dejar asentadas, en el primer change, sus dos excepciones a CHANGES.md (8 escenarios frente a 3 a 6, D123, y la cantidad de tareas frente a alrededor de 20, D134).
+    - Si el change se aparta de los 3 a 6 escenarios o de las alrededor de 20 tareas de CHANGES.md, dejar asentada la excepción con la decisión que la respalda (como D123 y D134 en el primer change).
   specs:
     - Escribir cada Requirement con SHALL y citar las reglas de negocio (RN-XX-NN) que implementa.
     - Escribir cada Scenario en formato WHEN/THEN, con el ID de escenario (E#) en el título.
@@ -88,7 +90,7 @@ rules:
     - No agrupar los tests al final ni incluir tareas de "leer archivos" como tareas.
     - Agrupar las tareas por tema (preparación, dominio, persistencia, un grupo por escenario, API, demo y README, verificación final).
     - Incluir una tarea final de verificación en clon limpio siguiendo solo el README.
-    - Incluir una tarea que levante la API y pruebe POST /turnos desde /docs (201, 409 con codigos, 422 con RN-GL-04).
+    - Incluir una tarea en que el agente levanta la API y prueba en /docs (o en la interfaz, desde la fase 3) los endpoints del change, con la respuesta de éxito y los rechazos con su código RN, y otra tarea del autor que repite ese paso a paso.
 
 # Per-operation guidance
 operations:
@@ -99,3 +101,4 @@ operations:
   archive:
     guidance:
       - Antes de archivar, correr los tests y verificar que no quedan archivos de bloqueo residuales.
+      - Al archivar, marcar el change con [x] en CHANGES.md y repetir la verificación cruzada con scripts/verificar_changes.py.
