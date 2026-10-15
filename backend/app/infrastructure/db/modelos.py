@@ -4,6 +4,7 @@ from datetime import datetime
 from sqlalchemy import JSON, CheckConstraint, ForeignKey, Index, MetaData, String, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
+from app.domain.acceso.roles import Rol
 from app.infrastructure.db.tipos import FechaHoraUTC
 
 
@@ -37,11 +38,15 @@ class ConsultorioModelo(Base):
 
 class ProfesionalModelo(Base):
     __tablename__ = "profesional"
+    # UNIQUE simple: admite varios nulos en PostgreSQL y en SQLite (design R5).
+    __table_args__ = (UniqueConstraint("usuario_id"),)
 
     id: Mapped[int] = mapped_column(primary_key=True)
     consultorio_id: Mapped[int] = mapped_column(_fk("consultorio"))
     nombre: Mapped[str]
     activo: Mapped[bool] = mapped_column(default=True)
+    usuario_id: Mapped[int | None] = mapped_column(_fk("usuario"))
+    matricula: Mapped[str | None] = mapped_column(String)  # sin uso todavía (D215)
 
 
 class SillonModelo(Base):
@@ -100,6 +105,7 @@ class TurnoModelo(Base):
     duracion_minutos: Mapped[int]
     estado: Mapped[str] = mapped_column(String)
     creado_en: Mapped[datetime] = mapped_column(FechaHoraUTC)
+    creado_por: Mapped[int | None] = mapped_column(_fk("usuario"))  # nula en los turnos anteriores a C-07
 
 
 class EventoTurnoModelo(Base):
@@ -120,7 +126,7 @@ class EventoTurnoModelo(Base):
 
 
 class UsuarioModelo(Base):
-    """Usuario del panel (design J3). El email se guarda normalizado (D199); sin roles hasta C-07."""
+    """Usuario del panel (design J3). El email se guarda normalizado (D199); sus roles, en ``usuario_rol``."""
 
     __tablename__ = "usuario"
     __table_args__ = (UniqueConstraint("email"),)
@@ -132,3 +138,18 @@ class UsuarioModelo(Base):
     activo: Mapped[bool] = mapped_column(default=True)
     token_version: Mapped[int] = mapped_column(default=0)
     creado_en: Mapped[datetime] = mapped_column(FechaHoraUTC)
+
+
+class UsuarioRolModelo(Base):
+    """Un rol de un usuario (RN-AU-02, design R5). La PK compuesta impide repetirlo y el CHECK lo acota (D213)."""
+
+    __tablename__ = "usuario_rol"
+    __table_args__ = (
+        CheckConstraint(
+            "rol IN (" + ", ".join(f"'{rol.value}'" for rol in Rol) + ")",
+            name="ck_usuario_rol_rol_valido",
+        ),
+    )
+
+    usuario_id: Mapped[int] = mapped_column(_fk("usuario"), primary_key=True)
+    rol: Mapped[str] = mapped_column(String, primary_key=True)

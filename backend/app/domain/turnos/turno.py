@@ -18,3 +18,4 @@ class Turno:
     estado: EstadoTurno
     creado_en: datetime
     id: int | None = None
+    creado_por: int | None = None  # id del usuario del panel; None en los turnos anteriores a C-07

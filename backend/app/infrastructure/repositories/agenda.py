@@ -124,6 +124,7 @@ class RepositorioAgendaSqlAlchemy:
             duracion_minutos=turno.duracion_minutos,
             estado=turno.estado.value,
             creado_en=turno.creado_en,
+            creado_por=turno.creado_por,
         )
         self._sesion.add(modelo)
         try:

@@ -188,16 +188,15 @@ def test_us091_ca5_quitar_un_rol_que_no_tiene_no_cambia_nada(sesion: Session, fa
     assert RepositorioUsuariosSqlAlchemy(sesion).roles_de(usuario.id) == frozenset({Rol.DUENO})
 
 
-def test_us091_ca1_un_rol_desconocido_en_la_base_es_un_error_de_programacion(
-    sesion: Session, fabrica_sesiones
-) -> None:
+def test_us091_ca1_la_base_rechaza_un_rol_fuera_de_la_lista(sesion: Session) -> None:
     usuario = un_usuario(sesion, un_consultorio(sesion))
-    with fabrica_sesiones() as escritura:
-        escritura.add(UsuarioRolModelo(usuario_id=usuario.id, rol="administrador"))
-        escritura.commit()
+    sesion.add(UsuarioRolModelo(usuario_id=usuario.id, rol="administrador"))
 
-    with pytest.raises(ValueError):
-        RepositorioUsuariosSqlAlchemy(sesion).roles_de(usuario.id)
+    with pytest.raises(IntegrityError):
+        sesion.commit()
+    sesion.rollback()
+
+    assert RepositorioUsuariosSqlAlchemy(sesion).roles_de(usuario.id) == frozenset()
 
 
 def test_us091_ca4_el_profesional_se_vincula_a_un_usuario_y_el_vinculo_no_se_repite(

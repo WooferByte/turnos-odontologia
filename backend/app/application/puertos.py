@@ -3,6 +3,7 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from typing import Literal, Protocol
 
+from app.domain.acceso.roles import Rol
 from app.domain.acceso.sesion import ClaimsDeSesion
 from app.domain.acceso.usuarios import DatosUsuario
 from app.domain.agenda.intervalo import Intervalo
@@ -130,6 +131,21 @@ class RepositorioUsuarios(Protocol):
         """Guarda al usuario con el email normalizado y lo devuelve con su id; levanta ``EmailRepetidoEnLaBase``."""
         ...
 
+    def roles_de(self, usuario_id: int) -> frozenset[Rol]:
+        """Los roles del usuario, leídos de la base en cada llamada (RN-AU-02, D102).
+
+        Un rol desconocido en la base es un error de programación (``ValueError``): no se ignora.
+        """
+        ...
+
+    def asignar_rol(self, usuario_id: int, rol: Rol) -> None:
+        """Agrega el rol; levanta ``RolInvalidoEnLaBase`` si ya lo tenía o la base lo rechaza."""
+        ...
+
+    def quitar_rol(self, usuario_id: int, rol: Rol) -> None:
+        """Quita el rol; si no lo tenía no pasa nada."""
+        ...
+
 
 class UnidadDeTrabajo(Protocol):
     agenda: RepositorioAgenda
@@ -212,3 +228,14 @@ class EmailRepetidoEnLaBase(Exception):
 
     def __init__(self) -> None:
         super().__init__("La base rechazó el email del usuario porque ya existe.")
+
+
+class RolInvalidoEnLaBase(Exception):
+    """La base rechazó la asignación de un rol: repetido o fuera de la lista cerrada (RN-AU-05, D213).
+
+    No es un error de dominio ni lleva código RN: en este change solo lo ven el seed y los tests
+    (no hay asignación de roles por la API hasta C-09).
+    """
+
+    def __init__(self) -> None:
+        super().__init__("La base rechazó el rol del usuario porque está repetido o no es válido.")

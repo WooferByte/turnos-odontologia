@@ -7,6 +7,7 @@ from itertools import count
 
 from sqlalchemy.orm import Session
 
+from app.domain.acceso.roles import Rol
 from app.infrastructure.db.modelos import (
     ConsultorioModelo,
     EventoTurnoModelo,
@@ -16,6 +17,7 @@ from app.infrastructure.db.modelos import (
     SillonModelo,
     TurnoModelo,
     UsuarioModelo,
+    UsuarioRolModelo,
 )
 from app.infrastructure.seguridad.contrasenas import HasherBcrypt
 from tests.conftest import RELOJ_FIJO
@@ -72,6 +74,7 @@ def un_turno(
     prestacion: PrestacionModelo,
     inicio: datetime,
     estado: str = "reservado",
+    creado_por: int | None = None,
     **kw,
 ) -> TurnoModelo:
     datos = {
@@ -89,6 +92,7 @@ def un_turno(
             prestacion_id=prestacion.id,
             inicio=inicio,
             estado=estado,
+            creado_por=creado_por,
             **{**datos, **kw},
         ),
     )
@@ -116,9 +120,10 @@ def un_usuario(
     contrasena: str = CONTRASENA_DE_PRUEBA,
     activo: bool = True,
     token_version: int = 0,
+    roles: tuple[Rol, ...] = (),
     **kw,
 ) -> UsuarioModelo:
-    """Usuario ficticio; el hash es bcrypt con 4 rondas para que la suite no tarde (design J17)."""
+    """Usuario ficticio con los ``roles`` indicados; el hash es bcrypt con 4 rondas (design J17)."""
     datos = {
         "email": f"usuario{next(_secuencia)}@consultorio-demo.test",
         "hash_password": HasherBcrypt(4).hashear(contrasena),
@@ -126,4 +131,8 @@ def un_usuario(
         "token_version": token_version,
         "creado_en": RELOJ_FIJO,
     }
-    return _guardar(sesion, UsuarioModelo(consultorio_id=consultorio.id, **{**datos, **kw}))
+    usuario = _guardar(sesion, UsuarioModelo(consultorio_id=consultorio.id, **{**datos, **kw}))
+    for rol in roles:
+        sesion.add(UsuarioRolModelo(usuario_id=usuario.id, rol=rol.value))
+    sesion.commit()
+    return usuario

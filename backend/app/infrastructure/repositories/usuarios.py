@@ -1,15 +1,19 @@
 """Repositorio de usuarios sobre SQLAlchemy. Traduce modelos ORM a tipos de dominio (design J6)."""
-from sqlalchemy import select
+from sqlalchemy import delete, select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.application.puertos import EmailRepetidoEnLaBase
+from app.application.puertos import EmailRepetidoEnLaBase, RolInvalidoEnLaBase
+from app.domain.acceso.roles import Rol
 from app.domain.acceso.usuarios import DatosUsuario, normalizar_email
-from app.infrastructure.db.modelos import UsuarioModelo
+from app.infrastructure.db.modelos import UsuarioModelo, UsuarioRolModelo
 
 SQLSTATE_UNICIDAD = "23505"  # unique_violation
 RESTRICCION_DE_EMAIL = "uq_usuario_email"
 MENSAJE_DE_EMAIL_EN_SQLITE = "UNIQUE constraint failed: usuario.email"
+SQLSTATE_CHECK = "23514"  # check_violation
+MENSAJES_DE_ROL_EN_SQLITE = ("UNIQUE constraint failed: usuario_rol.", "CHECK constraint failed: ck_usuario_rol_rol_valido")
+RESTRICCIONES_DE_ROL = ("pk_usuario_rol", "ck_usuario_rol_rol_valido")
 
 
 def _a_dominio(modelo: UsuarioModelo) -> DatosUsuario:
@@ -30,6 +34,14 @@ def _es_email_repetido(error: IntegrityError) -> bool:
         restriccion = getattr(getattr(error.orig, "diag", None), "constraint_name", None)
         return restriccion == RESTRICCION_DE_EMAIL
     return MENSAJE_DE_EMAIL_EN_SQLITE in str(error.orig)
+
+
+def _es_rol_rechazado(error: IntegrityError) -> bool:
+    """Solo la PK compuesta (repetido) y el CHECK (inválido); cualquier otra violación sube tal cual."""
+    if getattr(error.orig, "sqlstate", None) in (SQLSTATE_UNICIDAD, SQLSTATE_CHECK):
+        restriccion = getattr(getattr(error.orig, "diag", None), "constraint_name", None)
+        return restriccion in RESTRICCIONES_DE_ROL
+    return any(mensaje in str(error.orig) for mensaje in MENSAJES_DE_ROL_EN_SQLITE)
 
 
 class RepositorioUsuariosSqlAlchemy:
@@ -61,3 +73,23 @@ class RepositorioUsuariosSqlAlchemy:
                 raise EmailRepetidoEnLaBase() from error
             raise
         return _a_dominio(modelo)
+
+    def roles_de(self, usuario_id: int) -> frozenset[Rol]:
+        filas = self._sesion.scalars(select(UsuarioRolModelo.rol).where(UsuarioRolModelo.usuario_id == usuario_id))
+        return frozenset(Rol(fila) for fila in filas)  # ValueError ante un rol desconocido
+
+    def asignar_rol(self, usuario_id: int, rol: Rol) -> None:
+        self._sesion.add(UsuarioRolModelo(usuario_id=usuario_id, rol=rol.value))
+        try:
+            self._sesion.flush()
+        except IntegrityError as error:
+            if _es_rol_rechazado(error):
+                raise RolInvalidoEnLaBase() from error
+            raise
+
+    def quitar_rol(self, usuario_id: int, rol: Rol) -> None:
+        self._sesion.execute(
+            delete(UsuarioRolModelo).where(
+                UsuarioRolModelo.usuario_id == usuario_id, UsuarioRolModelo.rol == rol.value
+            )
+        )
