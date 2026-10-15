@@ -41,9 +41,9 @@ Reglas de trabajo para todos los grupos (no son tareas):
 
 ## 5. Autorización y unión de roles (casos de uso)
 
-- [ ] 5.1 RED (US-091 CA-1 y CA-3; RN-AU-02, RN-AU-05). En `tests/integration/test_acceso.py`: `test_us091_ca3_rol_insuficiente_levanta_permiso_insuficiente` (el dueño identificado no tiene `turnos.crear`) y `test_us091_ca1_odontologa_con_dos_roles_tiene_todos_los_permisos` (con `autorizar` sobre los 6 permisos). Verificación: falla porque no existe `autorizar`.
-- [ ] 5.2 GREEN (design R8). Agregar `autorizar(usuario, permiso)` a `app/application/acceso.py`. Verificación: los tests de 5.1 pasan; suite por defecto en verde.
-- [ ] 5.3 TRIANGULATE (US-091 CA-5; RN-AU-02, D102). Agregar `test_us091_ca5_quitar_un_rol_vale_con_el_mismo_token` (identificar, quitar `odontologo` en la base con el repositorio, identificar de nuevo con el **mismo** token: `turnos.crear` ya no, `historial.leer` sí; `token_version` sin cambios), `test_us091_ca5_asignar_un_rol_vale_con_el_mismo_token` (el dueño recibe `recepcionista` y pasa `turnos.crear`) y `test_us091_ca1_recepcionista_y_dueno_suman_permisos`. Verificación: pasan; si nacen verdes, se guarda a propósito los roles en una caché del caso de uso, se comprueba que CA-5 falla y se restaura; suite por defecto en verde.
+- [x] 5.1 RED (US-091 CA-1 y CA-3; RN-AU-02, RN-AU-05). En `tests/integration/test_acceso.py`: `test_us091_ca3_rol_insuficiente_levanta_permiso_insuficiente` (el dueño identificado no tiene `turnos.crear`) y `test_us091_ca1_odontologa_con_dos_roles_tiene_todos_los_permisos` (con `autorizar` sobre los 6 permisos). Verificación: falla porque no existe `autorizar`.
+- [x] 5.2 GREEN (design R8). Agregar `autorizar(usuario, permiso)` a `app/application/acceso.py`. Verificación: los tests de 5.1 pasan; suite por defecto en verde.
+- [x] 5.3 TRIANGULATE (US-091 CA-5; RN-AU-02, D102). Agregar `test_us091_ca5_quitar_un_rol_vale_con_el_mismo_token` (identificar, quitar `odontologo` en la base con el repositorio, identificar de nuevo con el **mismo** token: `turnos.crear` ya no, `historial.leer` sí; `token_version` sin cambios), `test_us091_ca5_asignar_un_rol_vale_con_el_mismo_token` (el dueño recibe `recepcionista` y pasa `turnos.crear`) y `test_us091_ca1_recepcionista_y_dueno_suman_permisos`. Verificación: pasan; si nacen verdes, se guarda a propósito los roles en una caché del caso de uso, se comprueba que CA-5 falla y se restaura; suite por defecto en verde.
 
 ## 6. Seed y demo con roles
 
