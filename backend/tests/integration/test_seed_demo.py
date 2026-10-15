@@ -5,6 +5,7 @@ Sin dobles: sesión y base SQLite en memoria reales del ``conftest.py``.
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
+from app.domain.acceso.roles import Rol
 from app.infrastructure.db.modelos import (
     ConsultorioModelo,
     PacienteModelo,
@@ -15,10 +16,14 @@ from app.infrastructure.db.modelos import (
 )
 from app.infrastructure.db.seed_demo import (
     CONTRASENA_DEMO,
+    EMAIL_RECEPCION_DEMO,
     cargar_demo_si_falta,
+    cargar_recepcionista_demo_si_falta,
+    cargar_roles_demo_si_faltan,
     cargar_usuario_demo,
     cargar_usuario_demo_si_falta,
 )
+from app.infrastructure.repositories.usuarios import RepositorioUsuariosSqlAlchemy
 from app.infrastructure.seguridad.contrasenas import HasherBcrypt
 
 _TABLAS_SEMBRADAS = (
@@ -86,3 +91,58 @@ def test_cargar_usuario_demo_si_falta_con_el_consultorio_ya_sembrado_y_sin_usuar
     assert cargado is True
     assert _filas(sesion) == [1, 1, 1, 5, 3]
     assert sesion.scalar(select(func.count()).select_from(UsuarioModelo)) == 1
+
+
+def _sembrar_como_en_c06(sesion: Session) -> None:
+    """El estado que dejó C-06: consultorio y usuario 1 sin roles ni vínculo."""
+    cargar_demo_si_falta(sesion)
+    cargar_usuario_demo(sesion, HasherBcrypt(4).hashear(CONTRASENA_DEMO))
+
+
+def test_us091_ca4_usuario_del_seed_con_sus_roles_y_su_profesional(sesion: Session):
+    _sembrar_como_en_c06(sesion)
+
+    cargado = cargar_roles_demo_si_faltan(sesion)
+
+    assert cargado is True
+    assert RepositorioUsuariosSqlAlchemy(sesion).roles_de(1) == frozenset({Rol.ODONTOLOGO, Rol.DUENO})
+    assert sesion.get(ProfesionalModelo, 1).usuario_id == 1
+
+
+def test_cargar_roles_demo_si_faltan_no_duplica(sesion: Session):
+    _sembrar_como_en_c06(sesion)  # el usuario sembrado sin roles, como en C-06
+
+    primera = cargar_roles_demo_si_faltan(sesion)
+    segunda = cargar_roles_demo_si_faltan(sesion)
+
+    assert (primera, segunda) == (True, False)
+    assert RepositorioUsuariosSqlAlchemy(sesion).roles_de(1) == frozenset({Rol.ODONTOLOGO, Rol.DUENO})
+    assert sesion.get(ProfesionalModelo, 1).usuario_id == 1
+
+
+def test_cargar_roles_demo_si_faltan_completa_lo_que_falta_sin_tocar_lo_que_hay(sesion: Session):
+    _sembrar_como_en_c06(sesion)
+    RepositorioUsuariosSqlAlchemy(sesion).asignar_rol(1, Rol.DUENO)
+    sesion.commit()
+
+    cargado = cargar_roles_demo_si_faltan(sesion)
+
+    assert cargado is True
+    assert RepositorioUsuariosSqlAlchemy(sesion).roles_de(1) == frozenset({Rol.ODONTOLOGO, Rol.DUENO})
+
+
+def test_us091_ca3_recepcionista_de_la_demo(sesion: Session):
+    hasher = HasherBcrypt(4)
+    _sembrar_como_en_c06(sesion)
+
+    primera = cargar_recepcionista_demo_si_falta(sesion, hasher.hashear(CONTRASENA_DEMO))
+    segunda = cargar_recepcionista_demo_si_falta(sesion, hasher.hashear(CONTRASENA_DEMO))
+
+    recepcionista = sesion.get(UsuarioModelo, 2)
+    assert (primera, segunda) == (True, False)
+    assert recepcionista.email == EMAIL_RECEPCION_DEMO == "recepcion@consultorio-demo.test"
+    assert recepcionista.activo is True
+    assert recepcionista.consultorio_id == 1
+    assert hasher.verificar(CONTRASENA_DEMO, recepcionista.hash_password) is True
+    assert RepositorioUsuariosSqlAlchemy(sesion).roles_de(2) == frozenset({Rol.RECEPCIONISTA})
+    assert sesion.scalar(select(func.count()).select_from(UsuarioModelo)) == 2
