@@ -12,6 +12,7 @@ from app.domain.acceso.roles import Permiso, Rol, UsuarioDelPanel
 from app.domain.acceso.sesion import ClaimsDeSesion, TipoDeToken, claims_para
 from app.domain.errors import PermisoInsuficiente, SesionInvalida
 from app.domain.tiempo import UTC
+from app.infrastructure.repositories.usuarios import RepositorioUsuariosSqlAlchemy
 from app.infrastructure.seguridad.contrasenas import HasherBcrypt
 from app.infrastructure.seguridad.tokens import FirmadorJwtHs256
 from tests.conftest import RELOJ_FIJO, SECRETO_DE_PRUEBA, reloj_fijo
@@ -182,3 +183,47 @@ def test_us091_ca1_odontologa_con_dos_roles_tiene_todos_los_permisos(sesion, uow
 
     for permiso in Permiso:
         assert autorizar(identificada, permiso) == identificada
+
+
+def _identificar(uow, firmador, token):
+    return identificar_usuario(token, uow, firmador, reloj_fijo)
+
+
+def test_us091_ca5_quitar_un_rol_vale_con_el_mismo_token(sesion, uow, firmador, consultorio) -> None:
+    usuario = un_usuario(sesion, consultorio, roles=(Rol.ODONTOLOGO, Rol.DUENO))
+    token = _iniciar_sesion(uow, firmador, usuario).access_token
+    assert autorizar(_identificar(uow, firmador, token), Permiso.TURNOS_CREAR)
+    RepositorioUsuariosSqlAlchemy(sesion).quitar_rol(usuario.id, Rol.ODONTOLOGO)
+    sesion.commit()
+
+    despues = _identificar(uow, firmador, token)
+
+    with pytest.raises(PermisoInsuficiente):
+        autorizar(despues, Permiso.TURNOS_CREAR)
+    assert autorizar(despues, Permiso.HISTORIAL_LEER) == despues
+    assert firmador.leer(token).token_version == 0
+    sesion.refresh(usuario)
+    assert usuario.token_version == 0
+
+
+def test_us091_ca5_asignar_un_rol_vale_con_el_mismo_token(sesion, uow, firmador, consultorio) -> None:
+    usuario = un_usuario(sesion, consultorio, roles=(Rol.DUENO,))
+    token = _iniciar_sesion(uow, firmador, usuario).access_token
+    with pytest.raises(PermisoInsuficiente):
+        autorizar(_identificar(uow, firmador, token), Permiso.TURNOS_CREAR)
+    RepositorioUsuariosSqlAlchemy(sesion).asignar_rol(usuario.id, Rol.RECEPCIONISTA)
+    sesion.commit()
+
+    despues = _identificar(uow, firmador, token)
+
+    assert autorizar(despues, Permiso.TURNOS_CREAR) == despues
+
+
+def test_us091_ca1_recepcionista_y_dueno_suman_permisos(sesion, uow, firmador, consultorio) -> None:
+    usuario = un_usuario(sesion, consultorio, roles=(Rol.RECEPCIONISTA, Rol.DUENO))
+    identificado = _identificar(uow, firmador, _iniciar_sesion(uow, firmador, usuario).access_token)
+
+    assert autorizar(identificado, Permiso.TURNOS_CREAR) == identificado
+    assert autorizar(identificado, Permiso.HISTORIAL_LEER) == identificado
+    with pytest.raises(PermisoInsuficiente):
+        autorizar(identificado, Permiso.PRESTACIONES_EDITAR)
