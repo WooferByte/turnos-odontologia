@@ -5,8 +5,10 @@ from alembic.autogenerate import compare_metadata
 from alembic.config import Config
 from alembic.migration import MigrationContext
 from sqlalchemy import DateTime, Engine, inspect, select, text
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
+from app.domain.acceso.roles import Rol
 from app.infrastructure.db.modelos import Base, TurnoModelo
 from app.infrastructure.db.tipos import FechaHoraUTC
 from tests.conftest import a_las
@@ -18,6 +20,7 @@ from tests.factories import (
     una_prestacion,
     un_sillon,
     un_turno,
+    un_usuario,
 )
 
 TABLAS_DE_C01 = {"consultorio", "profesional", "sillon", "prestacion", "paciente", "turno"}
@@ -152,7 +155,9 @@ def test_inf1_deshacer_solo_la_migracion_de_usuarios_deja_el_esquema_anterior(
     command.downgrade(config_alembic, "0005")
 
     with engine.connect() as conexion:
-        assert set(inspect(conexion).get_table_names()) == (TABLAS_DEL_MODELO - {"usuario"}) | {"alembic_version"}
+        assert set(inspect(conexion).get_table_names()) == (
+            TABLAS_DEL_MODELO - {"usuario", "usuario_rol"}
+        ) | {"alembic_version"}
         assert conexion.execute(text("SELECT count(*) FROM turno")).scalar_one() == 1
         assert conexion.execute(text("SELECT count(*) FROM evento_turno")).scalar_one() == 1
 
@@ -160,3 +165,59 @@ def test_inf1_deshacer_solo_la_migracion_de_usuarios_deja_el_esquema_anterior(
 
     with engine.connect() as conexion:
         assert "usuario" in inspect(conexion).get_table_names()
+
+
+def test_inf1_deshacer_solo_la_migracion_de_roles_deja_el_esquema_de_la_sesion(
+    engine: Engine, config_alembic: Config, sesion: Session
+) -> None:
+    consultorio = un_consultorio(sesion)
+    usuario = un_usuario(sesion, consultorio, roles=(Rol.ODONTOLOGO, Rol.DUENO))
+    profesional = un_profesional(sesion, consultorio, usuario_id=usuario.id, matricula="MP 0000")
+    turno = un_turno(
+        sesion,
+        paciente=un_paciente(sesion, consultorio),
+        profesional=profesional,
+        sillon=un_sillon(sesion, consultorio),
+        prestacion=una_prestacion(sesion, consultorio),
+        inicio=a_las(10),
+        creado_por=usuario.id,
+    )
+    un_evento(sesion, turno)
+    with engine.connect() as conexion:
+        assert "usuario_rol" in inspect(conexion).get_table_names()
+
+    command.downgrade(config_alembic, "0006")
+
+    with engine.connect() as conexion:
+        inspector = inspect(conexion)
+        assert set(inspector.get_table_names()) == (TABLAS_DEL_MODELO - {"usuario_rol"}) | {"alembic_version"}
+        assert "usuario_id" not in {c["name"] for c in inspector.get_columns("profesional")}
+        assert "matricula" not in {c["name"] for c in inspector.get_columns("profesional")}
+        assert "creado_por" not in {c["name"] for c in inspector.get_columns("turno")}
+        for tabla in ("usuario", "profesional", "turno", "evento_turno"):
+            assert conexion.execute(text(f"SELECT count(*) FROM {tabla}")).scalar_one() == 1
+
+    command.upgrade(config_alembic, "head")
+
+    with engine.connect() as conexion:
+        assert "usuario_rol" in inspect(conexion).get_table_names()
+        assert "creado_por" in {c["name"] for c in inspect(conexion).get_columns("turno")}
+
+
+def test_us091_ca1_la_base_rechaza_un_rol_invalido(sesion: Session) -> None:
+    usuario = un_usuario(sesion, un_consultorio(sesion))
+
+    with pytest.raises(IntegrityError, match="ck_usuario_rol_rol_valido"):
+        sesion.execute(
+            text("INSERT INTO usuario_rol (usuario_id, rol) VALUES (:usuario_id, 'administrador')"),
+            {"usuario_id": usuario.id},
+        )
+    sesion.rollback()
+
+    with pytest.raises(IntegrityError, match="pk_usuario_rol"):
+        for _ in range(2):
+            sesion.execute(
+                text("INSERT INTO usuario_rol (usuario_id, rol) VALUES (:usuario_id, 'dueno')"),
+                {"usuario_id": usuario.id},
+            )
+    sesion.rollback()
