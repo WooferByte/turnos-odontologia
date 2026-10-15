@@ -340,3 +340,20 @@ def test_openapi_declara_bearer_401_y_403_en_las_rutas_protegidas(engine) -> Non
                 contenido = operacion["responses"][estado]["content"]
                 assert "application/problem+json" in contenido, (metodo, ruta, estado)
     assert protegidas == 8
+
+
+# --- E9 y US-092 CA-2 (borde): el turno guarda quién lo creó -----------------------------------
+
+
+def test_us092_ca2_el_turno_guarda_quien_lo_creo(engine, sesion) -> None:
+    datos = _escenario(sesion)
+    odontologa = un_usuario(sesion, datos["consultorio"], roles=(Rol.ODONTOLOGO,))
+
+    respuesta = _cliente(engine).post(
+        "/turnos", json=_peticion_de_turno(datos), headers=_con(token_de(odontologa.id))
+    )
+
+    assert respuesta.status_code == 201
+    assert "creado_por" not in respuesta.json()  # D209: la respuesta de POST /turnos no cambia
+    sesion.expire_all()
+    assert sesion.get(TurnoModelo, respuesta.json()["id"]).creado_por == odontologa.id

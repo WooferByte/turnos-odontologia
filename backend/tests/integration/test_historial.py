@@ -13,7 +13,7 @@ from app.domain.errors import (
     ReferenciaInvalida,
     TurnoNoEncontrado,
 )
-from app.domain.turnos.eventos import ActorTipo, TipoEvento
+from app.domain.turnos.eventos import Actor, ActorTipo, TipoEvento
 from app.infrastructure.db.modelos import EventoTurnoModelo, TurnoModelo
 from app.infrastructure.repositories.historial import RepositorioHistorialSqlAlchemy
 from tests.conftest import RELOJ_FIJO, a_las, reloj_fijo
@@ -25,6 +25,7 @@ from tests.factories import (
     una_prestacion,
     un_sillon,
     un_turno,
+    un_usuario,
 )
 
 
@@ -191,3 +192,19 @@ def test_ca1_consultar_historial_respeta_el_orden_cronologico(sesion, engine, uo
     eventos = consultar_historial(turno.id, uow)
 
     assert [e.motivo for e in eventos] == ["primero", "segundo", "tercero"]
+
+
+def test_e9_el_evento_lleva_el_id_del_usuario(sesion, fabrica_sesiones, uow):
+    datos = _escenario(sesion)
+    usuario = un_usuario(sesion, datos["consultorio"])
+
+    turno = crear_turno(
+        _comando(datos, a_las(10)), uow, reloj_fijo,
+        actor=Actor(ActorTipo.USUARIO, str(usuario.id)), creado_por=usuario.id,
+    )
+
+    with fabrica_sesiones() as otra_sesion:
+        eventos = RepositorioHistorialSqlAlchemy(otra_sesion).del_turno(turno.id)
+        guardado = otra_sesion.get(TurnoModelo, turno.id)
+    assert [(e.actor_tipo, e.actor_id) for e in eventos] == [(ActorTipo.USUARIO, str(usuario.id))]
+    assert guardado.creado_por == usuario.id

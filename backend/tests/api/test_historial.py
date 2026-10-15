@@ -4,11 +4,14 @@ Sin dobles: sesión y repositorios reales sobre el engine SQLite del test; solo 
 """
 import pytest
 from fastapi.testclient import TestClient
+from sqlalchemy import select
 
 from app.api.deps import get_reloj
+from app.domain.acceso.roles import Rol
 from app.infrastructure.configuracion import ConfiguracionDeSesion
+from app.infrastructure.db.modelos import UsuarioModelo
 from app.main import crear_app
-from tests.conftest import SECRETO_DE_PRUEBA, a_las, reloj_fijo, con_token_del_panel
+from tests.conftest import SECRETO_DE_PRUEBA, a_las, reloj_fijo, con_token_del_panel, token_de
 from tests.factories import (
     un_consultorio,
     un_paciente,
@@ -16,6 +19,7 @@ from tests.factories import (
     una_prestacion,
     un_sillon,
     un_turno,
+    un_usuario,
 )
 
 CAMPOS_DE_EVENTO_SALIDA = {
@@ -76,7 +80,7 @@ def test_e9_post_turnos_deja_el_evento_creado_en_el_historial(cliente, sesion):
     assert evento["turno_id"] == turno_id
     assert evento["tipo"] == "creado"
     assert evento["actor_tipo"] == "usuario"
-    assert evento["actor_id"] is None
+    assert evento["actor_id"] == str(sesion.scalar(select(UsuarioModelo.id)))  # el del token (E9, D159)
     assert evento["ocurrido_en"] == "2026-10-07T12:00:00Z"
     assert evento["antes"] is None
     assert evento["motivo"] is None
@@ -164,3 +168,22 @@ def test_openapi_declara_404_y_422_del_historial_con_el_esquema_problema(engine)
             "$ref": "#/components/schemas/Problema"
         }
     assert "HTTPValidationError" not in openapi["components"]["schemas"]
+
+
+def test_e9_cada_evento_lleva_al_usuario_que_creo_su_turno(cliente, sesion):
+    datos = _escenario(sesion)
+    odontologa = un_usuario(sesion, datos["consultorio"], roles=(Rol.ODONTOLOGO,))
+    recepcionista = un_usuario(sesion, datos["consultorio"], roles=(Rol.RECEPCIONISTA,))
+    turnos = {}
+    for usuario, hora in ((odontologa, 10), (recepcionista, 11)):
+        creado = cliente.post(
+            "/turnos",
+            json=_pedido(datos, f"2026-11-02T{hora}:00:00Z"),
+            headers={"Authorization": f"Bearer {token_de(usuario.id)}"},
+        )
+        assert creado.status_code == 201
+        turnos[usuario.id] = creado.json()["id"]
+
+    for usuario in (odontologa, recepcionista):
+        eventos = cliente.get(f"/turnos/{turnos[usuario.id]}/historial").json()
+        assert [e["actor_id"] for e in eventos] == [str(usuario.id)]
