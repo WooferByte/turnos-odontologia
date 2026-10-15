@@ -19,7 +19,7 @@ Reglas de trabajo para todos los grupos (no son tareas):
 
 ## 1. Preparación
 
-- [ ] 1.1 Red de seguridad. Correr `python -m pytest` y, con PostgreSQL levantado (`docker compose up -d postgres`) y `TEST_DATABASE_URL` definida, `python -m pytest -m postgres`; anotar las dos líneas finales (cantidad de tests en verde: es la base contra la que se compara la tarea 7.2). Verificación: las dos corridas en verde; `git status` limpio; `openspec status --change roles-y-proteccion-del-panel` con las cuatro piezas hechas; `pyproject.toml` sin cambios pendientes (design R2: no hay dependencias nuevas).
+- [x] 1.1 Red de seguridad. Correr `python -m pytest` y, con PostgreSQL levantado (`docker compose up -d postgres`) y `TEST_DATABASE_URL` definida, `python -m pytest -m postgres`; anotar las dos líneas finales (cantidad de tests en verde: es la base contra la que se compara la tarea 7.2). Verificación: las dos corridas en verde; `git status` limpio; `openspec status --change roles-y-proteccion-del-panel` con las cuatro piezas hechas; `pyproject.toml` sin cambios pendientes (design R2: no hay dependencias nuevas).
 
 ## 2. Dominio de roles y permisos
 
