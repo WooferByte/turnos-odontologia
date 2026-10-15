@@ -1,7 +1,8 @@
 """Firmador de tokens JWT con HS256 (design J7).
 
 PyJWT verifica la firma, el algoritmo (lista cerrada) y los claims obligatorios. El tiempo NO lo mira:
-usa ``time.time()`` y la vigencia la decide el dominio con el reloj inyectado (regla dura 2).
+se apagan sus chequeos de vigencia, que usarían el reloj del sistema, y la vigencia la decide el
+dominio con el reloj inyectado (regla dura 2).
 """
 from datetime import datetime
 
