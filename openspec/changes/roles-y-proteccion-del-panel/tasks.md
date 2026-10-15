@@ -63,7 +63,7 @@ Reglas de trabajo para todos los grupos (no son tareas):
 
 ## 9. Perfil `postgres` y Compose
 
-- [ ] 9.1 Perfil `postgres` y Compose (US-091 CA-4 borde, US-092 CA-1 sobre PostgreSQL; design R16). RED: en `tests/postgres/test_seed_y_api.py`, `test_us091_ca4_volumen_sembrado_en_c06_recibe_roles_y_vinculo` (consultorio y usuario sembrados como en C-06, después la carga: roles, vínculo y recepcionista, sin duplicar nada, la secuencia de `usuario` avanzada) y adaptar los tests existentes del recorrido para que inicien sesión y usen el token; con PostgreSQL levantado, fallan antes del GREEN. GREEN: lo que falte en `cargar_seed.py`. Verificación: perfil y suite por defecto en verde; `docker compose up --build -d` sobre el volumen existente deja la API sana y `docker compose logs api` muestra «Seed cargado.».
+- [x] 9.1 Perfil `postgres` y Compose (US-091 CA-4 borde, US-092 CA-1 sobre PostgreSQL; design R16). RED: en `tests/postgres/test_seed_y_api.py`, `test_us091_ca4_volumen_sembrado_en_c06_recibe_roles_y_vinculo` (consultorio y usuario sembrados como en C-06, después la carga: roles, vínculo y recepcionista, sin duplicar nada, la secuencia de `usuario` avanzada) y adaptar los tests existentes del recorrido para que inicien sesión y usen el token; con PostgreSQL levantado, fallan antes del GREEN. GREEN: lo que falte en `cargar_seed.py`. Verificación: perfil y suite por defecto en verde; `docker compose up --build -d` sobre el volumen existente deja la API sana y `docker compose logs api` muestra «Seed cargado.».
 
 ## 10. README
 
