@@ -11,7 +11,9 @@ Sistema de gestión de turnos y agenda para odontólogos independientes y consul
 
 - `gestion-de-prestaciones` (C-04): `GET /prestaciones`, `POST /prestaciones` y `PATCH /prestaciones/{id}` para mantener el catálogo del consultorio (nombre único, duración múltiplo de 5, color, si se ofrece en la reserva online, activa o inactiva). Editar una prestación no cambia los turnos ya creados, y una prestación inactiva no admite turnos nuevos. La migración `0005` agrega `color` y `reservable_online`.
 
-- `sesion-con-jwt` (C-06): `POST /auth/login` y `POST /auth/refresh`. Con el email y la contraseña de un usuario activo, el login devuelve un token de acceso (15 minutos) y uno de renovación (7 días), firmados con HS256; el refresh cambia el de renovación por un acceso nuevo, sin rotarlo. Cualquier rechazo del login es el mismo `401` (`RN-AU-04`) y cualquier rechazo del refresh, el mismo `401` (`RN-AU-03`). La migración `0006` crea la tabla `usuario` y el seed trae un usuario ficticio. **Todavía ninguna ruta exige el token**: eso llega en C-07.
+- `sesion-con-jwt` (C-06): `POST /auth/login` y `POST /auth/refresh`. Con el email y la contraseña de un usuario activo, el login devuelve un token de acceso (15 minutos) y uno de renovación (7 días), firmados con HS256; el refresh cambia el de renovación por un acceso nuevo, sin rotarlo. Cualquier rechazo del login es el mismo `401` (`RN-AU-04`) y cualquier rechazo del refresh, el mismo `401` (`RN-AU-03`). La migración `0006` crea la tabla `usuario` y el seed trae un usuario ficticio.
+
+- `roles-y-proteccion-del-panel` (C-07): ahora **todas las rutas del panel** (`/turnos`, `/prestaciones`, `/sillones`) exigen el access token y un rol que las permita. Sin token válido responde `401` (`RN-AU-03`, siempre el mismo cuerpo); con token pero sin el rol que corresponde, `403` (`RN-AU-05`). Los roles son `odontologo`, `recepcionista` y `dueno`, se leen de la base en cada petición y sus permisos se suman. Los eventos del historial de turnos nuevos llevan el `actor_id` del usuario del token y el turno guarda quién lo creó (`creado_por`). La migración `0007` crea `usuario_rol` y las columnas `profesional.usuario_id`, `profesional.matricula` y `turno.creado_por`; el seed trae roles para la odontóloga y una recepcionista ficticia. Solo `/auth/login` y `/auth/refresh` (y `/docs`) se pueden llamar sin token.
 
 No hay interfaz gráfica. La API se puede probar sin instalar nada más que Python (base SQLite en memoria) o sobre PostgreSQL con Docker.
 
@@ -91,7 +93,7 @@ python -m pytest
 
 Los tests corren con **SQLite en memoria**: no necesitan Docker, PostgreSQL ni Redis, ni ningún archivo de base de datos.
 
-La corrida termina con **«416 passed, 42 deselected, 1 warning»**. Los 42 «deselected» son los del perfil opcional con PostgreSQL (más abajo), que la corrida por defecto excluye a propósito. El warning es un aviso de deprecación interno de Starlette (`starlette/testclient.py`, sobre `anyio.abc.BlockingPortal`): viene de una dependencia con versión fijada, no del código del proyecto, y no indica ningún problema.
+La corrida termina con **«528 passed, 47 deselected, 1 warning»**. Los 47 «deselected» son los del perfil opcional con PostgreSQL (más abajo), que la corrida por defecto excluye a propósito. El warning es un aviso de deprecación interno de Starlette (`starlette/testclient.py`, sobre `anyio.abc.BlockingPortal`): viene de una dependencia con versión fijada, no del código del proyecto, y no indica ningún problema.
 
 ### Escenario → test
 
@@ -182,6 +184,30 @@ Los escenarios de la sesión del panel (`sesion-con-jwt`, C-06) están en `opens
 | Configuración | `JWT_SECRET` de 32 bytes como mínimo; vigencias válidas; el repr no muestra el secreto; `SEED_USUARIO_PASSWORD` de 10 caracteres a 72 bytes | `test_sesion_con_secreto_ausente_vacio_o_corto_levanta_error_que_nombra_la_variable`, `test_sesion_con_vigencia_invalida_levanta_error_que_nombra_la_variable_y_no_su_valor`, `test_sesion_repr_no_muestra_el_secreto`, `test_leer_contrasena_del_seed_acepta_de_10_caracteres_a_72_bytes` |
 | Contrato | `/docs` declara los `401` y `422` de `/auth` con el esquema de problema | `test_openapi_declara_401_y_422_de_auth_con_el_esquema_problema` |
 
+Los escenarios de la protección del panel (`roles-y-proteccion-del-panel`, C-07) están en `openspec/changes/roles-y-proteccion-del-panel/specs/` y se prueban en la suite por defecto: la matriz pura en `backend/tests/unit/test_roles.py`, el repositorio en `backend/tests/integration/test_repositorio_usuarios.py`, los casos de uso en `backend/tests/integration/test_acceso.py` y `test_historial.py`, el seed en `test_seed_demo.py` y la API en `backend/tests/api/test_proteccion.py`, `test_proteccion_de_rutas.py` y `test_demo.py`:
+
+| Escenario | Qué verifica | Test titular |
+|---|---|---|
+| US-091 CA-1 | Los roles de un usuario se guardan, se leen y no se repiten ni se mezclan entre usuarios; un usuario sin roles tiene el conjunto vacío | `test_us091_ca1_roles_de_un_usuario`, `test_us091_ca1_usuario_sin_roles`, `test_us091_ca1_rol_repetido_se_rechaza` (`test_repositorio_usuarios.py`) |
+| US-091 CA-1 | Los permisos son la unión de los de sus roles (odontóloga con dos roles, recepcionista más dueño) | `test_us091_ca1_los_permisos_son_la_union_de_los_roles` (`test_roles.py`), `test_us091_ca1_odontologa_con_dos_roles_tiene_todos_los_permisos`, `test_us091_ca1_recepcionista_y_dueno_suman_permisos` (`test_acceso.py`) |
+| US-091 CA-3 | La matriz de permisos por rol de la tabla de arriba; sin roles no hay ningún permiso | `test_us091_ca3_matriz_de_las_rutas_existentes` (parametrizado, 6 permisos por 3 roles), `test_us091_ca3_sin_roles_no_hay_ningun_permiso` (`test_roles.py`) |
+| US-091 CA-3 | Un rol insuficiente es `PermisoInsuficiente` con `RN-AU-05` | `test_us091_ca3_exigir_permiso_levanta_rn_au_05` (`test_roles.py`), `test_us091_ca3_rol_insuficiente_levanta_permiso_insuficiente` (`test_acceso.py`) |
+| US-091 CA-3 | Por HTTP: el dueño no crea turnos, la recepcionista no crea prestaciones y quien no tiene roles no lee el catálogo (`403`, `RN-AU-05`, sin crear nada) | `test_us091_ca3_el_dueno_no_crea_turnos`, `test_us091_ca3_la_recepcionista_no_crea_prestaciones`, `test_us091_ca3_un_usuario_sin_roles_no_lee_el_catalogo` (`test_proteccion.py`) |
+| US-091 CA-3 | El `403` se informa antes que el `422` y el `404` | `test_us091_ca3_403_antes_que_422_y_404` (`test_proteccion.py`) |
+| US-091 CA-3 | La recepcionista de la demo existe y recibe `403` en `POST /prestaciones` | `test_us091_ca3_recepcionista_de_la_demo` (`test_seed_demo.py`), `test_us091_ca3_la_recepcionista_de_la_demo_recibe_403_en_prestaciones` (`test_demo.py`) |
+| US-091 CA-4 | El seed da roles y profesional vinculado al usuario, sin duplicar | `test_us091_ca4_usuario_del_seed_con_sus_roles_y_su_profesional` (`test_seed_demo.py`) |
+| US-091 CA-4 | El profesional se vincula a un usuario y un segundo profesional no puede usar el mismo | `test_us091_ca4_el_profesional_se_vincula_a_un_usuario_y_el_vinculo_no_se_repite` (`test_repositorio_usuarios.py`) |
+| US-091 CA-5 | Quitar o asignar un rol vale con el mismo token, en la siguiente petición | `test_us091_ca5_quitar_un_rol_vale_con_el_mismo_token`, `test_us091_ca5_asignar_un_rol_vale_con_el_mismo_token` (`test_acceso.py`), `test_us091_ca5_quitar_un_rol_por_http` (`test_proteccion.py`) |
+| US-092 CA-1 | Un access vigente identifica al usuario con sus roles; sin token, ilegible, de otro secreto, un refresh o uno vencido en el instante exacto son `SesionInvalida` (`RN-AU-03`) | `test_us092_ca1_access_vigente_identifica_al_usuario_con_sus_roles`, `test_us092_ca1_sin_token_es_sesion_invalida`, `test_us092_ca1_access_vencido_en_el_instante_exacto`, `test_us092_ca1_refresh_no_sirve_como_access`, `test_us092_ca1_token_ilegible_o_de_otro_secreto` (`test_acceso.py`) |
+| US-092 CA-1 | Por HTTP: toda causa de rechazo da el mismo `401` (`application/problem+json`, `WWW-Authenticate: Bearer`, `RN-AU-03`) y un segundo antes de vencer el token sirve | `test_us092_ca1_toda_causa_de_rechazo_responde_401_rn_au_03`, `test_us092_ca1_los_cuerpos_de_todos_los_401_son_iguales`, `test_us092_ca1_un_segundo_antes_de_vencer_responde_200` (`test_proteccion.py`) |
+| US-092 CA-1 | El `401` se informa antes que el `404` y el `422`; la demo sin token responde `401` | `test_us092_ca1_401_antes_que_404_y_422` (`test_proteccion.py`), `test_us092_ca1_la_demo_sin_token_responde_401` (`test_demo.py`) |
+| US-092 CA-2 | La matriz por HTTP: las siete rutas por los tres usuarios de los ejemplos | `test_us092_ca2_matriz_por_http` (parametrizado, `test_proteccion.py`) |
+| US-092 CA-2 | El turno guarda quién lo creó (`creado_por`) y la respuesta de `POST /turnos` no cambia | `test_us092_ca2_turno_guarda_creado_por` (`test_repositorio_agenda.py`), `test_us092_ca2_el_turno_guarda_quien_lo_creo` (`test_proteccion.py`) |
+| US-092 CA-3 | Toda ruta fuera de la lista pública exige el access token; `/auth/login` y `/auth/refresh` responden sin cabecera | `test_us092_ca3_toda_ruta_fuera_de_la_lista_publica_exige_el_access_token`, `test_us092_ca3_las_rutas_publicas_son_solo_login_y_refresh`, `test_us092_ca3_login_y_refresh_responden_sin_cabecera` (`test_proteccion_de_rutas.py`) |
+| US-092 CA-4 | Usuario desactivado, inexistente, `token_version` cambiada o reactivado con un token viejo: el mismo `401` | `test_us092_ca4_usuario_desactivado_despues_del_login`, `test_us092_ca4_usuario_inexistente`, `test_us092_ca4_token_version_cambiada`, `test_us092_ca4_reactivado_no_revive_el_token_viejo` (`test_acceso.py`), `test_us092_ca4_usuario_inactivo_responde_el_mismo_401`, `test_us092_ca4_token_version_cambiada_responde_el_mismo_401` (`test_proteccion.py`) |
+| E9 | El evento `creado` lleva el id del usuario como `actor_id`; cada turno, el de quien lo creó | `test_e9_el_evento_lleva_el_id_del_usuario` (`test_historial.py` de integración), `test_e9_cada_evento_lleva_al_usuario_que_creo_su_turno` (`test_historial.py` de API) |
+| E9 | Un `401` o un `403` no registra ningún evento; los eventos anteriores a C-07 se siguen leyendo sin actor | `test_e9_un_401_o_un_403_no_registra_ningun_evento` (`test_proteccion.py`), `test_e9_los_eventos_anteriores_quedan_sin_actor` (`test_historial.py` de integración) |
+
 Además, E1, E4 y E12 se prueban por HTTP en `backend/tests/api/test_post_turnos.py` (`test_e1_post_turnos_responde_201`, `test_e4_post_turnos_responde_409_con_los_dos_codigos`, `test_e12_post_turnos_responde_422_con_rn_gl_04`), y las reglas puras tienen tests unitarios sin base de datos en `backend/tests/unit/`.
 
 ## Perfil opcional con PostgreSQL
@@ -216,7 +242,7 @@ Una parte de los tests (la que prueba lo que solo PostgreSQL garantiza) está fu
 
    Se usa `127.0.0.1` y no `localhost`: en Windows `localhost` resuelve primero a IPv6 y la conexión espera varios segundos antes de caer a IPv4.
 
-Con la base levantada, la corrida termina con **«42 passed, 416 deselected, 1 warning»**. **Si PostgreSQL no está disponible** (Docker apagado, `TEST_DATABASE_URL` sin definir o base que no responde), los 42 tests del perfil **se omiten con el motivo en el resumen** (**«42 skipped, 416 deselected»**) y la corrida termina con código de salida 0. Si la base de `TEST_DATABASE_URL` no termina en `_test`, el perfil falla a propósito para no borrar otra base.
+Con la base levantada, la corrida termina con **«47 passed, 528 deselected, 1 warning»**. **Si PostgreSQL no está disponible** (Docker apagado, `TEST_DATABASE_URL` sin definir o base que no responde), los 47 tests del perfil **se omiten con el motivo en el resumen** (**«47 skipped, 528 deselected»**) y la corrida termina con código de salida 0. Si la base de `TEST_DATABASE_URL` no termina en `_test`, el perfil falla a propósito para no borrar otra base.
 
 El esquema de estos tests sale siempre de las migraciones, nunca de `create_all`. Por eso el perfil también comprueba que las migraciones y los modelos coinciden (INF-1): si alguien cambia un modelo sin escribir su migración, ese test se pone en rojo. **La suite por defecto no avisa de esto**: hay que correr el perfil cada vez que se toque el esquema.
 
@@ -228,11 +254,16 @@ Los escenarios están en `openspec/changes/infraestructura-postgresql/specs/pers
 
 | Escenario | Qué verifica | Test titular |
 |---|---|---|
-| INF-1 | Una base vacía migrada queda con el esquema de los modelos (siete tablas desde C-03; con `color` y `reservable_online` desde C-04; ocho con `usuario` desde C-06), sin diferencias | `test_inf1_base_vacia_migrada_queda_con_el_esquema_del_modelo` (`test_migraciones.py`) |
+| INF-1 | Una base vacía migrada queda con el esquema de los modelos (siete tablas desde C-03; con `color` y `reservable_online` desde C-04; ocho con `usuario` desde C-06; nueve con `usuario_rol` desde C-07), sin diferencias | `test_inf1_base_vacia_migrada_queda_con_el_esquema_del_modelo` (`test_migraciones.py`) |
 | INF-1 | Deshacer las migraciones deja la base vacía | `test_inf1_deshacer_las_migraciones_deja_la_base_vacia` (`test_migraciones.py`) |
 | INF-1 | Deshacer solo las migraciones del historial deja el esquema de C-01 | `test_inf1_deshacer_las_migraciones_del_historial_deja_el_esquema_de_c01` (`test_migraciones.py`) |
 | INF-1 | La migración `0005` completa las prestaciones existentes con gris (`#9E9E9E`) y `reservable_online` en `false` (D174) | `test_inf1_la_migracion_0005_completa_las_prestaciones_existentes` (`test_migraciones.py`) |
 | INF-1 | La migración `0006` crea la tabla `usuario` (ocho tablas desde C-06); deshacer solo esa migración deja el esquema anterior | `test_inf1_deshacer_solo_la_migracion_de_usuarios_deja_el_esquema_anterior` (`test_migraciones.py`) |
+| INF-1 | La migración `0007` crea `usuario_rol` y las columnas `profesional.usuario_id`, `profesional.matricula` y `turno.creado_por`; deshacer solo esa migración deja el esquema de C-06 con los datos que ya había | `test_inf1_deshacer_solo_la_migracion_de_roles_deja_el_esquema_de_la_sesion` (`test_migraciones.py`) |
+| US-091 CA-1 | La base rechaza un rol fuera de la lista (`CHECK`) | `test_us091_ca1_la_base_rechaza_un_rol_invalido` (`test_migraciones.py`) |
+| US-091 CA-4 | Un volumen sembrado en C-06 (usuario sin roles) recibe los roles, el vínculo y la recepcionista, sin duplicar nada y con la secuencia de `usuario` avanzada | `test_us091_ca4_volumen_sembrado_en_c06_recibe_roles_y_vinculo` (`test_seed_y_api.py`) |
+| US-091 CA-3 | Sobre PostgreSQL, la recepcionista recibe `403` en `POST /prestaciones` y `201` en `POST /turnos` | `test_us091_ca3_la_recepcionista_recibe_403_en_prestaciones_y_201_en_turnos` (`test_seed_y_api.py`) |
+| US-092 CA-1 | Sobre PostgreSQL, `POST /turnos` sin token responde `401` con `RN-AU-03`; con el token del login, la petición de ejemplo funciona (`201`, y repetida `409`) | `test_us092_ca1_el_recorrido_sin_token_responde_401_sobre_postgresql`, `test_la_peticion_de_ejemplo_del_readme_responde_201_sobre_postgresql` (`test_seed_y_api.py`) |
 | US-090 CA-4 | Un volumen ya sembrado sin usuario recibe el usuario del seed | `test_us090_ca4_volumen_sembrado_sin_usuario_recibe_el_usuario` (`test_seed_y_api.py`) |
 | US-090 CA-1 | El seed sobre PostgreSQL permite iniciar sesión (`200`) y rechaza otra contraseña (`401`) | `test_us090_ca1_inicio_de_sesion_sobre_postgresql` (`test_seed_y_api.py`) |
 | INF-2 | La base rechaza el solapamiento por profesional (E2) y por sillón (E3) | `test_inf2_la_base_rechaza_el_solapamiento_de_e2`, `test_inf2_la_base_rechaza_el_solapamiento_de_e3` (`test_restriccion_de_exclusion.py`) |
@@ -269,6 +300,15 @@ La demo usa una base SQLite en memoria con datos ficticios. Cada arranque parte 
 | Prestaciones | 1 «Consulta / control» (30 min, `#1E88E5`), 2 «Limpieza» (45 min, `#43A047`), 3 «Obturación» (60 min, `#FB8C00`), 4 «Extracción» (45 min, `#E53935`), 5 «Urgencia» (30 min, `#8E24AA`); ninguna es reservable online |
 | Pacientes | 1 «Ana Ejemplo», 2 «Bruno Ficticio», 3 «Carla Inventada» |
 
+Los usuarios de prueba, con la contraseña `demo-consultorio-2026`:
+
+| Usuario | Roles |
+|---|---|
+| 1 — `odontologa@consultorio-demo.test` | `odontologo` y `dueno` (puede todo) |
+| 2 — `recepcion@consultorio-demo.test` | `recepcionista` (crea turnos y lee; no edita prestaciones ni sillones) |
+
+**Todas las rutas de los recorridos de abajo piden el access token.** Antes de empezar, obtené uno con `POST /auth/login` y pegalo en «Authorize» de `/docs`, o mandalo con `curl`; el paso a paso está en «Protección del panel» (más abajo). Sin token, cada petición de estos recorridos responde `401`.
+
 El profesional y el sillón se pueden omitir en la petición: como la demo tiene uno solo de cada uno, se usan esos. Si se da de alta un segundo sillón activo, omitir el sillón deja de funcionar (ver «Sillones» más abajo).
 
 ### Petición de ejemplo
@@ -283,24 +323,25 @@ El `inicio` va en UTC (termina en `Z`).
 
 ### Recorrido
 
+0. Con el token de la odontóloga en «Authorize» (o en la cabecera `Authorization`) para todo lo que sigue. La misma petición sin token → `401`, con `codigos` igual a `["RN-AU-03"]`.
 1. Esa petición → `201`, con el turno `reservado` en el profesional 1 y el sillón 1.
 2. La misma petición otra vez → `409`, con `codigos` igual a `["RN-AG-05", "RN-AG-08"]`.
 3. La misma con `"prestacion_id": 999` → `422`, con el código `RN-GL-04` (no se registra ningún evento).
-4. `GET /turnos/1/historial` → `200`, con una lista de un solo evento: `tipo` `creado`, `actor_tipo` `usuario` y `actor_id` vacío (`null`). El `409` y el `422` de los pasos 2 y 3 no agregan eventos: repetir la consulta sigue mostrando uno.
+4. `GET /turnos/1/historial` → `200`, con una lista de un solo evento: `tipo` `creado`, `actor_tipo` `usuario` y `actor_id` `"1"` (el id del usuario del token: la odontóloga). El `409` y el `422` de los pasos 2 y 3 no agregan eventos: repetir la consulta sigue mostrando uno.
 5. `GET /turnos/999/historial` → `404`, con el código `RN-GL-04`.
 
 Con `curl`:
 
 ```
-curl -i -X POST http://127.0.0.1:8000/turnos -H "Content-Type: application/json" -d "{\"paciente_id\": 1, \"prestacion_id\": 1, \"inicio\": \"2026-11-02T13:00:00Z\"}"
-curl -i http://127.0.0.1:8000/turnos/1/historial
+curl -i -X POST http://127.0.0.1:8000/turnos -H "Authorization: Bearer PEGAR_EL_ACCESS_TOKEN" -H "Content-Type: application/json" -d "{\"paciente_id\": 1, \"prestacion_id\": 1, \"inicio\": \"2026-11-02T13:00:00Z\"}"
+curl -i http://127.0.0.1:8000/turnos/1/historial -H "Authorization: Bearer PEGAR_EL_ACCESS_TOKEN"
 ```
 
-La demo parte siempre sin turnos, así que el primero que se crea es el `1`. En la API sobre PostgreSQL el id lo asigna la base y puede ser otro: usá el `id` que devolvió el `201`.
+(`PEGAR_EL_ACCESS_TOKEN` es el `access_token` del login; vale 15 minutos.) La demo parte siempre sin turnos, así que el primero que se crea es el `1`. En la API sobre PostgreSQL el id lo asigna la base y puede ser otro: usá el `id` que devolvió el `201`.
 
 ### Prestaciones
 
-Las tres rutas no tienen autenticación y trabajan sobre el único consultorio de la instalación (el cuerpo no lleva `consultorio_id`). Con la demo levantada, en Swagger o con `curl`:
+Las tres rutas piden el access token (leer: los tres roles; `POST` y `PATCH`: solo `odontologo`) y trabajan sobre el único consultorio de la instalación (el cuerpo no lleva `consultorio_id`). Con la demo levantada y el token de la odontóloga, en Swagger o con `curl`:
 
 1. `GET /prestaciones` → `200`, con las cinco prestaciones de la tabla de arriba, ordenadas por `id`, cada una con `id`, `nombre`, `duracion_minutos`, `color`, `reservable_online` (`false`) y `activa` (`true`). Incluye las inactivas.
 2. `POST /prestaciones` con `{"nombre": "Blanqueamiento", "duracion_minutos": 60, "color": "#3A7BD5"}` → `201`, con `id` 6, `reservable_online` `false` y `activa` `true`.
@@ -323,15 +364,15 @@ Y una prestación inactiva no admite turnos nuevos:
 Con `curl` (el alta y la edición del color):
 
 ```
-curl -i -X POST http://127.0.0.1:8000/prestaciones -H "Content-Type: application/json" -d "{\"nombre\": \"Blanqueamiento\", \"duracion_minutos\": 60, \"color\": \"#3A7BD5\"}"
-curl -i -X PATCH http://127.0.0.1:8000/prestaciones/2 -H "Content-Type: application/json" -d "{\"color\": \"#000000\"}"
+curl -i -X POST http://127.0.0.1:8000/prestaciones -H "Authorization: Bearer PEGAR_EL_ACCESS_TOKEN" -H "Content-Type: application/json" -d "{\"nombre\": \"Blanqueamiento\", \"duracion_minutos\": 60, \"color\": \"#3A7BD5\"}"
+curl -i -X PATCH http://127.0.0.1:8000/prestaciones/2 -H "Authorization: Bearer PEGAR_EL_ACCESS_TOKEN" -H "Content-Type: application/json" -d "{\"color\": \"#000000\"}"
 ```
 
 En la API sobre PostgreSQL el id de la prestación nueva lo asigna la base (mayor que 5) y los de la 1 a la 5 son los del seed.
 
 ### Sillones
 
-Las tres rutas no tienen autenticación y trabajan sobre el único consultorio de la instalación (el cuerpo no lleva `consultorio_id`). El nombre del sillón no es único (D183). Con la demo **recién arrancada** (los pasos dependen unos de otros y el reinicio los reinicia), en Swagger o con `curl`:
+Las tres rutas piden el access token (leer: los tres roles; `POST` y `PATCH`: solo `odontologo`) y trabajan sobre el único consultorio de la instalación (el cuerpo no lleva `consultorio_id`). El nombre del sillón no es único (D183). Con la demo **recién arrancada** y el token de la odontóloga (los pasos dependen unos de otros y el reinicio los reinicia), en Swagger o con `curl`:
 
 1. `GET /sillones` → `200`, con `[{"id": 1, "nombre": "Sillón 1", "activo": true}]`. Incluye los inactivos, ordenados por `id`.
 2. `POST /sillones` con `{"nombre": "Sillón 2"}` → `201`, con `{"id": 2, "nombre": "Sillón 2", "activo": true}`. El alta recibe solo el nombre.
@@ -346,19 +387,19 @@ Las tres rutas no tienen autenticación y trabajan sobre el único consultorio d
 Con `curl` (el alta, la edición y el turno sin sillón; en el JSON, `\u00f3` es la «ó», para que la consola de Windows no altere el cuerpo):
 
 ```
-curl -i http://127.0.0.1:8000/sillones
-curl -i -X POST http://127.0.0.1:8000/sillones -H "Content-Type: application/json" -d "{\"nombre\": \"Sill\u00f3n 2\"}"
-curl -i -X POST http://127.0.0.1:8000/turnos -H "Content-Type: application/json" -d "{\"paciente_id\": 1, \"prestacion_id\": 1, \"inicio\": \"2026-11-02T13:00:00Z\"}"
-curl -i -X PATCH http://127.0.0.1:8000/sillones/2 -H "Content-Type: application/json" -d "{\"activo\": false}"
+curl -i http://127.0.0.1:8000/sillones -H "Authorization: Bearer PEGAR_EL_ACCESS_TOKEN"
+curl -i -X POST http://127.0.0.1:8000/sillones -H "Authorization: Bearer PEGAR_EL_ACCESS_TOKEN" -H "Content-Type: application/json" -d "{\"nombre\": \"Sill\u00f3n 2\"}"
+curl -i -X POST http://127.0.0.1:8000/turnos -H "Authorization: Bearer PEGAR_EL_ACCESS_TOKEN" -H "Content-Type: application/json" -d "{\"paciente_id\": 1, \"prestacion_id\": 1, \"inicio\": \"2026-11-02T13:00:00Z\"}"
+curl -i -X PATCH http://127.0.0.1:8000/sillones/2 -H "Authorization: Bearer PEGAR_EL_ACCESS_TOKEN" -H "Content-Type: application/json" -d "{\"activo\": false}"
 ```
 
 En la API sobre PostgreSQL el id del sillón nuevo lo asigna la base: el seed deja la secuencia ajustada y el primer alta recibe el 2, pero si ya hubo otras altas será mayor; usá el `id` que devolvió el `201`.
 
 ## Sesión del panel
 
-`POST /auth/login` y `POST /auth/refresh` están en la demo y en la API sobre PostgreSQL. **Ninguna otra ruta exige el token todavía**: se protegen en C-07. El usuario del seed no tiene roles hasta C-07 (D202).
+`POST /auth/login` y `POST /auth/refresh` están en la demo y en la API sobre PostgreSQL. Son las dos únicas rutas del panel que se llaman sin token; todas las demás lo exigen (ver «Protección del panel», abajo).
 
-El usuario ficticio de la demo es `odontologa@consultorio-demo.test`, con la contraseña de prueba `demo-consultorio-2026`. En PostgreSQL el email es el mismo y la contraseña es la de `SEED_USUARIO_PASSWORD`: con el `.env` copiado tal cual de `.env.example`, es la misma `demo-consultorio-2026`, así que el recorrido de abajo vale sin cambios. Si cambiaste esa variable, usá tu valor (y mirá en «Límites conocidos» qué pasa con un usuario ya sembrado). Con la demo levantada, en Swagger o con `curl`:
+El usuario ficticio de la demo es `odontologa@consultorio-demo.test`, con la contraseña de prueba `demo-consultorio-2026`. En PostgreSQL el email es el mismo y la contraseña es la de `SEED_USUARIO_PASSWORD`: con el `.env` copiado tal cual de `.env.example`, es la misma `demo-consultorio-2026`, así que el recorrido de abajo vale sin cambios. La recepcionista (`recepcion@consultorio-demo.test`) usa la misma contraseña. Si cambiaste esa variable, usá tu valor (y mirá en «Límites conocidos» qué pasa con un usuario ya sembrado). Con la demo levantada, en Swagger o con `curl`:
 
 1. `POST /auth/login` con `{"email": "odontologa@consultorio-demo.test", "contrasena": "demo-consultorio-2026"}` → `200`, con `access_token`, `refresh_token`, `token_type` `bearer` y `expires_in` `900` (segundos), y la cabecera `Cache-Control: no-store`. El email se compara sin mayúsculas ni espacios de más.
 2. El mismo `POST` con otra contraseña, o con `"email": "nadie@consultorio-demo.test"` → `401`, con `application/problem+json`, la cabecera `WWW-Authenticate: Bearer` y `codigos` igual a `["RN-AU-04"]`. Los dos casos (y el de un usuario inactivo) devuelven exactamente el mismo cuerpo: no se revela si el email existe.
@@ -377,6 +418,79 @@ curl -i -X POST http://127.0.0.1:8000/auth/refresh -H "Content-Type: application
 
 Los tokens de la demo dejan de valer al reiniciarla: cada arranque genera un secreto efímero (D196). En la API sobre PostgreSQL el secreto sale de `JWT_SECRET` (32 bytes como mínimo) y los tokens sobreviven a un reinicio.
 
+## Protección del panel
+
+Desde C-07, **toda ruta del panel exige un access token** y un rol que la permita. Solo `POST /auth/login`, `POST /auth/refresh`, `/docs` y `/openapi.json` se pueden llamar sin token.
+
+### Obtener el token y usarlo
+
+1. `POST /auth/login` (en `/docs`, o con `curl`) con `{"email": "odontologa@consultorio-demo.test", "contrasena": "demo-consultorio-2026"}` → `200`. Copiá el valor de `access_token` (vale 15 minutos; después, volvé a iniciar sesión o usá `/auth/refresh`).
+2. En `/docs`, tocá el botón **Authorize** (arriba a la derecha), pegá el `access_token` **sin** el prefijo `Bearer` y confirmá. Desde ahí, «Try it out» manda la cabecera `Authorization` solo.
+3. Con `curl`, agregá `-H "Authorization: Bearer <access_token>"` a cada petición:
+
+```
+curl -i http://127.0.0.1:8000/sillones -H "Authorization: Bearer PEGAR_EL_ACCESS_TOKEN"
+```
+
+Sin token, con uno vencido, alterado, de refresh, o de un usuario desactivado o con `token_version` cambiada, la respuesta es siempre **el mismo `401`**: `application/problem+json`, cabecera `WWW-Authenticate: Bearer` y `codigos` igual a `["RN-AU-03"]`. Con un token válido pero sin el rol que la ruta pide: `403` con `codigos` igual a `["RN-AU-05"]`. El `401` se informa antes que cualquier otro error (también antes de un `404` o un `422`), y el `403` antes que el `422` y el `404`.
+
+### Qué puede hacer cada rol
+
+Un usuario puede tener varios roles y sus permisos **se suman**. Los roles se leen de la base en **cada petición**: quitar o dar un rol vale desde la petición siguiente, con el mismo token.
+
+| Ruta | `odontologo` | `recepcionista` | `dueno` |
+|---|---|---|---|
+| `POST /turnos` | sí | sí | no |
+| `GET /turnos/{id}/historial` | sí | sí | sí |
+| `GET /prestaciones` | sí | sí | sí |
+| `POST /prestaciones`, `PATCH /prestaciones/{id}` | sí | no | no |
+| `GET /sillones` | sí | sí | sí |
+| `POST /sillones`, `PATCH /sillones/{id}` | sí | no | no |
+
+### Usuarios de prueba
+
+| Email | Roles | Dónde |
+|---|---|---|
+| `odontologa@consultorio-demo.test` | `odontologo` y `dueno` | La demo y el seed de PostgreSQL |
+| `recepcion@consultorio-demo.test` | `recepcionista` | La demo y el seed de PostgreSQL |
+
+La contraseña de los dos es `demo-consultorio-2026` (la de prueba de `SEED_USUARIO_PASSWORD` en `.env.example`; la demo siempre usa esa). La odontóloga puede todo, así que el `403` se ve con la recepcionista.
+
+### Recorrido de la protección (demo sin Docker)
+
+Con la demo recién arrancada:
+
+1. `POST /turnos` con la petición de ejemplo y **sin** token → `401`, con `codigos` igual a `["RN-AU-03"]`.
+2. `POST /auth/login` con la odontóloga y «Authorize» con su `access_token`. `POST /turnos` → `201`; repetido → `409` con `["RN-AG-05", "RN-AG-08"]`; con `"prestacion_id": 999` → `422` con `RN-GL-04`.
+3. `GET /turnos/1/historial` → `200`, con `actor_id` `"1"`.
+4. `POST /auth/login` con la recepcionista y «Authorize» con su token (reemplaza al anterior). `POST /prestaciones` con `{"nombre": "Prueba", "duracion_minutos": 30, "color": "#3A7BD5"}` → `403`, con `codigos` igual a `["RN-AU-05"]`. `POST /turnos` con `{"paciente_id": 2, "prestacion_id": 1, "inicio": "2026-11-02T14:00:00Z"}` → `201`.
+
+### Recorrido de los roles sobre PostgreSQL (Compose)
+
+Con `docker compose up --build -d` hecho y el token de la odontóloga en «Authorize». Los roles viven en la tabla `usuario_rol`; se cambian con SQL desde el contenedor de la base (con otra copia del repositorio, agregá `-p otro-nombre`). Un volumen sembrado antes de C-07 recibe los roles al arrancar la API: `docker compose logs api` dice «Seed cargado.».
+
+1. Quitar el rol y probar **con el mismo token**:
+
+   ```
+   docker compose exec postgres psql -U app -d turnos -c "DELETE FROM usuario_rol WHERE usuario_id = 1 AND rol = 'odontologo'"
+   ```
+
+   `POST /turnos` → `403` (`RN-AU-05`: el dueño no crea turnos) y `GET /turnos/{id}/historial` → `200` (el dueño sí lo lee).
+2. Restaurar el rol:
+
+   ```
+   docker compose exec postgres psql -U app -d turnos -c "INSERT INTO usuario_rol (usuario_id, rol) VALUES (1, 'odontologo')"
+   ```
+
+   Con el mismo token, `POST /turnos` vuelve a responder `201` (con un horario libre).
+3. Invalidar el token:
+
+   ```
+   docker compose exec postgres psql -U app -d turnos -c "UPDATE usuario SET token_version = token_version + 1 WHERE id = 1"
+   ```
+
+   El mismo token → `401`; un login nuevo → `200` y el token nuevo sirve.
+
 ## Levantar la API con PostgreSQL
 
 Necesita Docker Desktop. Los datos son los mismos de la demo y todos son ficticios.
@@ -391,8 +505,8 @@ Necesita Docker Desktop. Los datos son los mismos de la demo y todos son fictici
 
    Con otra copia del repositorio en la misma máquina, usá `-p otro-nombre` en **todos** los comandos de `docker compose` de esta sección (`up`, `ps`, `logs`, `restart`, `down`), por ejemplo `docker compose -p otro-nombre up --build -d`, y detené antes el Compose de la otra copia, porque los puertos son los mismos.
 
-   Esperá a que `postgres` y `api` figuren como `healthy`. Al arrancar, el contenedor de la API aplica las migraciones (`alembic upgrade head`), carga el seed ficticio si falta y recién entonces levanta el servidor: `docker compose logs api` lo muestra. Una segunda vez el log dice «El seed ya estaba cargado: no hizo falta.». Esto vale para una sola réplica de la API.
-3. Swagger queda en <http://127.0.0.1:8000/docs>, con los mismos identificadores, la misma petición de ejemplo y el mismo recorrido de la sección anterior. A diferencia de la demo, los turnos **persisten**: tras `docker compose restart api`, repetir la primera petición devuelve `409`.
+   Esperá a que `postgres` y `api` figuren como `healthy`. Al arrancar, el contenedor de la API aplica las migraciones (`alembic upgrade head`), carga el seed ficticio si falta (también les da los roles al usuario y a la recepcionista de un volumen sembrado antes de C-07) y recién entonces levanta el servidor: `docker compose logs api` lo muestra. Una segunda vez el log dice «El seed ya estaba cargado: no hizo falta.». Esto vale para una sola réplica de la API.
+3. Swagger queda en <http://127.0.0.1:8000/docs>, con los mismos identificadores, la misma petición de ejemplo y el mismo recorrido de la demo (con el token de «Protección del panel»). A diferencia de la demo, los turnos **persisten**: tras `docker compose restart api`, repetir la primera petición devuelve `409`.
 
 Los puertos se publican solo en `127.0.0.1`: `8000` para la API y `5434` para PostgreSQL (el 5434 y no el 5432, para no chocar con un PostgreSQL local). Los dos tienen que estar libres en el host; si no, `docker compose up` falla y hay que cambiar el mapeo en `docker-compose.yml` (y la URL de `TEST_DATABASE_URL`). Se usa `127.0.0.1` y no `localhost` por la razón explicada arriba.
 
@@ -425,33 +539,32 @@ python -m uvicorn app.main:crear_app_desde_entorno --factory
 
 ### Migraciones
 
-El esquema de PostgreSQL sale solo de migraciones (`backend/app/infrastructure/db/migraciones/versions/`: `0001` crea las seis tablas, `0002` agrega las restricciones de exclusión, `0003` crea la tabla `evento_turno` del historial y `0004` agrega los disparadores que hacen que la base rechace `UPDATE`, `DELETE` y `TRUNCATE` sobre esa tabla, `0005` agrega `color` y `reservable_online` a `prestacion`: completa las filas que ya existían con gris `#9E9E9E` y `false`, y después quita esos valores por defecto porque la API exige el color, y `0006` crea la tabla `usuario` del panel: email único en minúsculas, hash bcrypt, `activo` y `token_version`). Son solo para PostgreSQL; la suite por defecto crea el esquema con `create_all` sobre SQLite. Desde `backend/`, con `DATABASE_URL` definida como arriba:
+El esquema de PostgreSQL sale solo de migraciones (`backend/app/infrastructure/db/migraciones/versions/`: `0001` crea las seis tablas, `0002` agrega las restricciones de exclusión, `0003` crea la tabla `evento_turno` del historial y `0004` agrega los disparadores que hacen que la base rechace `UPDATE`, `DELETE` y `TRUNCATE` sobre esa tabla, `0005` agrega `color` y `reservable_online` a `prestacion`: completa las filas que ya existían con gris `#9E9E9E` y `false`, y después quita esos valores por defecto porque la API exige el color, `0006` crea la tabla `usuario` del panel: email único en minúsculas, hash bcrypt, `activo` y `token_version`, y `0007` crea `usuario_rol` —clave compuesta, con un `CHECK` que solo admite `odontologo`, `recepcionista` y `dueno`— y las columnas nulas `profesional.usuario_id` (único), `profesional.matricula` y `turno.creado_por`; no escribe datos: los roles los pone el seed). Son solo para PostgreSQL; la suite por defecto crea el esquema con `create_all` sobre SQLite. Desde `backend/`, con `DATABASE_URL` definida como arriba:
 
 ```
 python -m alembic current
 python -m alembic upgrade head
 python -m alembic downgrade base
-python -m alembic revision --autogenerate --rev-id 0007 -m "descripcion"
+python -m alembic revision --autogenerate --rev-id 0008 -m "descripcion"
 ```
 
 La migración autogenerada **se revisa a mano** antes de usarla, y cada change que toque un modelo agrega la suya y corre el perfil opcional (INF-1).
 
 ## Límites conocidos
 
-- **`POST /turnos` no tiene autenticación** en este change (DD-14). Es aceptable porque solo hay datos ficticios y ningún despliegue público; por eso los puertos se publican solo en `127.0.0.1`.
 - Los datos de la demo sin Docker viven en memoria y se pierden al reiniciar; los de la API sobre PostgreSQL persisten en el volumen de Docker.
 - La coincidencia entre migraciones y modelos (INF-1), la protección ante reservas simultáneas (E11, y el evento único de E9 con ocho reservas) y la garantía de que la base rechaza modificar o borrar un evento (US-015 CA-1, migración `0004`) **solo se prueban en el perfil opcional con PostgreSQL**: la suite por defecto no las ejerce. En SQLite (demo y suite por defecto) la inmutabilidad del historial se garantiza solo desde la aplicación: no hay métodos para modificarlo y la ruta responde `405`.
-- **`GET /prestaciones`, `POST /prestaciones` y `PATCH /prestaciones/{id}` no tienen autenticación** (DD-14), por el mismo motivo: datos ficticios y puertos solo en `127.0.0.1`. Trabajan sobre el único consultorio de la instalación (D173).
-- **`GET /sillones`, `POST /sillones` y `PATCH /sillones/{id}` no tienen autenticación** (DD-14), por el mismo motivo: datos ficticios y puertos solo en `127.0.0.1`. Cualquiera que llegue a la API puede dar de alta o desactivar un sillón; C-07 las protege.
 - **El estado de los sillones cambia el resultado del recorrido de la demo**: con un segundo sillón activo, `POST /turnos` sin `sillon_id` responde `422` con `varios_activos` (RN-AG-14), y sin ninguno activo, `ninguno_activo`. En PostgreSQL los sillones persisten, así que un sillón dado de alta en una prueba sigue ahí en la siguiente: desactivalo con `PATCH` o usá `docker compose down -v`.
 - Desactivar un sillón y crear un turno en él **al mismo tiempo** puede dejar un turno nuevo en un sillón recién desactivado: `crear_turno` valida el sillón antes de tomar el bloqueo de fila (S15). Sin usuarios ni panel todavía, se acepta; el turno queda igual de válido y no se cancela.
 - Un volumen de PostgreSQL sembrado antes de la migración `0005` (por ejemplo, el de las pruebas manuales de C-02 y C-03) **no se vuelve a sembrar**: sus cinco prestaciones quedan con el color gris `#9E9E9E` hasta que se edite cada una con `PATCH /prestaciones/{id}` (D174). Con `docker compose down -v` la base arranca vacía y el seed trae los colores de la demo.
-- **`GET /turnos/{id}/historial` no tiene autenticación** (DD-14): cualquiera que llegue a la API ve el historial de cualquier turno. Es aceptable por el mismo motivo que `POST /turnos`: datos ficticios y puertos solo en `127.0.0.1`.
-- Los eventos `creado` anteriores a C-07 tienen `actor_tipo` `usuario` y **`actor_id` vacío para siempre** (D159): todavía no hay usuarios autenticados y completarlo después sería modificar el historial.
+- Los eventos `creado` anteriores a C-07 tienen `actor_tipo` `usuario` y **`actor_id` vacío para siempre** (D159): completarlo después sería modificar el historial. Los turnos anteriores a C-07 tampoco tienen `creado_por` (queda vacío). Los eventos y turnos nuevos sí llevan al usuario del token.
+- **`/docs` y `/openapi.json` son públicos** (D214): se pueden leer sin token (las rutas que documentan, no). Es aceptable porque la API se publica solo en `127.0.0.1` y hay solo datos ficticios.
+- **Un cuerpo con JSON roto responde `422` antes que `401`** (design R12): FastAPI lee el cuerpo antes de evaluar el token. Un cuerpo bien formado sin token sí responde `401`, antes de cualquier validación.
+- **Deshacer la migración `0007` pierde los roles** (`alembic downgrade 0006` borra `usuario_rol`), el vínculo profesional-usuario y `creado_por`; los usuarios, los turnos y los eventos quedan.
+- **El rol se lee en cada petición, pero el token no se revoca de a uno**: tras quitarle **un** rol a un usuario, su access token sigue sirviendo hasta 15 minutos para lo que sus **otros** roles permiten (y deja de servir para lo que solo daba el rol quitado). Desactivar al usuario o subir su `token_version` lo corta en la petición siguiente. Todavía no hay ruta para dar o quitar roles ni para desactivar usuarios: se hace en la base, como en «Protección del panel».
+- **`profesional.matricula` existe pero nadie la escribe ni la lee todavía** (D215).
 - Los turnos guardados antes de la migración `0003` (por ejemplo, los de la prueba manual de C-02 en el volumen de PostgreSQL) **no tienen historial**: la consulta devuelve `200` con `[]` (D160). La migración no inventa eventos del pasado.
-- **Las rutas de la agenda siguen sin exigir el token** hasta C-07: `/auth/login` y `/auth/refresh` ya emiten tokens, pero ninguna otra ruta los valida (ver los límites de autenticación de arriba).
 - **`/auth/login` no tiene límite de peticiones** (D195): cualquiera que llegue a la API puede probar contraseñas. Se acepta porque la API se publica solo en `127.0.0.1` y bcrypt con 12 rondas ya frena cada intento; el límite se decide en el change de la reserva pública. Tampoco hay registro de eventos de seguridad.
-- **El usuario del seed no tiene roles** hasta C-07 (D202). Con `activo` en `false` o con un `token_version` mayor, sus tokens dejan de valer, pero todavía no hay ruta para hacerlo: se cambia en la base.
 - **No hay cierre de sesión en el servidor** ni revocación de un token puntual (RN-AU-03): un refresh vale hasta su vencimiento o hasta que cambie la `token_version` del usuario.
 - **Dónde guarda el panel los tokens** (memoria, `sessionStorage` o cookie) se decide en C-08; si fuera una cookie, el contrato de `/auth/refresh` cambiaría.
 - Un volumen de PostgreSQL sembrado antes de C-06 recibe el usuario del seed al próximo arranque, pero **un usuario ya sembrado no cambia su contraseña** aunque cambie `SEED_USUARIO_PASSWORD`. Con `docker compose down -v` la base arranca vacía.

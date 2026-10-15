@@ -67,7 +67,7 @@ Reglas de trabajo para todos los grupos (no son tareas):
 
 ## 10. README
 
-- [ ] 10.1 Completar el `README.md` (design R19): sección «Protección del panel» (obtener el token, «Authorize» en `/docs`, matriz de R4, usuarios de prueba y sus roles), el recorrido de la demo con token (reemplaza al de C-01 a C-06), `0007` en «Migraciones», la tabla escenario → test (US-091 CA-1, CA-3, CA-4, CA-5; US-092 CA-1 a CA-4; E9; INF-1 y los del perfil), el resultado real de las dos corridas y los límites conocidos nuevos; quitar los límites que este change resuelve («las rutas no exigen token», «sin `actor_id`» para los turnos nuevos). Verificación: cada comando y petición nueva del README se ejecutó tal cual y dio lo que el README dice.
+- [x] 10.1 Completar el `README.md` (design R19): sección «Protección del panel» (obtener el token, «Authorize» en `/docs`, matriz de R4, usuarios de prueba y sus roles), el recorrido de la demo con token (reemplaza al de C-01 a C-06), `0007` en «Migraciones», la tabla escenario → test (US-091 CA-1, CA-3, CA-4, CA-5; US-092 CA-1 a CA-4; E9; INF-1 y los del perfil), el resultado real de las dos corridas y los límites conocidos nuevos; quitar los límites que este change resuelve («las rutas no exigen token», «sin `actor_id`» para los turnos nuevos). Verificación: cada comando y petición nueva del README se ejecutó tal cual y dio lo que el README dice.
 
 ## 11. Prueba en el navegador
 
