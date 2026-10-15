@@ -213,3 +213,16 @@ def test_e9_el_evento_lleva_el_id_del_usuario(sesion, fabrica_sesiones, uow):
         guardado = otra_sesion.get(TurnoModelo, turno.id)
     assert [(e.actor_tipo, e.actor_id) for e in eventos] == [(ActorTipo.USUARIO, str(usuario.id))]
     assert guardado.creado_por == usuario.id
+
+
+def test_e9_los_eventos_anteriores_quedan_sin_actor(sesion, uow):
+    datos = _escenario(sesion)
+    turno = un_turno(
+        sesion, paciente=datos["paciente"], profesional=datos["profesional"],
+        sillon=datos["sillon"], prestacion=datos["prestacion"], inicio=a_las(9),
+    )
+    un_evento(sesion, turno, actor_id=None)  # como los eventos de C-03 a C-06 (D159)
+
+    eventos = consultar_historial(turno.id, uow)
+
+    assert [(e.actor_tipo, e.actor_id) for e in eventos] == [(ActorTipo.USUARIO, None)]

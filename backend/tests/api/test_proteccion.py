@@ -14,7 +14,7 @@ from app.domain.acceso.roles import Rol
 from app.domain.acceso.sesion import TipoDeToken
 from app.domain.tiempo import UTC
 from app.infrastructure.configuracion import ConfiguracionDeSesion
-from app.infrastructure.db.modelos import PrestacionModelo, TurnoModelo
+from app.infrastructure.db.modelos import EventoTurnoModelo, PrestacionModelo, TurnoModelo
 from app.main import crear_app
 from tests.conftest import RELOJ_FIJO, SECRETO_DE_PRUEBA, token_de
 from app.infrastructure.repositories.usuarios import RepositorioUsuariosSqlAlchemy
@@ -357,3 +357,16 @@ def test_us092_ca2_el_turno_guarda_quien_lo_creo(engine, sesion) -> None:
     assert "creado_por" not in respuesta.json()  # D209: la respuesta de POST /turnos no cambia
     sesion.expire_all()
     assert sesion.get(TurnoModelo, respuesta.json()["id"]).creado_por == odontologa.id
+
+
+def test_e9_un_401_o_un_403_no_registra_ningun_evento(engine, sesion) -> None:
+    datos = _escenario(sesion)
+    dueno = un_usuario(sesion, datos["consultorio"], roles=(Rol.DUENO,))
+    cliente = _cliente(engine)
+
+    sin_token = cliente.post("/turnos", json=_peticion_de_turno(datos))
+    del_dueno = cliente.post("/turnos", json=_peticion_de_turno(datos), headers=_con(token_de(dueno.id)))
+
+    assert (sin_token.status_code, del_dueno.status_code) == (401, 403)
+    assert _cuantos(sesion, TurnoModelo) == 0
+    assert _cuantos(sesion, EventoTurnoModelo) == 0
