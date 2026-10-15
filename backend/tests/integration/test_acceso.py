@@ -9,7 +9,7 @@ import pytest
 from app.application.acceso import identificar_usuario
 from app.application.sesion import IniciarSesionComando, Vigencias, iniciar_sesion
 from app.domain.acceso.roles import Rol, UsuarioDelPanel
-from app.domain.acceso.sesion import claims_para, TipoDeToken
+from app.domain.acceso.sesion import ClaimsDeSesion, TipoDeToken, claims_para
 from app.domain.errors import SesionInvalida
 from app.domain.tiempo import UTC
 from app.infrastructure.seguridad.contrasenas import HasherBcrypt
@@ -106,5 +106,58 @@ def test_us092_ca1_token_ilegible_o_de_otro_secreto(caso, sesion, uow, firmador,
 
     with pytest.raises(SesionInvalida) as error:
         identificar_usuario(token, uow, firmador, reloj_fijo)
+
+    assert error.value.codigos == ["RN-AU-03"]
+
+
+def test_us092_ca4_usuario_desactivado_despues_del_login(sesion, uow, firmador, consultorio) -> None:
+    usuario = un_usuario(sesion, consultorio, roles=(Rol.ODONTOLOGO,))
+    tokens = _iniciar_sesion(uow, firmador, usuario)
+    usuario.activo = False
+    sesion.commit()
+
+    with pytest.raises(SesionInvalida) as error:
+        identificar_usuario(tokens.access_token, uow, firmador, reloj_fijo)
+
+    assert error.value.codigos == ["RN-AU-03"]
+
+
+def test_us092_ca4_token_version_cambiada(sesion, uow, firmador, consultorio) -> None:
+    usuario = un_usuario(sesion, consultorio, roles=(Rol.ODONTOLOGO,))
+    tokens = _iniciar_sesion(uow, firmador, usuario)
+    usuario.token_version += 1
+    sesion.commit()
+
+    with pytest.raises(SesionInvalida):
+        identificar_usuario(tokens.access_token, uow, firmador, reloj_fijo)
+
+
+def test_us092_ca4_reactivado_no_revive_el_token_viejo(sesion, uow, firmador, consultorio) -> None:
+    usuario = un_usuario(sesion, consultorio, roles=(Rol.ODONTOLOGO,))
+    viejo = _iniciar_sesion(uow, firmador, usuario).access_token
+    usuario.activo, usuario.token_version = False, usuario.token_version + 1  # desactivar sube la versión
+    sesion.commit()
+    usuario.activo = True
+    sesion.commit()
+
+    with pytest.raises(SesionInvalida):
+        identificar_usuario(viejo, uow, firmador, reloj_fijo)
+
+    nuevo = _iniciar_sesion(uow, firmador, usuario).access_token
+    assert firmador.leer(nuevo).token_version == 1
+    assert identificar_usuario(nuevo, uow, firmador, reloj_fijo).id == usuario.id
+
+
+def test_us092_ca4_usuario_inexistente(uow, firmador) -> None:
+    claims = ClaimsDeSesion(
+        usuario_id=999,
+        token_version=0,
+        tipo=TipoDeToken.ACCESS,
+        emitido_en=RELOJ_FIJO,
+        vence_en=RELOJ_FIJO + VIGENCIAS.access,
+    )
+
+    with pytest.raises(SesionInvalida) as error:
+        identificar_usuario(firmador.firmar(claims), uow, firmador, reloj_fijo)
 
     assert error.value.codigos == ["RN-AU-03"]
