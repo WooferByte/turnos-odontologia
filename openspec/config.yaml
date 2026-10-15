@@ -90,7 +90,7 @@ rules:
     - No agrupar los tests al final ni incluir tareas de "leer archivos" como tareas.
     - Agrupar las tareas por tema (preparación, dominio, persistencia, un grupo por escenario, API, demo y README, verificación final).
     - Incluir una tarea final de verificación en clon limpio siguiendo solo el README.
-    - Incluir una tarea en que el agente levanta la API y prueba en /docs (o en la interfaz, desde la fase 3) los endpoints del change, con la respuesta de éxito y los rechazos con su código RN, y otra tarea del autor que repite ese paso a paso.
+    - Incluir una tarea en que el agente levanta la API y prueba en /docs (o en la interfaz, desde la fase 3) los endpoints del change, con la respuesta de éxito y los rechazos con su código RN, y le deja al autor el paso a paso. La repetición a mano del autor es opcional: va como tarea solo si el change es complejo, crítico o esencial, o si el agente no quedó conforme con lo que pudo probar.
 
 # Per-operation guidance
 operations:
