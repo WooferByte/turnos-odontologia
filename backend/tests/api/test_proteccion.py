@@ -17,12 +17,14 @@ from app.infrastructure.configuracion import ConfiguracionDeSesion
 from app.infrastructure.db.modelos import PrestacionModelo, TurnoModelo
 from app.main import crear_app
 from tests.conftest import RELOJ_FIJO, SECRETO_DE_PRUEBA, token_de
+from app.infrastructure.repositories.usuarios import RepositorioUsuariosSqlAlchemy
 from tests.factories import (
     un_consultorio,
     un_paciente,
     un_profesional,
     una_prestacion,
     un_sillon,
+    un_turno,
     un_usuario,
 )
 
@@ -199,3 +201,142 @@ def test_us091_ca1_la_recepcionista_si_crea_turnos(engine, sesion) -> None:
     )
 
     assert respuesta.status_code == 201
+
+
+# --- US-092 CA-2: la matriz de design R4 por HTTP ------------------------------------------------
+
+# método, ruta con {turno}, {prestacion} o {sillon}, cuerpo y los roles que pasan.
+RUTAS_DE_LA_MATRIZ = {
+    "POST /turnos": ("POST", "/turnos", "turno_nuevo", {Rol.ODONTOLOGO, Rol.RECEPCIONISTA}),
+    "GET /turnos/{id}/historial": (
+        "GET", "/turnos/{turno}/historial", None, {Rol.ODONTOLOGO, Rol.RECEPCIONISTA, Rol.DUENO}
+    ),
+    "GET /prestaciones": ("GET", "/prestaciones", None, {Rol.ODONTOLOGO, Rol.RECEPCIONISTA, Rol.DUENO}),
+    "POST /prestaciones": (
+        "POST", "/prestaciones", {"nombre": "Blanqueamiento", "duracion_minutos": 30, "color": "#3A7BD5"}, {Rol.ODONTOLOGO}
+    ),
+    "PATCH /prestaciones/{id}": (
+        "PATCH", "/prestaciones/{prestacion}", {"color": "#112233"}, {Rol.ODONTOLOGO}
+    ),
+    "GET /sillones": ("GET", "/sillones", None, {Rol.ODONTOLOGO, Rol.RECEPCIONISTA, Rol.DUENO}),
+    "POST /sillones": ("POST", "/sillones", {"nombre": "Sillón nuevo"}, {Rol.ODONTOLOGO}),
+    "PATCH /sillones/{id}": (
+        "PATCH", "/sillones/{sillon}", {"nombre": "Sillón renombrado"}, {Rol.ODONTOLOGO}
+    ),
+}
+USUARIOS_DE_LOS_EJEMPLOS = {
+    "odontologa con dueno": (Rol.ODONTOLOGO, Rol.DUENO),
+    "recepcionista": (Rol.RECEPCIONISTA,),
+    "dueno": (Rol.DUENO,),
+}
+
+
+@pytest.mark.parametrize("usuario", USUARIOS_DE_LOS_EJEMPLOS)
+@pytest.mark.parametrize("ruta", RUTAS_DE_LA_MATRIZ)
+def test_us092_ca2_matriz_por_http(ruta, usuario, engine, sesion) -> None:
+    metodo, plantilla, cuerpo, permitidos = RUTAS_DE_LA_MATRIZ[ruta]
+    datos = _escenario(sesion)
+    turno = un_turno(
+        sesion,
+        paciente=datos["paciente"], profesional=datos["profesional"], sillon=datos["sillon"],
+        prestacion=datos["prestacion"], inicio=datetime(2026, 11, 3, 13, 0, tzinfo=UTC),
+    )
+    roles = USUARIOS_DE_LOS_EJEMPLOS[usuario]
+    persona = un_usuario(sesion, datos["consultorio"], roles=roles)
+    url = plantilla.format(turno=turno.id, prestacion=datos["prestacion"].id, sillon=datos["sillon"].id)
+    cuerpo = _peticion_de_turno(datos) if cuerpo == "turno_nuevo" else cuerpo
+
+    respuesta = _cliente(engine).request(metodo, url, json=cuerpo, headers=_con(token_de(persona.id)))
+
+    if permitidos & set(roles):
+        assert respuesta.status_code in (200, 201)
+    else:
+        assert respuesta.status_code == 403
+        assert respuesta.json()["codigos"] == ["RN-AU-05"]
+
+
+# --- RN-GL-02 (D208): el control de acceso va antes que la validación y que el 404 ---------------
+
+
+def test_us091_ca3_403_antes_que_422_y_404(engine, sesion) -> None:
+    datos = _escenario(sesion)
+    dueno = un_usuario(sesion, datos["consultorio"], roles=(Rol.DUENO,))
+    recepcionista = un_usuario(sesion, datos["consultorio"], roles=(Rol.RECEPCIONISTA,))
+    cliente = _cliente(engine)
+
+    con_referencia_invalida = cliente.post(
+        "/turnos", json={**_peticion_de_turno(datos), "prestacion_id": 999}, headers=_con(token_de(dueno.id))
+    )
+    sillon_inexistente = cliente.patch(
+        "/sillones/999", json={"nombre": "Nuevo"}, headers=_con(token_de(recepcionista.id))
+    )
+
+    assert (con_referencia_invalida.status_code, con_referencia_invalida.json()["codigos"]) == (403, ["RN-AU-05"])
+    assert (sillon_inexistente.status_code, sillon_inexistente.json()["codigos"]) == (403, ["RN-AU-05"])
+
+
+def test_us092_ca1_401_antes_que_404_y_422(engine, sesion) -> None:
+    datos = _escenario(sesion)
+    cliente = _cliente(engine)
+
+    historial_inexistente = cliente.get("/turnos/999/historial")
+    referencia_invalida = cliente.post("/turnos", json={**_peticion_de_turno(datos), "prestacion_id": 999})
+    id_no_entero = cliente.get("/turnos/abc/historial")
+
+    for respuesta in (historial_inexistente, referencia_invalida, id_no_entero):
+        assert respuesta.status_code == 401
+        assert respuesta.json()["codigos"] == ["RN-AU-03"]
+
+
+def test_json_roto_sin_token_responde_422(engine) -> None:
+    """El límite de design R12: FastAPI rechaza el JSON roto antes de resolver las dependencias."""
+    respuesta = _cliente(engine).post(
+        "/turnos", content=b'{"paciente_id": ', headers={"Content-Type": "application/json"}
+    )
+
+    assert respuesta.status_code == 422
+    assert respuesta.json()["codigos"] == []
+
+
+# --- US-091 CA-5: quitar un rol vale con el mismo token -----------------------------------------
+
+
+def test_us091_ca5_quitar_un_rol_por_http(engine, sesion) -> None:
+    datos = _escenario(sesion)
+    usuario = un_usuario(sesion, datos["consultorio"], roles=(Rol.ODONTOLOGO, Rol.DUENO))
+    cabecera = _con(token_de(usuario.id))
+    cliente = _cliente(engine)
+    creado = cliente.post("/turnos", json=_peticion_de_turno(datos), headers=cabecera)
+    assert creado.status_code == 201
+
+    RepositorioUsuariosSqlAlchemy(sesion).quitar_rol(usuario.id, Rol.ODONTOLOGO)
+    sesion.commit()
+    otro = {**_peticion_de_turno(datos), "inicio": "2026-11-02T15:00:00Z"}
+
+    crear = cliente.post("/turnos", json=otro, headers=cabecera)
+    historial = cliente.get(f"/turnos/{creado.json()['id']}/historial", headers=cabecera)
+
+    assert (crear.status_code, crear.json()["codigos"]) == (403, ["RN-AU-05"])
+    assert historial.status_code == 200
+
+
+# --- design R15: OpenAPI -------------------------------------------------------------------------
+
+
+def test_openapi_declara_bearer_401_y_403_en_las_rutas_protegidas(engine) -> None:
+    openapi = _cliente(engine).get("/openapi.json").json()
+
+    esquema = openapi["components"]["securitySchemes"]["AccessToken"]
+    assert (esquema["type"], esquema["scheme"], esquema["bearerFormat"]) == ("http", "bearer", "JWT")
+    protegidas = 0
+    for ruta, operaciones in openapi["paths"].items():
+        for metodo, operacion in operaciones.items():
+            if ruta in ("/auth/login", "/auth/refresh"):
+                assert "security" not in operacion
+                continue
+            protegidas += 1
+            assert operacion["security"] == [{"AccessToken": []}], (metodo, ruta)
+            for estado in ("401", "403"):
+                contenido = operacion["responses"][estado]["content"]
+                assert "application/problem+json" in contenido, (metodo, ruta, estado)
+    assert protegidas == 8

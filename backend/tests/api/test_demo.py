@@ -8,7 +8,7 @@ from datetime import datetime
 import pytest
 from fastapi.testclient import TestClient
 
-from app.infrastructure.db.seed_demo import CONTRASENA_DEMO, EMAIL_DEMO
+from app.infrastructure.db.seed_demo import CONTRASENA_DEMO, EMAIL_DEMO, EMAIL_RECEPCION_DEMO
 from app.main import crear_app_demo
 
 PETICION_DE_EJEMPLO = {"paciente_id": 1, "prestacion_id": 1, "inicio": "2026-11-02T13:00:00Z"}
@@ -125,3 +125,23 @@ def test_us090_ca1_la_demo_inicia_sesion_con_el_usuario_del_seed():
     assert correcta.status_code == 200
     assert set(correcta.json()) >= {"access_token", "refresh_token", "token_type", "expires_in"}
     assert incorrecta.status_code == 401
+
+
+def test_us092_ca1_la_demo_sin_token_responde_401():
+    cliente = TestClient(crear_app_demo())
+
+    respuesta = cliente.post("/turnos", json=PETICION_DE_EJEMPLO)
+
+    assert respuesta.status_code == 401
+    assert respuesta.json()["codigos"] == ["RN-AU-03"]
+
+
+def test_us091_ca3_la_recepcionista_de_la_demo_recibe_403_en_prestaciones():
+    cliente = _cliente_con_sesion(EMAIL_RECEPCION_DEMO)
+
+    prestacion = cliente.post("/prestaciones", json={"nombre": "Blanqueamiento", "duracion_minutos": 30})
+    turno = cliente.post("/turnos", json=PETICION_DE_EJEMPLO)
+
+    assert prestacion.status_code == 403
+    assert prestacion.json()["codigos"] == ["RN-AU-05"]
+    assert turno.status_code == 201
