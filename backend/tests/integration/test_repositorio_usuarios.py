@@ -3,14 +3,16 @@ from dataclasses import replace
 
 import pytest
 from sqlalchemy import func, select
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-from app.application.puertos import EmailRepetidoEnLaBase
+from app.application.puertos import EmailRepetidoEnLaBase, RolInvalidoEnLaBase
+from app.domain.acceso.roles import Rol
 from app.domain.acceso.usuarios import DatosUsuario
-from app.infrastructure.db.modelos import UsuarioModelo
+from app.infrastructure.db.modelos import UsuarioModelo, UsuarioRolModelo
 from app.infrastructure.repositories.usuarios import RepositorioUsuariosSqlAlchemy
 from tests.conftest import RELOJ_FIJO
-from tests.factories import un_consultorio
+from tests.factories import un_consultorio, un_profesional, un_usuario
 
 EMAIL = "odontologa@consultorio-demo.test"
 
@@ -112,3 +114,104 @@ def test_us090_ca4_la_unidad_de_trabajo_expone_usuarios_sobre_la_misma_sesion_qu
     assert leido == agregado
     assert zona == consultorio.zona_horaria
     assert _cantidad_de_usuarios(sesion) == 1
+
+
+def test_us091_ca1_roles_de_un_usuario(sesion: Session, fabrica_sesiones) -> None:
+    usuario = un_usuario(sesion, un_consultorio(sesion))
+    with fabrica_sesiones() as escritura:
+        repositorio = RepositorioUsuariosSqlAlchemy(escritura)
+        repositorio.asignar_rol(usuario.id, Rol.ODONTOLOGO)
+        repositorio.asignar_rol(usuario.id, Rol.DUENO)
+        escritura.commit()
+
+    with fabrica_sesiones() as lectura:
+        roles = RepositorioUsuariosSqlAlchemy(lectura).roles_de(usuario.id)
+
+    assert roles == frozenset({Rol.ODONTOLOGO, Rol.DUENO})
+
+
+def test_us091_ca1_usuario_sin_roles(sesion: Session) -> None:
+    usuario = un_usuario(sesion, un_consultorio(sesion))
+
+    assert RepositorioUsuariosSqlAlchemy(sesion).roles_de(usuario.id) == frozenset()
+
+
+def test_us091_ca1_los_roles_de_cada_usuario_no_se_mezclan(sesion: Session, fabrica_sesiones) -> None:
+    consultorio = un_consultorio(sesion)
+    uno, otro = un_usuario(sesion, consultorio), un_usuario(sesion, consultorio)
+    with fabrica_sesiones() as escritura:
+        RepositorioUsuariosSqlAlchemy(escritura).asignar_rol(uno.id, Rol.RECEPCIONISTA)
+        escritura.commit()
+
+    repositorio = RepositorioUsuariosSqlAlchemy(sesion)
+
+    assert repositorio.roles_de(uno.id) == frozenset({Rol.RECEPCIONISTA})
+    assert repositorio.roles_de(otro.id) == frozenset()
+
+
+def test_us091_ca1_rol_repetido_se_rechaza(sesion: Session, fabrica_sesiones) -> None:
+    usuario = un_usuario(sesion, un_consultorio(sesion))
+    with fabrica_sesiones() as primera:
+        RepositorioUsuariosSqlAlchemy(primera).asignar_rol(usuario.id, Rol.DUENO)
+        primera.commit()
+
+    with fabrica_sesiones() as segunda:
+        with pytest.raises(RolInvalidoEnLaBase):
+            RepositorioUsuariosSqlAlchemy(segunda).asignar_rol(usuario.id, Rol.DUENO)
+
+    assert RepositorioUsuariosSqlAlchemy(sesion).roles_de(usuario.id) == frozenset({Rol.DUENO})
+
+
+def test_us091_ca5_quitar_rol(sesion: Session, fabrica_sesiones) -> None:
+    usuario = un_usuario(sesion, un_consultorio(sesion))
+    with fabrica_sesiones() as escritura:
+        repositorio = RepositorioUsuariosSqlAlchemy(escritura)
+        repositorio.asignar_rol(usuario.id, Rol.ODONTOLOGO)
+        repositorio.asignar_rol(usuario.id, Rol.DUENO)
+        escritura.commit()
+
+    with fabrica_sesiones() as quitando:
+        RepositorioUsuariosSqlAlchemy(quitando).quitar_rol(usuario.id, Rol.ODONTOLOGO)
+        quitando.commit()
+
+    assert RepositorioUsuariosSqlAlchemy(sesion).roles_de(usuario.id) == frozenset({Rol.DUENO})
+
+
+def test_us091_ca5_quitar_un_rol_que_no_tiene_no_cambia_nada(sesion: Session, fabrica_sesiones) -> None:
+    usuario = un_usuario(sesion, un_consultorio(sesion))
+    with fabrica_sesiones() as escritura:
+        repositorio = RepositorioUsuariosSqlAlchemy(escritura)
+        repositorio.asignar_rol(usuario.id, Rol.DUENO)
+        repositorio.quitar_rol(usuario.id, Rol.RECEPCIONISTA)
+        escritura.commit()
+
+    assert RepositorioUsuariosSqlAlchemy(sesion).roles_de(usuario.id) == frozenset({Rol.DUENO})
+
+
+def test_us091_ca1_un_rol_desconocido_en_la_base_es_un_error_de_programacion(
+    sesion: Session, fabrica_sesiones
+) -> None:
+    usuario = un_usuario(sesion, un_consultorio(sesion))
+    with fabrica_sesiones() as escritura:
+        escritura.add(UsuarioRolModelo(usuario_id=usuario.id, rol="administrador"))
+        escritura.commit()
+
+    with pytest.raises(ValueError):
+        RepositorioUsuariosSqlAlchemy(sesion).roles_de(usuario.id)
+
+
+def test_us091_ca4_el_profesional_se_vincula_a_un_usuario_y_el_vinculo_no_se_repite(
+    sesion: Session,
+) -> None:
+    consultorio = un_consultorio(sesion)
+    usuario = un_usuario(sesion, consultorio)
+
+    vinculado = un_profesional(sesion, consultorio, usuario_id=usuario.id, matricula="MP 0000")
+    sin_vinculo_a = un_profesional(sesion, consultorio)
+    sin_vinculo_b = un_profesional(sesion, consultorio)
+
+    assert vinculado.usuario_id == usuario.id
+    assert sin_vinculo_a.usuario_id is None and sin_vinculo_b.usuario_id is None
+    with pytest.raises(IntegrityError):
+        un_profesional(sesion, consultorio, usuario_id=usuario.id)
+    sesion.rollback()

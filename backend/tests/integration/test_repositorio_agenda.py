@@ -1,12 +1,16 @@
 """Lectura de turnos ocupados del repositorio real sobre SQLite en memoria (E11, design I8)."""
+from datetime import timedelta
+
 import pytest
 from sqlalchemy import Engine, event
 from sqlalchemy.orm import Session
 
 from app.domain.agenda.intervalo import Intervalo
 from app.domain.turnos.estados import EstadoTurno
+from app.domain.turnos.turno import Turno
+from app.infrastructure.db.modelos import ConsultorioModelo, TurnoModelo
 from app.infrastructure.repositories.agenda import RepositorioAgendaSqlAlchemy
-from tests.conftest import a_las
+from tests.conftest import RELOJ_FIJO, a_las
 from tests.factories import (
     un_consultorio,
     un_paciente,
@@ -14,6 +18,7 @@ from tests.factories import (
     una_prestacion,
     un_sillon,
     un_turno,
+    un_usuario,
 )
 
 
@@ -154,3 +159,38 @@ def test_bloquear_recursos_en_sqlite_no_emite_clausula_de_bloqueo(
 
     assert sentencias  # se emitieron
     assert not any("FOR " in s.upper() for s in sentencias)
+
+
+def _turno_de_dominio(mundo: dict, inicio, **cambios) -> Turno:
+    return Turno(
+        consultorio_id=mundo["sillon"].consultorio_id,
+        paciente_id=mundo["paciente"].id,
+        profesional_id=mundo["profesional"].id,
+        sillon_id=mundo["sillon"].id,
+        prestacion_id=mundo["prestacion"].id,
+        inicio=inicio,
+        fin=inicio + timedelta(minutes=30),
+        duracion_minutos=30,
+        estado=EstadoTurno.RESERVADO,
+        creado_en=RELOJ_FIJO,
+        **cambios,
+    )
+
+
+def test_us092_ca2_turno_guarda_creado_por(sesion: Session, fabrica_sesiones, mundo: dict) -> None:
+    consultorio = sesion.get(ConsultorioModelo, mundo["sillon"].consultorio_id)
+    creador = un_usuario(sesion, consultorio)
+    with fabrica_sesiones() as escritura:
+        repositorio = RepositorioAgendaSqlAlchemy(escritura)
+        con_creador = repositorio.agregar(_turno_de_dominio(mundo, a_las(10), creado_por=creador.id))
+        sin_creador = repositorio.agregar(_turno_de_dominio(mundo, a_las(11)))
+        escritura.commit()
+
+    with fabrica_sesiones() as lectura:
+        guardado_con = lectura.get(TurnoModelo, con_creador.id)
+        guardado_sin = lectura.get(TurnoModelo, sin_creador.id)
+
+    assert con_creador.creado_por == creador.id
+    assert guardado_con.creado_por == creador.id
+    assert sin_creador.creado_por is None
+    assert guardado_sin.creado_por is None
