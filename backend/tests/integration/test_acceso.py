@@ -6,11 +6,11 @@ from datetime import datetime, timedelta
 
 import pytest
 
-from app.application.acceso import identificar_usuario
+from app.application.acceso import autorizar, identificar_usuario
 from app.application.sesion import IniciarSesionComando, Vigencias, iniciar_sesion
-from app.domain.acceso.roles import Rol, UsuarioDelPanel
+from app.domain.acceso.roles import Permiso, Rol, UsuarioDelPanel
 from app.domain.acceso.sesion import ClaimsDeSesion, TipoDeToken, claims_para
-from app.domain.errors import SesionInvalida
+from app.domain.errors import PermisoInsuficiente, SesionInvalida
 from app.domain.tiempo import UTC
 from app.infrastructure.seguridad.contrasenas import HasherBcrypt
 from app.infrastructure.seguridad.tokens import FirmadorJwtHs256
@@ -161,3 +161,24 @@ def test_us092_ca4_usuario_inexistente(uow, firmador) -> None:
         identificar_usuario(firmador.firmar(claims), uow, firmador, reloj_fijo)
 
     assert error.value.codigos == ["RN-AU-03"]
+
+
+def test_us091_ca3_rol_insuficiente_levanta_permiso_insuficiente(sesion, uow, firmador, consultorio) -> None:
+    dueno = un_usuario(sesion, consultorio, roles=(Rol.DUENO,))
+    identificado = identificar_usuario(_iniciar_sesion(uow, firmador, dueno).access_token, uow, firmador, reloj_fijo)
+
+    with pytest.raises(PermisoInsuficiente) as error:
+        autorizar(identificado, Permiso.TURNOS_CREAR)
+
+    assert error.value.codigos == ["RN-AU-05"]
+    assert autorizar(identificado, Permiso.HISTORIAL_LEER) == identificado
+
+
+def test_us091_ca1_odontologa_con_dos_roles_tiene_todos_los_permisos(sesion, uow, firmador, consultorio) -> None:
+    odontologa = un_usuario(sesion, consultorio, roles=(Rol.ODONTOLOGO, Rol.DUENO))
+    identificada = identificar_usuario(
+        _iniciar_sesion(uow, firmador, odontologa).access_token, uow, firmador, reloj_fijo
+    )
+
+    for permiso in Permiso:
+        assert autorizar(identificada, permiso) == identificada
