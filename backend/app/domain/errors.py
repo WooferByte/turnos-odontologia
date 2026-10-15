@@ -173,3 +173,15 @@ class SesionInvalida(ErrorDeDominio):
 
     def __init__(self) -> None:
         super().__init__("La sesión no es válida o venció. Iniciá sesión de nuevo.")
+
+
+class PermisoInsuficiente(ErrorDeDominio):
+    """El usuario tiene sesión pero ninguno de sus roles permite la operación (RN-AU-05, D207).
+
+    El mensaje es fijo y no lista los roles que harían falta.
+    """
+
+    codigo = "RN-AU-05"
+
+    def __init__(self) -> None:
+        super().__init__("Tu usuario no tiene permiso para esta operación.")
