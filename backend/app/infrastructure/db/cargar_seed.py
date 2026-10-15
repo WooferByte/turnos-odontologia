@@ -13,6 +13,8 @@ from app.infrastructure.db.motor import crear_engine
 from app.infrastructure.db.seed_demo import (
     ajustar_secuencias,
     cargar_demo_si_falta,
+    cargar_recepcionista_demo_si_falta,
+    cargar_roles_demo_si_faltan,
     cargar_usuario_demo_si_falta,
 )
 from app.infrastructure.seguridad.contrasenas import HasherBcrypt
@@ -27,7 +29,11 @@ def main(entorno: Mapping[str, str] = os.environ) -> None:
         with Session(engine) as sesion:
             consultorio_cargado = cargar_demo_si_falta(sesion)
             usuario_cargado = cargar_usuario_demo_si_falta(sesion, hash_password)
-            cargado = consultorio_cargado or usuario_cargado
+            roles_cargados = cargar_roles_demo_si_faltan(sesion)
+            recepcionista_cargada = cargar_recepcionista_demo_si_falta(sesion, hash_password)
+            cargado = (
+                consultorio_cargado or usuario_cargado or roles_cargados or recepcionista_cargada
+            )
             if cargado:
                 ajustar_secuencias(sesion)
     finally:

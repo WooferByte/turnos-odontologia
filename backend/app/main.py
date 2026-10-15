@@ -18,7 +18,13 @@ from app.infrastructure.configuracion import (
     secreto_efimero,
 )
 from app.infrastructure.db.motor import crear_engine, crear_engine_en_memoria
-from app.infrastructure.db.seed_demo import CONTRASENA_DEMO, cargar_demo, cargar_usuario_demo
+from app.infrastructure.db.seed_demo import (
+    CONTRASENA_DEMO,
+    cargar_demo,
+    cargar_recepcionista_demo_si_falta,
+    cargar_roles_demo_si_faltan,
+    cargar_usuario_demo,
+)
 from app.infrastructure.seguridad.contrasenas import HasherBcrypt
 from app.infrastructure.seguridad.tokens import FirmadorJwtHs256
 
@@ -53,7 +59,10 @@ def crear_app_demo() -> FastAPI:
     Base.metadata.create_all(engine)
     with Session(engine) as sesion:
         cargar_demo(sesion)
-        cargar_usuario_demo(sesion, HasherBcrypt().hashear(CONTRASENA_DEMO))
+        hash_password = HasherBcrypt().hashear(CONTRASENA_DEMO)  # una sola vez: los dos usuarios comparten la contraseña
+        cargar_usuario_demo(sesion, hash_password)
+        cargar_roles_demo_si_faltan(sesion)
+        cargar_recepcionista_demo_si_falta(sesion, hash_password)
     return crear_app(engine)
 
 

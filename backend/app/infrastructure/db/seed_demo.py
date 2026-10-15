@@ -7,6 +7,7 @@ segundo turno a la misma hora muestra el ``409`` con los dos códigos (E4).
 from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
+from app.domain.acceso.roles import Rol
 from app.infrastructure.db.modelos import (
     ConsultorioModelo,
     PacienteModelo,
@@ -16,6 +17,7 @@ from app.infrastructure.db.modelos import (
     UsuarioModelo,
 )
 from app.domain.tiempo import utc_now
+from app.infrastructure.repositories.usuarios import RepositorioUsuariosSqlAlchemy
 
 # Prestaciones y duraciones de 04_modelo_de_datos.md, «Seed data inicial» (D56).
 _PRESTACIONES = (
@@ -33,9 +35,11 @@ _PACIENTES = (
     (3, "Carla", "Inventada", "+5491155550103"),
 )
 
-# Usuario ficticio del panel (design J11, D197, D202): sin roles hasta C-07. La contraseña es
-# solo de la demo en memoria; en PostgreSQL la define SEED_USUARIO_PASSWORD.
+# Usuarios ficticios del panel (design J11, D197, D202, R16, D212): la odontóloga (id 1) con los
+# roles ``odontologo`` y ``dueno``, y una recepcionista (id 2) para mostrar el 403. La contraseña
+# es solo de la demo en memoria; en PostgreSQL la define SEED_USUARIO_PASSWORD.
 EMAIL_DEMO = "odontologa@consultorio-demo.test"
+EMAIL_RECEPCION_DEMO = "recepcion@consultorio-demo.test"
 CONTRASENA_DEMO = "demo-consultorio-2026"
 
 
@@ -113,6 +117,55 @@ def cargar_usuario_demo_si_falta(sesion: Session, hash_password: str) -> bool:
         return False
     cargar_usuario_demo(sesion, hash_password)
     return True
+
+
+def cargar_roles_demo_si_faltan(sesion: Session) -> bool:
+    """Da al usuario 1 los roles ``odontologo`` y ``dueno`` y vincula al profesional 1 con él; devuelve si cambió algo.
+
+    Va aparte de ``cargar_usuario_demo_si_falta`` (design R16): un volumen sembrado en C-06 ya tiene
+    al usuario y tiene que recibir los roles igual. No toca lo que ya está: es idempotente.
+    """
+    if sesion.get(UsuarioModelo, 1) is None:
+        return False
+    repositorio = RepositorioUsuariosSqlAlchemy(sesion)
+    cambio = False
+    faltantes = {Rol.ODONTOLOGO, Rol.DUENO} - repositorio.roles_de(1)
+    for rol in sorted(faltantes):
+        repositorio.asignar_rol(1, rol)
+        cambio = True
+    profesional = sesion.get(ProfesionalModelo, 1)
+    if profesional is not None and profesional.usuario_id is None:
+        profesional.usuario_id = 1
+        cambio = True
+    sesion.commit()
+    return cambio
+
+
+def cargar_recepcionista_demo_si_falta(sesion: Session, hash_password: str) -> bool:
+    """Carga a la recepcionista (id 2, rol ``recepcionista``) si falta; devuelve si cambió algo (D212)."""
+    cambio = False
+    existente = sesion.scalar(select(UsuarioModelo.id).where(UsuarioModelo.email == EMAIL_RECEPCION_DEMO))
+    if existente is None:
+        sesion.add(
+            UsuarioModelo(
+                id=2,
+                consultorio_id=1,
+                email=EMAIL_RECEPCION_DEMO,
+                hash_password=hash_password,
+                activo=True,
+                token_version=0,
+                creado_en=utc_now(),
+            )
+        )
+        sesion.flush()
+        existente = 2
+        cambio = True
+    repositorio = RepositorioUsuariosSqlAlchemy(sesion)
+    if Rol.RECEPCIONISTA not in repositorio.roles_de(existente):
+        repositorio.asignar_rol(existente, Rol.RECEPCIONISTA)
+        cambio = True
+    sesion.commit()
+    return cambio
 
 
 # Tablas con identificador fijo en el seed.
