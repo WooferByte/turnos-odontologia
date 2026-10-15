@@ -9,7 +9,8 @@ from app.api.esquemas import (
     EditarPrestacionEntrada,
     PrestacionSalida,
 )
-from app.api.respuestas import _respuesta_de_error
+from app.api.respuestas import RESPUESTAS_DE_ACCESO, _respuesta_de_error
+from app.api.seguridad import requiere
 from app.application.prestaciones import (
     CrearPrestacionComando,
     EditarPrestacionComando,
@@ -18,26 +19,40 @@ from app.application.prestaciones import (
     listar_prestaciones,
 )
 from app.application.puertos import UnidadDeTrabajo
+from app.domain.acceso.roles import Permiso
 
 router = APIRouter(prefix="/prestaciones", tags=["prestaciones"])
 
 RESPUESTAS_DEL_ALTA = {
+    **RESPUESTAS_DE_ACCESO,
     409: _respuesta_de_error("Ya existe una prestación con ese nombre (RN-AG-15)"),
     422: _respuesta_de_error("Entrada inválida: duración (RN-AG-01) o formato del cuerpo"),
 }
 RESPUESTAS_DE_LA_EDICION = {
+    **RESPUESTAS_DE_ACCESO,
     404: _respuesta_de_error("La prestación no existe (RN-GL-04)"),
     409: _respuesta_de_error("Ya existe otra prestación con ese nombre (RN-AG-15)"),
     422: _respuesta_de_error("Entrada inválida: duración (RN-AG-01) o formato de la ruta o del cuerpo"),
 }
 
 
-@router.get("", response_model=list[PrestacionSalida])
+@router.get(
+    "",
+    response_model=list[PrestacionSalida],
+    responses=RESPUESTAS_DE_ACCESO,
+    dependencies=[Depends(requiere(Permiso.PRESTACIONES_LEER))],
+)
 def get_prestaciones(uow: Annotated[UnidadDeTrabajo, Depends(get_uow)]) -> list[PrestacionSalida]:
     return [PrestacionSalida.desde_datos(p) for p in listar_prestaciones(uow)]
 
 
-@router.post("", status_code=201, response_model=PrestacionSalida, responses=RESPUESTAS_DEL_ALTA)
+@router.post(
+    "",
+    status_code=201,
+    response_model=PrestacionSalida,
+    responses=RESPUESTAS_DEL_ALTA,
+    dependencies=[Depends(requiere(Permiso.PRESTACIONES_EDITAR))],
+)
 def post_prestaciones(
     entrada: CrearPrestacionEntrada, uow: Annotated[UnidadDeTrabajo, Depends(get_uow)]
 ) -> PrestacionSalida:
@@ -46,7 +61,10 @@ def post_prestaciones(
 
 
 @router.patch(
-    "/{prestacion_id}", response_model=PrestacionSalida, responses=RESPUESTAS_DE_LA_EDICION
+    "/{prestacion_id}",
+    response_model=PrestacionSalida,
+    responses=RESPUESTAS_DE_LA_EDICION,
+    dependencies=[Depends(requiere(Permiso.PRESTACIONES_EDITAR))],
 )
 def patch_prestacion(
     prestacion_id: int,

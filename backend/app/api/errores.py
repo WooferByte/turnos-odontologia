@@ -13,6 +13,7 @@ from app.domain.errors import (
     FechaNoUTC,
     IntervaloInvalido,
     NombreDePrestacionRepetido,
+    PermisoInsuficiente,
     RecursoDeLaUrlNoEncontrado,
     SesionInvalida,
 )
@@ -31,10 +32,16 @@ _CLASES_DE_ERROR: dict[type[ErrorDeDominio], tuple[int, str, str]] = {
     NombreDePrestacionRepetido: (409, "/errores/nombre-repetido", "Nombre repetido"),
     CredencialesInvalidas: (401, "/errores/credenciales-invalidas", "Credenciales inválidas"),
     SesionInvalida: (401, "/errores/sesion-invalida", "Sesión inválida"),
+    PermisoInsuficiente: (403, "/errores/permiso-insuficiente", "Permiso insuficiente"),
 }
 # Los dos 401 llevan RFC 6750 §3 y un texto fijo que no depende de la causa (design J13).
 _CABECERAS_DE_NO_AUTENTICADO = {"WWW-Authenticate": "Bearer"}
-_ERRORES_DE_TEXTO_FIJO = (NombreDePrestacionRepetido, CredencialesInvalidas, SesionInvalida)
+_ERRORES_DE_TEXTO_FIJO = (
+    NombreDePrestacionRepetido,
+    CredencialesInvalidas,
+    SesionInvalida,
+    PermisoInsuficiente,
+)
 
 
 def _problemas(cantidad: int) -> str:

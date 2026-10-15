@@ -114,3 +114,9 @@ class TokenDelPanel(httpx.Auth):
                 self._cabecera = cabecera_de(self._engine, self._roles)
             request.headers["Authorization"] = self._cabecera["Authorization"]
         yield request
+
+
+def con_token_del_panel(cliente, engine: Engine, roles: tuple[Rol, ...] = ROLES_DEL_PANEL):
+    """Hace que el ``TestClient`` mande el access token real de un usuario con esos ``roles``."""
+    cliente.auth = TokenDelPanel(engine, roles)
+    return cliente

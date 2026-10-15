@@ -9,8 +9,9 @@ import pytest
 from fastapi.testclient import TestClient
 
 from app.api.deps import get_reloj
+from app.infrastructure.configuracion import ConfiguracionDeSesion
 from app.main import crear_app
-from tests.conftest import RELOJ_FIJO, a_las, reloj_fijo
+from tests.conftest import RELOJ_FIJO, SECRETO_DE_PRUEBA, a_las, reloj_fijo, con_token_del_panel
 from tests.factories import (
     un_consultorio,
     un_paciente,
@@ -37,9 +38,9 @@ CAMPOS_DE_TURNO_SALIDA = {
 
 @pytest.fixture
 def cliente(engine) -> TestClient:
-    app = crear_app(engine)
+    app = crear_app(engine, ConfiguracionDeSesion(SECRETO_DE_PRUEBA, rondas_bcrypt=4))
     app.dependency_overrides[get_reloj] = lambda: reloj_fijo
-    return TestClient(app)
+    return con_token_del_panel(TestClient(app), engine)
 
 
 def _escenario(sesion, duracion_minutos: int = 30) -> dict:

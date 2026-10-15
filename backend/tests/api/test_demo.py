@@ -8,10 +8,18 @@ from datetime import datetime
 import pytest
 from fastapi.testclient import TestClient
 
-from app.infrastructure.db.seed_demo import CONTRASENA_DEMO
+from app.infrastructure.db.seed_demo import CONTRASENA_DEMO, EMAIL_DEMO
 from app.main import crear_app_demo
 
 PETICION_DE_EJEMPLO = {"paciente_id": 1, "prestacion_id": 1, "inicio": "2026-11-02T13:00:00Z"}
+
+
+def _cliente_con_sesion(email: str = EMAIL_DEMO) -> TestClient:
+    """La demo con el usuario del seed ya autenticado: ``POST /auth/login`` y su access token (D211)."""
+    cliente = TestClient(crear_app_demo())
+    login = cliente.post("/auth/login", json={"email": email, "contrasena": CONTRASENA_DEMO})
+    cliente.headers["Authorization"] = f"Bearer {login.json()['access_token']}"
+    return cliente
 
 
 def _fecha(texto: str) -> datetime:
@@ -19,7 +27,7 @@ def _fecha(texto: str) -> datetime:
 
 
 def test_la_peticion_de_ejemplo_del_readme_responde_201():
-    cliente = TestClient(crear_app_demo())
+    cliente = _cliente_con_sesion()
 
     primera = cliente.post("/turnos", json=PETICION_DE_EJEMPLO)
     repetida = cliente.post("/turnos", json=PETICION_DE_EJEMPLO)
@@ -43,7 +51,7 @@ def test_la_peticion_de_ejemplo_del_readme_responde_201():
 
 
 def test_la_peticion_de_ejemplo_con_una_prestacion_inexistente_responde_422_con_rn_gl_04():
-    cliente = TestClient(crear_app_demo())
+    cliente = _cliente_con_sesion()
 
     respuesta = cliente.post("/turnos", json={**PETICION_DE_EJEMPLO, "prestacion_id": 999})
 
@@ -63,7 +71,7 @@ def test_la_peticion_de_ejemplo_con_una_prestacion_inexistente_responde_422_con_
 def test_el_seed_de_la_demo_deja_las_cinco_prestaciones_con_su_duracion(
     prestacion_id, duracion_minutos
 ):
-    cliente = TestClient(crear_app_demo())
+    cliente = _cliente_con_sesion()
 
     respuesta = cliente.post(
         "/turnos", json={**PETICION_DE_EJEMPLO, "prestacion_id": prestacion_id}
@@ -75,7 +83,7 @@ def test_el_seed_de_la_demo_deja_las_cinco_prestaciones_con_su_duracion(
 
 @pytest.mark.parametrize("paciente_id", [1, 2, 3])
 def test_el_seed_de_la_demo_deja_tres_pacientes_y_ninguno_mas(paciente_id):
-    cliente = TestClient(crear_app_demo())
+    cliente = _cliente_con_sesion()
 
     existente = cliente.post("/turnos", json={**PETICION_DE_EJEMPLO, "paciente_id": paciente_id})
     inexistente = cliente.post("/turnos", json={**PETICION_DE_EJEMPLO, "paciente_id": 4})
@@ -88,7 +96,7 @@ def test_el_seed_de_la_demo_deja_tres_pacientes_y_ninguno_mas(paciente_id):
 
 
 def test_la_demo_lista_las_cinco_prestaciones_con_su_color():
-    cliente = TestClient(crear_app_demo())
+    cliente = _cliente_con_sesion()
 
     respuesta = cliente.get("/prestaciones")
 

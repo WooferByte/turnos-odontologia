@@ -10,3 +10,10 @@ _PROBLEMA_JSON = {
 
 def _respuesta_de_error(descripcion: str) -> dict:
     return {"description": descripcion, "model": Problema, "content": _PROBLEMA_JSON}
+
+
+# Las rutas del panel pueden responder estas dos antes que cualquier otra cosa (design R12, R15).
+RESPUESTAS_DE_ACCESO = {
+    401: _respuesta_de_error("Sin sesión válida (RN-AU-03)"),
+    403: _respuesta_de_error("Rol insuficiente (RN-AU-05)"),
+}
