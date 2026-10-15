@@ -12,7 +12,7 @@
 2. Leer los archivos de la knowledge-base indicados en «Leer antes» (y `openspec/config.yaml`, que vale para todos).
 3. Ejecutar `/opsx:propose <nombre-del-change>` con el nombre exacto en kebab-case; el nombre es inmutable y el código `C-NN` es solo el índice de este archivo.
 4. Al terminar el change, archivarlo con `/opsx:archive <nombre-del-change>`.
-5. Marcar el estado `[x]` en este archivo y repetir la «Verificación cruzada» del final si se editó alguna entrada.
+5. Marcar el estado `[x]` en este archivo y repetir la «Verificación cruzada» del final (`python scripts/verificar_changes.py`, desde la raíz del repositorio) si se editó alguna entrada.
 
 **Leyenda de estados:** `[ ]` pendiente · `[~]` en curso (propuesto o en implementación) · `[x]` archivado.
 
@@ -960,9 +960,9 @@ Primer change: `/opsx:propose crear-turno-sin-solapamientos`.
 
 ## Verificación cruzada
 
-**Fecha de la verificación: 2026-10-15** (sexta corrida, posterior a C-01 a C-06 archivados y a las decisiones de la knowledge-base hasta D203; las anteriores fueron del 2026-10-14 y del 2026-10-05). Esta corrida repitió las filas 1, 3a, 3b, 3c, 7 y 12; las filas 2, 4, 5, 6, 8, 9, 10 y 11 conservan el resultado de la corrida anterior y no se volvieron a medir. Se hizo con un script que lee este archivo y la knowledge-base tal como estaban ese día y compara los identificadores uno por uno; el script no modifica nada y no forma parte del repositorio. **Hay que repetirla cada vez que se edite este archivo o los archivos 02 a 06, 09 o 10 de la knowledge-base**: el resultado vale solo para el contenido verificado.
+**Fecha de la verificación: 2026-10-15** (sexta corrida, posterior a C-01 a C-06 archivados y a las decisiones de la knowledge-base hasta D203; las anteriores fueron del 2026-10-14 y del 2026-10-05). Esta corrida repitió todas las filas con `scripts/verificar_changes.py` (versionado, solo lectura, solo biblioteca estándar), que lee este archivo y la knowledge-base tal como están y compara los identificadores uno por uno; se corre con `python scripts/verificar_changes.py` desde la raíz del repositorio (en Windows, `backend/.venv/Scripts/python.exe scripts/verificar_changes.py`), no modifica nada y sale con código 1 si hay alguna diferencia. El docstring del script define qué cuenta como «citado» en cada fila. **Hay que repetirla cada vez que se edite este archivo o los archivos 02 a 06, 09 o 10 de la knowledge-base**: el resultado vale solo para el contenido verificado.
 
-Qué compara cada fila: las cinco primeras son las verificaciones pedidas por el autor (la tercera se muestra separada en reglas, decisiones y escenarios); las marcadas «Adicional» se agregaron para cubrir el resto del índice. En la fila 6 «criterio» es un par (historia, CA-n) distinto y «cita» cada aparición en el archivo; no se cuentan solo las de «Escenarios mínimos» (178 citas, 158 pares), que es lo que midió por error la corrida del 2026-10-14 anterior a esta aclaración.
+Qué compara cada fila: las cinco primeras son las verificaciones pedidas por el autor (la tercera se muestra separada en reglas, decisiones y escenarios); las marcadas «Adicional» se agregaron para cubrir el resto del índice. En la fila 6 «criterio» es un par (historia, CA-n) distinto y «cita» cada aparición en el archivo; no se cuentan solo las de «Escenarios mínimos» (178 citas, 158 pares), que es lo que midió por error la corrida del 2026-10-14 anterior a esta aclaración; un rango «CA-7 a CA-10» cita todos los del medio y «CA-2b» se agrupa con CA-2. Aplicado a los commits de las corridas del 2026-10-14 (2fc4bba y f5ab071), el script reproduce las cifras de las filas 1 a 8 y 10 a 12 y las 178 citas de «Escenarios mínimos»; difieren dos criterios. En la fila 7 se excluye esta sección y un rango «D195 a D203» cita solo sus extremos (con ese criterio salen las 59 y 63 D de aquellas corridas); el 66 de la corrida anterior contaba D115, que solo aparece en esta sección. En la fila 9 las 511 y 516 referencias de aquellas corridas no se pueden reproducir con ninguna definición razonable (el script anterior no se conservó): ahora se cuenta cada archivo, ID, sección, flujo y fila que nombra «Leer antes».
 
 | # | Verificación | Elementos revisados | Resultado |
 |---|---|---|---|
@@ -974,9 +974,9 @@ Qué compara cada fila: las cinco primeras son las verificaciones pedidas por el
 | 4 | Rutas: cada ruta HTTP citada (método y ruta) existe en `02_descripcion_general.md` o en `03_actores_y_roles.md` | 67 rutas citadas (02 y 03 listan 69, dos de ellas de Fase 2) | sin diferencias |
 | 5 | Tablas: cada entidad de `04_modelo_de_datos.md` tiene un change que la crea en «Tablas del modelo → change que las crea», ese change implementa la historia que nombra la columna «Change que la crea» de 04 y su entrada nombra la tabla | 23 tablas | sin diferencias |
 | 6 | Adicional: cada criterio CA-n citado como escenario, o como criterio que se completa en otro change, existe en su historia de 06 | 165 criterios distintos (pares historia y CA), en 260 citas de todo el índice (incluye «Leer antes» y el mapeo) | sin diferencias |
-| 7 | Adicional: cada decisión D-NN citada figura en el registro de `10_preguntas_abiertas.md`, cada SU-NN en 09 y cada P-NN en 10 | 66 D, 3 SU y 2 P | sin diferencias |
+| 7 | Adicional: cada decisión D-NN citada figura en el registro de `10_preguntas_abiertas.md`, cada SU-NN en 09 y cada P-NN en 10 | 65 D, 3 SU y 2 P | sin diferencias |
 | 8 | Adicional: cada ruta de la v1 listada en 02 y 03 está citada en alguna entrada (ninguna ruta queda sin change) | 67 rutas de la v1 | sin diferencias |
-| 9 | Adicional: cada sección («…», §), flujo e ID de «Leer antes» aparece en el archivo de la KB que la entrada indica, y el archivo existe | 516 referencias | sin diferencias |
+| 9 | Adicional: cada sección («…», §), flujo e ID de «Leer antes» aparece en el archivo de la KB que la entrada indica, y el archivo existe | 817 referencias | sin diferencias |
 | 10 | Adicional: el árbol por bloques muestra el mismo nombre, bloque y dependencias que cada entrada, y las puertas nombran los 48 changes | 48 nodos | sin diferencias |
 | 11 | Adicional: el camino crítico es una cadena de dependencias directas y es la más larga hasta un change del MVP | 15 changes | sin diferencias |
 | 12 | Adicional, formato: códigos consecutivos, nombres kebab-case únicos, 12 líneas como máximo por entrada, 3 a 6 escenarios (8 en C-01), 3 o 4 líneas de «Leer antes», sin emoji | 48 entradas | sin diferencias |
