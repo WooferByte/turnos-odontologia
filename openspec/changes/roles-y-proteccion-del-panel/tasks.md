@@ -47,7 +47,7 @@ Reglas de trabajo para todos los grupos (no son tareas):
 
 ## 6. Seed y demo con roles
 
-- [ ] 6.1 RED y GREEN (US-091 CA-4; design R16). RED: en `tests/integration/test_seed_demo.py`, `test_us091_ca4_usuario_del_seed_con_sus_roles_y_su_profesional`, `test_cargar_roles_demo_si_faltan_no_duplica` (dos corridas, también con el usuario sembrado sin roles, como en C-06) y `test_us091_ca3_recepcionista_de_la_demo` (D212: activa, rol `recepcionista`, el hash verifica `CONTRASENA_DEMO`). GREEN: `cargar_roles_demo_si_faltan` y `cargar_recepcionista_demo_si_falta` en `seed_demo.py`; `crear_app_demo` y `cargar_seed.py` las llaman. Verificación: pasan; `test_seed_demo.py` y `test_demo.py` existentes siguen en verde sin tocarlos (las rutas todavía no exigen token); suite por defecto en verde.
+- [x] 6.1 RED y GREEN (US-091 CA-4; design R16). RED: en `tests/integration/test_seed_demo.py`, `test_us091_ca4_usuario_del_seed_con_sus_roles_y_su_profesional`, `test_cargar_roles_demo_si_faltan_no_duplica` (dos corridas, también con el usuario sembrado sin roles, como en C-06) y `test_us091_ca3_recepcionista_de_la_demo` (D212: activa, rol `recepcionista`, el hash verifica `CONTRASENA_DEMO`). GREEN: `cargar_roles_demo_si_faltan` y `cargar_recepcionista_demo_si_falta` en `seed_demo.py`; `crear_app_demo` y `cargar_seed.py` las llaman. Verificación: pasan; `test_seed_demo.py` y `test_demo.py` existentes siguen en verde sin tocarlos (las rutas todavía no exigen token); suite por defecto en verde.
 
 ## 7. API: proteger las rutas del panel
 
