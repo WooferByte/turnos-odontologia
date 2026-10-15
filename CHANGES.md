@@ -362,7 +362,7 @@ Primer change: `/opsx:propose crear-turno-sin-solapamientos`.
 > C-06, C-07 y C-08 van en serie. Después, C-09, C-11, C-12 y C-13 no dependen entre sí. Desde C-08 cada change incluye su pantalla.
 
 ### [C-06] `sesion-con-jwt`
-- **Estado**: `[ ]` pendiente · **Orden**: 3 · **Gobernanza**: CRITICO
+- **Estado**: `[x]` archivado · **Orden**: 3 · **Gobernanza**: CRITICO
 - **Objetivo** (US-090, US-094): iniciar y renovar la sesión del panel con JWT (parte de API).
 - **Alcance — dentro**: tabla `Usuario` con `activo` y `token_version`; hash bcrypt; `POST /auth/login` y `POST /auth/refresh`; access token de 15 minutos y refresh de 7 días, HS256, con el claim `token_version`; `401` genérico; usuario ficticio del seed; variables `JWT_*`.
 - **Alcance — fuera**: roles y protección de endpoints (C-07); pantalla de inicio de sesión (C-08); gestión de usuarios y contraseñas (C-09, C-10); tabla de tokens (no existe en la v1).
@@ -370,7 +370,7 @@ Primer change: `/opsx:propose crear-turno-sin-solapamientos`.
 - **Escenarios mínimos**: US-090: CA-1+CA-4, CA-2, CA-3; US-094: CA-1, CA-2, CA-3
 - **Leer antes**:
   - `knowledge-base/06_funcionalidades.md` §«Épica 10: Usuarios y acceso» (introducción, US-090, US-094)
-  - `knowledge-base/05_reglas_de_negocio.md` RN-AU-01, RN-AU-03, RN-AU-04 · `knowledge-base/09_decisiones_y_supuestos.md` SU-09
+  - `knowledge-base/05_reglas_de_negocio.md` RN-AU-01, RN-AU-03, RN-AU-04 · `knowledge-base/09_decisiones_y_supuestos.md` SU-09 · `knowledge-base/10_preguntas_abiertas.md` (ya implementado, D195 a D203)
   - `knowledge-base/04_modelo_de_datos.md` §«Usuario y UsuarioRol» · `knowledge-base/07_flujos_principales.md` Flujo 8
   - `knowledge-base/08_arquitectura_propuesta.md` §Seguridad y «Variables de entorno»
 
@@ -960,7 +960,7 @@ Primer change: `/opsx:propose crear-turno-sin-solapamientos`.
 
 ## Verificación cruzada
 
-**Fecha de la verificación: 2026-10-14** (quinta corrida, posterior a C-01, C-02, C-03, C-04 y C-05 archivados y a las decisiones de la knowledge-base hasta D194; las anteriores fueron del 2026-10-05). Se hizo con un script que lee este archivo y la knowledge-base tal como estaban ese día y compara los identificadores uno por uno; el script no modifica nada y no forma parte del repositorio. **Hay que repetirla cada vez que se edite este archivo o los archivos 02 a 06, 09 o 10 de la knowledge-base**: el resultado vale solo para el contenido verificado.
+**Fecha de la verificación: 2026-10-15** (sexta corrida, posterior a C-01 a C-06 archivados y a las decisiones de la knowledge-base hasta D203; las anteriores fueron del 2026-10-14 y del 2026-10-05). Esta corrida repitió las filas 1, 3a, 3b, 3c, 7 y 12; las filas 2, 4, 5, 6, 8, 9, 10 y 11 conservan el resultado de la corrida anterior y no se volvieron a medir. Se hizo con un script que lee este archivo y la knowledge-base tal como estaban ese día y compara los identificadores uno por uno; el script no modifica nada y no forma parte del repositorio. **Hay que repetirla cada vez que se edite este archivo o los archivos 02 a 06, 09 o 10 de la knowledge-base**: el resultado vale solo para el contenido verificado.
 
 Qué compara cada fila: las cinco primeras son las verificaciones pedidas por el autor (la tercera se muestra separada en reglas, decisiones y escenarios); las marcadas «Adicional» se agregaron para cubrir el resto del índice. En la fila 6 «criterio» es un par (historia, CA-n) distinto y «cita» cada aparición en el archivo; no se cuentan solo las de «Escenarios mínimos» (178 citas, 158 pares), que es lo que midió por error la corrida del 2026-10-14 anterior a esta aclaración.
 
@@ -974,7 +974,7 @@ Qué compara cada fila: las cinco primeras son las verificaciones pedidas por el
 | 4 | Rutas: cada ruta HTTP citada (método y ruta) existe en `02_descripcion_general.md` o en `03_actores_y_roles.md` | 67 rutas citadas (02 y 03 listan 69, dos de ellas de Fase 2) | sin diferencias |
 | 5 | Tablas: cada entidad de `04_modelo_de_datos.md` tiene un change que la crea en «Tablas del modelo → change que las crea», ese change implementa la historia que nombra la columna «Change que la crea» de 04 y su entrada nombra la tabla | 23 tablas | sin diferencias |
 | 6 | Adicional: cada criterio CA-n citado como escenario, o como criterio que se completa en otro change, existe en su historia de 06 | 165 criterios distintos (pares historia y CA), en 260 citas de todo el índice (incluye «Leer antes» y el mapeo) | sin diferencias |
-| 7 | Adicional: cada decisión D-NN citada figura en el registro de `10_preguntas_abiertas.md`, cada SU-NN en 09 y cada P-NN en 10 | 63 D, 3 SU y 2 P | sin diferencias |
+| 7 | Adicional: cada decisión D-NN citada figura en el registro de `10_preguntas_abiertas.md`, cada SU-NN en 09 y cada P-NN en 10 | 66 D, 3 SU y 2 P | sin diferencias |
 | 8 | Adicional: cada ruta de la v1 listada en 02 y 03 está citada en alguna entrada (ninguna ruta queda sin change) | 67 rutas de la v1 | sin diferencias |
 | 9 | Adicional: cada sección («…», §), flujo e ID de «Leer antes» aparece en el archivo de la KB que la entrada indica, y el archivo existe | 516 referencias | sin diferencias |
 | 10 | Adicional: el árbol por bloques muestra el mismo nombre, bloque y dependencias que cada entrada, y las puertas nombran los 48 changes | 48 nodos | sin diferencias |

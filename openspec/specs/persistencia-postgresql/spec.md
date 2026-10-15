@@ -16,9 +16,9 @@ El sistema SHALL crear y modificar el esquema de PostgreSQL únicamente con migr
 
 - **GIVEN** una base PostgreSQL vacía
 - **WHEN** se aplican todas las migraciones
-- **THEN** existen exactamente las tablas del modelo de datos de la aplicación (desde C-03: `consultorio`, `profesional`, `sillon`, `prestacion`, `paciente`, `turno` y `evento_turno`), y ninguna otra tabla de la aplicación
+- **THEN** existen exactamente las tablas del modelo de datos de la aplicación (desde C-06: `consultorio`, `profesional`, `sillon`, `prestacion`, `paciente`, `turno`, `evento_turno` y `usuario`), y ninguna otra tabla de la aplicación
 - **AND** comparar el esquema de la base con el modelo de datos de la aplicación no encuentra ninguna diferencia de tablas, columnas, tipos, nulabilidad, claves ni índices
-- **AND** toda columna de fecha-hora es una fecha con zona (desde C-03: `inicio`, `fin` y `creado_en` de `turno` y `ocurrido_en` de `evento_turno`)
+- **AND** toda columna de fecha-hora es una fecha con zona (desde C-06: `inicio`, `fin` y `creado_en` de `turno`, `ocurrido_en` de `evento_turno` y `creado_en` de `usuario`)
 
 #### Scenario: INF-1 Borde - deshacer las migraciones deja la base vacía
 
@@ -33,6 +33,14 @@ El sistema SHALL crear y modificar el esquema de PostgreSQL únicamente con migr
 - **WHEN** se deshacen solo las migraciones del historial, hasta la versión que dejó el change de infraestructura
 - **THEN** quedan exactamente las seis tablas del primer change, sin `evento_turno` ni su función ni sus disparadores
 - **AND** los turnos guardados siguen en la base
+
+#### Scenario: INF-1 Borde - deshacer solo la migración de usuarios deja el esquema anterior
+
+- **GIVEN** una base PostgreSQL migrada hasta la última versión, con turnos y eventos guardados
+- **WHEN** se deshace solo la migración de usuarios, hasta la versión que dejó el change de prestaciones
+- **THEN** existen exactamente las tablas anteriores (`consultorio`, `profesional`, `sillon`, `prestacion`, `paciente`, `turno` y `evento_turno`), sin `usuario`
+- **AND** los turnos y los eventos guardados siguen en la base
+- **AND** volver a aplicar la migración de usuarios termina sin errores
 
 ### Requirement: La base rechaza turnos activos solapados
 
