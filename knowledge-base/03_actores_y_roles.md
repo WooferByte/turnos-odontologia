@@ -60,4 +60,4 @@ Accesibles sin autenticación (protegidas por slug del consultorio, token de ges
 - `POST /webhooks/mercadopago` — notificación de pago. `GET/POST /webhooks/whatsapp` — **Fase 2** (Cloud API).
 - `POST /auth/login`. `POST /auth/refresh` (se autentica con el refresh token, no con el JWT de acceso; RN-AU-03).
 
-Todas las demás rutas requieren JWT. **Excepción conocida:** en el primer change, `POST /turnos` va **sin autenticación** (decisión del autor 2026-10-03, DD-14); desde el change de usuarios y acceso exige JWT con rol `odontologo` o `recepcionista` (US-092).
+Todas las demás rutas requieren JWT; `POST /turnos` exige JWT con rol `odontologo` o `recepcionista` (US-092; desde C-07 ya no hay excepción, antes iba sin autenticación por DD-14). **Límite conocido (D214):** la documentación interactiva que agrega FastAPI (`/docs`, `/docs/oauth2-redirect`, `/redoc` y `/openapi.json`) también es pública, sin token; fuera de desarrollo se deberían apagar.

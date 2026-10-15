@@ -40,12 +40,12 @@ context: |
   siguen con create_all sobre SQLite); Docker Compose publica PostgreSQL en 127.0.0.1:5434 y la API en
   127.0.0.1:8000. Lo que solo PostgreSQL garantiza se prueba en el perfil opcional `postgres`.
   Sesión (desde C-06): JWT HS256 de acceso y de renovación y hash bcrypt; ninguna ruta exige el token
-  hasta el change de roles y protección del panel (C-07).
+  desde C-07 las rutas del panel exigen el access token y el rol (D204; capability proteccion-del-panel).
   Cada change mantiene la demo sin Docker (SQLite en memoria, datos ficticios cargados al arrancar, con
   identificadores fijos documentados en el README). Las fases 1 y 2 son solo API y se prueban desde
   Swagger (/docs); la interfaz (React + TypeScript + Vite) empieza en la fase 3.
   WhatsApp en la v1 = enlace wa.me (Cloud API en Fase 2).
-  Todo rechazo lleva el código RN (p. ej. RN-AG-05, RN-AG-08, RN-GL-04). Hay dos clases (RN-GL-02, D135).
+  Todo rechazo lleva el código RN (p. ej. RN-AG-05, RN-AG-08, RN-GL-04). Hay dos clases (RN-GL-02, D135), precedidas desde C-07 por el control de acceso: 401 sin sesión y 403 con rol insuficiente, antes de la validación (D208).
   VALIDACIÓN DE ENTRADA (referencias inválidas, RN-GL-04; fecha sin zona o con desfase distinto de UTC,
   RN-GL-01; cuerpo mal formado): todos los problemas de la petición se informan JUNTOS en un único 422, con
   todos los códigos; lo que no se puede evaluar porque otro dato es inválido no se informa. REGLA DE NEGOCIO

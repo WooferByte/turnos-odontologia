@@ -16,7 +16,7 @@ El sistema SHALL crear y modificar el esquema de PostgreSQL únicamente con migr
 
 - **GIVEN** una base PostgreSQL vacía
 - **WHEN** se aplican todas las migraciones
-- **THEN** existen exactamente las tablas del modelo de datos de la aplicación (desde C-06: `consultorio`, `profesional`, `sillon`, `prestacion`, `paciente`, `turno`, `evento_turno` y `usuario`), y ninguna otra tabla de la aplicación
+- **THEN** existen exactamente las tablas del modelo de datos de la aplicación (desde C-07: `consultorio`, `profesional`, `sillon`, `prestacion`, `paciente`, `turno`, `evento_turno`, `usuario` y `usuario_rol`), y ninguna otra tabla de la aplicación
 - **AND** comparar el esquema de la base con el modelo de datos de la aplicación no encuentra ninguna diferencia de tablas, columnas, tipos, nulabilidad, claves ni índices
 - **AND** toda columna de fecha-hora es una fecha con zona (desde C-06: `inicio`, `fin` y `creado_en` de `turno`, `ocurrido_en` de `evento_turno` y `creado_en` de `usuario`)
 
@@ -41,6 +41,14 @@ El sistema SHALL crear y modificar el esquema de PostgreSQL únicamente con migr
 - **THEN** existen exactamente las tablas anteriores (`consultorio`, `profesional`, `sillon`, `prestacion`, `paciente`, `turno` y `evento_turno`), sin `usuario`
 - **AND** los turnos y los eventos guardados siguen en la base
 - **AND** volver a aplicar la migración de usuarios termina sin errores
+
+#### Scenario: INF-1 Borde - deshacer solo la migración de roles deja el esquema del change de sesión
+
+- **GIVEN** una base PostgreSQL migrada hasta la última versión, con un usuario con roles, un profesional vinculado a él y un turno creado por él con su evento
+- **WHEN** se deshace solo la migración de roles, hasta la versión que dejó el change de sesión
+- **THEN** no existe `usuario_rol`, `profesional` no tiene `usuario_id` ni `matricula` y `turno` no tiene `creado_por`
+- **AND** el usuario, el profesional, el turno y su evento siguen en la base
+- **AND** volver a aplicar la migración de roles termina sin errores
 
 ### Requirement: La base rechaza turnos activos solapados
 

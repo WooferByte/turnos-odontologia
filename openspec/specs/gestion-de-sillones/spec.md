@@ -4,7 +4,7 @@
 
 Permite que el consultorio mantenga sus sillones como recurso de la agenda (alta, listado, renombre, desactivación y reactivación), y fija cómo el estado de los sillones decide el sillón de un turno nuevo: el sillón inactivo no admite turnos (RN-AG-07) y el sillón por defecto es el único activo, no un id fijo (RN-AG-06, RN-AG-14; US-004).
 
-Convenciones de los escenarios: todos los horarios están en **UTC** y son del día 2026-11-02; «10:00» significa `2026-11-02T10:00:00Z`. Hay un solo consultorio por instalación (MVP, D173) y los sillones son siempre los de ese consultorio. Las operaciones son `GET /sillones`, `POST /sillones` y `PATCH /sillones/{id}`, sin autenticación hasta el change de roles (DD-14); los turnos se piden con `POST /turnos` (capability `creacion-de-turnos`). Un error sale como `application/problem+json` con la lista `codigos`. Todos los datos son ficticios (RN-PR-01). Los escenarios se verifican en la suite por defecto, salvo que digan otra cosa.
+Convenciones de los escenarios: todos los horarios están en **UTC** y son del día 2026-11-02; «10:00» significa `2026-11-02T10:00:00Z`. Hay un solo consultorio por instalación (MVP, D173) y los sillones son siempre los de ese consultorio. Las operaciones son `GET /sillones`, `POST /sillones` y `PATCH /sillones/{id}`, que desde el change de roles y protección del panel exigen un access token y el permiso de cada operación (D204; capability `proteccion-del-panel`); los turnos se piden con `POST /turnos` (capability `creacion-de-turnos`). Un error sale como `application/problem+json` con la lista `codigos`. Todos los datos son ficticios (RN-PR-01). Los escenarios se verifican en la suite por defecto, salvo que digan otra cosa.
 
 ## Requirements
 

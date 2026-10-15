@@ -111,7 +111,7 @@ Los plazos de seña y de oferta son **valores de diseño del autor, no de mercad
 | Campo | Tipo | Null | Restricciones / FK / nota |
 |---|---|---|---|
 | `usuario_id` | entero | NN | FK → Usuario; parte de la PK compuesta |
-| `rol` | texto | NN | Valores: `odontologo`, `recepcionista`, `dueno`; parte de la PK compuesta |
+| `rol` | texto | NN | Valores: `odontologo`, `recepcionista`, `dueno`; parte de la PK compuesta. `CHECK` en la base que limita el rol a esos tres valores (migración `0007`; D213) |
 
 ### Profesional
 **Change que la crea:** primer change (sin `usuario_id` ni `matricula`). MVP: 1 profesional; el modelo admite N (Fase 2). **En la v1, asignar el rol `odontologo` a otro usuario no crea un `Profesional`:** el único profesional queda vinculado al usuario del seed; un segundo profesional es **Fase 2** (multi-profesional) (decisión del autor 2026-10-05, D46). **v1: un profesional pertenece a un consultorio** (decisión del autor 2026-10-07, D126): `Turno.consultorio_id` sale del profesional; un profesional en varios consultorios queda fuera de la v1.
@@ -120,9 +120,9 @@ Los plazos de seña y de oferta son **valores de diseño del autor, no de mercad
 |---|---|---|---|
 | `id` | entero | NN | PK |
 | `consultorio_id` | entero | NN | FK → Consultorio |
-| `usuario_id` | entero | null | FK → Usuario; `UNIQUE` si no es nulo (change de usuarios) |
+| `usuario_id` | entero | null | FK → Usuario; `UNIQUE` si no es nulo (change de usuarios). Lo construye la migración `0007` (C-07) |
 | `nombre` | texto | NN | — |
-| `matricula` | texto | null | — |
+| `matricula` | texto | null | Lo construye la migración `0007` (C-07; D215) |
 | `activo` | bool | NN | Default `true` |
 
 ### Sillon (recurso)
@@ -240,7 +240,7 @@ Identificación del paciente en la reserva pública (decisión del autor 2026-10
 | `estado` | texto | NN | Enum de texto, ver máquina de estados |
 | `origen` | texto | NN | Default `panel`. Valores: `panel`, `link_publico`, `lista_espera` |
 | `token_gestion` | texto | null | `UNIQUE` si no es nulo; firmado, para el link del paciente. La columna la crea el change de reserva pública (US-020), que además **genera el token de los turnos ya existentes**: desde entonces **todo turno tiene token, también el cargado desde el panel**, y sirve para el mismo flujo de gestión (D94). No tiene vencimiento propio: su validez sale del estado del turno (RN-TD-08, D77) |
-| `creado_por` | entero | null | FK → Usuario (columna agregada cuando existe `Usuario` †) |
+| `creado_por` | entero | null | FK → Usuario (columna agregada cuando existe `Usuario` †). La construye la migración `0007` (C-07) y se guarda al crear el turno con el id del usuario del token; la respuesta de `POST /turnos` no la expone (D209) |
 | `creado_en` | fecha-hora | NN | — |
 | `actualizado_en` | fecha-hora | NN | — |
 | `version` | entero | NN | Default 1; bloqueo optimista |
@@ -300,7 +300,7 @@ Los estados terminales no tienen transiciones de salida, **salvo la corrección 
 | `turno_id` | entero | NN | FK → Turno, `ON DELETE RESTRICT`: un turno con historial no se borra (D164) |
 | `tipo` | texto | NN | Valores: `creado`, `reprogramado`, `confirmado`, `cancelado`, `estado_cambiado`, `sena_acreditada`, `sena_retenida`, `sena_devuelta`, `nota` |
 | `actor_tipo` | texto | NN | Valores: `usuario`, `paciente`, `sistema`, `webhook_mp`. `webhook_wa` se agrega en Fase 2 |
-| `actor_id` | texto | null | Id del usuario o del token, según `actor_tipo`. **Vacío mientras no haya autenticación:** los eventos `creado` anteriores a C-07 llevan `actor_tipo = usuario` y `actor_id` nulo para siempre (D159) |
+| `actor_id` | texto | null | Id del usuario o del token, según `actor_tipo`. **Desde C-07** el evento `creado` lleva el id del usuario del token, escrito como texto decimal sin prefijo (D209). Los eventos `creado` anteriores a C-07 llevan `actor_tipo = usuario` y `actor_id` nulo para siempre (D159) |
 | `ocurrido_en` | fecha-hora | NN | — |
 | `antes` | json (`JSON`, no `JSONB`; D164) | null | Estado previo (horario, estado). En una corrección de marcado, el valor anterior (`atendido` o `ausente`) |
 | `despues` | json (`JSON`, no `JSONB`; D164) | null | Estado nuevo. En el evento `creado` de C-03 es la foto completa del turno al nacer (`estado`, `inicio`, `fin`, `duracion_minutos`, `paciente_id`, `prestacion_id`, `profesional_id`, `sillon_id`; fechas ISO 8601 UTC con `Z`; D163). En el evento `creado` de una reserva con menos antelación que la ventana de cancelación, registra además la **aceptación explícita** del paciente (RN-TD-10, D87) |
@@ -504,6 +504,7 @@ Todos los datos son **ficticios** (RN-PR-01). El seed del primer change incluye 
 
 - 1 `Consultorio` ("Consultorio Demo", slug `consultorio-demo`) con `ConfiguracionReglas` por defecto (esta tabla la carga el change que la crea; el primer change no la lleva).
 - 1 `Usuario` con roles `odontologo` + `dueno` (credenciales de prueba definidas en un archivo de ejemplo de entorno, nunca reales). No va en el primer change: lo carga el change de usuarios y acceso.
+- 1 `Usuario` más (C-07, D212), `recepcion@consultorio-demo.test`, con el rol `recepcionista` y la misma contraseña de prueba, para mostrar el `403` en la demo.
 - 1 `Profesional` vinculado a ese usuario (el vínculo, `usuario_id`, llega con el change de usuarios; el primer change carga el profesional sin vínculo).
 - 1 `Sillon` ("Sillón 1") — el recurso por defecto del MVP: el único activo (RN-AG-14).
 - Prestaciones de ejemplo (**datos ilustrativos confirmados por el autor el 2026-10-05, D56**, sin fuente de mercado): Consulta / control 30 min; Limpieza 45 min; Obturación 60 min; Extracción 45 min; Urgencia 30 min. Cada una con un color (el `color` lo agregó C-04: el primer change cargó las prestaciones sin él, D130; **colores ilustrativos de D174**: Consulta / control `#1E88E5`, Limpieza `#43A047`, Obturación `#FB8C00`, Extracción `#E53935`, Urgencia `#8E24AA`, todas con `reservable_online` en `false`).

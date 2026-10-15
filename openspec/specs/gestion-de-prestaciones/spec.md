@@ -4,7 +4,7 @@
 
 Permite que el consultorio mantenga su catálogo de prestaciones (nombre, duración por defecto, color y si se ofrecen en la reserva online), con nombres únicos y duraciones que respetan la granularidad de la agenda, sin que editar una prestación cambie los turnos ya creados (US-001; RN-AG-01, RN-AG-02, RN-GL-03).
 
-Convenciones de los escenarios: todos los horarios están en **UTC** y son del día 2026-11-02; «10:00» significa `2026-11-02T10:00:00Z`. Hay un solo consultorio por instalación (MVP) y las prestaciones son siempre las de ese consultorio. Las operaciones son `GET /prestaciones`, `POST /prestaciones` y `PATCH /prestaciones/{id}`, sin autenticación hasta el change de roles (DD-14). La granularidad de la agenda es la constante de **5 minutos** (D99). Un error sale como `application/problem+json` con la lista `codigos`. Todos los datos son ficticios (RN-PR-01). Los escenarios se verifican en la suite por defecto.
+Convenciones de los escenarios: todos los horarios están en **UTC** y son del día 2026-11-02; «10:00» significa `2026-11-02T10:00:00Z`. Hay un solo consultorio por instalación (MVP) y las prestaciones son siempre las de ese consultorio. Las operaciones son `GET /prestaciones`, `POST /prestaciones` y `PATCH /prestaciones/{id}`, que desde el change de roles y protección del panel exigen un access token y el permiso de cada operación (D204; capability `proteccion-del-panel`). La granularidad de la agenda es la constante de **5 minutos** (D99). Un error sale como `application/problem+json` con la lista `codigos`. Todos los datos son ficticios (RN-PR-01). Los escenarios se verifican en la suite por defecto.
 
 ## Requirements
 

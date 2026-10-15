@@ -80,8 +80,8 @@ Detalle, restricciones y preguntas en `11_integraciones_whatsapp_y_mercadopago.m
 |---|---|---|
 | Auth | `POST /auth/login`, `POST /auth/refresh`, `POST /auth/cambiar-contrasena` (el usuario cambia la propia, pidiendo la actual) | Público (login); `POST /auth/refresh` tampoco usa el JWT de acceso: se autentica con el refresh token (RN-AU-03); `cambiar-contrasena` con sesión; change de usuarios y acceso (Épica 10) |
 | Usuarios | `GET/POST /usuarios`, `PATCH /usuarios/{id}` (roles, activar o desactivar), `POST /usuarios/{id}/restablecer-contrasena` | Odontólogo (el dueño solo lee) |
-| Prestaciones | `GET/POST /prestaciones`, `PATCH /prestaciones/{id}` (editar o desactivar; no hay borrado) | Odontólogo |
-| Sillones | `GET/POST /sillones`, `PATCH /sillones/{id}` (renombrar, desactivar o reactivar; no hay borrado) (MVP: 1 sillón por defecto) | Odontólogo |
+| Prestaciones | `GET/POST /prestaciones`, `PATCH /prestaciones/{id}` (editar o desactivar; no hay borrado) | Lectura: los tres roles; escritura: odontólogo (D205) |
+| Sillones | `GET/POST /sillones`, `PATCH /sillones/{id}` (renombrar, desactivar o reactivar; no hay borrado) (MVP: 1 sillón por defecto) | Lectura: los tres roles; escritura: odontólogo (D205) |
 | Horario | `GET/PUT /profesionales/{id}/horario`, `GET/POST/DELETE /bloqueos` | Odontólogo |
 | Disponibilidad | `GET /disponibilidad?prestacion_id&desde&hasta` | Interno + público |
 | Turnos | `POST /turnos`, `GET /turnos?fecha`, `GET /turnos/{id}`, `PATCH /turnos/{id}` (reprogramar o cambiar la duración, US-012), `POST /turnos/{id}/cancelar`, `POST /turnos/{id}/confirmar` (el consultorio confirma un turno `reservado` desde la agenda del día, US-031 CA-4), `POST /turnos/{id}/estado` (marcar atendido o ausente; corregir el marcado, solo odontólogo), `POST /turnos/{id}/aprobar` y `POST /turnos/{id}/rechazar` (aprobación manual, solo odontólogo, desde la agenda del día, RN-TD-05; US-020 CA-12), `POST /turnos/{id}/sena/devolver` y `POST /turnos/{id}/sena/retener` (acción manual, solo odontólogo, RN-SP-10) | Odontólogo / Recepcionista |
