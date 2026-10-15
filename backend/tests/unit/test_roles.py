@@ -1,7 +1,7 @@
 """Roles y permisos del panel: la matriz de design R4, sin HTTP ni base (US-091, RN-AU-02, RN-AU-05)."""
 import pytest
 
-from app.domain.acceso.roles import Permiso, Rol, exigir_permiso, puede
+from app.domain.acceso.roles import MATRIZ, Permiso, Rol, exigir_permiso, puede
 from app.domain.errors import PermisoInsuficiente
 
 ODONTOLOGO, RECEPCIONISTA, DUENO = Rol.ODONTOLOGO, Rol.RECEPCIONISTA, Rol.DUENO
@@ -56,3 +56,18 @@ def test_us091_ca3_exigir_permiso_levanta_rn_au_05():
 
 def test_us091_ca3_exigir_permiso_no_levanta_nada_si_algun_rol_alcanza():
     exigir_permiso(frozenset({DUENO, RECEPCIONISTA}), Permiso.TURNOS_CREAR)
+
+
+@pytest.mark.parametrize("permiso", list(Permiso))
+def test_us091_ca3_cada_permiso_tiene_al_menos_un_rol(permiso):
+    assert MATRIZ[permiso]
+    assert MATRIZ[permiso] <= set(Rol)
+
+
+def test_us091_ca3_la_matriz_tiene_un_renglon_por_permiso():
+    assert set(MATRIZ) == set(Permiso)
+
+
+def test_us091_ca1_rol_desconocido_no_existe():
+    with pytest.raises(ValueError):
+        Rol("administrador")
