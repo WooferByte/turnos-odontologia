@@ -30,3 +30,9 @@ def identificar_usuario(
         roles = frozenset() if usuario is None else uow.usuarios.roles_de(usuario.id)
     exigir_token_valido(claims, TipoDeToken.ACCESS, usuario, reloj())
     return UsuarioDelPanel(id=usuario.id, roles=roles)
+
+
+def autorizar(usuario: UsuarioDelPanel, permiso: Permiso) -> UsuarioDelPanel:
+    """Devuelve al usuario si alguno de sus roles tiene el permiso; si no, ``PermisoInsuficiente`` (RN-AU-05)."""
+    exigir_permiso(usuario.roles, permiso)
+    return usuario
