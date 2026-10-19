@@ -56,7 +56,7 @@ Reglas de trabajo para todos los grupos (no son tareas):
 
 ## 8. README
 
-- [ ] 8.1 Completar el `README.md` de la raíz (design F15): sección «Panel (interfaz)» con requisitos (Node 24 LTS), instalación (`npm ci`), tests (`npm test`, `npm run typecheck`), la demo en dos terminales, los usuarios de prueba, el recorrido, Compose con el servicio `frontend`, las versiones fijadas del frontend, la tabla escenario → test (US-090 CA-1, CA-2, CA-3; US-092 CA-1) con el resultado real de las dos suites, y los límites conocidos nuevos; actualizar «Qué entrega hasta ahora», «Requisitos» y «Estructura»; quitar «No hay interfaz gráfica» y el límite «Dónde guarda el panel los tokens … se decide en C-08». Verificación: cada comando nuevo del README se ejecutó tal cual y dio lo que el README dice.
+- [x] 8.1 Completar el `README.md` de la raíz (design F15): sección «Panel (interfaz)» con requisitos (Node 24 LTS), instalación (`npm ci`), tests (`npm test`, `npm run typecheck`), la demo en dos terminales, los usuarios de prueba, el recorrido, Compose con el servicio `frontend`, las versiones fijadas del frontend, la tabla escenario → test (US-090 CA-1, CA-2, CA-3; US-092 CA-1) con el resultado real de las dos suites, y los límites conocidos nuevos; actualizar «Qué entrega hasta ahora», «Requisitos» y «Estructura»; quitar «No hay interfaz gráfica» y el límite «Dónde guarda el panel los tokens … se decide en C-08». Verificación: cada comando nuevo del README se ejecutó tal cual y dio lo que el README dice.
 
 ## 9. Prueba en el navegador
 
