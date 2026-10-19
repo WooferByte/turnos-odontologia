@@ -4,7 +4,9 @@ Fecha del design: **2026-10-19**. Gobernanza **BAJO** (pantalla sobre una API ex
 
 **Respuesta del autor (2026-10-19): las cinco preguntas abiertas se cierran con la recomendación del agente.** Quedan como decisiones del autor D229 (T1, capability nueva), D230 (T13, acciones visibles para todos y `403` de la API), D231 (T4, C-11 cablea `SesionTerminada`), D232 (T9, sin validación local de la duración) y D233 (T10, selector de color nativo), registradas en `knowledge-base/10_preguntas_abiertas.md`. Las demás decisiones marcadas «Propuesta» siguen así hasta que el autor apruebe el plan completo. En la misma revisión se incorporó el informe de `revisor-de-escenarios` (`revision-de-escenarios.md`, que queda como el «antes»): el spec pasó de 24 a 33 escenarios (H1 a H7 y los bordes sugeridos) y las tareas siguen siendo 20.
 
-Las decisiones se numeran **T1 a T16** («T» de tabla de prestaciones) para no confundirlas con las D1..D228 de `knowledge-base/10_preguntas_abiertas.md` ni con las de los designs anteriores (D de C-01, I de C-02, H de C-03, P de C-04, S de C-05, J de C-06, R de C-07, F de C-08). Cada una dice si es **Decisión del autor** (ya tomada en la KB), **Propuesta** (elección de este design, a confirmar) o **A verificar en el change** (comprobación técnica pendiente, con su «antes de qué»). Las que salieron de una pregunta abierta citan su D y su Q («Decisión del autor (D230; Q2)»).
+**Actualización del 2026-10-19 (`/opsx:update`, después del Apply y antes del archive).** El autor fijó la regla **D234**: toda pantalla del frontend se implementa a partir de una pantalla generada en Stitch, no solo de sus tokens. La pantalla de C-11 se regeneró (`projects/14200813501064679723/screens/b5ef4d80164a4f28a7e7017a94814c49`) y este design suma **T17** (qué se toma de la pantalla y qué se rechaza) y reescribe «Referencia visual (Stitch)». El spec pasa de 33 a **38 escenarios** (contador del listado general, marca «Editando» y botón «Cerrar» del panel) y las tareas, de 20 a **26**, con el grupo 10 «Ajuste a la pantalla de Stitch» (T16).
+
+Las decisiones se numeran **T1 a T17** («T» de tabla de prestaciones) para no confundirlas con las D1..D228 de `knowledge-base/10_preguntas_abiertas.md` ni con las de los designs anteriores (D de C-01, I de C-02, H de C-03, P de C-04, S de C-05, J de C-06, R de C-07, F de C-08). Cada una dice si es **Decisión del autor** (ya tomada en la KB), **Propuesta** (elección de este design, a confirmar) o **A verificar en el change** (comprobación técnica pendiente, con su «antes de qué»). Las que salieron de una pregunta abierta citan su D y su Q («Decisión del autor (D230; Q2)»).
 
 ## Context
 
@@ -37,7 +39,7 @@ Motivación y alcance: ver `proposal.md`. Requisitos: `specs/pantalla-de-prestac
 - Saber el rol del usuario en el navegador (D230): la API es la que decide y la pantalla muestra su `403`.
 - Actualizaciones optimistas, caché de peticiones o sincronización entre pestañas: la fila cambia cuando llega la respuesta.
 - Un sistema de diseño reutilizable, componentes genéricos (tabla, modal, formulario) o tema oscuro: solo los tokens y estilos que esta pantalla y el encabezado necesitan.
-- Cargar la fuente Inter desde un CDN (la CSP de nginx es `default-src 'self'`, F14 de C-08) o empaquetarla (sería una dependencia nueva).
+- Cargar la fuente Inter desde un CDN (la CSP de nginx es `default-src 'self'`, F14 de C-08) o empaquetarla (sería una dependencia nueva). Lo mismo para Tailwind y los íconos Material Symbols que usa el HTML de la pantalla de Stitch (T17): se traducen a CSS propio y a SVG en línea.
 - Accesibilidad certificada (WCAG formal): se cuidan etiquetas, foco, `role="alert"` y estado no solo por color, sin auditoría.
 
 ## Decisions
@@ -121,7 +123,7 @@ Con `201` se agrega la fila devuelta; con `200` se reemplaza por `id` (actualiza
 
 ### T8. Tabla — Propuesta (referencia visual de Stitch)
 
-Columnas: **Color** (muestra circular con nombre accesible «Color #43A047»), **Nombre**, **Duración** («45 min»), **Reserva online** («Sí»/«No»), **Estado** (insignia «Activa» o «Inactiva») y **Acciones** («Editar» y «Desactivar» o «Reactivar», con el nombre de la prestación en su nombre accesible, por ejemplo «Desactivar Limpieza»). Las filas inactivas se atenúan (opacidad) **y** llevan la insignia: el estado no depende solo del color. Mientras una acción de una fila espera respuesta, sus botones quedan deshabilitados. Desactivar no pide confirmación (es reversible con «Reactivar»). No hay acción de borrar (RN-GL-03).
+Columnas: **Color** (muestra circular con nombre accesible «Color #43A047»), **Nombre**, **Duración** («45 min»), **Reserva online** («Sí»/«No»), **Estado** (insignia «Activa» o «Inactiva») y **Acciones** («Editar» y «Desactivar» o «Reactivar», con el nombre de la prestación en su nombre accesible, por ejemplo «Desactivar Limpieza»). Las filas inactivas se atenúan (opacidad) **y** llevan la insignia: el estado no depende solo del color. Mientras una acción de una fila espera respuesta, sus botones quedan deshabilitados. Desactivar no pide confirmación (es reversible con «Reactivar»). No hay acción de borrar (RN-GL-03). La marca «Editando», el contador del listado general y el ajuste visual a la pantalla de Stitch están en T17.
 
 ### T9. Panel lateral de alta y edición — Propuesta (referencia visual de Stitch)
 
@@ -133,7 +135,7 @@ Columnas: **Color** (muestra circular con nombre accesible «Color #43A047»), *
 - **Ofrecer en la reserva online**: casilla.
 - «Guardar» (primario; deshabilitado y «Guardando…» mientras espera) y «Cancelar».
 
-Errores de campo debajo del campo, enlazados con `aria-describedby` y `aria-invalid`, con el texto de T11. Un error que no es de un campo (permiso, conexión) va en el **aviso del panel**, un aviso `role="alert"` arriba del formulario, y el panel sigue abierto con lo escrito y «Guardar» habilitado; el `404` cierra el panel (T11). En la edición, «Guardar» sin cambios cierra el panel sin pedir nada (escenario «guardar sin cambios no pide nada»). Al abrir, el foco va al nombre.
+Errores de campo debajo del campo, enlazados con `aria-describedby` y `aria-invalid`, con el texto de T11. Un error que no es de un campo (permiso, conexión) va en el **aviso del panel**, un aviso `role="alert"` arriba del formulario, y el panel sigue abierto con lo escrito y «Guardar» habilitado; el `404` cierra el panel (T11). En la edición, «Guardar» sin cambios cierra el panel sin pedir nada (escenario «guardar sin cambios no pide nada»). Al abrir, el foco va al nombre. El encabezado con subtítulo y el botón «Cerrar», en T17.
 
 ### T10. Selector de color — Decisión del autor (D233; Q5)
 
@@ -179,7 +181,38 @@ Sección «Pantalla de prestaciones» dentro de «Panel (interfaz)»: cómo lleg
 
 ### T16. Prueba en el navegador y tamaño — Propuesta
 
-Prueba del agente con la demo (`crear_app_demo` + `npm run dev`) y en Compose (`http://127.0.0.1:5173`), recorriendo los escenarios contra la API real y revisando la pestaña de red (método, cuerpo, estado y `codigos`) y la consola (sin errores ni violaciones de CSP). Por ser gobernanza BAJO, la repetición del autor no va como tarea (regla `rules.tasks` de `config.yaml`): el agente le deja el paso a paso. **20 tareas en 9 grupos**, dentro del «alrededor de 20», para **33 escenarios**: los nueve que sumó la revisión de escenarios entran en las tareas RED y TRIANGULATE de su tema, sin tareas nuevas. Los estilos de Stitch se aplican en las tareas GREEN que crean cada pieza visual (no hay tarea aparte).
+Prueba del agente con la demo (`crear_app_demo` + `npm run dev`) y en Compose (`http://127.0.0.1:5173`), recorriendo los escenarios contra la API real y revisando la pestaña de red (método, cuerpo, estado y `codigos`) y la consola (sin errores ni violaciones de CSP). Por ser gobernanza BAJO, la repetición del autor no va como tarea (regla `rules.tasks` de `config.yaml`): el agente le deja el paso a paso. **20 tareas en 9 grupos**, dentro del «alrededor de 20», para **33 escenarios**: los nueve que sumó la revisión de escenarios entran en las tareas RED y TRIANGULATE de su tema, sin tareas nuevas. Los estilos de Stitch se aplicaron en las tareas GREEN que crearon cada pieza visual.
+
+**Actualización (D234):** el grupo 10 suma **6 tareas** (26 en total, en 10 grupos) para los 5 escenarios nuevos de T17 (38 en total) y la traducción visual de la pantalla de Stitch. La prueba del agente en el navegador se repite (tarea 10.5) y **compara la implementación con la captura `pantalla.png`** de la pantalla de Stitch: disposición, jerarquía, estados (fila en edición, fila inactiva, error de campo, aviso del panel) y textos, anotando las diferencias que queden y su motivo (las de T17, «Qué se rechaza», son esperadas). La repetición del autor sigue siendo opcional (gobernanza BAJO). Pasar de 20 a 26 tareas es una excepción al «alrededor de 20» que respalda D234 (el ajuste lo pide la regla nueva, después del Apply) — **Propuesta**, a confirmar por el autor con el plan.
+
+### T17. Ajuste a la pantalla de Stitch — Decisión del autor (D234) + Propuesta (pantalla de Stitch, detalle)
+
+Que la pantalla se implemente a partir de la pantalla de Stitch es **Decisión del autor (D234)**. Qué se toma de ella, cómo se traduce y qué se rechaza es **Propuesta (pantalla de Stitch)**, salvo donde se indica otra cosa. Todo se traduce a `tokens.css` y `panel.css` y a marcado de React: **ninguna dependencia nueva**, nada de Tailwind ni de fuentes o íconos por CDN (la CSP de nginx es `default-src 'self'`, que además bloquearía imágenes `data:`), y los íconos son **SVG en línea** simples, con `aria-hidden="true"` y `focusable="false"`.
+
+**Qué se toma, con comportamiento observable (tiene escenario en el spec):**
+
+- **Tarjeta «Listado general» con el contador** «N prestaciones registradas» en una insignia del encabezado de la tarjeta, que cuenta activas e inactivas (es lo que la tabla muestra; desactivar no cambia el número). Una sola prestación: «1 prestación registrada». **Sin contador** mientras carga, sin conexión o con la lista vacía: con la lista vacía ya está «Todavía no hay prestaciones.» y un «0 prestaciones registradas» lo repetiría; mientras carga o sin conexión el número no se conoce. El número se deriva en el render de la lista (T7), no se guarda en el estado.
+- **Fila en edición resaltada** (fondo suave y borde izquierdo de 3 px del primario, como la fila seleccionada de «Clinical Ops») con la insignia **«Editando»** junto al nombre; solo la fila del panel de edición abierto, y desaparece al cerrar el panel (guardar, cancelar, «Cerrar», abrir el alta o el `404`). Se deriva del estado del panel (`modo: 'edicion'` y su `id`), sin estado nuevo.
+- **Encabezado del panel lateral**: ícono de lápiz (edición) o de más (alta), el título de T9, un subtítulo y el botón **«Cerrar»** (una X con nombre accesible «Cerrar»), que hace exactamente lo mismo que «Cancelar» (cierra sin pedir nada). Subtítulo de la edición: «Modificando los atributos de «<nombre>»» (el nombre de la fila, tal como vino de la API). Subtítulo del alta: «Completá los datos de la nueva prestación.» (equivalente propio: la pantalla de Stitch solo muestra la edición).
+
+**Qué se toma, solo visual (sin escenario; lo cubre la comparación con la captura, T16):**
+
+- **Barra superior**: marca con un ícono de diente en SVG, el enlace «Prestaciones» como pastilla con ícono (marcada cuando está activa) y «Cerrar sesión» como botón con borde e ícono de salida. Ningún dato del usuario (D225).
+- **Encabezado de la pantalla**: «Prestaciones» con un subtítulo debajo y «Nueva prestación» con ícono de más, separado del contenido por una línea. Subtítulo: «Catálogo de prestaciones del consultorio: duración, color en la agenda y reserva online.» (adapta el de Stitch, «Configuración del catálogo de prácticas…», al vocabulario de la KB: «prestación», no «práctica»).
+- **Etiquetas en mayúsculas** con asterisco de obligatorio y la **ayuda alineada a la derecha** en la misma línea que la etiqueta. Las mayúsculas van por CSS (`text-transform`) y el asterisco por un seudoelemento (`::after`), así el texto de cada etiqueta en el DOM no cambia («Nombre», «Duración en minutos», «Color», «Ofrecer en la reserva online») y los tests que buscan por etiqueta siguen valiendo. Se conservan las etiquetas actuales, no las de Stitch («Nombre de la prestación», «Color identificador en agenda»): dicen lo mismo y cambiarlas no aporta. La ayuda sigue enlazada con `aria-describedby`.
+- **La nota de CA-3 en un recuadro informativo** con ícono «i», debajo de la duración, solo en la edición (el spec no cambia).
+- **Error de campo** con borde y fondo rojo suave en el campo, un ícono de alerta dentro del campo (SVG en línea posicionado, no imagen de fondo) y el mensaje debajo.
+- **Títulos en los avisos** (aviso del panel y aviso de la tabla), con ícono de alerta: **«Acceso restringido»** para el `403` `RN-AU-05` (de la pantalla de Stitch) y **«Sin conexión»** para el mensaje de conexión (equivalente propio). El `404` («La prestación ya no existe (RN-GL-04).») y «Revisá los datos de la prestación.» van **sin título**: el mensaje es corto y un título lo repetiría. El título va dentro del mismo `role="alert"`, antes del mensaje de T11, que no cambia.
+- **Selector de color** en un recuadro con borde: el control nativo como muestra y el hex en negrita al lado (T10 y D233 no cambian).
+- **Pie del panel** con una línea arriba y los botones a la derecha, «Cancelar» y después «Guardar» (el orden de Stitch).
+- **Fila inactiva**: se atenúan las celdas de datos y la insignia «Inactiva» va en gris; **los botones de acción se ven con su contraste normal**, porque siguen habilitados (en la captura «Editar» se ve atenuado y podría leerse como deshabilitado). El comportamiento no cambia: las acciones son las del spec.
+
+**Qué se rechaza, y por qué (la KB y el spec mandan, D234):**
+
+- **El nombre del color** («#43A047 (Verde odontológico)»): la API no guarda nombres de color y ninguna regla los define; la pantalla muestra solo el hex (D233).
+- **La ayuda de la casilla de reserva online** («Permite que los pacientes seleccionen esta prestación desde la plataforma web pública de turnos»): describe el efecto de la reserva pública, que es C-24 y está fuera del alcance de C-11; la casilla solo guarda `reservable_online`.
+- **Los textos de error de Stitch** se reemplazan por los de T11 (ya lo decía «Referencia visual (Stitch)»); la nota de CA-3 sigue en la edición, no en el alta.
+- **El usuario de la captura ve a la vez el aviso de `RN-AU-05` y el error de `RN-AG-01`**: no puede pasar (D208: el permiso se evalúa antes que la entrada). La captura junta estados para mostrar los estilos; la pantalla muestra uno por vez.
 
 ### Skills aplicadas
 
@@ -189,9 +222,17 @@ Prueba del agente con la demo (`crear_app_demo` + `npm run dev`) y en Compose (`
 
 ## Referencia visual (Stitch)
 
-El orquestador usó el MCP de Stitch en este propose; la evidencia está en `docs/skills-mcp/evidencias/sesion-nueva/stitch-c11.md` (proyecto `projects/14200813501064679723`, «Turnos Odontológicos AR — C-11 panel-de-prestaciones», con el texto exacto enviado, solo datos ficticios del dominio y sin pacientes ni secretos). La generación de la pantalla superó el tiempo de espera y `list_screens` seguía vacío al cerrar la evidencia; lo que sí devolvió es el design system **«Clinical Ops»**.
+**Regla (D234, Decisión del autor):** toda pantalla del frontend se implementa a partir de una pantalla generada en Stitch con el design system del proyecto; el design cita el id de la pantalla; si Stitch no entrega la pantalla, el change de interfaz no se cierra; la KB y el spec mandan sobre el contenido.
 
-**Qué decisiones fundamenta:**
+**Pantalla de C-11:** `projects/14200813501064679723/screens/b5ef4d80164a4f28a7e7017a94814c49`, «Prestaciones - Turnos Odontológicos AR», generada el 2026-10-19 (después del Apply) con el design system «Clinical Ops» (`assets/b683d44391ab410db2dd48aa71ed0b47`) y un texto alineado con este spec (barra superior, acciones visibles para todos por D230, los mensajes de T11 y «Urgencia» inactiva). **Evidencia:**
+
+- `docs/skills-mcp/evidencias/sesion-nueva/stitch-c11.md`, secciones 3b (la pantalla) y 4 (cómo se usa), con el texto enviado: solo datos ficticios del dominio, sin pacientes ni secretos;
+- `docs/skills-mcp/evidencias/sesion-nueva/stitch-c11-pantalla/pantalla.png`, la captura con la que se compara la implementación (T16, tarea 10.5);
+- `docs/skills-mcp/evidencias/sesion-nueva/stitch-c11-pantalla/pantalla.html`, el HTML generado (Tailwind, Google Fonts y Material Symbols por CDN): **no se copia**; se traduce a los tokens de `frontend/src/shared/estilos/` (T12, T17).
+
+**Antes (propose):** la primera generación superó el tiempo de espera y `list_screens` seguía vacío al cerrar la evidencia; solo llegó el design system **«Clinical Ops»**, y el Apply de los grupos 1 a 9 se hizo con sus tokens. Las decisiones de abajo salen de esos tokens; las que toma de la pantalla y las que rechaza están en **T17**.
+
+**Qué decisiones fundamenta el design system:**
 
 - **Disposición**: tabla del catálogo con un **panel lateral** de alta y edición a la derecha (T8, T9), en lugar de un modal o de una página aparte.
 - **Tokens** (T12): Inter, fondo `#F8FAFC`, superficies blancas con borde de 1 px, primario `#0284C7`, error `#DC2626` sobre `#FEF2F2`, éxito `#16A34A` sobre `#F0FDF4`, radio de 4 px en campos y botones, 6 a 8 px en paneles, filas de 40 px con encabezado `#F1F5F9` en mayúsculas de 11 px, insignias de estado de 22 px, campos de 36 o 40 px.
@@ -204,7 +245,8 @@ El orquestador usó el MCP de Stitch en este propose; la evidencia está en `doc
 - El texto enviado decía «Nueva prestación (solo visible para el rol odontólogo)»; sin una ruta que informe el rol y sin cambios de API, la interfaz no puede saberlo (T13, D230).
 - Los mensajes de error del texto enviado («La duración debe ser mayor que 0 y múltiplo de 5 (RN-AG-01)», el del nombre repetido con el nombre) se ajustan a los de T11.
 - La nota de CA-3 va en el panel de edición, junto a la duración (spec), y no bajo la tabla.
-- Stitch no agrega reglas de dominio ni comportamiento: es referencia visual. Ante cualquier conflicto se siguen la KB y el spec.
+- En la pantalla generada: el nombre del color, la ayuda de la reserva online (C-24) y la combinación de `RN-AU-05` con `RN-AG-01` en la misma captura se rechazan (T17, «Qué se rechaza»).
+- Stitch no agrega reglas de dominio: aporta la disposición y lo visual. Los únicos comportamientos nuevos (contador, marca «Editando», botón «Cerrar») son de presentación, no tocan la API y tienen su escenario en el spec. Ante cualquier conflicto se siguen la KB y el spec.
 
 ## Contradicciones y huecos encontrados en las fuentes
 
@@ -229,9 +271,10 @@ El orquestador usó el MCP de Stitch en este propose; la evidencia está en `doc
 ## A verificar en el change
 
 - **V1** (antes de cerrar la tarea 4.2): que jsdom 30.1.2 admite `<input type="color">` y que `fireEvent.input` de Testing Library cambia su valor y dispara el `onChange` de React; si no, se usa `fireEvent.change`. En el navegador (tarea 8.1), que Chrome entrega el hex en minúsculas y la interfaz lo manda en mayúsculas.
-- **V2** (antes de cerrar la tarea 8.1, en Compose): que con la CSP de `nginx.conf` las muestras de color (propiedad `style` de React) y el CSS construido se ven sin violaciones en la consola.
+- **V2** (antes de cerrar la tarea 8.1, en Compose; se repite en la 10.5 con los íconos SVG en línea): que con la CSP de `nginx.conf` las muestras de color (propiedad `style` de React) y el CSS construido se ven sin violaciones en la consola.
 - **V3** (antes de la tarea 3.1): que React Router 7.18.4 renderiza las rutas hijas (`index`, `prestaciones`, `*`) de `path="/panel"` dentro del `<Outlet/>` de `PanelBase` y que `/panel/algo` sigue mostrando «Panel del consultorio» sin cambiar la URL (los tests de C-08 siguen en verde).
 - **V4** (antes de la tarea 2.1): que la API real responde al nombre «   » con `422`, `codigos` vacío y un error con `campo` `nombre` (leyendo `backend/tests/api/test_prestaciones.py` o con la demo), para copiarlo tal cual en el servidor falso.
+- **V5** (antes de cerrar las tareas 10.2 y 10.4): que los tests de los grupos 3 a 6 siguen en verde con la insignia «Editando» dentro de la celda del nombre y con el título dentro de los avisos; si alguno depende del texto exacto de la celda o del aviso, se ajusta su consulta sin cambiar lo que verifica y se anota en el resumen del grupo.
 
 ## Migration Plan
 
@@ -244,11 +287,11 @@ El orquestador usó el MCP de Stitch en este propose; la evidencia está en `doc
 No se editan ahora ni durante el Apply:
 
 - `CHANGES.md`: marcar C-11 con `[x]`; por D231, quitar de la entrada de C-09 «cablear `pedidoDelPanel` y `SesionTerminada` en `ProveedorDeSesion`»; repetir `scripts/verificar_changes.py`.
-- `knowledge-base/10_preguntas_abiertas.md`: D229 a D233 ya están registradas (2026-10-19); al cerrar se registran las demás decisiones «Propuesta» que el autor apruebe con el plan y los hallazgos del Apply (V1 a V4).
-- `CLAUDE.md` y `AGENTS.md`: re-sincronizar el párrafo «Estado de `10_preguntas_abiertas.md`» con D229 a D233 (no se editan en el update).
+- `knowledge-base/10_preguntas_abiertas.md`: D229 a D233 y D234 ya están registradas (2026-10-19); al cerrar se registran las demás decisiones «Propuesta» que el autor apruebe con el plan y los hallazgos del Apply (V1 a V4).
+- `CLAUDE.md` y `AGENTS.md`: el párrafo «Estado de `10_preguntas_abiertas.md`» ya se re-sincronizó con D229 a D233 y D234 en el update del 2026-10-19 (junto con la integración «Stitch», `openspec/config.yaml` y `docs/skills-mcp/mcp-stitch.md`); al archivar solo se comprueba que siguen idénticos.
 - `knowledge-base/08_arquitectura_propuesta.md`, «Estructura de directorios»: `features/prestaciones/` y `shared/estilos/` (T3).
 - `knowledge-base/06_funcionalidades.md`, US-001: nota de que la pantalla llegó con C-11 (como la de la API en CA-1).
-- `docs/skills-mcp/evidencias/sesion-nueva/stitch-c11.md`: si la pantalla de Stitch aparece después, agregarla (la evidencia ya lo prevé).
+- `docs/skills-mcp/evidencias/sesion-nueva/stitch-c11.md`: la pantalla ya está agregada (sección 3b); al archivar, sumar el resultado de la comparación de la tarea 10.5.
 
 ## Open Questions
 

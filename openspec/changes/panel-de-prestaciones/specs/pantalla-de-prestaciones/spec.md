@@ -4,13 +4,13 @@
 
 Define cómo el panel muestra y mantiene el catálogo de prestaciones del consultorio desde el navegador: la tabla con activas e inactivas, el alta y la edición con el selector de color, desactivar y reactivar, el aviso de que cambiar la duración no toca los turnos y cómo se muestran los rechazos de la API con su código (US-001; RN-AG-01, RN-AG-02, RN-AG-15, RN-GL-03, RN-GL-04, RN-AU-05) y qué pasa si la sesión termina mientras se usa la pantalla (US-092 CA-1; RN-AU-03). El contrato de la API que consume está en `gestion-de-prestaciones` y `proteccion-del-panel`; la renovación y el aviso de sesión terminada, en `ingreso-al-panel`.
 
-Convenciones de los escenarios: «la pantalla» es la de prestaciones del panel, en `/panel/prestaciones`, con una sesión iniciada (`ingreso-al-panel`). «El panel lateral» es el formulario de alta o de edición que se abre junto a la tabla. «La API» son `GET /prestaciones`, `POST /prestaciones` y `PATCH /prestaciones/{id}`, que la interfaz llama por el mismo origen. «La odontóloga» es `odontologa@consultorio-demo.test` (roles `odontologo` y `dueno`) y «la recepcionista» es `recepcion@consultorio-demo.test` (rol `recepcionista`, activa en estos escenarios). El catálogo de partida son las cinco prestaciones de la demo, con ids 1 a 5: «Consulta / control» 30 min `#1E88E5`, «Limpieza» 45 min `#43A047`, «Obturación» 60 min `#FB8C00`, «Extracción» 45 min `#E53935`, activas, y «Urgencia» 30 min `#8E24AA`, que en estos escenarios está **inactiva** (en la demo arranca activa; para verla inactiva se la desactiva antes desde la pantalla). Ninguna se ofrece en la reserva online. «El aviso de sesión terminada» es el de `ingreso-al-panel`, «Tu sesión terminó. Iniciá sesión de nuevo.». «El aviso del panel» es el aviso `role="alert"` arriba del formulario del panel lateral y «el aviso de la tabla» es el que aparece arriba de la tabla. La granularidad es la constante de 5 minutos (D99). Los horarios de los ejemplos están en UTC. Todos los datos son ficticios (RN-PR-01). Los escenarios se verifican en la suite del frontend, con la API reemplazada por un servidor falso que respeta su contrato, y se repiten contra la API real en la prueba en el navegador.
+Convenciones de los escenarios: «la pantalla» es la de prestaciones del panel, en `/panel/prestaciones`, con una sesión iniciada (`ingreso-al-panel`). «El panel lateral» es el formulario de alta o de edición que se abre junto a la tabla. «La API» son `GET /prestaciones`, `POST /prestaciones` y `PATCH /prestaciones/{id}`, que la interfaz llama por el mismo origen. «La odontóloga» es `odontologa@consultorio-demo.test` (roles `odontologo` y `dueno`) y «la recepcionista» es `recepcion@consultorio-demo.test` (rol `recepcionista`, activa en estos escenarios). El catálogo de partida son las cinco prestaciones de la demo, con ids 1 a 5: «Consulta / control» 30 min `#1E88E5`, «Limpieza» 45 min `#43A047`, «Obturación» 60 min `#FB8C00`, «Extracción» 45 min `#E53935`, activas, y «Urgencia» 30 min `#8E24AA`, que en estos escenarios está **inactiva** (en la demo arranca activa; para verla inactiva se la desactiva antes desde la pantalla). Ninguna se ofrece en la reserva online. «El aviso de sesión terminada» es el de `ingreso-al-panel`, «Tu sesión terminó. Iniciá sesión de nuevo.». «El aviso del panel» es el aviso `role="alert"` arriba del formulario del panel lateral y «el aviso de la tabla» es el que aparece arriba de la tabla. «El listado general» es la tarjeta que contiene la tabla, con su contador, y «el botón «Cerrar»» es el de la esquina del encabezado del panel lateral (la disposición viene de la pantalla de Stitch, D234; lo puramente visual no tiene escenario). La granularidad es la constante de 5 minutos (D99). Los horarios de los ejemplos están en UTC. Todos los datos son ficticios (RN-PR-01). Los escenarios se verifican en la suite del frontend, con la API reemplazada por un servidor falso que respeta su contrato, y se repiten contra la API real en la prueba en el navegador.
 
 ## ADDED Requirements
 
 ### Requirement: Listar las prestaciones en la pantalla
 
-La pantalla SHALL mostrar, en el orden en que las devuelve la API, todas las prestaciones del consultorio, activas e inactivas, cada una con su color, nombre, duración en minutos, si se ofrece en la reserva online y su estado. Una prestación inactiva SHALL verse atenuada y con la insignia «Inactiva», sin depender solo del color (US-001 CA-1).
+La pantalla SHALL mostrar, en el orden en que las devuelve la API, todas las prestaciones del consultorio, activas e inactivas, cada una con su color, nombre, duración en minutos, si se ofrece en la reserva online y su estado. Una prestación inactiva SHALL verse atenuada y con la insignia «Inactiva», sin depender solo del color. El listado general SHALL mostrar cuántas prestaciones hay registradas, activas e inactivas, con el texto «N prestaciones registradas» («1 prestación registrada» si hay una), y MUST NOT mostrar el contador mientras carga, sin conexión ni con la lista vacía (US-001 CA-1).
 
 #### Scenario: US-001 CA-1 Feliz - la tabla muestra activas e inactivas
 
@@ -45,6 +45,21 @@ La pantalla SHALL mostrar, en el orden en que las devuelve la API, todas las pre
 - **GIVEN** la recepcionista en el panel
 - **WHEN** abre la pantalla
 - **THEN** la interfaz muestra las cinco prestaciones, igual que a la odontóloga (lectura: los tres roles, D205)
+
+#### Scenario: US-001 CA-1 Feliz - el listado general cuenta las prestaciones registradas
+
+- **GIVEN** la odontóloga en la pantalla, con el catálogo de partida
+- **WHEN** la tabla termina de cargar
+- **THEN** el listado general muestra «5 prestaciones registradas» (cuenta también «Urgencia», que está inactiva)
+- **AND** después de crear «Blanqueamiento», 60 minutos, muestra «6 prestaciones registradas»
+- **AND** después de pulsar «Desactivar» en «Extracción», sigue mostrando «6 prestaciones registradas»
+
+#### Scenario: US-001 CA-1 Borde - el contador en singular y sin prestaciones
+
+- **GIVEN** la API responde `GET /prestaciones` con una sola prestación, «Consulta / control»
+- **WHEN** se abre la pantalla
+- **THEN** el listado general muestra «1 prestación registrada»
+- **AND** si la API responde una lista vacía, la interfaz muestra «Todavía no hay prestaciones.» y ningún contador; mientras carga o sin conexión tampoco hay contador
 
 ### Requirement: Dar de alta una prestación desde la pantalla
 
@@ -135,7 +150,7 @@ Si la API rechaza el alta o la edición con `422` y un error del campo `duracion
 
 ### Requirement: Editar una prestación desde la pantalla
 
-«Editar» SHALL abrir el panel lateral con los valores actuales de la fila. «Guardar» SHALL enviar `PATCH /prestaciones/{id}` solo con los campos que cambiaron y, con `200`, actualizar la fila con la respuesta y cerrar el panel. «Cancelar» SHALL cerrar el panel sin pedir nada (US-001 CA-1).
+«Editar» SHALL abrir el panel lateral con los valores actuales de la fila. «Guardar» SHALL enviar `PATCH /prestaciones/{id}` solo con los campos que cambiaron y, con `200`, actualizar la fila con la respuesta y cerrar el panel. «Cancelar» SHALL cerrar el panel sin pedir nada, y el botón «Cerrar» del encabezado del panel SHALL hacer lo mismo, en el alta y en la edición. Mientras el panel edita una prestación, su fila SHALL llevar la marca «Editando», ninguna otra fila MUST llevarla y el encabezado del panel SHALL decir «Modificando los atributos de «<nombre>»»; la marca SHALL desaparecer cuando el panel se cierra (US-001 CA-1).
 
 #### Scenario: US-001 CA-1 Feliz - cambiar solo el color
 
@@ -155,6 +170,28 @@ Si la API rechaza el alta o la edición con `422` y un error del campo `duracion
 - **GIVEN** la odontóloga editando «Limpieza», sin tocar ningún campo
 - **WHEN** pulsa «Guardar»
 - **THEN** el panel lateral se cierra, la fila de «Limpieza» no cambia y la API no recibió ningún `PATCH`
+
+#### Scenario: US-001 CA-1 Feliz - la fila en edición se marca «Editando»
+
+- **GIVEN** la odontóloga en la pantalla, con el catálogo de partida
+- **WHEN** pulsa «Editar» en «Limpieza»
+- **THEN** la fila de «Limpieza» muestra la marca «Editando» y ninguna otra fila la muestra
+- **AND** el encabezado del panel lateral dice «Editar prestación» y «Modificando los atributos de «Limpieza»»
+
+#### Scenario: US-001 CA-1 Borde - la marca «Editando» sigue al panel
+
+- **GIVEN** la odontóloga editando «Limpieza»
+- **WHEN** pulsa «Editar» en «Obturación»
+- **THEN** la marca «Editando» pasa a la fila de «Obturación» y la de «Limpieza» ya no la tiene
+- **AND** al cambiar la duración de «Obturación» a 50 y guardar, el panel se cierra y ninguna fila muestra «Editando»
+- **AND** al pulsar «Nueva prestación», ninguna fila muestra «Editando»
+
+#### Scenario: US-001 CA-1 Borde - el botón «Cerrar» del panel no pide nada
+
+- **GIVEN** la odontóloga editando «Limpieza», con el nombre cambiado a «Limpieza profunda»
+- **WHEN** pulsa el botón «Cerrar» del encabezado del panel
+- **THEN** el panel lateral se cierra, la fila sigue diciendo «Limpieza», sin la marca «Editando», y la API no recibió ningún `PATCH`
+- **AND** si abre «Nueva prestación», escribe «Blanqueamiento» y pulsa «Cerrar», el panel se cierra, la API no recibió ningún `POST` y la tabla sigue con cinco filas
 
 #### Scenario: US-001 CA-1 Error de negocio - la prestación ya no existe
 

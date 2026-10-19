@@ -18,17 +18,18 @@ Va ahora porque las dos dependencias están archivadas, no lleva migración ni c
 - **Solo el rol `odontologo` edita; los demás leen** (matriz de `03`, D205): la API rechaza la escritura con `403` `RN-AU-05` y la pantalla lo muestra sin tocar la sesión, en el aviso del panel (conservando lo escrito) o arriba de la tabla. Las acciones se ven para todos los roles, porque ninguna ruta informa el rol (decisión del autor **D230**, Q2 del design).
 - **Cableado de la sesión terminada**: el proveedor de sesión de C-08 pasa a ofrecer `pedidoDelPanel` a las pantallas y, ante `SesionTerminada`, vuelve a `/ingresar` con el aviso (requisito ya vigente de `ingreso-al-panel` que C-08 dejó sin cablear porque ninguna pantalla lo usaba; decisión del autor **D231**, Q3 del design). El spec lo cubre con un Requirement propio de la pantalla.
 - **Estilos mínimos con los tokens de «Clinical Ops»** (Stitch): tipografía, colores, densidad de la tabla y errores de campo, en CSS propio sin dependencias nuevas.
+- **Ajuste a la pantalla generada en Stitch** (regla del autor **D234**, sumada en el update del 2026-10-19): la pantalla `projects/14200813501064679723/screens/b5ef4d80164a4f28a7e7017a94814c49` se traduce a CSS propio y SVG en línea, sin dependencias nuevas: tarjeta «Listado general» con el contador de prestaciones registradas, la fila en edición marcada «Editando», el encabezado del panel lateral con subtítulo y botón «Cerrar», etiquetas, avisos con título y la nota de CA-3 en un recuadro. Se rechazan el nombre del color y la ayuda de la reserva online (C-24), que la KB no respalda (design T17).
 - **Servidor falso de la API** ampliado con el contrato de `gestion-de-prestaciones` y roles; tests de Vitest por escenario; README con la pantalla, la tabla escenario → test y el recorrido.
 
 No hay cambios en el backend ni en la API, ni dependencias nuevas. No hay **BREAKING**.
 
 ### Escenarios
 
-Cubre los tres mínimos de la entrada C-11 de `CHANGES.md` (dentro del «3 a 6»); el spec los detalla en 33 escenarios (8 felices, 6 de error de negocio y 19 de borde):
+Cubre los tres mínimos de la entrada C-11 de `CHANGES.md` (dentro del «3 a 6»); el spec los detalla en 38 escenarios (10 felices, 6 de error de negocio y 22 de borde; cinco de ellos, del contador, la marca «Editando» y el botón «Cerrar», los sumó el ajuste a la pantalla de Stitch, D234):
 
 | ID | Qué verifica en la pantalla | Dónde corre |
 |---|---|---|
-| US-001 CA-1 | Listar (también mientras carga, vacío y sin conexión), crear, editar (también sin cambios), desactivar y reactivar; el nombre repetido se muestra con `RN-AG-15`; la prestación inexistente con `RN-GL-04`; el rol sin permiso con `RN-AU-05`, antes que cualquier error de entrada; sin conexión al guardar o al desactivar | Suite del frontend + prueba en el navegador |
+| US-001 CA-1 | Listar (también mientras carga, vacío y sin conexión), crear, editar (también sin cambios, con la marca «Editando» y el botón «Cerrar»), el contador del listado general, desactivar y reactivar; el nombre repetido se muestra con `RN-AG-15`; la prestación inexistente con `RN-GL-04`; el rol sin permiso con `RN-AU-05`, antes que cualquier error de entrada; sin conexión al guardar o al desactivar | Suite del frontend + prueba en el navegador |
 | US-001 CA-2 | Una duración que no es mayor que 0 o no es múltiplo de 5 se muestra debajo del campo con `RN-AG-01`, en el alta y en la edición, y no cambia nada | Suite del frontend + prueba en el navegador |
 | US-001 CA-3 | La edición avisa que cambiar la duración no toca los turnos existentes y cambia solo la prestación | Suite del frontend + prueba en el navegador (la invariancia de los turnos ya la prueba la API, C-04) |
 
@@ -61,5 +62,5 @@ Ninguna. Se revisaron `gestion-de-prestaciones` y `proteccion-del-panel` (descri
 - **Código que se modifica**: `frontend/src/App.tsx` (ruta `/panel/prestaciones`), `frontend/src/pages/PanelBase.tsx` (encabezado con el enlace y lugar para la pantalla), `frontend/src/shared/api/ProveedorDeSesion.tsx` (expone `pedidoDelPanel` y maneja `SesionTerminada`), `frontend/src/shared/api/errores.ts` (errores de la API con código y errores de campo), `frontend/src/test/servidorFalso.ts` (contrato de prestaciones y roles) y `README.md`.
 - **Backend y API**: sin cambios (`backend/` no se toca).
 - **Dependencias**: ninguna nueva; `frontend/package.json` y `package-lock.json` no cambian. Sin variables de entorno nuevas.
-- **Documentación**: `README.md`. `knowledge-base/10_preguntas_abiertas.md` registra D229 a D233 (respuesta del autor a Q1 a Q5). Al archivar, `CHANGES.md` marca C-11 y, por D231, la entrada de C-09 deja de listar el cableado de `SesionTerminada`; `CLAUDE.md` y `AGENTS.md` se re-sincronizan con D229 a D233.
-- **Tamaño**: 20 tareas en 9 grupos, dentro del «alrededor de 20» de `CHANGES.md`, para 33 escenarios.
+- **Documentación**: `README.md`. `knowledge-base/10_preguntas_abiertas.md` registra D229 a D233 (respuesta del autor a Q1 a Q5) y D234 (pantallas desde Stitch), que también se registró en `CLAUDE.md`, `AGENTS.md`, `openspec/config.yaml` y `docs/skills-mcp/mcp-stitch.md`. Al archivar, `CHANGES.md` marca C-11 y, por D231, la entrada de C-09 deja de listar el cableado de `SesionTerminada`; `CLAUDE.md` y `AGENTS.md` ya quedaron re-sincronizados con D229 a D234 en el update.
+- **Tamaño**: 26 tareas en 10 grupos para 38 escenarios. Los grupos 1 a 9 (20 tareas, dentro del «alrededor de 20» de `CHANGES.md`) están hechos; el grupo 10 (6 tareas) es el ajuste a la pantalla de Stitch y la excepción al «alrededor de 20» la respalda D234 (Propuesta, a confirmar por el autor con el plan).

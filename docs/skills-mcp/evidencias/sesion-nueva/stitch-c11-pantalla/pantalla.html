@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="es-AR" class="h-full bg-slate-50">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Prestaciones - Turnos Odontológicos AR</title>
+  <!-- Tailwind CSS CDN with Inter font -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Material Symbols -->
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            primary: {
+              DEFAULT: '#0284c7', // Sky 600 from Clinical Ops
+              hover: '#0369a1',
+              light: '#e0f2fe',
+            }
+          }
+        }
+      }
+    }
+  </script>
+</head>
+<body class="h-full font-sans text-slate-800 antialiased flex flex-col bg-slate-100/70">
+
+  <!-- BARRA SUPERIOR (Sin barra lateral) -->
+  <header class="w-full bg-white border-b border-slate-200 sticky top-0 z-20">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <!-- Marca y Navegación activa -->
+      <div class="flex items-center space-x-8">
+        <div class="flex items-center space-x-2.5">
+          <span class="material-symbols-outlined text-primary text-2xl" aria-hidden="true">dentistry</span>
+          <span class="font-bold text-slate-900 tracking-tight text-lg">Turnos Odontológicos AR</span>
+        </div>
+        <nav class="flex items-center space-x-1" aria-label="Navegación principal">
+          <a href="#" class="px-3.5 py-1.5 rounded-md text-sm font-semibold text-primary bg-sky-50 border border-sky-100 inline-flex items-center gap-1.5" aria-current="page">
+            <span class="material-symbols-outlined text-base">medical_services</span>
+            Prestaciones
+          </a>
+        </nav>
+      </div>
+
+      <!-- Acción secundaria: Cerrar sesión (Sin datos del usuario) -->
+      <div>
+        <button type="button" class="inline-flex items-center gap-1.5 px-3 py-1.5 border border-slate-300 rounded-md text-sm font-medium text-slate-700 bg-white hover:bg-slate-50 hover:text-slate-900 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+          <span class="material-symbols-outlined text-base text-slate-500">logout</span>
+          Cerrar sesión
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- CONTENIDO PRINCIPAL -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 flex flex-col">
+    <!-- Encabezado de página -->
+    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between pb-6 gap-4 border-b border-slate-200 mb-6">
+      <div>
+        <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Prestaciones</h1>
+        <p class="text-sm text-slate-500 mt-1">Configuración del catálogo de prácticas, tiempos de atención asignados y disponibilidad en línea.</p>
+      </div>
+      <div>
+        <button type="button" class="inline-flex items-center gap-2 px-4 py-2 border border-transparent rounded-md text-sm font-medium text-white bg-primary hover:bg-primary-hover shadow-sm transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+          <span class="material-symbols-outlined text-lg leading-none">add</span>
+          Nueva prestación
+        </button>
+      </div>
+    </div>
+
+    <!-- Layout en 2 columnas: Tabla y Panel lateral abierto -->
+    <div class="grid grid-cols-12 gap-6 items-start">
+      
+      <!-- TABLA DE PRESTACIONES (7 columnas en desktop) -->
+      <section class="col-span-12 lg:col-span-7 bg-white rounded-lg border border-slate-200 shadow-sm overflow-hidden" aria-labelledby="tabla-titulo">
+        <div class="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
+          <h2 id="tabla-titulo" class="text-base font-semibold text-slate-900">Listado general</h2>
+          <span class="text-xs font-medium text-slate-500 bg-slate-100 px-2.5 py-1 rounded-full">5 prestaciones registradas</span>
+        </div>
+
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-sm border-collapse">
+            <thead>
+              <tr class="bg-slate-50/80 border-b border-slate-200 text-xs font-semibold text-slate-600 uppercase tracking-wider">
+                <th scope="col" class="py-3 px-3 text-center w-14">Color</th>
+                <th scope="col" class="py-3 px-4">Nombre</th>
+                <th scope="col" class="py-3 px-3">Duración</th>
+                <th scope="col" class="py-3 px-3">Reserva online</th>
+                <th scope="col" class="py-3 px-3">Estado</th>
+                <th scope="col" class="py-3 px-4 text-right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              
+              <!-- Fila 1: Consulta / control -->
+              <tr class="hover:bg-slate-50/60 transition-colors">
+                <td class="py-3.5 px-3 text-center">
+                  <div class="inline-block w-4 h-4 rounded-full border border-black/10 align-middle shadow-xs" style="background-color: #1E88E5;" title="#1E88E5"></div>
+                </td>
+                <td class="py-3.5 px-4 font-medium text-slate-900">Consulta / control</td>
+                <td class="py-3.5 px-3 text-slate-600">30 min</td>
+                <td class="py-3.5 px-3 text-slate-600">No</td>
+                <td class="py-3.5 px-3">
+                  <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    Activa
+                  </span>
+                </td>
+                <td class="py-3.5 px-4 text-right space-x-1.5 whitespace-nowrap">
+                  <button type="button" class="text-xs font-medium text-slate-700 hover:text-slate-900 px-2 py-1 bg-white hover:bg-slate-50 border border-slate-300 rounded shadow-2xs">Editar</button>
+                  <button type="button" class="text-xs font-medium text-slate-700 hover:text-slate-900 px-2 py-1 bg-white hover:bg-slate-50 border border-slate-300 rounded shadow-2xs">Desactivar</button>
+                </td>
+              </tr>
+
+              <!-- Fila 2: Limpieza (En edición actualmente) -->
+              <tr class="bg-sky-50/50 border-l-4 border-l-primary hover:bg-sky-50/80 transition-colors">
+                <td class="py-3.5 px-3 text-center">
+                  <div class="inline-block w-4 h-4 rounded-full border border-black/10 align-middle shadow-xs ring-2 ring-primary/40 ring-offset-1" style="background-color: #43A047;" title="#43A047"></div>
+                </td>
+                <td class="py-3.5 px-4 font-medium text-slate-900">
+                  <span class="flex items-center gap-1.5">
+                    Limpieza
+                    <span class="text-[10px] font-semibold text-primary uppercase tracking-wider bg-white px-1.5 py-0.5 rounded border border-primary/20">Editando</span>
+                  </span>
+                </td>
+                <td class="py-3.5 px-3 text-slate-600">45 min</td>
+                <td class="py-3.5 px-3 text-slate-600">No</td>
+                <td class="py-3.5 px-3">
+                  <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    Activa
+                  </span>
+                </td>
+                <td class="py-3.5 px-4 text-right space-x-1.5 whitespace-nowrap">
+                  <button type="button" class="text-xs font-semibold text-primary bg-white border border-primary/40 px-2 py-1 rounded shadow-2xs">Editar</button>
+                  <button type="button" class="text-xs font-medium text-slate-700 hover:text-slate-900 px-2 py-1 bg-white hover:bg-slate-50 border border-slate-300 rounded shadow-2xs">Desactivar</button>
+                </td>
+              </tr>
+
+              <!-- Fila 3: Obturación -->
+              <tr class="hover:bg-slate-50/60 transition-colors">
+                <td class="py-3.5 px-3 text-center">
+                  <div class="inline-block w-4 h-4 rounded-full border border-black/10 align-middle shadow-xs" style="background-color: #FB8C00;" title="#FB8C00"></div>
+                </td>
+                <td class="py-3.5 px-4 font-medium text-slate-900">Obturación</td>
+                <td class="py-3.5 px-3 text-slate-600">60 min</td>
+                <td class="py-3.5 px-3 text-slate-600">No</td>
+                <td class="py-3.5 px-3">
+                  <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    Activa
+                  </span>
+                </td>
+                <td class="py-3.5 px-4 text-right space-x-1.5 whitespace-nowrap">
+                  <button type="button" class="text-xs font-medium text-slate-700 hover:text-slate-900 px-2 py-1 bg-white hover:bg-slate-50 border border-slate-300 rounded shadow-2xs">Editar</button>
+                  <button type="button" class="text-xs font-medium text-slate-700 hover:text-slate-900 px-2 py-1 bg-white hover:bg-slate-50 border border-slate-300 rounded shadow-2xs">Desactivar</button>
+                </td>
+              </tr>
+
+              <!-- Fila 4: Extracción -->
+              <tr class="hover:bg-slate-50/60 transition-colors">
+                <td class="py-3.5 px-3 text-center">
+                  <div class="inline-block w-4 h-4 rounded-full border border-black/10 align-middle shadow-xs" style="background-color: #E53935;" title="#E53935"></div>
+                </td>
+                <td class="py-3.5 px-4 font-medium text-slate-900">Extracción</td>
+                <td class="py-3.5 px-3 text-slate-600">45 min</td>
+                <td class="py-3.5 px-3 text-slate-600">No</td>
+                <td class="py-3.5 px-3">
+                  <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                    Activa
+                  </span>
+                </td>
+                <td class="py-3.5 px-4 text-right space-x-1.5 whitespace-nowrap">
+                  <button type="button" class="text-xs font-medium text-slate-700 hover:text-slate-900 px-2 py-1 bg-white hover:bg-slate-50 border border-slate-300 rounded shadow-2xs">Editar</button>
+                  <button type="button" class="text-xs font-medium text-slate-700 hover:text-slate-900 px-2 py-1 bg-white hover:bg-slate-50 border border-slate-300 rounded shadow-2xs">Desactivar</button>
+                </td>
+              </tr>
+
+              <!-- Fila 5: Urgencia (Inactiva y atenuada) -->
+              <tr class="opacity-60 bg-slate-50/40 hover:opacity-75 transition-opacity">
+                <td class="py-3.5 px-3 text-center">
+                  <div class="inline-block w-4 h-4 rounded-full border border-black/10 align-middle shadow-xs grayscale" style="background-color: #8E24AA;" title="#8E24AA"></div>
+                </td>
+                <td class="py-3.5 px-4 font-medium text-slate-700">Urgencia</td>
+                <td class="py-3.5 px-3 text-slate-500">30 min</td>
+                <td class="py-3.5 px-3 text-slate-500">No</td>
+                <td class="py-3.5 px-3">
+                  <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-slate-200 text-slate-700 border border-slate-300">
+                    Inactiva
+                  </span>
+                </td>
+                <td class="py-3.5 px-4 text-right space-x-1.5 whitespace-nowrap">
+                  <button type="button" class="text-xs font-medium text-slate-700 hover:text-slate-900 px-2 py-1 bg-white hover:bg-slate-50 border border-slate-300 rounded shadow-2xs">Editar</button>
+                  <button type="button" class="text-xs font-medium text-primary hover:text-primary-hover px-2 py-1 bg-white hover:bg-sky-50 border border-primary/30 rounded shadow-2xs">Reactivar</button>
+                </td>
+              </tr>
+
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- PANEL LATERAL DERECHO: Editar prestación -->
+      <aside class="col-span-12 lg:col-span-5 bg-white rounded-lg border border-slate-200 shadow-sm flex flex-col" aria-labelledby="panel-titulo">
+        <!-- Encabezado del panel -->
+        <div class="px-5 py-4 border-b border-slate-200 flex items-center justify-between bg-slate-50/50 rounded-t-lg">
+          <div>
+            <h2 id="panel-titulo" class="text-base font-semibold text-slate-900 flex items-center gap-2">
+              <span class="material-symbols-outlined text-slate-500 text-lg">edit</span>
+              Editar prestación
+            </h2>
+            <p class="text-xs text-slate-500 mt-0.5">Modificando los atributos de «Limpieza»</p>
+          </div>
+          <button type="button" class="text-slate-400 hover:text-slate-600 p-1 rounded-md hover:bg-slate-100 transition-colors" title="Cerrar panel">
+            <span class="material-symbols-outlined text-xl">close</span>
+          </button>
+        </div>
+
+        <div class="p-5 space-y-5">
+          <!-- AVISO DE ERROR DE PERMISO (RN-AU-05) arriba de los campos -->
+          <div class="rounded-md bg-rose-50 border border-rose-200 p-3.5 flex items-start gap-3 text-rose-900" role="alert">
+            <span class="material-symbols-outlined text-rose-600 text-xl shrink-0 mt-0.5">error</span>
+            <div class="text-xs leading-relaxed">
+              <p class="font-semibold text-rose-800">Acceso restringido</p>
+              <p class="mt-0.5">Tu usuario no tiene permiso para modificar prestaciones (RN-AU-05).</p>
+            </div>
+          </div>
+
+          <form class="space-y-4" onsubmit="return false;">
+            
+            <!-- Campo: Nombre -->
+            <div>
+              <label for="nombre-prestacion" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                Nombre de la prestación <span class="text-rose-500">*</span>
+              </label>
+              <input type="text" id="nombre-prestacion" value="Limpieza" class="block w-full px-3 py-2 text-sm bg-white border border-slate-300 rounded-md shadow-xs focus:ring-2 focus:ring-primary focus:border-primary text-slate-900" placeholder="Ej. Limpieza y pulido">
+            </div>
+
+            <!-- Campo: Duración en minutos (con estado de error) -->
+            <div>
+              <div class="flex items-center justify-between mb-1.5">
+                <label for="duracion-prestacion" class="block text-xs font-semibold text-rose-700 uppercase tracking-wider">
+                  Duración en minutos <span class="text-rose-500">*</span>
+                </label>
+                <span class="text-xs text-slate-500">Mayor que 0 y múltiplo de 5.</span>
+              </div>
+              <div class="relative rounded-md shadow-xs">
+                <input type="number" id="duracion-prestacion" value="47" class="block w-full px-3 py-2 pr-10 text-sm bg-rose-50/40 border border-rose-300 rounded-md text-slate-900 focus:outline-none focus:ring-2 focus:ring-rose-500 focus:border-rose-500" aria-invalid="true" aria-describedby="duracion-error">
+                <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center pr-3">
+                  <span class="material-symbols-outlined text-rose-500 text-lg">error</span>
+                </div>
+              </div>
+              <!-- Mensaje de error -->
+              <p class="mt-1.5 text-xs text-rose-600 font-medium flex items-center gap-1" id="duracion-error">
+                <span>La duración debe ser mayor que 0 y múltiplo de 5 minutos (RN-AG-01).</span>
+              </p>
+              <!-- Nota informativa técnica -->
+              <p class="mt-2 text-xs text-slate-500 bg-slate-50 p-2.5 rounded border border-slate-200/80 flex items-start gap-1.5">
+                <span class="material-symbols-outlined text-slate-400 text-sm shrink-0 mt-0.5">info</span>
+                <span>Cambiar la duración no modifica los turnos ya creados.</span>
+              </p>
+            </div>
+
+            <!-- Campo: Color identificador -->
+            <div>
+              <label for="color-picker" class="block text-xs font-semibold text-slate-700 uppercase tracking-wider mb-1.5">
+                Color identificador en agenda
+              </label>
+              <div class="flex items-center space-x-3 bg-slate-50/70 p-2.5 rounded-md border border-slate-200">
+                <!-- Selector nativo de color tipo muestra cuadrada -->
+                <div class="relative flex items-center">
+                  <input type="color" id="color-picker" value="#43A047" class="w-8 h-8 rounded border border-slate-300 cursor-pointer p-0 bg-transparent overflow-hidden" title="Elegir color">
+                </div>
+                <div class="flex items-center space-x-2">
+                  <span class="font-mono text-sm font-semibold text-slate-800 uppercase">#43A047</span>
+                  <span class="text-xs text-slate-500">(Verde odontológico)</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Casilla: Ofrecer en la reserva online -->
+            <div class="pt-1">
+              <div class="relative flex items-start">
+                <div class="flex h-5 items-center">
+                  <input id="reserva-online" name="reserva-online" type="checkbox" class="h-4 w-4 rounded border-slate-300 text-primary focus:ring-primary cursor-pointer">
+                </div>
+                <div class="ml-3 text-xs">
+                  <label for="reserva-online" class="font-medium text-slate-800 cursor-pointer">Ofrecer en la reserva online</label>
+                  <p class="text-slate-500">Permite que los pacientes seleccionen esta prestación desde la plataforma web pública de turnos.</p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Botonera del formulario -->
+            <div class="pt-4 border-t border-slate-200 flex items-center justify-end space-x-3">
+              <button type="button" class="px-3.5 py-2 border border-slate-300 rounded-md text-xs font-semibold text-slate-700 bg-white hover:bg-slate-50 transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-400">
+                Cancelar
+              </button>
+              <button type="submit" class="px-4 py-2 border border-transparent rounded-md text-xs font-semibold text-white bg-primary hover:bg-primary-hover shadow-xs transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
+                Guardar
+              </button>
+            </div>
+
+          </form>
+        </div>
+      </aside>
+
+    </div>
+  </main>
+
+</body>
+</html>
