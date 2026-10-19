@@ -154,7 +154,7 @@ El **access token** vive **solo en memoria** (una variable del módulo de sesió
 - `pedidoDelPanel(ruta, opciones)`: agrega `Authorization: Bearer <access>`; si responde `401`:
   1. Si no hay refresh guardado → `SesionTerminada`.
   2. Si no, **una** renovación con `POST /api/auth/refresh`. Varias peticiones que reciben `401` a la vez esperan **la misma** promesa de renovación (se guarda la promesa en curso; *single flight*).
-  3. Con `200`, guarda el access nuevo y **repite la petición original una sola vez**; si la repetición vuelve a dar `401`, no se renueva de nuevo: `SesionTerminada` (sin bucles).
+  3. Con `200`, guarda el access nuevo y **repite la petición original una sola vez**; si la repetición vuelve a dar `401`, no se renueva de nuevo: `SesionTerminada` (sin bucles) y se borra la sesión (memoria y `sessionStorage`) para que la pantalla vuelva al inicio de sesión (aceptado por el orquestador en el Apply, grupo 4).
   4. Con `401` en la renovación → borra la sesión (memoria y `sessionStorage`) y `SesionTerminada`.
 
 `SesionTerminada` la recibe el proveedor de sesión de React (F10), que navega a `/ingresar` con el aviso de F9. Un `403` **no** termina la sesión: se devuelve al llamador (cada pantalla futura decide cómo mostrarlo). La renovación es **reactiva**: no se usa `expires_in` para programar una renovación anticipada (Non-Goals); el costo es un `401` extra cada 15 minutos de uso.
