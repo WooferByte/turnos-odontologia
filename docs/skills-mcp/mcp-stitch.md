@@ -68,6 +68,17 @@ En ese caso la key queda guardada en tu configuración local; no la copies a nin
 - Se usa en el `/opsx:explore` o el `/opsx:propose` de changes con interfaz (previsto: C-11 `panel-de-prestaciones`), para fundamentar el `design.md`.
 - La key vive fuera del repo, en `STITCH_API_KEY`.
 
+## Uso en el proyecto
+
+Desde el 2026-10-19, por decisión del autor (D234 en `knowledge-base/10_preguntas_abiertas.md`), **toda pantalla del frontend se implementa a partir de una pantalla generada en Stitch**, no solo a partir de los tokens del design system:
+
+1. El `/opsx:explore` o el `/opsx:propose` del change genera la pantalla con el design system del proyecto («Clinical Ops») y guarda la evidencia (captura y HTML generado) en `docs/skills-mcp/evidencias/`.
+2. El `design.md` cita el id de la pantalla (`projects/…/screens/…`) y esos archivos, y lista qué decisiones visuales toma de ella y cuáles rechaza (un texto o un dato que la KB no respalda se rechaza con su motivo).
+3. El `/opsx:apply` traduce el HTML a los tokens CSS de `frontend/src/shared/estilos/`. No se copia tal cual: usa Tailwind, Google Fonts e íconos por CDN, que la CSP de nginx (`default-src 'self'`) bloquea y que serían dependencias nuevas.
+4. La prueba en el navegador compara la implementación con la captura.
+
+Si Stitch no entrega la pantalla (por ejemplo, por el tiempo de espera de la tabla de abajo), se reintenta: el change de interfaz no se cierra solo con los tokens. El primer caso fue C-11 (`panel-de-prestaciones`): ver [evidencias/sesion-nueva/stitch-c11.md](evidencias/sesion-nueva/stitch-c11.md), sección 3b.
+
 ## Solución de problemas
 
 | Síntoma | Causa | Qué hacer |
