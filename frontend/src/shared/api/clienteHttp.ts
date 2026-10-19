@@ -19,11 +19,15 @@ export interface ClienteHttp {
   pedidoDelPanel(ruta: string, opciones?: RequestInit): Promise<Response>
 }
 
+type Contexto = 'login' | 'refresh' | 'panel'
+
 const MENSAJE_SIN_CONEXION = 'No se pudo conectar con el servidor.'
+const MENSAJE_SESION_TERMINADA = 'La sesión terminó.'
+const CODIGO_SESION_INVALIDA = 'RN-AU-03'
 
 async function codigoDeRespuesta(respuesta: Response): Promise<string | null> {
   try {
-    const cuerpo: unknown = await respuesta.json()
+    const cuerpo: unknown = await respuesta.clone().json()
     if (typeof cuerpo === 'object' && cuerpo !== null && 'codigos' in cuerpo && Array.isArray(cuerpo.codigos)) {
       const primero: unknown = cuerpo.codigos[0]
       return typeof primero === 'string' ? primero : null
@@ -34,15 +38,23 @@ async function codigoDeRespuesta(respuesta: Response): Promise<string | null> {
   }
 }
 
-/** Clasifica la respuesta del login (F12): devuelve el error que corresponde, o null si fue 200. */
-async function errorDelLogin(respuesta: Response): Promise<Error | null> {
+/**
+ * Única función que traduce una respuesta a un error (F12). Devuelve null cuando la respuesta no es un
+ * error para ese contexto: un 2xx, o en el panel un 4xx que decide el llamador (401 renueva, 403 se devuelve).
+ */
+async function errorDeRespuesta(respuesta: Response, contexto: Contexto): Promise<Error | null> {
+  if (respuesta.status >= 500) return new SinConexion(MENSAJE_SIN_CONEXION, null)
   if (respuesta.ok) return null
-  if (respuesta.status === 401) {
+  if (contexto === 'login' && respuesta.status === 401) {
     return new CredencialesRechazadas('Credenciales rechazadas.', await codigoDeRespuesta(respuesta))
   }
-  if (respuesta.status === 422) {
+  if (contexto === 'login' && respuesta.status === 422) {
     return new EntradaRechazada('Entrada rechazada.', await codigoDeRespuesta(respuesta))
   }
+  if (contexto === 'refresh' && respuesta.status === 401) {
+    return new SesionTerminada(MENSAJE_SESION_TERMINADA, CODIGO_SESION_INVALIDA)
+  }
+  if (contexto === 'panel') return null
   return new SinConexion(MENSAJE_SIN_CONEXION, null)
 }
 
@@ -54,70 +66,49 @@ async function enviar(fetchInyectado: Fetch, entrada: string, init: RequestInit)
   }
 }
 
-const MENSAJE_SESION_TERMINADA = 'La sesión terminó.'
-const CODIGO_SESION_INVALIDA = 'RN-AU-03'
+async function leerCuerpo(respuesta: Response): Promise<Record<string, unknown>> {
+  try {
+    const cuerpo: unknown = await respuesta.json()
+    if (typeof cuerpo === 'object' && cuerpo !== null) return cuerpo as Record<string, unknown>
+  } catch {
+    // Cuerpo ilegible: se trata como falla de transporte.
+  }
+  throw new SinConexion(MENSAJE_SIN_CONEXION, null)
+}
 
 export function crearClienteHttp(opciones: OpcionesDelCliente): ClienteHttp {
   const fetchInyectado: Fetch = opciones.fetch ?? ((entrada, init) => globalThis.fetch(entrada, init))
   const { sesion } = opciones
+  let renovacionEnCurso: Promise<void> | null = null
 
-  async function iniciarSesion(email: string, contrasena: string): Promise<void> {
-    const respuesta = await enviar(fetchInyectado, '/api/auth/login', {
+  async function pedirJson(contexto: Contexto, ruta: string, cuerpo: unknown): Promise<Response> {
+    const respuesta = await enviar(fetchInyectado, ruta, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ email, contrasena }),
+      body: JSON.stringify(cuerpo),
     })
-    const error = await errorDelLogin(respuesta)
+    const error = await errorDeRespuesta(respuesta, contexto)
+    if (error instanceof SesionTerminada) sesion.borrar()
     if (error !== null) throw error
-    try {
-      const cuerpo: unknown = await respuesta.json()
-      if (
-        typeof cuerpo === 'object' &&
-        cuerpo !== null &&
-        'access_token' in cuerpo &&
-        typeof cuerpo.access_token === 'string' &&
-        'refresh_token' in cuerpo &&
-        typeof cuerpo.refresh_token === 'string'
-      ) {
-        sesion.guardar(cuerpo.access_token, cuerpo.refresh_token)
-        return
-      }
-    } catch {
-      // Cuerpo ilegible: se trata como falla de transporte.
-    }
-    throw new SinConexion(MENSAJE_SIN_CONEXION, null)
+    return respuesta
   }
 
-  async function enviarConAccess(ruta: string, opciones: RequestInit): Promise<Response> {
-    const respuesta = await enviar(fetchInyectado, ruta, {
-      ...opciones,
-      headers: { ...opciones.headers, Authorization: `Bearer ${sesion.access() ?? ''}` },
-    })
-    if (respuesta.status >= 500) throw new SinConexion(MENSAJE_SIN_CONEXION, null)
-    return respuesta
+  async function iniciarSesion(email: string, contrasena: string): Promise<void> {
+    const respuesta = await pedirJson('login', '/api/auth/login', { email, contrasena })
+    const cuerpo = await leerCuerpo(respuesta)
+    if (typeof cuerpo.access_token !== 'string' || typeof cuerpo.refresh_token !== 'string') {
+      throw new SinConexion(MENSAJE_SIN_CONEXION, null)
+    }
+    sesion.guardar(cuerpo.access_token, cuerpo.refresh_token)
   }
 
   async function renovar(): Promise<void> {
     const refresh = sesion.refresh()
     if (refresh === null) throw terminarSesion()
-    const respuesta = await enviar(fetchInyectado, '/api/auth/refresh', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refresh_token: refresh }),
-    })
-    if (respuesta.status === 401) throw terminarSesion()
-    if (respuesta.ok) {
-      try {
-        const cuerpo: unknown = await respuesta.json()
-        if (typeof cuerpo === 'object' && cuerpo !== null && 'access_token' in cuerpo && typeof cuerpo.access_token === 'string') {
-          sesion.guardarAccess(cuerpo.access_token)
-          return
-        }
-      } catch {
-        // Cuerpo ilegible: falla de transporte.
-      }
-    }
-    throw new SinConexion(MENSAJE_SIN_CONEXION, null)
+    const respuesta = await pedirJson('refresh', '/api/auth/refresh', { refresh_token: refresh })
+    const cuerpo = await leerCuerpo(respuesta)
+    if (typeof cuerpo.access_token !== 'string') throw new SinConexion(MENSAJE_SIN_CONEXION, null)
+    sesion.guardarAccess(cuerpo.access_token)
   }
 
   function terminarSesion(): SesionTerminada {
@@ -125,13 +116,21 @@ export function crearClienteHttp(opciones: OpcionesDelCliente): ClienteHttp {
     return new SesionTerminada(MENSAJE_SESION_TERMINADA, CODIGO_SESION_INVALIDA)
   }
 
-  let renovacionEnCurso: Promise<void> | null = null
-
   function renovarUnaVez(): Promise<void> {
     renovacionEnCurso ??= renovar().finally(() => {
       renovacionEnCurso = null
     })
     return renovacionEnCurso
+  }
+
+  async function enviarConAccess(ruta: string, opciones: RequestInit): Promise<Response> {
+    const respuesta = await enviar(fetchInyectado, ruta, {
+      ...opciones,
+      headers: { ...opciones.headers, Authorization: `Bearer ${sesion.access() ?? ''}` },
+    })
+    const error = await errorDeRespuesta(respuesta, 'panel')
+    if (error !== null) throw error
+    return respuesta
   }
 
   async function pedidoDelPanel(ruta: string, opciones: RequestInit = {}): Promise<Response> {
