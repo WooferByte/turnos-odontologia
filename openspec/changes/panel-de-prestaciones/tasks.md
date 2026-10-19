@@ -50,7 +50,7 @@ Reglas de trabajo para todos los grupos (no son tareas):
 
 ## 7. README
 
-- [ ] 7.1 Completar el `README.md` de la raíz (design T15): «Pantalla de prestaciones» dentro de «Panel (interfaz)» con cómo llegar, el recorrido con la demo, la tabla escenario → test (US-001 CA-1, CA-2, CA-3 y los tres US-092 CA-1 de la sesión que termina en la pantalla) con la cantidad real de tests de `npm test`, y los límites conocidos nuevos (acciones visibles para todos los roles con `RN-AU-05` de la API, mensaje de 5 minutos hasta US-005, Inter solo si está instalada, la demo arranca con todo activo); actualizar «Qué entrega hasta ahora». Verificación: cada comando y paso nuevo del README se ejecutó tal cual y dio lo que dice.
+- [x] 7.1 Completar el `README.md` de la raíz (design T15): «Pantalla de prestaciones» dentro de «Panel (interfaz)» con cómo llegar, el recorrido con la demo, la tabla escenario → test (US-001 CA-1, CA-2, CA-3 y los tres US-092 CA-1 de la sesión que termina en la pantalla) con la cantidad real de tests de `npm test`, y los límites conocidos nuevos (acciones visibles para todos los roles con `RN-AU-05` de la API, mensaje de 5 minutos hasta US-005, Inter solo si está instalada, la demo arranca con todo activo); actualizar «Qué entrega hasta ahora». Verificación: cada comando y paso nuevo del README se ejecutó tal cual y dio lo que dice.
 
 ## 8. Prueba en el navegador
 

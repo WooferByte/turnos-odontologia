@@ -17,6 +17,8 @@ Sistema de gestión de turnos y agenda para odontólogos independientes y consul
 
 - `panel-base-e-inicio-de-sesion` (C-08): la **primera interfaz**, en `frontend/` (React, TypeScript y Vite). La pantalla de inicio de sesión (`/ingresar`), el panel base vacío (`/panel`) con «Cerrar sesión», la sesión en el navegador (el access en memoria y el refresh en `sessionStorage`), la renovación automática ante un `401` y la vuelta al inicio de sesión cuando la sesión termina. La interfaz habla con la API por `/api` del mismo origen, sin cambios en la API.
 
+- `panel-de-prestaciones` (C-11): la **primera pantalla de negocio**, en `/panel/prestaciones`. Muestra el catálogo (activas e inactivas), permite dar de alta, editar (nombre, duración, color, reserva online), desactivar y reactivar una prestación, avisa que cambiar la duración no modifica los turnos ya creados y muestra los rechazos de la API con su código (`RN-AG-01`, `RN-AG-15`, `RN-GL-04`, `RN-AU-05`). Es solo interfaz: no cambia la API, el esquema ni las dependencias.
+
 La API se puede probar sin instalar nada más que Python (base SQLite en memoria) o sobre PostgreSQL con Docker; el panel necesita además Node 24 (ver «Panel (interfaz)»).
 
 > Todos los datos del proyecto, de los tests y de la demo son **ficticios**. No hay datos reales de pacientes ni secretos.
@@ -511,7 +513,7 @@ npm test
 npm run typecheck
 ```
 
-`npm test` corre **38 tests en 4 archivos** («Tests 38 passed (38)»); no necesita el backend, Docker ni red. `npm run typecheck` (`tsc --noEmit`) termina sin salida. `npm run build` genera `frontend/dist/`.
+`npm test` corre **85 tests en 6 archivos** («Tests 85 passed (85)»); no necesita el backend, Docker ni red. `npm run typecheck` (`tsc --noEmit`) termina sin salida. `npm run build` genera `frontend/dist/`.
 
 ### Probar el panel (demo sin Docker, dos terminales)
 
@@ -557,6 +559,39 @@ docker compose exec postgres psql -U app -d turnos -c "UPDATE usuario SET activo
 
 Con la odontóloga adentro, `UPDATE usuario SET token_version = token_version + 1 WHERE id = 1` (con el mismo `docker compose exec postgres psql ...`) y recargar `/panel` te lleva a `/ingresar` con el aviso «Tu sesión terminó. Iniciá sesión de nuevo.». Con otra copia del repositorio, agregá `-p otro-nombre` a todos los comandos de `docker compose`.
 
+### Pantalla de prestaciones
+
+Desde C-11 el panel tiene su primera pantalla de negocio. Cómo llegar: iniciar sesión y pulsar **Prestaciones** en el encabezado (`/panel/prestaciones`). La pantalla lee y modifica el catálogo por `GET`, `POST` y `PATCH /api/prestaciones` (el contrato es el de «Prestaciones»); no cambia la API.
+
+Recorrido con la demo sin Docker (las dos terminales de «Probar el panel»; la demo arranca con las cinco prestaciones **activas**):
+
+1. Ingresar con `odontologa@consultorio-demo.test` y pulsar «Prestaciones»: la tabla muestra «Consulta / control», «Limpieza», «Obturación», «Extracción» y «Urgencia», todas «Activa». En la pestaña de red hay un solo `GET /api/prestaciones`.
+2. «Nueva prestación»: nombre «Blanqueamiento», duración 60 y un color → `POST` con `201` y una sexta fila (el color se manda en mayúsculas, por ejemplo `#3A7BD5`).
+3. «Nueva prestación» con duración 47 → `422` con `codigos` `["RN-AG-01"]` y, debajo de la duración, «La duración debe ser mayor que 0 y múltiplo de 5 minutos (RN-AG-01).» La tabla no cambia.
+4. «Nueva prestación» con nombre «limpieza» → `409` con `["RN-AG-15"]` y «Ya existe una prestación con ese nombre (RN-AG-15).» debajo del nombre; lo escrito se conserva.
+5. «Editar» en «Limpieza», cambiar solo el color, «Guardar» → `PATCH /api/prestaciones/2` con un cuerpo que tiene solo `color`. «Editar» y «Guardar» sin tocar nada → no hay ningún `PATCH`.
+6. «Editar» en «Consulta / control»: el panel dice «Cambiar la duración no modifica los turnos ya creados.»; cambiar la duración a 60 manda solo `duracion_minutos`.
+7. «Desactivar» en «Urgencia» → `PATCH` con `{"activa": false}`: la fila queda atenuada, con «Inactiva» y «Reactivar». «Reactivar» manda `{"activa": true}`. No hay acción de borrar.
+8. «Cerrar sesión» e ingresar con `recepcion@consultorio-demo.test`: ve las cinco prestaciones; al crear, editar, desactivar o reactivar la API responde `403` con `["RN-AU-05"]` y la pantalla muestra «Tu usuario no tiene permiso para modificar prestaciones (RN-AU-05).» (también con duración 47: nunca se ve `RN-AG-01`). La sesión sigue abierta.
+
+Con la API detenida, «Guardar» muestra «No se pudo conectar con el servidor. Probá de nuevo en unos minutos.» y conserva lo escrito. Si la sesión termina mientras se usa la pantalla (access vencido y refresh que la API ya no acepta), la interfaz vuelve a `/ingresar` con «Tu sesión terminó. Iniciá sesión de nuevo.».
+
+Escenario → test (`src/features/prestaciones/`, API reemplazada por el servidor falso):
+
+| Escenario | Test titular |
+|---|---|
+| US-001 CA-1 (listar activas e inactivas) | `PaginaPrestaciones.test.tsx` — «US-001 CA-1: el enlace Prestaciones lleva a la tabla con activas e inactivas» |
+| US-001 CA-1 (alta, nombre repetido, edición, desactivar y reactivar) | `PaginaPrestaciones.test.tsx` — «US-001 CA-1: alta de Blanqueamiento agrega la fila y cierra el panel», «US-001 CA-1: nombre repetido muestra RN-AG-15 debajo del nombre y conserva lo escrito», «US-001 CA-1: editar solo el color manda solo color y actualiza la muestra», «US-001 CA-1: desactivar Extracción manda {"activa": false} y la fila queda atenuada con Inactiva y Reactivar», «US-001 CA-1: reactivar Urgencia manda {"activa": true} y ninguna fila ofrece borrar» |
+| US-001 CA-1 (la prestación ya no existe, `RN-GL-04`) | «US-001 CA-1: Urgencia que ya no existe muestra RN-GL-04, cierra el panel y la lista recargada tiene cuatro filas» |
+| US-001 CA-1 (la recepcionista, `RN-AU-05`) | «US-001 CA-1: la recepcionista que crea ve RN-AU-05 en el aviso del panel, conserva lo escrito, la tabla no cambia y no hay refresh» y los otros tres de ese grupo |
+| US-001 CA-2 (duración inválida, `RN-AG-01`) | «US-001 CA-2: duración 47 muestra RN-AG-01 debajo del campo y no agrega filas», «US-001 CA-2: duración 0 y -5 llegan a la API y muestran RN-AG-01», «US-001 CA-2: la edición con 52 muestra RN-AG-01 y la fila sigue en 45; con 50 se guarda y el mensaje desaparece» |
+| US-001 CA-3 (la duración no cambia los turnos) | «US-001 CA-3: cambiar la duración muestra el aviso, manda solo duracion_minutos y no pide rutas de turnos» |
+| US-092 CA-1 (access vencido que se renueva) | «US-092 CA-1: un access vencido se renueva y la tabla carga» |
+| US-092 CA-1 (sesión irrenovable al abrir la pantalla) | «US-092 CA-1: una sesión irrenovable al abrir la pantalla vuelve a /ingresar con el aviso» |
+| US-092 CA-1 (la sesión termina al guardar un alta) | «US-092 CA-1: la sesión termina al guardar un alta, vuelve a /ingresar y no crea nada» |
+
+El cliente de la API (`apiPrestaciones.test.ts`, 12 tests) se prueba aparte, con el `pedidoDelPanel` real sobre el servidor falso. Resultado de `npm test`: «Tests 85 passed (85)».
+
 ### Versiones fijadas del frontend
 
 Las versiones exactas viven en `frontend/package.json`; `frontend/package-lock.json` se generó con `npm install --before=2026-10-12` (ningún paquete publicado desde esa fecha) y se instala siempre con `npm ci`.
@@ -589,7 +624,7 @@ La API se reemplaza en los tests por un servidor falso escrito a mano (`frontend
 
 Hay además tests de la renovación compartida, del `403`, del cierre de sesión y de que ninguna URL contenga un token, y cuatro guards (`src/test/guards.test.ts`) que fallan si aparece `any`, `vi.mock`, `localStorage`, `dangerouslySetInnerHTML` o un archivo `index.ts` de reexportación.
 
-Resultado actual de las dos suites: frontend «Tests 38 passed (38)»; backend «528 passed, 47 deselected, 1 warning».
+Resultado actual de las dos suites: frontend «Tests 85 passed (85)»; backend «528 passed, 47 deselected, 1 warning».
 
 ## Levantar la API con PostgreSQL
 
@@ -670,7 +705,12 @@ La migración autogenerada **se revisa a mano** antes de usarla, y cada change q
 - **La sesión del panel no se comparte entre pestañas ni sobrevive al cierre del navegador**: el access vive en memoria y el refresh en `sessionStorage`. Recargar la pestaña la conserva; otra pestaña pide iniciar sesión. Si `sessionStorage` no está disponible, la sesión vive solo en memoria.
 - **El refresh en `sessionStorage` lo podría leer un script inyectado (XSS)**: lo mitigan React (escapa el texto), la ausencia de HTML crudo y la política de contenido de nginx. La alternativa, una cookie `HttpOnly`, cambiaría el contrato de `/auth/refresh` y queda fuera de C-08.
 - **El panel renueva el access solo cuando recibe un `401`** (no antes de que venza): un `401` extra cada 15 minutos de uso.
-- **El panel base no muestra quién inició sesión** (no hay ruta que lo informe) y todavía no tiene pantallas de negocio.
+- **El panel no muestra quién inició sesión** (no hay ruta que lo informe) y solo tiene una pantalla de negocio, la de prestaciones.
+- **Los botones «Nueva prestación», «Editar», «Desactivar» y «Reactivar» se ven con cualquier rol** (D230): la interfaz no conoce el rol, y la API rechaza a quien no es odontólogo con `403` y `RN-AU-05`, que la pantalla muestra sin cerrar la sesión.
+- **El mensaje de `RN-AG-01` dice «múltiplo de 5 minutos»** (constante de D99) hasta que US-005 haga configurable la granularidad; entonces tendrá que salir del valor configurado.
+- **La demo arranca con las cinco prestaciones activas** (el catálogo de partida de los tests tiene «Urgencia» inactiva): para ver una fila inactiva en la demo se la desactiva primero desde la pantalla.
+- **La fuente Inter se usa solo si está instalada** en el equipo; si no, el navegador usa la fuente del sistema (la política de contenido de nginx no permite cargarla desde fuera).
+- **Dos pestañas editando la misma prestación**: la última gana (la API no versiona); cada pantalla muestra lo que devolvió la API.
 - Un volumen de PostgreSQL sembrado antes de C-06 recibe el usuario del seed al próximo arranque, pero **un usuario ya sembrado no cambia su contraseña** aunque cambie `SEED_USUARIO_PASSWORD`. Con `docker compose down -v` la base arranca vacía.
 - El puerto 5434 (PostgreSQL), el 8000 (API) y el 5173 (interfaz) del host tienen que estar libres.
 - El proyecto de Compose tiene nombre fijo (`turnos-odontologia`): **dos copias del repositorio en la misma máquina comparten contenedores y volumen**, y un `docker compose down -v` en una borra los datos de la otra. Para levantar una segunda copia aparte, usá otro nombre de proyecto en todos los comandos: `docker compose -p otro-nombre up -d`.
@@ -678,7 +718,7 @@ La migración autogenerada **se revisa a mano** antes de usarla, y cada change q
 - Las credenciales, la contraseña del usuario del seed y el `JWT_SECRET` de los ejemplos y de `.env.example` son de prueba. No hay configuración de producción: TLS, copias de respaldo, roles con privilegios mínimos ni ajuste del pool.
 - La API migra al arrancar el contenedor: sirve para una sola réplica.
 - No se valida el horario de atención del profesional ni del consultorio.
-- No hay Redis ni pantallas de negocio (turnos, prestaciones, sillones) en la interfaz: llegan en changes posteriores.
+- No hay Redis ni pantallas de turnos ni de sillones en la interfaz (la de prestaciones sí existe, desde C-11): llegan en changes posteriores.
 - En `/docs`, las respuestas `409` y `422` figuran bajo `application/problem+json` y también bajo `application/json`. La respuesta real sale siempre como `application/problem+json`.
 - Los mensajes de validación de formato que genera Pydantic salen en inglés.
 
