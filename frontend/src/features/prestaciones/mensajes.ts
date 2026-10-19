@@ -6,6 +6,7 @@ export const MENSAJE_SIN_CONEXION = 'No se pudo conectar con el servidor. Probá
 export const MENSAJE_LISTA_VACIA = 'Todavía no hay prestaciones.'
 export const MENSAJE_CARGANDO = 'Cargando prestaciones…'
 export const MENSAJE_NOMBRE_REPETIDO = 'Ya existe una prestación con ese nombre (RN-AG-15).'
+export const MENSAJE_DURACION_INVALIDA = 'La duración debe ser mayor que 0 y múltiplo de 5 minutos (RN-AG-01).'
 export const MENSAJE_NOMBRE_VACIO = 'Ingresá un nombre.'
 export const MENSAJE_REVISAR_DATOS = 'Revisá los datos de la prestación.'
 
@@ -24,6 +25,9 @@ export function erroresDelPanel(error: unknown): ErroresDelPanel {
   }
   if (error instanceof EntradaRechazada) {
     if (error.errores.some((e) => e.campo === 'nombre')) return { ...SIN_ERRORES, nombre: MENSAJE_NOMBRE_VACIO }
+    if (error.errores.some((e) => e.campo === 'duracion_minutos' && e.codigo === 'RN-AG-01')) {
+      return { ...SIN_ERRORES, duracion: MENSAJE_DURACION_INVALIDA }
+    }
     return { ...SIN_ERRORES, aviso: MENSAJE_REVISAR_DATOS }
   }
   return { ...SIN_ERRORES, aviso: MENSAJE_SIN_CONEXION }

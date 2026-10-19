@@ -13,6 +13,7 @@ import {
 } from '../../test/servidorFalso'
 
 const AVISO_SESION_TERMINADA = 'Tu sesión terminó. Iniciá sesión de nuevo.'
+const MENSAJE_RN_AG_01 = 'La duración debe ser mayor que 0 y múltiplo de 5 minutos (RN-AG-01).'
 const MENSAJE_DE_CONEXION = 'No se pudo conectar con el servidor. Probá de nuevo en unos minutos.'
 
 function LugarActual() {
@@ -316,5 +317,75 @@ describe('PaginaPrestaciones: alta', () => {
     expect((await screen.findByRole('status')).textContent).toBe(AVISO_SESION_TERMINADA)
     expect(lugar()).toBe('/ingresar')
     expect(servidor.catalogoActual()).toHaveLength(5)
+  })
+})
+
+describe('PaginaPrestaciones: duración inválida', () => {
+  beforeEach(() => {
+    sessionStorage.clear()
+  })
+  afterEach(() => {
+    cleanup()
+  })
+
+  it('US-001 CA-2: duración 47 muestra RN-AG-01 debajo del campo y no agrega filas', async () => {
+    const servidor = crearServidorFalso({ prestaciones: PRESTACIONES_DE_PARTIDA })
+    const usuario = await abrirPanel(servidor, '/panel/prestaciones')
+    await screen.findByRole('table')
+
+    await completarAlta(usuario, { nombre: 'Blanqueamiento', duracion: '47' })
+    await usuario.click(screen.getByRole('button', { name: 'Guardar' }))
+
+    const mensaje = await screen.findByText(MENSAJE_RN_AG_01)
+    const duracion = screen.getByLabelText<HTMLInputElement>('Duración en minutos')
+    expect(servidor.cuerpos('POST', '/api/prestaciones')[0]?.duracion_minutos).toBe(47)
+    expect(duracion.getAttribute('aria-invalid')).toBe('true')
+    expect(duracion.getAttribute('aria-describedby')).toContain(mensaje.id)
+    expect(duracion.value).toBe('47')
+    expect(filasDeDatos()).toHaveLength(5)
+  })
+
+  it('US-001 CA-2: duración 45 se acepta sin mensajes', async () => {
+    const servidor = crearServidorFalso({ prestaciones: PRESTACIONES_DE_PARTIDA })
+    const usuario = await abrirPanel(servidor, '/panel/prestaciones')
+    await screen.findByRole('table')
+
+    await completarAlta(usuario, { nombre: 'Blanqueamiento', duracion: '45' })
+    await usuario.click(screen.getByRole('button', { name: 'Guardar' }))
+
+    await waitFor(() => expect(filasDeDatos()).toHaveLength(6))
+    expect(within(filaDe('Blanqueamiento')).getByText('45 min')).toBeDefined()
+    expect(screen.queryByText(MENSAJE_RN_AG_01)).toBeNull()
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
+
+  it('US-001 CA-2: duración 0 y -5 llegan a la API y muestran RN-AG-01', async () => {
+    const servidor = crearServidorFalso({ prestaciones: PRESTACIONES_DE_PARTIDA })
+    const usuario = await abrirPanel(servidor, '/panel/prestaciones')
+    await screen.findByRole('table')
+    await completarAlta(usuario, { nombre: 'Blanqueamiento', duracion: '0' })
+
+    await usuario.click(screen.getByRole('button', { name: 'Guardar' }))
+    await screen.findByText(MENSAJE_RN_AG_01)
+    await usuario.clear(screen.getByLabelText('Duración en minutos'))
+    await usuario.type(screen.getByLabelText('Duración en minutos'), '-5')
+    await usuario.click(screen.getByRole('button', { name: 'Guardar' }))
+
+    await waitFor(() => expect(servidor.llamadas('POST', '/api/prestaciones')).toBe(2))
+    expect(servidor.cuerpos('POST', '/api/prestaciones').map((c) => c.duracion_minutos)).toEqual([0, -5])
+    expect(await screen.findByText(MENSAJE_RN_AG_01)).toBeDefined()
+    expect(filasDeDatos()).toHaveLength(5)
+  })
+
+  it('US-001 CA-2: con duración 47 y nombre repetido se ve solo RN-AG-01', async () => {
+    const servidor = crearServidorFalso({ prestaciones: PRESTACIONES_DE_PARTIDA })
+    const usuario = await abrirPanel(servidor, '/panel/prestaciones')
+    await screen.findByRole('table')
+
+    await completarAlta(usuario, { nombre: 'Limpieza', duracion: '47' })
+    await usuario.click(screen.getByRole('button', { name: 'Guardar' }))
+
+    expect(await screen.findByText(MENSAJE_RN_AG_01)).toBeDefined()
+    expect(screen.queryByText('Ya existe una prestación con ese nombre (RN-AG-15).')).toBeNull()
   })
 })
