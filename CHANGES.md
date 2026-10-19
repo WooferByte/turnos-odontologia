@@ -427,7 +427,7 @@ Primer change: `/opsx:propose crear-turno-sin-solapamientos`.
   - `knowledge-base/02_descripcion_general.md` §«API REST (resumen)», filas Auth y Usuarios
 
 ### [C-11] `panel-de-prestaciones`
-- **Estado**: `[ ]` pendiente · **Orden**: 3 · **Gobernanza**: BAJO
+- **Estado**: `[~]` en curso (propuesto) · **Orden**: 3 · **Gobernanza**: BAJO
 - **Objetivo** (US-001): dar a la gestión de prestaciones su pantalla del panel (parte de interfaz; la API es de C-04).
 - **Alcance — dentro**: listado, alta, edición y desactivación de prestaciones contra la API de C-04; selector de color; muestra el error de dominio RN-AG-01; solo el rol `odontologo` edita, los demás leen.
 - **Alcance — fuera**: cambios de API o de esquema; pantalla de sillones (US-004 no tiene interfaz).
