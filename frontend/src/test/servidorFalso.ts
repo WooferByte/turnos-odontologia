@@ -28,6 +28,10 @@ export interface ServidorFalso {
   quitarPermiso(email: string): void
   /** Las rutas del panel responden 401 RN-AU-03 aunque el access sea válido (para probar que no hay bucles). */
   rechazarAccessSiempre(): void
+  /** Las peticiones a esa ruta quedan esperando hasta que se llame a la función devuelta. */
+  retener(ruta: string): () => void
+  /** Emite una sesión válida sin pasar por el login (por ejemplo, para simular un refresh ya guardado). */
+  emitirSesion(email?: string): { access: string; refresh: string }
 }
 
 function problema(estado: number, tipo: string, titulo: string, detalle: string, codigos: string[]): Response {
@@ -64,6 +68,7 @@ export function crearServidorFalso(): ServidorFalso {
   const refrescos = new Map<string, string>()
   const sinPermiso = new Set<string>()
   let accessSiempreRechazado = false
+  const retenciones = new Map<string, Promise<void>>()
 
   function emitirAccess(email: string): string {
     secuencia += 1
@@ -129,6 +134,11 @@ export function crearServidorFalso(): ServidorFalso {
 
   const falso: Fetch = (entrada, init) => {
     contadores.set(entrada, (contadores.get(entrada) ?? 0) + 1)
+    const retencion = retenciones.get(entrada)
+    return retencion === undefined ? despachar(entrada, init) : retencion.then(() => despachar(entrada, init))
+  }
+
+  function despachar(entrada: string, init: RequestInit | undefined): Promise<Response> {
     if (caido) return Promise.reject(new TypeError('Failed to fetch'))
     if (estado5xx !== null) {
       return Promise.resolve(problema(estado5xx, '/errores/interno', 'Error del servidor', 'Error.', []))
@@ -161,6 +171,22 @@ export function crearServidorFalso(): ServidorFalso {
     },
     rechazarAccessSiempre: () => {
       accessSiempreRechazado = true
+    },
+    retener: (ruta) => {
+      let liberar: () => void = () => undefined
+      retenciones.set(
+        ruta,
+        new Promise<void>((resolver) => {
+          liberar = resolver
+        }),
+      )
+      return liberar
+    },
+    emitirSesion: (email = EMAIL_ACTIVA) => {
+      const access = emitirAccess(email)
+      const refresh = `refresco-${secuencia}`
+      refrescos.set(refresh, email)
+      return { access, refresh }
     },
   }
 }
