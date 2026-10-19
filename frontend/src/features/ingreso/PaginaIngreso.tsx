@@ -1,7 +1,7 @@
 // Pantalla de inicio de sesión (design F9). Los mensajes son fijos de la interfaz: no se muestra el
 // `detail` de la API, y los dos rechazos del login (RN-AU-04) se ven idénticos.
 import { useState, type FormEvent } from 'react'
-import { Navigate } from 'react-router'
+import { Navigate, useLocation } from 'react-router'
 import { CredencialesRechazadas, EntradaRechazada } from '../../shared/api/errores'
 import { useSesionDelPanel } from '../../shared/api/ProveedorDeSesion'
 
@@ -19,14 +19,28 @@ function problemaDe(error: unknown): Problema {
   return 'conexion'
 }
 
+const MENSAJE_SESION_TERMINADA = 'Tu sesión terminó. Iniciá sesión de nuevo.'
+const RUTA_DEL_PANEL = /^\/panel(\/|\?|$)/
+
+/** Solo se vuelve a una ruta del panel: nunca a una dirección arbitraria (F6). */
+function destinoPedido(estadoDeNavegacion: unknown): string {
+  if (typeof estadoDeNavegacion === 'object' && estadoDeNavegacion !== null && 'desde' in estadoDeNavegacion) {
+    const { desde } = estadoDeNavegacion
+    if (typeof desde === 'string' && RUTA_DEL_PANEL.test(desde)) return desde
+  }
+  return '/panel'
+}
+
 export function PaginaIngreso() {
-  const { estado, iniciarSesion } = useSesionDelPanel()
+  const { estado, aviso, iniciarSesion } = useSesionDelPanel()
+  const ubicacion = useLocation()
   const [email, setEmail] = useState('')
   const [contrasena, setContrasena] = useState('')
   const [enviando, setEnviando] = useState(false)
   const [problema, setProblema] = useState<Problema | null>(null)
 
-  if (estado === 'con-sesion') return <Navigate to="/panel" replace />
+  if (estado === 'con-sesion') return <Navigate to={destinoPedido(ubicacion.state)} replace />
+  const problemaVisible = problema ?? (aviso === 'sin-conexion' ? 'conexion' : null)
 
   async function enviar(evento: FormEvent<HTMLFormElement>): Promise<void> {
     evento.preventDefault()
@@ -66,7 +80,8 @@ export function PaginaIngreso() {
           value={contrasena}
           onChange={(evento) => setContrasena(evento.target.value)}
         />
-        {problema === null ? null : <p role="alert">{MENSAJES[problema]}</p>}
+        {aviso === 'sesion-terminada' ? <p role="status">{MENSAJE_SESION_TERMINADA}</p> : null}
+        {problemaVisible === null ? null : <p role="alert">{MENSAJES[problemaVisible]}</p>}
         <button type="submit" disabled={enviando}>
           {enviando ? 'Ingresando…' : 'Ingresar'}
         </button>

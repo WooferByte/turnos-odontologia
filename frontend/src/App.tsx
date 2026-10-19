@@ -2,6 +2,7 @@
 import { Navigate, Route, Routes } from 'react-router'
 import { PaginaIngreso } from './features/ingreso/PaginaIngreso'
 import { PanelBase } from './pages/PanelBase'
+import { RutaProtegida } from './pages/RutaProtegida'
 import type { Fetch } from './shared/api/clienteHttp'
 import { ProveedorDeSesion } from './shared/api/ProveedorDeSesion'
 
@@ -14,7 +15,11 @@ export function App({ fetch }: Propiedades) {
     <ProveedorDeSesion {...(fetch === undefined ? {} : { fetch })}>
       <Routes>
         <Route path="/ingresar" element={<PaginaIngreso />} />
-        <Route path="/panel/*" element={<PanelBase />} />
+        <Route path="/panel/*" element={
+            <RutaProtegida>
+              <PanelBase />
+            </RutaProtegida>
+          } />
         <Route path="*" element={<Navigate to="/panel" replace />} />
       </Routes>
     </ProveedorDeSesion>

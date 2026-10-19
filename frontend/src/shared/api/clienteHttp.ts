@@ -17,6 +17,8 @@ export interface ClienteHttp {
    * un 403 (u otro 4xx) se devuelve al llamador sin tocar la sesión.
    */
   pedidoDelPanel(ruta: string, opciones?: RequestInit): Promise<Response>
+  /** Renueva el access con el refresh guardado (arranque del panel). Comparte la renovación en curso. */
+  renovarSesion(): Promise<void>
 }
 
 type Contexto = 'login' | 'refresh' | 'panel'
@@ -142,5 +144,5 @@ export function crearClienteHttp(opciones: OpcionesDelCliente): ClienteHttp {
     return repetida
   }
 
-  return { iniciarSesion, pedidoDelPanel }
+  return { iniciarSesion, pedidoDelPanel, renovarSesion: renovarUnaVez }
 }
