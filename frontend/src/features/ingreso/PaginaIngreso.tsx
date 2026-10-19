@@ -39,6 +39,7 @@ export function PaginaIngreso() {
   const [enviando, setEnviando] = useState(false)
   const [problema, setProblema] = useState<Problema | null>(null)
 
+  if (estado === 'verificando') return <p>Cargando…</p>
   if (estado === 'con-sesion') return <Navigate to={destinoPedido(ubicacion.state)} replace />
   const problemaVisible = problema ?? (aviso === 'sin-conexion' ? 'conexion' : null)
 
