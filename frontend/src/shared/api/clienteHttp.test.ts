@@ -6,7 +6,7 @@ import {
   crearServidorFalso,
 } from '../../test/servidorFalso'
 import { crearClienteHttp } from './clienteHttp'
-import { CredencialesRechazadas, EntradaRechazada, SinConexion } from './errores'
+import { CredencialesRechazadas, EntradaRechazada, SesionTerminada, SinConexion } from './errores'
 import { CLAVE_DE_SESION, crearSesion } from './sesion'
 
 describe('clienteHttp: iniciarSesion', () => {
@@ -144,5 +144,65 @@ describe('clienteHttp: iniciarSesion, bordes', () => {
 
     expect(accessGuardado).not.toBeNull()
     expect(sesion.refresh()).toBeNull()
+  })
+})
+
+describe('clienteHttp: pedidoDelPanel', () => {
+  beforeEach(() => {
+    sessionStorage.clear()
+  })
+
+  async function conSesion() {
+    const servidor = crearServidorFalso()
+    const sesion = crearSesion()
+    const cliente = crearClienteHttp({ fetch: servidor.fetch, sesion })
+    await cliente.iniciarSesion(EMAIL_ACTIVA, CONTRASENA_FICTICIA)
+    return { servidor, sesion, cliente }
+  }
+
+  it('US-092 CA-1: pedidoDelPanel manda el Bearer del access', async () => {
+    const { servidor, sesion } = await conSesion()
+    let cabeceraEnviada: unknown = null
+    const espia = crearClienteHttp({
+      sesion,
+      fetch: (entrada, init) => {
+        cabeceraEnviada = init?.headers
+        return servidor.fetch(entrada, init)
+      },
+    })
+
+    const respuesta = await espia.pedidoDelPanel('/api/prestaciones')
+
+    expect(respuesta.status).toBe(200)
+    expect(cabeceraEnviada).toMatchObject({ Authorization: `Bearer ${sesion.access()}` })
+    expect(servidor.peticiones('/api/auth/refresh')).toBe(0)
+  })
+
+  it('US-092 CA-1: access vencido se renueva una vez y repite la petición', async () => {
+    const { servidor, sesion, cliente } = await conSesion()
+    const accessViejo = sesion.access()
+    servidor.vencerAccess()
+
+    const respuesta = await cliente.pedidoDelPanel('/api/prestaciones')
+
+    expect(respuesta.status).toBe(200)
+    expect(servidor.peticiones('/api/auth/refresh')).toBe(1)
+    expect(servidor.peticiones('/api/prestaciones')).toBe(2)
+    expect(sesion.access()).not.toBe(accessViejo)
+    expect(sesion.access()).not.toBeNull()
+  })
+
+  it('US-092 CA-1: refresh rechazado borra la sesión y levanta SesionTerminada', async () => {
+    const { servidor, sesion, cliente } = await conSesion()
+    servidor.vencerAccess()
+    servidor.invalidarRefresh()
+
+    const error = await cliente.pedidoDelPanel('/api/prestaciones').catch((e: unknown) => e)
+
+    expect(error).toBeInstanceOf(SesionTerminada)
+    expect((error as SesionTerminada).codigo).toBe('RN-AU-03')
+    expect(sesion.access()).toBeNull()
+    expect(sesion.refresh()).toBeNull()
+    expect(sessionStorage.getItem(CLAVE_DE_SESION)).toBeNull()
   })
 })

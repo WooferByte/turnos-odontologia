@@ -9,6 +9,8 @@ export const EMAIL_INACTIVA = 'recepcion@consultorio-demo.test'
 export const CONTRASENA_FICTICIA = 'clave-ficticia-de-prueba'
 
 const TEXTO_CREDENCIALES = 'El email o la contraseña no son correctos.'
+const TEXTO_SESION = 'La sesión no es válida o venció. Iniciá sesión de nuevo.'
+const TEXTO_PERMISO = 'No tenés permiso para esta acción.'
 
 export interface ServidorFalso {
   fetch: Fetch
@@ -18,6 +20,12 @@ export interface ServidorFalso {
   caerse(): void
   /** A partir de ahora toda petición responde con ese estado 5xx. */
   responderConError(estado: number): void
+  /** Todos los access emitidos hasta ahora pasan a vencidos (401 RN-AU-03); el refresh sigue válido. */
+  vencerAccess(): void
+  /** Todos los refresh emitidos hasta ahora pasan a inválidos (el refresh responde 401 RN-AU-03). */
+  invalidarRefresh(): void
+  /** El usuario deja de tener permiso en las rutas del panel (403 RN-AU-05). */
+  quitarPermiso(email: string): void
 }
 
 function problema(estado: number, tipo: string, titulo: string, detalle: string, codigos: string[]): Response {
@@ -50,6 +58,47 @@ export function crearServidorFalso(): ServidorFalso {
   let caido = false
   let estado5xx: number | null = null
   let secuencia = 0
+  const accesos = new Map<string, string>()
+  const refrescos = new Map<string, string>()
+  const sinPermiso = new Set<string>()
+
+  function emitirAccess(email: string): string {
+    secuencia += 1
+    const token = `acceso-${secuencia}`
+    accesos.set(token, email)
+    return token
+  }
+
+  function sesionInvalida(): Response {
+    return problema(401, '/errores/sesion-invalida', 'Sesión inválida', TEXTO_SESION, ['RN-AU-03'])
+  }
+
+  function bearer(init: RequestInit | undefined): string | null {
+    const cabeceras = init?.headers
+    const valor = cabeceras !== undefined && !Array.isArray(cabeceras) && !(cabeceras instanceof Headers)
+      ? cabeceras['Authorization']
+      : undefined
+    return typeof valor === 'string' && valor.startsWith('Bearer ') ? valor.slice('Bearer '.length) : null
+  }
+
+  function prestaciones(init: RequestInit | undefined): Response {
+    const token = bearer(init)
+    const email = token === null ? undefined : accesos.get(token)
+    if (email === undefined) return sesionInvalida()
+    if (sinPermiso.has(email)) {
+      return problema(403, '/errores/permiso-insuficiente', 'Permiso insuficiente', TEXTO_PERMISO, ['RN-AU-05'])
+    }
+    return json(200, [])
+  }
+
+  async function refrescar(init: RequestInit | undefined): Promise<Response> {
+    // Una vuelta del bucle de eventos: da tiempo a que lleguen varios 401 antes de contestar.
+    await new Promise<void>((resolver) => setTimeout(resolver, 0))
+    const token = leerCuerpo(init)?.refresh_token
+    const email = typeof token === 'string' ? refrescos.get(token) : undefined
+    if (email === undefined) return sesionInvalida()
+    return json(200, { access_token: emitirAccess(email), token_type: 'bearer', expires_in: 900 })
+  }
 
   function login(init: RequestInit | undefined): Response {
     const cuerpo = leerCuerpo(init)
@@ -64,10 +113,12 @@ export function crearServidorFalso(): ServidorFalso {
         'RN-AU-04',
       ])
     }
-    secuencia += 1
+    const accessToken = emitirAccess(EMAIL_ACTIVA)
+    const refreshToken = `refresco-${secuencia}`
+    refrescos.set(refreshToken, EMAIL_ACTIVA)
     return json(200, {
-      access_token: `acceso-${secuencia}`,
-      refresh_token: `refresco-${secuencia}`,
+      access_token: accessToken,
+      refresh_token: refreshToken,
       token_type: 'bearer',
       expires_in: 900,
     })
@@ -80,6 +131,10 @@ export function crearServidorFalso(): ServidorFalso {
       return Promise.resolve(problema(estado5xx, '/errores/interno', 'Error del servidor', 'Error.', []))
     }
     if (entrada === '/api/auth/login' && init?.method === 'POST') return Promise.resolve(login(init))
+    if (entrada === '/api/auth/refresh' && init?.method === 'POST') return refrescar(init)
+    if (entrada === '/api/prestaciones' && (init?.method ?? 'GET') === 'GET') {
+      return Promise.resolve(prestaciones(init))
+    }
     return Promise.resolve(problema(404, '/errores/recurso-no-encontrado', 'Recurso no encontrado', 'No existe.', []))
   }
 
@@ -91,6 +146,15 @@ export function crearServidorFalso(): ServidorFalso {
     },
     responderConError: (estado) => {
       estado5xx = estado
+    },
+    vencerAccess: () => {
+      accesos.clear()
+    },
+    invalidarRefresh: () => {
+      refrescos.clear()
+    },
+    quitarPermiso: (email) => {
+      sinPermiso.add(email)
     },
   }
 }
