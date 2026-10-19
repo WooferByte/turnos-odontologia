@@ -1,5 +1,5 @@
 // Servidor falso de la API del panel (design F13). Implementación alternativa escrita a mano de `fetch`,
-// inyectada por parámetro: no es vi.mock. Las respuestas citan los contratos vigentes de
+// inyectada por parámetro: no es un mock de módulos. Las respuestas citan los contratos vigentes de
 // `sesion-del-panel` (login, refresh) y `proteccion-del-panel` (rutas del panel). Todo es ficticio (RN-PR-01).
 
 export type Fetch = (entrada: string, init?: RequestInit) => Promise<Response>
