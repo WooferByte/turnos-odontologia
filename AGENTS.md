@@ -21,7 +21,7 @@ Las versiones exactas **no están decididas a propósito**: el criterio es versi
 | Base de datos de tests | SQLite en memoria, `sqlite+pysqlite:///:memory:` con `StaticPool` (DD-03, DD-12); sin `aiosqlite` | — |
 | Asincronía | Redis: tarea periódica que persiste vencimientos y dispara efectos (RN-GL-05); no interviene en el primer change | No fijada (pin en el `design.md` del change que la use) |
 | Contenedores | Docker y Docker Compose; PostgreSQL se publica en `127.0.0.1:5434` y la API en `127.0.0.1:8000` (D153) | Imágenes fijadas con etiqueta y digest (D144) |
-| Frontend | React + TypeScript + Vite (no interviene en el primer change; empieza en la fase 3) | No fijada |
+| Frontend | React 19.3.0, React Router 7.18.4, TypeScript 6.0.3, Vite 8.3.4, Node 24 LTS (desde C-08; D223, D224); pruebas con Vitest 5.0.3 y jsdom 30.1.2 | Pins exactos en `frontend/package.json` con su `package-lock.json` (D217) |
 | Tests backend | pytest + cliente de pruebas de FastAPI (D84) | — |
 
 Detalle completo: [knowledge-base/02_descripcion_general.md](knowledge-base/02_descripcion_general.md)
@@ -99,7 +99,7 @@ El plan de implementación completo está en [CHANGES.md](CHANGES.md). Resumen:
 
 5. **NUNCA** sesiones asíncronas, `aiosqlite` ni `pytest-asyncio` → SQLAlchemy 2.x sincrónico, estilo 2.x, en todos los changes (DD-12, D119).
 6. **NUNCA** mocks de sesión ni de repositorio → SQLite en memoria (`StaticPool`, engine por test); la suite por defecto corre sin Docker, PostgreSQL ni Redis, solo con el README.
-7. **NUNCA** inventar versiones ni repartir dependencias → un archivo único con versiones exactas, fijado en el design de C-01 y ampliado en el design de cada change (D116).
+7. **NUNCA** inventar versiones ni repartir dependencias → un archivo único por subproyecto con versiones exactas: `backend/pyproject.toml` para la API y `frontend/package.json` con su `package-lock.json` para la interfaz (D217, amplía D137); se fijan en el design de cada change que las agregue (D116).
 8. **NUNCA** usar `any` en TypeScript → `tsconfig` estricto y componentes en PascalCase. Aplica desde la fase 3 (cuando empieza la interfaz). Propuesta del agente aceptada por el autor (D120).
 
 ### Proceso

@@ -18,12 +18,15 @@ Stack definido por el autor en el Discovery (restricción, punto 9). Las version
 | Base de datos de tests | SQLite en memoria, `sqlite+pysqlite:///:memory:` con `StaticPool` (DD-03, DD-12); sin `aiosqlite` | — |
 | Asincronía | Redis: tarea periódica que persiste los vencimientos (señas y ofertas) y dispara los efectos (recordatorios, ofertas de lista de espera); el vencimiento se evalúa al consultar, por lo que los tests no la necesitan (RN-GL-05, D80). No interviene en el primer change | No fijada (pin en el `design.md` del change que la use) |
 | Contenedores | Docker y Docker Compose | Docker Compose v2 (servicios `postgres` y `api`; imagen de la API `python:3.13.15-slim-bookworm` con digest; D143, D151) |
-| Frontend | React + TypeScript + Vite (no interviene en el primer change) | No fijada |
+| Frontend | React 19.3.0, React Router 7.18.4, TypeScript 6.0.3, Vite 8.3.4 (desde C-08; D224), Node 24 LTS (D223) | Pins exactos en `frontend/package.json` con su `package-lock.json` (D217) |
+| Tests frontend | Vitest 5.0.3 y jsdom 30.1.2 con Testing Library (React 16.3.3); servidor falso de la API inyectado, sin `vi.mock` (D222, desde C-08) | — |
 | Tests backend | pytest + cliente de pruebas de FastAPI (**confirmado por el autor 2026-10-05, D84**; el primer change expone `POST /turnos`, por lo que también se prueba la API); todas las dependencias de test declaradas en el archivo único de dependencias | — |
 
 > **Alcance del change de la consigna.** El change que se implementa en la Etapa 6 solo necesita el **backend**: dominio, caso de uso y el endpoint `POST /turnos` (FastAPI), **sin interfaz gráfica y sin autenticación** (límite conocido, DD-14), para demostrarlo desde Swagger. El autor implementará el proyecto completo antes de fin de año, change por change. Sus tests deben correr **sin PostgreSQL ni Redis** (SQLite en memoria; los vencimientos se evalúan al consultar y la lógica de la tarea periódica se prueba llamándola directamente, sin Redis), para que el repositorio se pueda clonar y testear siguiendo solo el README (restricción del Discovery). Ver DD-03 (confirmada por el autor el 2026-10-02: el README debe decir explícitamente que los tests corren con SQLite en memoria) y R-08 en `09_decisiones_y_supuestos.md`.
 
 ## Arquitectura general
+
+Desde C-08 la SPA llama a la API por el mismo origen, con el prefijo `/api` (proxy en Vite y en nginx; D220): no hay CORS.
 
 ```
  Paciente (celular)            Odontólogo / Recepcionista

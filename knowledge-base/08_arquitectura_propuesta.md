@@ -49,11 +49,20 @@ proyecto/
 │   ├── pyproject.toml           # archivo único: dependencias y configuración de pytest (D137)
 │   ├── alembic.ini              # configuración de Alembic, sin URL ni credenciales (D147)
 │   └── Dockerfile               # dos etapas (D151)
-├── frontend/
+├── frontend/                # desde C-08 (F4 del design de ese change)
+│   ├── package.json             # archivo único del frontend, versiones exactas (D217)
+│   ├── package-lock.json        # generado con npm install --before=2026-10-12
+│   ├── .npmrc                   # save-exact=true, engine-strict=true
+│   ├── tsconfig.json            # strict, noEmit
+│   ├── vite.config.ts           # plugin de React, proxy /api, configuración de Vitest
+│   ├── index.html
+│   ├── Dockerfile, nginx.conf, .dockerignore
 │   └── src/
-│       ├── features/            # agenda, turnos, reserva-publica, ficha...
-│       ├── shared/
-│       └── pages/
+│       ├── main.tsx, App.tsx    # rutas del panel (ingreso y panel base)
+│       ├── shared/api/          # clienteHttp, sesion, errores
+│       ├── features/ingreso/    # pantalla de inicio de sesión
+│       ├── pages/               # panel base y rutas protegidas
+│       └── test/                # servidor falso de la API para las pruebas
 ├── docker-compose.yml           # api, worker, postgres, redis, frontend (C-02 crea api y postgres, D151)
 ├── docker/postgres-init/        # 01_base_de_tests.sql: crea `turnos_test` (D149)
 ├── .env.example                 # solo valores de prueba
@@ -64,7 +73,7 @@ proyecto/
 
 **Migraciones:** Alembic **no se usa en el primer change**; los tests crean el esquema con `create_all`. **Alembic se usa a partir del change de infraestructura con PostgreSQL** (decisión del autor 2026-10-03, DD-15), que va en el **orden 2, justo después del primer change** (decisión del autor 2026-10-05, D105). Las columnas que el primer change no crea se agregan con migraciones (`04_modelo_de_datos.md`). **Aplicado en C-02 (2026-10-13):** las migraciones viven en `backend/app/infrastructure/db/migraciones/` (revisiones `0001_esquema_inicial` y `0002_exclusion_de_solapamientos`), son solo para PostgreSQL y la suite por defecto sigue con `create_all` (D145); la configuración está en `backend/alembic.ini` (D147); los nombres de claves y restricciones `UNIQUE` siguen una convención fija (D146).
 
-**Interfaz (decisión del autor 2026-10-05, D106):** las historias de orden 1 y 2 y el change de infraestructura con PostgreSQL se implementan y se prueban como API (tests de dominio y de API; sin interfaz gráfica). El `frontend/` empieza en el **orden 3**, con el inicio de sesión (Épica 10); la interfaz de las historias de orden 1 y 2 se construye a partir de ahí.
+**Interfaz (decisión del autor 2026-10-05, D106):** las historias de orden 1 y 2 y el change de infraestructura con PostgreSQL se implementan y se prueban como API (tests de dominio y de API; sin interfaz gráfica). El `frontend/` empieza en el **orden 3**, con el inicio de sesión (Épica 10); la interfaz de las historias de orden 1 y 2 se construye a partir de ahí. **Mismo origen (decisión del autor 2026-10-19, D220):** desde C-08 la interfaz llama a la API con el prefijo `/api` (proxy de Vite en desarrollo y de nginx en Compose), sin CORS ni cambios de API.
 
 ## Regla de capas
 
@@ -240,7 +249,7 @@ Decisión del autor 2026-10-05 (D80; RN-GL-05):
 | `JWT_ACCESS_MINUTES` | Vida del access token | `15` | N |
 | `JWT_REFRESH_DAYS` | Vida del refresh token | `7` | N |
 | `APP_TIMEZONE` | Zona por defecto con la que el seed carga `Consultorio.zona_horaria`; **la fuente de verdad es la columna** (RN-AG-10d). **No se lee todavía**: el seed tiene escrita `America/Argentina/Buenos_Aires` (D150) | `America/Argentina/Buenos_Aires` | N |
-| `PUBLIC_BASE_URL` | Base de los links públicos | `http://localhost:5173` | N |
+| `PUBLIC_BASE_URL` | Base de los links públicos | `http://127.0.0.1:5173` | N |
 | `WHATSAPP_MODE` | Canal de mensajería (v1: solo `wa_me`; `cloud_api` en Fase 2) | `wa_me` | N |
 | `MP_ACCESS_TOKEN` | Credencial **de prueba** de Mercado Pago | `TEST-...` | Y |
 | `MP_WEBHOOK_SECRET` | Validación de notificaciones | `<secret>` | Y |
@@ -281,6 +290,7 @@ Los nombres son **propuestos** y se toman como requisito (confirmado por el auto
 Política (decisión del autor 2026-10-03; **no se inventan números de versión**; precisada el 2026-10-07, D133 y D137):
 - **Confirmadas por el autor:** Python 3.11+; SQLAlchemy de la **serie 2.0.x** (no la 2.1: «2.x» en esta KB significa la línea 2.0, con su API declarativa tipada); FastAPI de la **serie 0.115.x**; Pydantic, una versión compatible con ese FastAPI. Las versiones exactas de pytest, Redis, React y Vite **no están decididas**. PostgreSQL quedó fijado en C-02: **17.10** (D143).
 - **Antigüedad mínima de un pin** (D133): **ninguna versión publicada en la semana anterior al día del design**. Si la más nueva de un paquete es tan reciente, se toma la más nueva publicada antes, dentro de la serie permitida. Motivo: una versión de pocos días no tiene recorrido, y el design no instala nada para probarla. Vale para el design del primer change y para el de cada change que agregue dependencias.
+- **Un archivo de dependencias por subproyecto** (decisión del autor 2026-10-19, D217; amplía D137): la API sigue en `backend/pyproject.toml`; el frontend tiene `frontend/package.json` con versiones exactas y su `package-lock.json`, generado con `npm install --before=2026-10-12` e instalado con `npm ci`. Versiones del frontend fijadas en C-08: Node 24 LTS (24.21.0 en la imagen de construcción; D223), React 19.3.0, React Router 7.18.4 y TypeScript 6.0.3 (D224), Vite 8.3.4, Vitest 5.0.3 y jsdom 30.1.2 (Propuesta, F3 del design). Imágenes: `node:24.21.0-bookworm-slim` y `nginxinc/nginx-unprivileged:1.30.4-alpine` (D144, D221).
 - **Un único archivo de dependencias: `backend/pyproject.toml`** (decisión del autor 2026-10-07, D137; D116 dejaba la elección al design), con **versiones exactas** (pins), sin duplicar la lista en otro archivo (criterio fijado por el autor el 2026-10-05, D72). Ahí van las dependencias de ejecución, las de test y la **configuración de pytest**: no hay `requirements.txt` ni `pytest.ini`. **Sin empaquetado**: no se agrega un backend de construcción ni más de lo necesario para instalar y correr los tests. **Propuesta** (se fija en el design del primer change): cómo se declaran las dependencias dentro del archivo y el comando exacto de instalación.
 - Los pins se **fijan en el `design.md` del primer change**, con la versión exacta, su fecha de publicación, la fuente y la fecha de consulta, y la compatibilidad entre ellos se comprueba con los metadatos de los paquetes, no se supone; lo que no se pueda obtener queda como **A verificar en el change** (verificar antes de crear el archivo de dependencias). Se **verifican en un clon limpio** (crear entorno, instalar solo desde ese archivo, correr los tests). **Los changes siguientes (incluido el de infraestructura con PostgreSQL) agregan sus dependencias a ese mismo archivo, con versión exacta**, cada uno en su design (D116), con el mismo criterio de antigüedad.
 - **Toda dependencia de test está declarada** en ese archivo (pytest y cualquier plugin que use la configuración). Ninguna dependencia queda implícita ni instalada solo en la máquina del autor.
