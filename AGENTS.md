@@ -63,8 +63,31 @@ Fuente de verdad: [.atl/skill-registry.md](.atl/skill-registry.md). Cargá la sk
 | **Acceso / autenticación** | JWT, bcrypt, roles y protección del panel | `auth-implementation-patterns` | Fase 3 (el primer change no lleva auth, DD-14) |
 | **Frontend** | React + TypeScript + Vite | `vercel-react-best-practices` | Fase 3 (la interfaz empieza con el inicio de sesión) |
 | **Orquestación** | OPSX / fundación del proyecto | `openspec-propose`, `openspec-apply-change`, `openspec-archive-change`, `openspec-explore`, `openspec-sync-specs`, `openspec-update-change`, `active-orchestrator`, `kb-creator`, `roadmap-generator`, `agent-instruction`, `skill-registry`, `find-skill`, `skill-creator` | Siempre |
+| **Revisión de changes** | Revisar la spec y las tasks de un change contra la KB (solo informa, no edita) | `revisor-de-escenarios` | Desde la fase 3 (C-11 en adelante); aplica a todo change con `spec.md` y `tasks.md` |
 
-Las seis skills `openspec-*` viven en `.claude/skills/` del proyecto (es la única copia); son las que usan los comandos `/opsx:*`. El resto está en `~/.claude/skills/`.
+Las seis skills `openspec-*` y `revisor-de-escenarios` viven en `.claude/skills/` del proyecto (es la única copia, versionada en el repo); las `openspec-*` son las que usan los comandos `/opsx:*`. El resto está en `~/.claude/skills/`.
+
+### `revisor-de-escenarios` (skill propia)
+
+- **Qué es**: skill propia del proyecto, creada con `skill-creator` (ver [docs/skills-mcp/investigacion.md](docs/skills-mcp/investigacion.md)). Revisa los escenarios (`specs/*/spec.md`) y las tasks de un change contra la KB, `CHANGES.md` y `openspec/config.yaml`.
+- **Quién la usa**: el rol de orquestación y revisión de changes.
+- **Cuándo**: después de `/opsx:propose` o `/opsx:update` y **antes** de aprobar el plan o de arrancar `/opsx:apply`; también cuando se pregunte si un change «está listo para implementar».
+- **Qué necesita**: el nombre del change (`openspec/changes/<nombre>/`), más la KB (`knowledge-base/`, sobre todo `05` y `06`), `CHANGES.md` y `openspec/config.yaml`.
+- **Cómo revisar el resultado**: el resultado es un **informe**, no una edición: la skill no toca spec, tasks ni design. Cada hallazgo cita su fuente (archivo y sección, código RN, decisión D o regla de `config.yaml`) y se clasifica como bloqueante, a corregir o sugerencia. Las correcciones las decide el autor (o las hace `/opsx:update` con el informe a la vista); un hallazgo sin fuente es una opinión y no manda sobre la KB.
+- **Evidencia**: [docs/skills-mcp/evidencias/](docs/skills-mcp/evidencias/) (evaluación con y sin la skill).
+
+---
+
+## Integraciones MCP
+
+Un servidor MCP **no es una skill**: es una integración externa y no se registra en `.atl/skill-registry.md`. Configuración y pasos en [docs/skills-mcp/mcp-stitch.md](docs/skills-mcp/mcp-stitch.md).
+
+- **Stitch (Google)**, versionado en `.mcp.json` (servidor HTTP remoto).
+  - **Propósito**: dar un diseño visual previo a las pantallas del panel, que el proyecto no tiene.
+  - **Capacidades que se usan**: generar el diseño de una pantalla a partir de un texto y consultar los diseños ya generados. La lista exacta de herramientas se confirma al conectar (ver el documento).
+  - **Cuándo**: en el `/opsx:explore` o el `/opsx:propose` de un change con interfaz (por ejemplo C-11 `panel-de-prestaciones`), para fundamentar el `design.md`.
+  - **Límites**: solo textos y datos ficticios del dominio; nunca datos de pacientes (RN-PR-01) ni secretos. El diseño es una referencia visual: la KB y la spec mandan, y ante un conflicto se sigue la KB. No se usa para modificar código. La API key vive fuera del repo, en la variable de entorno `STITCH_API_KEY`.
+- `context7` (documentación de librerías) y `engram` (memoria) están conectados a nivel global del autor, no versionados en el repo.
 
 > Los compact rules de cada skill los resuelve el orquestador desde `.atl/skill-registry.md` (generado por `skill-registry` y versionado en este repo, con las reglas de cada skill que no aplican al proyecto marcadas como tales). Esta tabla solo mapea skill→rol.
 
@@ -117,9 +140,11 @@ El plan de implementación completo está en [CHANGES.md](CHANGES.md). Resumen:
 1. Leer la KB relevante (knowledge-base/)        → entender el dominio
 2. Identificar el change en CHANGES.md           → respetar dependencias
 3. /opsx:propose <nombre-del-change>             → proposal + design + specs + tasks
-   (ej.: /opsx:propose crear-turno-sin-solapamientos)
-4. Implementar las tasks (cargando skills)       → respetando las reglas duras, TDD estricto
-5. /opsx:archive <nombre-del-change> + marcar [x] en CHANGES.md → cerrar el change
+   (ej.: /opsx:propose crear-turno-sin-solapamientos; si el change tiene interfaz, ver «Integraciones MCP»)
+4. Revisar con `revisor-de-escenarios`           → informe de la spec y las tasks contra la KB;
+   el autor decide las correcciones               (bloqueantes resueltos antes de aprobar el plan)
+5. Implementar las tasks (cargando skills)       → respetando las reglas duras, TDD estricto
+6. /opsx:archive <nombre-del-change> + marcar [x] en CHANGES.md → cerrar el change
 ```
 
 Aplicar TODAS las reglas duras en cada paso. Las reglas duras provienen de la KB: ante un conflicto entre este archivo y `knowledge-base/` (o `openspec/config.yaml`), no elijas en silencio: avisale al autor.

@@ -682,6 +682,12 @@ La migración autogenerada **se revisa a mano** antes de usarla, y cada change q
 - En `/docs`, las respuestas `409` y `422` figuran bajo `application/problem+json` y también bajo `application/json`. La respuesta real sale siempre como `application/problem+json`.
 - Los mensajes de validación de formato que genera Pydantic salen en inglés.
 
+## Integraciones del agente (skill y MCP)
+
+- **Skill propia `revisor-de-escenarios`** ([`.claude/skills/revisor-de-escenarios/`](.claude/skills/revisor-de-escenarios/SKILL.md)): revisa la spec y las tasks de un change contra la KB y entrega un informe, sin editar nada. Se usa después de `/opsx:propose` o `/opsx:update` y antes de aprobar el plan. Evidencias de su evaluación en [`docs/skills-mcp/evidencias/`](docs/skills-mcp/evidencias/).
+- **MCP de Google Stitch** (diseños de pantallas del panel): requisitos, variable `STITCH_API_KEY`, configuración en Windows, comprobación de la conexión y solución de problemas en [`docs/skills-mcp/mcp-stitch.md`](docs/skills-mcp/mcp-stitch.md). La configuración de ejemplo, sin secretos, es `.mcp.json`.
+- Investigación y fuentes de ambas piezas: [`docs/skills-mcp/investigacion.md`](docs/skills-mcp/investigacion.md).
+
 ## Estructura
 
 La consigna muestra `src/` y `tests/` y aclara que los nombres pueden variar. Acá la correspondencia es:

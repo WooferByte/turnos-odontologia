@@ -47,6 +47,8 @@ context: |
   con su `package-lock.json` (versiones exactas, D217), con Node 24 LTS. Su suite por defecto es `npm test` (Vitest con un
   servidor falso de la API inyectado, sin `vi.mock`), que corre sin Docker ni Python. El servicio `frontend` de Compose
   publica en 127.0.0.1:5173 y la interfaz llama a la API por el mismo origen (`/api`).
+  Agente: la skill propia revisor-de-escenarios (.claude/skills/) revisa spec y tasks contra la KB después del propose y antes del apply; solo informa, no edita.
+  El MCP de Stitch (.mcp.json, key en STITCH_API_KEY) da diseños de pantalla como referencia visual en changes con interfaz; la KB y la spec mandan y solo se le envían textos ficticios.
   WhatsApp en la v1 = enlace wa.me (Cloud API en Fase 2).
   Todo rechazo lleva el código RN (p. ej. RN-AG-05, RN-AG-08, RN-GL-04). Hay dos clases (RN-GL-02, D135), precedidas desde C-07 por el control de acceso: 401 sin sesión y 403 con rol insuficiente, antes de la validación (D208).
   VALIDACIÓN DE ENTRADA (referencias inválidas, RN-GL-04; fecha sin zona o con desfase distinto de UTC,
