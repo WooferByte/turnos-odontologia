@@ -205,4 +205,57 @@ describe('clienteHttp: pedidoDelPanel', () => {
     expect(sesion.refresh()).toBeNull()
     expect(sessionStorage.getItem(CLAVE_DE_SESION)).toBeNull()
   })
+
+  it('US-092 CA-1: tres 401 simultáneos comparten una sola renovación', async () => {
+    const { servidor, cliente } = await conSesion()
+    servidor.vencerAccess()
+
+    const respuestas = await Promise.all([
+      cliente.pedidoDelPanel('/api/prestaciones'),
+      cliente.pedidoDelPanel('/api/prestaciones'),
+      cliente.pedidoDelPanel('/api/prestaciones'),
+    ])
+
+    expect(respuestas.map((r) => r.status)).toEqual([200, 200, 200])
+    expect(servidor.peticiones('/api/auth/refresh')).toBe(1)
+  })
+
+  it('US-092 CA-1: la repetición con 401 no vuelve a renovar', async () => {
+    const { servidor, sesion, cliente } = await conSesion()
+    servidor.rechazarAccessSiempre()
+
+    const error = await cliente.pedidoDelPanel('/api/prestaciones').catch((e: unknown) => e)
+
+    expect(error).toBeInstanceOf(SesionTerminada)
+    expect(servidor.peticiones('/api/auth/refresh')).toBe(1)
+    expect(servidor.peticiones('/api/prestaciones')).toBe(2)
+    expect(sesion.access()).toBeNull()
+  })
+
+  it('US-092 CA-1: sin refresh guardado un 401 levanta SesionTerminada sin pedir refresh', async () => {
+    const servidor = crearServidorFalso()
+    const sesion = crearSesion()
+    sesion.guardarAccess('acceso-que-nadie-emitio')
+    const cliente = crearClienteHttp({ fetch: servidor.fetch, sesion })
+
+    const error = await cliente.pedidoDelPanel('/api/prestaciones').catch((e: unknown) => e)
+
+    expect(error).toBeInstanceOf(SesionTerminada)
+    expect(servidor.peticiones('/api/auth/refresh')).toBe(0)
+    expect(sesion.access()).toBeNull()
+  })
+
+  it('US-092 CA-1: un 403 no renueva ni borra la sesión y devuelve RN-AU-05', async () => {
+    const { servidor, sesion, cliente } = await conSesion()
+    servidor.quitarPermiso(EMAIL_ACTIVA)
+
+    const respuesta = await cliente.pedidoDelPanel('/api/prestaciones')
+    const cuerpo: { codigos: string[] } = await respuesta.json()
+
+    expect(respuesta.status).toBe(403)
+    expect(cuerpo.codigos).toEqual(['RN-AU-05'])
+    expect(servidor.peticiones('/api/auth/refresh')).toBe(0)
+    expect(sesion.access()).not.toBeNull()
+    expect(sesion.refresh()).not.toBeNull()
+  })
 })

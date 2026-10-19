@@ -26,6 +26,8 @@ export interface ServidorFalso {
   invalidarRefresh(): void
   /** El usuario deja de tener permiso en las rutas del panel (403 RN-AU-05). */
   quitarPermiso(email: string): void
+  /** Las rutas del panel responden 401 RN-AU-03 aunque el access sea válido (para probar que no hay bucles). */
+  rechazarAccessSiempre(): void
 }
 
 function problema(estado: number, tipo: string, titulo: string, detalle: string, codigos: string[]): Response {
@@ -61,6 +63,7 @@ export function crearServidorFalso(): ServidorFalso {
   const accesos = new Map<string, string>()
   const refrescos = new Map<string, string>()
   const sinPermiso = new Set<string>()
+  let accessSiempreRechazado = false
 
   function emitirAccess(email: string): string {
     secuencia += 1
@@ -84,7 +87,7 @@ export function crearServidorFalso(): ServidorFalso {
   function prestaciones(init: RequestInit | undefined): Response {
     const token = bearer(init)
     const email = token === null ? undefined : accesos.get(token)
-    if (email === undefined) return sesionInvalida()
+    if (email === undefined || accessSiempreRechazado) return sesionInvalida()
     if (sinPermiso.has(email)) {
       return problema(403, '/errores/permiso-insuficiente', 'Permiso insuficiente', TEXTO_PERMISO, ['RN-AU-05'])
     }
@@ -155,6 +158,9 @@ export function crearServidorFalso(): ServidorFalso {
     },
     quitarPermiso: (email) => {
       sinPermiso.add(email)
+    },
+    rechazarAccessSiempre: () => {
+      accessSiempreRechazado = true
     },
   }
 }
