@@ -39,11 +39,14 @@ context: |
   Infraestructura (desde C-02): PostgreSQL 17.10 con psycopg 3 y migraciones Alembic (los tests por defecto
   siguen con create_all sobre SQLite); Docker Compose publica PostgreSQL en 127.0.0.1:5434 y la API en
   127.0.0.1:8000. Lo que solo PostgreSQL garantiza se prueba en el perfil opcional `postgres`.
-  Sesión (desde C-06): JWT HS256 de acceso y de renovación y hash bcrypt; ninguna ruta exige el token
-  desde C-07 las rutas del panel exigen el access token y el rol (D204; capability proteccion-del-panel).
+  Sesión (desde C-06): JWT HS256 de acceso y de renovación y hash bcrypt; desde C-07 las rutas del panel exigen el access token y el rol (D204; capability proteccion-del-panel).
   Cada change mantiene la demo sin Docker (SQLite en memoria, datos ficticios cargados al arrancar, con
   identificadores fijos documentados en el README). Las fases 1 y 2 son solo API y se prueban desde
   Swagger (/docs); la interfaz (React + TypeScript + Vite) empieza en la fase 3.
+  Frontend (desde C-08): `frontend/` con React, TypeScript y Vite; su archivo de dependencias es `frontend/package.json`
+  con su `package-lock.json` (versiones exactas, D217), con Node 24 LTS. Su suite por defecto es `npm test` (Vitest con un
+  servidor falso de la API inyectado, sin `vi.mock`), que corre sin Docker ni Python. El servicio `frontend` de Compose
+  publica en 127.0.0.1:5173 y la interfaz llama a la API por el mismo origen (`/api`).
   WhatsApp en la v1 = enlace wa.me (Cloud API en Fase 2).
   Todo rechazo lleva el código RN (p. ej. RN-AG-05, RN-AG-08, RN-GL-04). Hay dos clases (RN-GL-02, D135), precedidas desde C-07 por el control de acceso: 401 sin sesión y 403 con rol insuficiente, antes de la validación (D208).
   VALIDACIÓN DE ENTRADA (referencias inválidas, RN-GL-04; fecha sin zona o con desfase distinto de UTC,
@@ -80,7 +83,7 @@ rules:
     - Los horarios de los ejemplos se expresan en UTC.
   design:
     - Incluir una sección "Non-goals" (qué no se resuelve en este change).
-    - Fijar las versiones exactas de las dependencias (pins) en backend/pyproject.toml, cada una con su fecha de publicación y su fuente, sin versiones publicadas en la última semana.
+    - Fijar las versiones exactas de las dependencias (pins) en el archivo de dependencias de su subproyecto (backend/pyproject.toml para la API; frontend/package.json con su package-lock.json para la interfaz desde C-08), cada una con su fecha de publicación y su fuente, sin versiones publicadas en la última semana.
     - Clasificar cada rechazo como validación de entrada o como regla de negocio (RN-GL-02) y fijar el orden de evaluación.
     - Marcar cada elección no confirmada por el autor como "Propuesta".
     - Marcar cada comprobación técnica pendiente como "A verificar en el change", indicando antes de qué se verifica.
@@ -90,7 +93,7 @@ rules:
     - No agrupar los tests al final ni incluir tareas de "leer archivos" como tareas.
     - Agrupar las tareas por tema (preparación, dominio, persistencia, un grupo por escenario, API, demo y README, verificación final).
     - Incluir una tarea final de verificación en clon limpio siguiendo solo el README.
-    - Incluir una tarea en que el agente levanta la API y prueba en /docs (o en la interfaz, desde la fase 3) los endpoints del change, con la respuesta de éxito y los rechazos con su código RN, y le deja al autor el paso a paso. La repetición a mano del autor es opcional: va como tarea solo si el change es complejo, crítico o esencial, o si el agente no quedó conforme con lo que pudo probar.
+    - "Incluir una tarea en que el agente levanta la API y prueba en /docs (o en la interfaz, desde la fase 3) los endpoints del change, con la respuesta de éxito y los rechazos con su código RN, y le deja al autor el paso a paso. La repetición a mano del autor es opcional: va como tarea solo si el change es complejo, crítico o esencial, o si el agente no quedó conforme con lo que pudo probar."
 
 # Per-operation guidance
 operations:
