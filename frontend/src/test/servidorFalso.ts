@@ -46,6 +46,8 @@ export interface ServidorFalso {
   peticiones(ruta: string): number
   /** Cantidad de peticiones de ese método a esa ruta. */
   llamadas(metodo: string, ruta: string): number
+  /** Rutas pedidas hasta ahora, sin repetir y en orden de primera aparición. */
+  rutasPedidas(): string[]
   /** Cuerpos JSON recibidos por ese método y esa ruta, en orden. */
   cuerpos(metodo: string, ruta: string): Record<string, unknown>[]
   /** Copia del catálogo del falso en este momento (para comprobar que algo no se creó). */
@@ -353,6 +355,7 @@ export function crearServidorFalso(opciones: OpcionesDelServidorFalso = {}): Ser
   return {
     fetch: falso,
     peticiones: (ruta) => contadores.get(ruta) ?? 0,
+    rutasPedidas: () => [...contadores.keys()],
     llamadas: (metodo, ruta) => llamadasPorMetodo.get(`${metodo} ${ruta}`) ?? 0,
     cuerpos: (metodo, ruta) => cuerposRecibidos.get(`${metodo} ${ruta}`) ?? [],
     catalogoActual: () => catalogo.map((p) => ({ ...p })),

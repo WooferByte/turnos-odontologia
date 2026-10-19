@@ -214,3 +214,10 @@
   display: flex;
   gap: 8px;
 }
+
+.acciones-de-fila {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  height: var(--alto-fila);
+}

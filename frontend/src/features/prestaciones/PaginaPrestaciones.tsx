@@ -1,13 +1,15 @@
 // Pantalla de prestaciones (design T7): una sola petición al montar. El estado del listado se deriva de
 // lo que respondió la API; la pantalla no evalúa reglas.
 import { useEffect, useMemo, useState } from 'react'
-import { SesionTerminada } from '../../shared/api/errores'
+import { RecursoInexistente, SesionTerminada } from '../../shared/api/errores'
 import { useSesionDelPanel } from '../../shared/api/ProveedorDeSesion'
-import { crearApiPrestaciones, type DatosDeAlta, type Prestacion } from './apiPrestaciones'
+import { cambiosEntre, crearApiPrestaciones, type DatosDeAlta, type Prestacion } from './apiPrestaciones'
 import {
+  avisoDeAccionDeFila,
   erroresDelPanel,
   MENSAJE_CARGANDO,
   MENSAJE_LISTA_VACIA,
+  MENSAJE_PRESTACION_INEXISTENTE,
   MENSAJE_SIN_CONEXION,
   SIN_ERRORES,
   type ErroresDelPanel,
@@ -20,7 +22,19 @@ type Listado =
   | { tipo: 'lista'; prestaciones: readonly Prestacion[] }
   | { tipo: 'sin-conexion' }
 
-type Panel = { modo: 'cerrado' } | { modo: 'alta' }
+type Panel = { modo: 'cerrado' } | { modo: 'alta' } | { modo: 'edicion'; prestacion: Prestacion }
+
+const SIN_OCUPADAS: ReadonlySet<number> = new Set()
+
+function conPrestacionNueva(listado: Listado, nueva: Prestacion): Listado {
+  return listado.tipo === 'lista' ? { tipo: 'lista', prestaciones: [...listado.prestaciones, nueva] } : listado
+}
+
+function conPrestacionReemplazada(listado: Listado, nueva: Prestacion): Listado {
+  return listado.tipo === 'lista'
+    ? { tipo: 'lista', prestaciones: listado.prestaciones.map((p) => (p.id === nueva.id ? nueva : p)) }
+    : listado
+}
 
 export function PaginaPrestaciones() {
   const { pedidoDelPanel } = useSesionDelPanel()
@@ -30,6 +44,8 @@ export function PaginaPrestaciones() {
   const [panel, setPanel] = useState<Panel>({ modo: 'cerrado' })
   const [guardando, setGuardando] = useState(false)
   const [errores, setErrores] = useState<ErroresDelPanel>(SIN_ERRORES)
+  const [avisoDeTabla, setAvisoDeTabla] = useState<string | null>(null)
+  const [ocupadas, setOcupadas] = useState<ReadonlySet<number>>(SIN_OCUPADAS)
 
   useEffect(() => {
     let vigente = true
@@ -52,29 +68,61 @@ export function PaginaPrestaciones() {
     setRecarga((n) => n + 1)
   }
 
-  function abrirAlta(): void {
+  function abrirPanel(nuevo: Panel): void {
     setErrores(SIN_ERRORES)
-    setPanel({ modo: 'alta' })
+    setAvisoDeTabla(null)
+    setPanel(nuevo)
   }
 
-  function cerrarPanel(): void {
-    setErrores(SIN_ERRORES)
+  /** La prestación ya no existe (404): se cierra el panel, se avisa y se vuelve a pedir la lista. */
+  function prestacionInexistente(): void {
     setPanel({ modo: 'cerrado' })
+    setAvisoDeTabla(MENSAJE_PRESTACION_INEXISTENTE)
+    setRecarga((n) => n + 1)
   }
 
-  async function guardarAlta(datos: DatosDeAlta): Promise<void> {
+  async function guardar(datos: DatosDeAlta): Promise<void> {
+    if (panel.modo === 'cerrado') return
+    const cambios =
+      panel.modo === 'edicion' ? cambiosEntre(panel.prestacion, { ...datos, activa: panel.prestacion.activa }) : null
+    if (cambios !== null && Object.keys(cambios).length === 0) {
+      abrirPanel({ modo: 'cerrado' })
+      return
+    }
     setGuardando(true)
     setErrores(SIN_ERRORES)
     try {
-      const nueva = await api.crearPrestacion(datos)
-      setListado((anterior) =>
-        anterior.tipo === 'lista' ? { tipo: 'lista', prestaciones: [...anterior.prestaciones, nueva] } : anterior,
-      )
+      if (panel.modo === 'edicion' && cambios !== null) {
+        const editada = await api.editarPrestacion(panel.prestacion.id, cambios)
+        setListado((anterior) => conPrestacionReemplazada(anterior, editada))
+      } else {
+        const nueva = await api.crearPrestacion(datos)
+        setListado((anterior) => conPrestacionNueva(anterior, nueva))
+      }
       setPanel({ modo: 'cerrado' })
     } catch (error: unknown) {
-      if (!(error instanceof SesionTerminada)) setErrores(erroresDelPanel(error))
+      if (error instanceof RecursoInexistente) prestacionInexistente()
+      else if (!(error instanceof SesionTerminada)) setErrores(erroresDelPanel(error))
     } finally {
       setGuardando(false)
+    }
+  }
+
+  async function cambiarActiva(prestacion: Prestacion): Promise<void> {
+    setAvisoDeTabla(null)
+    setOcupadas((anteriores) => new Set(anteriores).add(prestacion.id))
+    try {
+      const editada = await api.editarPrestacion(prestacion.id, { activa: !prestacion.activa })
+      setListado((anterior) => conPrestacionReemplazada(anterior, editada))
+    } catch (error: unknown) {
+      if (error instanceof RecursoInexistente) prestacionInexistente()
+      else if (!(error instanceof SesionTerminada)) setAvisoDeTabla(avisoDeAccionDeFila(error))
+    } finally {
+      setOcupadas((anteriores) => {
+        const restantes = new Set(anteriores)
+        restantes.delete(prestacion.id)
+        return restantes
+      })
     }
   }
 
@@ -82,12 +130,17 @@ export function PaginaPrestaciones() {
     <section aria-labelledby="titulo-prestaciones">
       <div className="barra-de-pantalla">
         <h1 id="titulo-prestaciones">Prestaciones</h1>
-        <button type="button" className="boton-primario" onClick={abrirAlta}>
+        <button type="button" className="boton-primario" onClick={() => abrirPanel({ modo: 'alta' })}>
           Nueva prestación
         </button>
       </div>
       <div className="pantalla-con-panel">
         <div className="zona-de-tabla">
+          {avisoDeTabla === null ? null : (
+            <div role="alert" className="aviso aviso-error">
+              {avisoDeTabla}
+            </div>
+          )}
           {listado.tipo === 'cargando' ? <p>{MENSAJE_CARGANDO}</p> : null}
           {listado.tipo === 'sin-conexion' ? (
             <div role="alert" className="aviso aviso-error">
@@ -99,15 +152,22 @@ export function PaginaPrestaciones() {
           ) : null}
           {listado.tipo === 'lista' && listado.prestaciones.length === 0 ? <p>{MENSAJE_LISTA_VACIA}</p> : null}
           {listado.tipo === 'lista' && listado.prestaciones.length > 0 ? (
-            <TablaDePrestaciones prestaciones={listado.prestaciones} />
+            <TablaDePrestaciones
+              prestaciones={listado.prestaciones}
+              ocupadas={ocupadas}
+              onEditar={(prestacion) => abrirPanel({ modo: 'edicion', prestacion })}
+              onCambiarActiva={(prestacion) => void cambiarActiva(prestacion)}
+            />
           ) : null}
         </div>
         {panel.modo === 'cerrado' ? null : (
           <PanelDePrestacion
+            key={panel.modo === 'edicion' ? panel.prestacion.id : 'alta'}
+            prestacion={panel.modo === 'edicion' ? panel.prestacion : null}
             guardando={guardando}
             errores={errores}
-            onGuardar={(datos) => void guardarAlta(datos)}
-            onCancelar={cerrarPanel}
+            onGuardar={(datos) => void guardar(datos)}
+            onCancelar={() => abrirPanel({ modo: 'cerrado' })}
           />
         )}
       </div>
