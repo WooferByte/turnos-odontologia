@@ -299,6 +299,7 @@ Correcciones que estas decisiones piden fuera del change. **No se editan ahora n
 - `knowledge-base/04_modelo_de_datos.md` no cambia. `03` no cambia (las rutas de la interfaz no son rutas de la API).
 - `openspec/config.yaml`: (a) contexto con el frontend (`frontend/package.json`, Node 24, `npm test` como segunda suite por defecto, sin Docker); (b) la regla de `design` sobre los pins (archivo por subproyecto); (c) **entrecomillar `rules.tasks[5]`** para que `openspec` deje de ignorar las reglas de `tasks`; (d) la frase cortada de «Sesión (desde C-06)».
 - `CLAUDE.md` y `AGENTS.md` (copias sincronizadas): fila Frontend del stack con las versiones y la regla dura 7 con el archivo por subproyecto.
+- Desvíos del Apply aceptados por el orquestador (grupos 5 y 6): (a) `/ingresar` muestra «Cargando…» mientras la sesión está en `verificando` (se agrega a F10; sin esto se veía el formulario durante la renovación del arranque); (b) el cableado de `pedidoDelPanel` y `SesionTerminada` en `ProveedorDeSesion` (F8: que el proveedor reciba `SesionTerminada` y navegue a `/ingresar` con el aviso) queda para el primer change que use `pedidoDelPanel` (C-09): en C-08 ninguna pantalla lo llama.
 - `CHANGES.md`: marcar C-08 con `[x]` y repetir `scripts/verificar_changes.py`.
 
 ## Open Questions
