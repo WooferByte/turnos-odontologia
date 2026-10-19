@@ -15,7 +15,9 @@ Sistema de gestión de turnos y agenda para odontólogos independientes y consul
 
 - `roles-y-proteccion-del-panel` (C-07): ahora **todas las rutas del panel** (`/turnos`, `/prestaciones`, `/sillones`) exigen el access token y un rol que las permita. Sin token válido responde `401` (`RN-AU-03`, siempre el mismo cuerpo); con token pero sin el rol que corresponde, `403` (`RN-AU-05`). Los roles son `odontologo`, `recepcionista` y `dueno`, se leen de la base en cada petición y sus permisos se suman. Los eventos del historial de turnos nuevos llevan el `actor_id` del usuario del token y el turno guarda quién lo creó (`creado_por`). La migración `0007` crea `usuario_rol` y las columnas `profesional.usuario_id`, `profesional.matricula` y `turno.creado_por`; el seed trae roles para la odontóloga y una recepcionista ficticia. Solo `/auth/login` y `/auth/refresh` (y `/docs`) se pueden llamar sin token.
 
-No hay interfaz gráfica. La API se puede probar sin instalar nada más que Python (base SQLite en memoria) o sobre PostgreSQL con Docker.
+- `panel-base-e-inicio-de-sesion` (C-08): la **primera interfaz**, en `frontend/` (React, TypeScript y Vite). La pantalla de inicio de sesión (`/ingresar`), el panel base vacío (`/panel`) con «Cerrar sesión», la sesión en el navegador (el access en memoria y el refresh en `sessionStorage`), la renovación automática ante un `401` y la vuelta al inicio de sesión cuando la sesión termina. La interfaz habla con la API por `/api` del mismo origen, sin cambios en la API.
+
+La API se puede probar sin instalar nada más que Python (base SQLite en memoria) o sobre PostgreSQL con Docker; el panel necesita además Node 24 (ver «Panel (interfaz)»).
 
 > Todos los datos del proyecto, de los tests y de la demo son **ficticios**. No hay datos reales de pacientes ni secretos.
 
@@ -24,6 +26,7 @@ No hay interfaz gráfica. La API se puede probar sin instalar nada más que Pyth
 - **Python 3.11, 3.12 o 3.13.** No funciona con Python 3.14: una de las dependencias fijadas (`pydantic-core`) no publica binario para esa versión.
 - Para instalar, correr los tests y probar la demo: nada más. **No hacen falta Docker, PostgreSQL ni Redis.**
 - **Docker Desktop** (Docker Compose v2) solo para levantar la API sobre PostgreSQL y para el perfil opcional de tests con PostgreSQL.
+- **Node 24 LTS (24.15 o superior)** solo para el panel (`frontend/`). Se comprueba con `node --version`, que tiene que mostrar `v24.`. Con otro Node, `npm ci` se detiene (`engine-strict`).
 
 En Windows, el lanzador `py` sin versión puede usar Python 3.14; por eso los comandos piden una versión explícita.
 
@@ -78,6 +81,8 @@ Imágenes de Docker (fijadas por etiqueta y digest en `docker-compose.yml` y `ba
 |---|---|
 | `postgres` | `17.10-bookworm` |
 | `python` | `3.13.15-slim-bookworm` |
+| `node` (solo la construcción del frontend) | `24.21.0-bookworm-slim` |
+| `nginxinc/nginx-unprivileged` (servidor del frontend) | `1.30.4-alpine` |
 
 Las dependencias transitivas las resuelve `pip` el día de la instalación.
 
@@ -491,6 +496,101 @@ Con `docker compose up --build -d` hecho y el token de la odontóloga en «Autho
 
    El mismo token → `401`; un login nuevo → `200` y el token nuevo sirve.
 
+## Panel (interfaz)
+
+Desde C-08 hay una interfaz en `frontend/`. Para el panel, el archivo de dependencias es `frontend/package.json` (con `frontend/package-lock.json`), con versiones exactas; para la API sigue siendo `backend/pyproject.toml`.
+
+### Instalación y tests
+
+Hace falta Node 24 LTS (24.15 o superior; ver «Requisitos»). Desde la raíz del repositorio:
+
+```
+cd frontend
+npm ci
+npm test
+npm run typecheck
+```
+
+`npm test` corre **38 tests en 4 archivos** («Tests 38 passed (38)»); no necesita el backend, Docker ni red. `npm run typecheck` (`tsc --noEmit`) termina sin salida. `npm run build` genera `frontend/dist/`.
+
+### Probar el panel (demo sin Docker, dos terminales)
+
+Terminal 1, la API de demostración (desde `backend/`, con el entorno activado como en «Instalación»):
+
+```
+python -m uvicorn app.main:crear_app_demo --factory
+```
+
+Terminal 2, la interfaz (desde `frontend/`, después de `npm ci`):
+
+```
+npm run dev
+```
+
+Abrí <http://127.0.0.1:5173>. El servidor de desarrollo reenvía `/api/...` a la API en `127.0.0.1:8000` (quitando el prefijo `/api`), así que el navegador habla siempre con un solo origen. Los puertos `5173` y `8000` tienen que estar libres.
+
+Usuarios de prueba (los de «Protección del panel», con la contraseña `demo-consultorio-2026`): `odontologa@consultorio-demo.test` y `recepcion@consultorio-demo.test`. En la demo los dos están activos; el caso del usuario inactivo (US-090 CA-3) se prueba en la suite y en Compose (más abajo).
+
+Recorrido:
+
+1. Abrir `/panel` sin sesión → te lleva a `/ingresar`.
+2. Ingresar con la odontóloga y una contraseña incorrecta, y después con `nadie@consultorio-demo.test`: los dos muestran **el mismo** mensaje («El email o la contraseña no son correctos.»); en la pestaña de red, `POST /api/auth/login` responde `401` con `codigos` `["RN-AU-04"]`.
+3. Ingresar con la contraseña correcta → «Panel del consultorio» y el botón «Cerrar sesión».
+4. Recargar la página → seguís dentro: se ve un `POST /api/auth/refresh` con `200`.
+5. «Cerrar sesión» → volvés a `/ingresar` y el botón «Atrás» del navegador no muestra el panel.
+
+Ningún token ni la contraseña aparecen en la URL.
+
+### Panel con Compose
+
+`docker compose up --build -d` (ver «Levantar la API con PostgreSQL») levanta también el servicio `frontend`: nginx sin privilegios que sirve la interfaz en <http://127.0.0.1:5173> y reenvía `/api/` a la API. `docker compose ps` tiene que mostrar `postgres`, `api` y `frontend` como `healthy`. Es la misma dirección que `npm run dev`: se usa una o la otra, y se detiene antes la que esté corriendo. El recorrido es el de arriba; además, con Compose se puede ver al usuario inactivo (US-090 CA-3) y la sesión invalidada (US-092 CA-1):
+
+```
+docker compose exec postgres psql -U app -d turnos -c "UPDATE usuario SET activo = false WHERE email = 'recepcion@consultorio-demo.test'"
+```
+
+La recepcionista ve el mismo mensaje genérico que con una contraseña incorrecta. Para restaurarla:
+
+```
+docker compose exec postgres psql -U app -d turnos -c "UPDATE usuario SET activo = true WHERE email = 'recepcion@consultorio-demo.test'"
+```
+
+Con la odontóloga adentro, `UPDATE usuario SET token_version = token_version + 1 WHERE id = 1` (con el mismo `docker compose exec postgres psql ...`) y recargar `/panel` te lleva a `/ingresar` con el aviso «Tu sesión terminó. Iniciá sesión de nuevo.». Con otra copia del repositorio, agregá `-p otro-nombre` a todos los comandos de `docker compose`.
+
+### Versiones fijadas del frontend
+
+Las versiones exactas viven en `frontend/package.json`; `frontend/package-lock.json` se generó con `npm install --before=2026-10-12` (ningún paquete publicado desde esa fecha) y se instala siempre con `npm ci`.
+
+| Paquete | Versión |
+|---|---|
+| `react`, `react-dom` | 19.3.0 |
+| `react-router` | 7.18.4 |
+| `typescript` | 6.0.3 |
+| `vite` | 8.3.4 |
+| `@vitejs/plugin-react` | 6.1.2 |
+| `vitest` | 5.0.3 |
+| `jsdom` | 30.1.2 |
+| `@testing-library/react` | 16.3.3 |
+| `@testing-library/dom` | 10.4.2 |
+| `@testing-library/user-event` | 14.6.7 |
+| `@types/react`, `@types/react-dom` | 19.3.0 |
+| `@types/node` | 24.19.2 |
+
+### Escenario → test (frontend)
+
+La API se reemplaza en los tests por un servidor falso escrito a mano (`frontend/src/test/servidorFalso.ts`) que se inyecta por parámetro; no hay `vi.mock`.
+
+| Escenario | Test titular |
+|---|---|
+| US-090 CA-1 (credenciales válidas) | `src/features/ingreso/PaginaIngreso.test.tsx` — «US-090 CA-1: credenciales válidas llevan al panel» |
+| US-090 CA-2 (rechazo genérico) | `PaginaIngreso.test.tsx` — «US-090 CA-2: email inexistente muestra el mensaje genérico» y «US-090 CA-2: los dos rechazos se ven idénticos» |
+| US-090 CA-3 (usuaria inactiva) | `PaginaIngreso.test.tsx` — «US-090 CA-3: la usuaria inactiva ve el mismo mensaje y no entra» |
+| US-092 CA-1 (sesión inválida o vencida) | `src/pages/RutaProtegida.test.tsx` — «US-092 CA-1: el panel sin sesión lleva a /ingresar sin pedir nada a la API»; `src/shared/api/clienteHttp.test.ts` — «US-092 CA-1: access vencido se renueva una vez y repite la petición» |
+
+Hay además tests de la renovación compartida, del `403`, del cierre de sesión y de que ninguna URL contenga un token, y cuatro guards (`src/test/guards.test.ts`) que fallan si aparece `any`, `vi.mock`, `localStorage`, `dangerouslySetInnerHTML` o un archivo `index.ts` de reexportación.
+
+Resultado actual de las dos suites: frontend «Tests 38 passed (38)»; backend «528 passed, 47 deselected, 1 warning».
+
 ## Levantar la API con PostgreSQL
 
 Necesita Docker Desktop. Los datos son los mismos de la demo y todos son ficticios.
@@ -566,15 +666,19 @@ La migración autogenerada **se revisa a mano** antes de usarla, y cada change q
 - Los turnos guardados antes de la migración `0003` (por ejemplo, los de la prueba manual de C-02 en el volumen de PostgreSQL) **no tienen historial**: la consulta devuelve `200` con `[]` (D160). La migración no inventa eventos del pasado.
 - **`/auth/login` no tiene límite de peticiones** (D195): cualquiera que llegue a la API puede probar contraseñas. Se acepta porque la API se publica solo en `127.0.0.1` y bcrypt con 12 rondas ya frena cada intento; el límite se decide en el change de la reserva pública. Tampoco hay registro de eventos de seguridad.
 - **No hay cierre de sesión en el servidor** ni revocación de un token puntual (RN-AU-03): un refresh vale hasta su vencimiento o hasta que cambie la `token_version` del usuario.
-- **Dónde guarda el panel los tokens** (memoria, `sessionStorage` o cookie) se decide en C-08; si fuera una cookie, el contrato de `/auth/refresh` cambiaría.
+- **Cerrar sesión en el panel no revoca el refresh en el servidor**: la interfaz solo borra los tokens del navegador (no hay ruta de cierre); el refresh sigue valiendo en la API hasta su vencimiento o hasta que cambie la `token_version`.
+- **La sesión del panel no se comparte entre pestañas ni sobrevive al cierre del navegador**: el access vive en memoria y el refresh en `sessionStorage`. Recargar la pestaña la conserva; otra pestaña pide iniciar sesión. Si `sessionStorage` no está disponible, la sesión vive solo en memoria.
+- **El refresh en `sessionStorage` lo podría leer un script inyectado (XSS)**: lo mitigan React (escapa el texto), la ausencia de HTML crudo y la política de contenido de nginx. La alternativa, una cookie `HttpOnly`, cambiaría el contrato de `/auth/refresh` y queda fuera de C-08.
+- **El panel renueva el access solo cuando recibe un `401`** (no antes de que venza): un `401` extra cada 15 minutos de uso.
+- **El panel base no muestra quién inició sesión** (no hay ruta que lo informe) y todavía no tiene pantallas de negocio.
 - Un volumen de PostgreSQL sembrado antes de C-06 recibe el usuario del seed al próximo arranque, pero **un usuario ya sembrado no cambia su contraseña** aunque cambie `SEED_USUARIO_PASSWORD`. Con `docker compose down -v` la base arranca vacía.
-- El puerto 5434 (PostgreSQL) y el 8000 (API) del host tienen que estar libres.
+- El puerto 5434 (PostgreSQL), el 8000 (API) y el 5173 (interfaz) del host tienen que estar libres.
 - El proyecto de Compose tiene nombre fijo (`turnos-odontologia`): **dos copias del repositorio en la misma máquina comparten contenedores y volumen**, y un `docker compose down -v` en una borra los datos de la otra. Para levantar una segunda copia aparte, usá otro nombre de proyecto en todos los comandos: `docker compose -p otro-nombre up -d`.
 - En Windows, si el repositorio está en una ruta muy larga (más de unos 200 caracteres), el perfil opcional falla al importar `psycopg` con «El nombre del archivo o la extensión es demasiado largo». Cloná en una ruta corta.
 - Las credenciales, la contraseña del usuario del seed y el `JWT_SECRET` de los ejemplos y de `.env.example` son de prueba. No hay configuración de producción: TLS, copias de respaldo, roles con privilegios mínimos ni ajuste del pool.
 - La API migra al arrancar el contenedor: sirve para una sola réplica.
 - No se valida el horario de atención del profesional ni del consultorio.
-- No hay interfaz gráfica ni Redis: llegan en changes posteriores.
+- No hay Redis ni pantallas de negocio (turnos, prestaciones, sillones) en la interfaz: llegan en changes posteriores.
 - En `/docs`, las respuestas `409` y `422` figuran bajo `application/problem+json` y también bajo `application/json`. La respuesta real sale siempre como `application/problem+json`.
 - Los mensajes de validación de formato que genera Pydantic salen en inglés.
 
@@ -586,5 +690,6 @@ La consigna muestra `src/` y `tests/` y aclara que los nombres pueden variar. Ac
 |---|---|
 | `src/` | `backend/app/` |
 | `tests/` | `backend/tests/` |
+| (interfaz) | `frontend/src/` y `frontend/src/**/*.test.ts(x)` |
 
 `backend/app/` tiene las capas `domain` (reglas puras, sin FastAPI ni SQLAlchemy), `application` (casos de uso), `infrastructure` (SQLAlchemy, SQLite y PostgreSQL, migraciones de Alembic, seed de la demo) y `api` (FastAPI). La documentación del dominio está en `knowledge-base/` y el plan de changes en `CHANGES.md`.
