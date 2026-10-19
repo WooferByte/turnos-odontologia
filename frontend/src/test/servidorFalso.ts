@@ -48,6 +48,8 @@ export interface ServidorFalso {
   llamadas(metodo: string, ruta: string): number
   /** Cuerpos JSON recibidos por ese método y esa ruta, en orden. */
   cuerpos(metodo: string, ruta: string): Record<string, unknown>[]
+  /** Copia del catálogo del falso en este momento (para comprobar que algo no se creó). */
+  catalogoActual(): PrestacionFalsa[]
   /** Saca una prestación del catálogo (la API no borra, RN-GL-03; sirve para simular una base recreada). */
   quitarPrestacion(id: number): void
   /** A partir de ahora toda petición falla como una red caída (fetch rechaza). */
@@ -353,6 +355,7 @@ export function crearServidorFalso(opciones: OpcionesDelServidorFalso = {}): Ser
     peticiones: (ruta) => contadores.get(ruta) ?? 0,
     llamadas: (metodo, ruta) => llamadasPorMetodo.get(`${metodo} ${ruta}`) ?? 0,
     cuerpos: (metodo, ruta) => cuerposRecibidos.get(`${metodo} ${ruta}`) ?? [],
+    catalogoActual: () => catalogo.map((p) => ({ ...p })),
     quitarPrestacion: (id) => {
       const indice = catalogo.findIndex((p) => p.id === id)
       if (indice >= 0) catalogo.splice(indice, 1)

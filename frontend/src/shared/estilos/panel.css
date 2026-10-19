@@ -141,3 +141,76 @@
   background: var(--fondo-error);
   border: 1px solid var(--error);
 }
+
+/* Panel lateral de alta y edición, y errores de campo (design T9, T12). */
+.pantalla-con-panel {
+  display: flex;
+  align-items: flex-start;
+  gap: 24px;
+}
+
+.zona-de-tabla {
+  flex: 1;
+  min-width: 0;
+}
+
+.panel-lateral {
+  width: 320px;
+  padding: 16px;
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-panel);
+}
+
+.panel-lateral h2 {
+  margin: 0 0 12px;
+  font-size: 16px;
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+}
+
+.campo input[type='text'],
+.campo input[type='number'] {
+  height: var(--alto-campo);
+  padding: 0 8px;
+  border: 1px solid var(--borde-fuerte);
+  border-radius: var(--radio);
+  font: inherit;
+}
+
+.campo input[aria-invalid='true'] {
+  border-color: var(--error);
+}
+
+.campo-casilla {
+  flex-direction: row;
+  align-items: center;
+}
+
+.selector-de-color {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ayuda {
+  margin: 0;
+  font-size: 12px;
+  color: var(--texto-suave);
+}
+
+.error-de-campo {
+  margin: 0;
+  font-size: 12px;
+  color: var(--error);
+}
+
+.acciones-del-panel {
+  display: flex;
+  gap: 8px;
+}

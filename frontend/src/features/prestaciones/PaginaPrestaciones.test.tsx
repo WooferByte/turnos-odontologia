@@ -1,4 +1,4 @@
-import { cleanup, render, screen, within } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, useLocation } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
@@ -163,5 +163,158 @@ describe('PaginaPrestaciones: listado y sesión', () => {
     expect(servidor.llamadas('GET', '/api/prestaciones')).toBe(2)
     expect(lugar()).toBe('/panel/prestaciones')
     expect(filasDeDatos()).toHaveLength(5)
+  })
+})
+
+type Usuario = ReturnType<typeof userEvent.setup>
+
+/** Abre el panel de alta y completa nombre, duración y (si se pide) color; no pulsa «Guardar». */
+async function completarAlta(
+  usuario: Usuario,
+  datos: { nombre: string; duracion: string; color?: string; reservaOnline?: boolean },
+) {
+  await usuario.click(screen.getByRole('button', { name: 'Nueva prestación' }))
+  const nombre = screen.getByLabelText('Nombre')
+  await usuario.clear(nombre)
+  if (datos.nombre !== '') await usuario.type(nombre, datos.nombre)
+  const duracion = screen.getByLabelText('Duración en minutos')
+  await usuario.clear(duracion)
+  if (datos.duracion !== '') await usuario.type(duracion, datos.duracion)
+  if (datos.color !== undefined) fireEvent.input(screen.getByLabelText('Color'), { target: { value: datos.color } })
+  if (datos.reservaOnline === true) await usuario.click(screen.getByLabelText('Ofrecer en la reserva online'))
+}
+
+describe('PaginaPrestaciones: alta', () => {
+  beforeEach(() => {
+    sessionStorage.clear()
+  })
+  afterEach(() => {
+    cleanup()
+  })
+
+  it('US-001 CA-1: alta de Blanqueamiento agrega la fila y cierra el panel', async () => {
+    const servidor = crearServidorFalso({ prestaciones: PRESTACIONES_DE_PARTIDA })
+    const usuario = await abrirPanel(servidor, '/panel/prestaciones')
+    await screen.findByRole('table')
+
+    await completarAlta(usuario, { nombre: 'Blanqueamiento', duracion: '60', color: '#3A7BD5' })
+    await usuario.click(screen.getByRole('button', { name: 'Guardar' }))
+
+    await waitFor(() => expect(filasDeDatos()).toHaveLength(6))
+    expect(servidor.llamadas('POST', '/api/prestaciones')).toBe(1)
+    expect(servidor.cuerpos('POST', '/api/prestaciones')).toEqual([
+      { nombre: 'Blanqueamiento', duracion_minutos: 60, color: '#3A7BD5', reservable_online: false },
+    ])
+    const nueva = within(filaDe('Blanqueamiento'))
+    expect(nueva.getByText('60 min')).toBeDefined()
+    expect(nueva.getByText('Activa')).toBeDefined()
+    expect(screen.queryByRole('complementary')).toBeNull()
+  })
+
+  it('US-001 CA-1: reserva online marcada manda true y la fila dice Sí', async () => {
+    const servidor = crearServidorFalso({ prestaciones: PRESTACIONES_DE_PARTIDA })
+    const usuario = await abrirPanel(servidor, '/panel/prestaciones')
+    await screen.findByRole('table')
+
+    await completarAlta(usuario, { nombre: 'Control de ortodoncia', duracion: '30', reservaOnline: true })
+    await usuario.click(screen.getByRole('button', { name: 'Guardar' }))
+
+    await waitFor(() => expect(filasDeDatos()).toHaveLength(6))
+    expect(servidor.cuerpos('POST', '/api/prestaciones')[0]?.reservable_online).toBe(true)
+    expect(within(filaDe('Control de ortodoncia')).getByText('Sí')).toBeDefined()
+  })
+
+  it('US-001 CA-1: nombre o duración vacíos no hacen ninguna petición', async () => {
+    const servidor = crearServidorFalso({ prestaciones: PRESTACIONES_DE_PARTIDA })
+    const usuario = await abrirPanel(servidor, '/panel/prestaciones')
+    await screen.findByRole('table')
+
+    await completarAlta(usuario, { nombre: '', duracion: '30' })
+    await usuario.click(screen.getByRole('button', { name: 'Guardar' }))
+    await usuario.clear(screen.getByLabelText('Duración en minutos'))
+    await usuario.type(screen.getByLabelText('Nombre'), 'Blanqueamiento')
+    await usuario.click(screen.getByRole('button', { name: 'Guardar' }))
+
+    expect(servidor.llamadas('POST', '/api/prestaciones')).toBe(0)
+    expect(screen.getByRole('complementary')).toBeDefined()
+    expect(filasDeDatos()).toHaveLength(5)
+  })
+
+  it('US-001 CA-1: el botón queda deshabilitado mientras espera', async () => {
+    const servidor = crearServidorFalso({ prestaciones: PRESTACIONES_DE_PARTIDA })
+    const usuario = await abrirPanel(servidor, '/panel/prestaciones')
+    await screen.findByRole('table')
+    await completarAlta(usuario, { nombre: 'Blanqueamiento', duracion: '60' })
+    const liberar = servidor.retener('/api/prestaciones')
+
+    await usuario.click(screen.getByRole('button', { name: 'Guardar' }))
+    const guardando = await screen.findByRole('button', { name: 'Guardando…' })
+    await usuario.click(guardando)
+
+    expect((guardando as HTMLButtonElement).disabled).toBe(true)
+    liberar()
+    await waitFor(() => expect(filasDeDatos()).toHaveLength(6))
+    expect(servidor.llamadas('POST', '/api/prestaciones')).toBe(1)
+  })
+
+  it('US-001 CA-1: nombre repetido muestra RN-AG-15 debajo del nombre y conserva lo escrito', async () => {
+    const servidor = crearServidorFalso({ prestaciones: PRESTACIONES_DE_PARTIDA })
+    const usuario = await abrirPanel(servidor, '/panel/prestaciones')
+    await screen.findByRole('table')
+
+    await completarAlta(usuario, { nombre: 'limpieza', duracion: '45' })
+    await usuario.click(screen.getByRole('button', { name: 'Guardar' }))
+
+    const mensaje = await screen.findByText('Ya existe una prestación con ese nombre (RN-AG-15).')
+    const nombre = screen.getByLabelText<HTMLInputElement>('Nombre')
+    expect(nombre.getAttribute('aria-describedby')).toBe(mensaje.id)
+    expect(nombre.value).toBe('limpieza')
+    expect(screen.getByLabelText<HTMLInputElement>('Duración en minutos').value).toBe('45')
+    expect(filasDeDatos()).toHaveLength(5)
+    expect(servidor.catalogoActual()).toHaveLength(5)
+  })
+
+  it('US-001 CA-1: nombre solo de espacios muestra «Ingresá un nombre.»', async () => {
+    const servidor = crearServidorFalso({ prestaciones: PRESTACIONES_DE_PARTIDA })
+    const usuario = await abrirPanel(servidor, '/panel/prestaciones')
+    await screen.findByRole('table')
+
+    await completarAlta(usuario, { nombre: '   ', duracion: '30' })
+    await usuario.click(screen.getByRole('button', { name: 'Guardar' }))
+
+    expect(await screen.findByText('Ingresá un nombre.')).toBeDefined()
+    expect(servidor.llamadas('POST', '/api/prestaciones')).toBe(1)
+    expect(filasDeDatos()).toHaveLength(5)
+  })
+
+  it('US-001 CA-1: sin conexión al guardar el alta muestra el aviso del panel, conserva lo escrito y rehabilita Guardar', async () => {
+    const servidor = crearServidorFalso({ prestaciones: PRESTACIONES_DE_PARTIDA })
+    const usuario = await abrirPanel(servidor, '/panel/prestaciones')
+    await screen.findByRole('table')
+    await completarAlta(usuario, { nombre: 'Blanqueamiento', duracion: '60' })
+    servidor.caerse()
+
+    await usuario.click(screen.getByRole('button', { name: 'Guardar' }))
+
+    expect((await screen.findByRole('alert')).textContent).toBe(MENSAJE_DE_CONEXION)
+    expect(screen.getByLabelText<HTMLInputElement>('Nombre').value).toBe('Blanqueamiento')
+    expect(screen.getByLabelText<HTMLInputElement>('Duración en minutos').value).toBe('60')
+    expect((screen.getByRole('button', { name: 'Guardar' }) as HTMLButtonElement).disabled).toBe(false)
+    expect(filasDeDatos()).toHaveLength(5)
+  })
+
+  it('US-092 CA-1: la sesión termina al guardar un alta, vuelve a /ingresar y no crea nada', async () => {
+    const servidor = crearServidorFalso({ prestaciones: PRESTACIONES_DE_PARTIDA })
+    const usuario = await abrirPanel(servidor, '/panel/prestaciones')
+    await screen.findByRole('table')
+    await completarAlta(usuario, { nombre: 'Blanqueamiento', duracion: '60' })
+    servidor.vencerAccess()
+    servidor.invalidarRefresh()
+
+    await usuario.click(screen.getByRole('button', { name: 'Guardar' }))
+
+    expect((await screen.findByRole('status')).textContent).toBe(AVISO_SESION_TERMINADA)
+    expect(lugar()).toBe('/ingresar')
+    expect(servidor.catalogoActual()).toHaveLength(5)
   })
 })
