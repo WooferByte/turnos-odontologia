@@ -1,6 +1,8 @@
-// Rutas de la interfaz (design F6). El `fetch` se inyecta solo en los tests.
+// Rutas de la interfaz (design F6, T2). El `fetch` se inyecta solo en los tests.
 import { Navigate, Route, Routes } from 'react-router'
 import { PaginaIngreso } from './features/ingreso/PaginaIngreso'
+import { PaginaPrestaciones } from './features/prestaciones/PaginaPrestaciones'
+import { InicioDelPanel } from './pages/InicioDelPanel'
 import { PanelBase } from './pages/PanelBase'
 import { RutaProtegida } from './pages/RutaProtegida'
 import type { Fetch } from './shared/api/clienteHttp'
@@ -15,11 +17,18 @@ export function App({ fetch }: Propiedades) {
     <ProveedorDeSesion {...(fetch === undefined ? {} : { fetch })}>
       <Routes>
         <Route path="/ingresar" element={<PaginaIngreso />} />
-        <Route path="/panel/*" element={
+        <Route
+          path="/panel"
+          element={
             <RutaProtegida>
               <PanelBase />
             </RutaProtegida>
-          } />
+          }
+        >
+          <Route index element={<InicioDelPanel />} />
+          <Route path="prestaciones" element={<PaginaPrestaciones />} />
+          <Route path="*" element={<InicioDelPanel />} />
+        </Route>
         <Route path="*" element={<Navigate to="/panel" replace />} />
       </Routes>
     </ProveedorDeSesion>

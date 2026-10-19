@@ -6,6 +6,8 @@ import type { Sesion } from './sesion'
 
 export type Fetch = (entrada: string, init?: RequestInit) => Promise<Response>
 
+export type PedidoDelPanel = (ruta: string, opciones?: RequestInit) => Promise<Response>
+
 export interface OpcionesDelCliente {
   fetch?: Fetch
   sesion: Sesion

@@ -1,5 +1,6 @@
-// Panel base (design F11, D225): encabezado con el cierre de sesión y ningún dato del usuario.
-import { useNavigate } from 'react-router'
+// Diseño común del panel (design F11, D225, T2): encabezado con la navegación y el cierre de sesión,
+// ningún dato del usuario, y debajo la pantalla elegida por la ruta.
+import { NavLink, Outlet, useNavigate } from 'react-router'
 import { useSesionDelPanel } from '../shared/api/ProveedorDeSesion'
 
 export function PanelBase() {
@@ -12,15 +13,20 @@ export function PanelBase() {
   }
 
   return (
-    <div>
-      <header>
-        <strong>Turnos Odontológicos AR</strong>
-        <button type="button" onClick={cerrar}>
+    <div className="panel">
+      <header className="encabezado">
+        <strong className="marca">Turnos Odontológicos AR</strong>
+        <nav aria-label="Principal">
+          <NavLink to="/panel/prestaciones" className="enlace-del-panel">
+            Prestaciones
+          </NavLink>
+        </nav>
+        <button type="button" className="boton-secundario" onClick={cerrar}>
           Cerrar sesión
         </button>
       </header>
-      <main>
-        <h1>Panel del consultorio</h1>
+      <main className="contenido">
+        <Outlet />
       </main>
     </div>
   )

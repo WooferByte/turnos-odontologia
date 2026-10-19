@@ -52,6 +52,8 @@ export interface ServidorFalso {
   quitarPrestacion(id: number): void
   /** A partir de ahora toda petición falla como una red caída (fetch rechaza). */
   caerse(): void
+  /** Deshace `caerse` y `responderConError`: la API vuelve a responder. */
+  recuperar(): void
   /** A partir de ahora toda petición responde con ese estado 5xx. */
   responderConError(estado: number): void
   /** Todos los access emitidos hasta ahora pasan a vencidos (401 RN-AU-03); el refresh sigue válido. */
@@ -357,6 +359,10 @@ export function crearServidorFalso(opciones: OpcionesDelServidorFalso = {}): Ser
     },
     caerse: () => {
       caido = true
+    },
+    recuperar: () => {
+      caido = false
+      estado5xx = null
     },
     responderConError: (estado) => {
       estado5xx = estado

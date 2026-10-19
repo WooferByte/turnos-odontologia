@@ -1,0 +1,29 @@
+/* Tokens de «Clinical Ops» (design T12). Sin dependencias: la fuente es Inter si está instalada. */
+:root {
+  --fondo: #f8fafc;
+  --superficie: #ffffff;
+  --borde: #e2e8f0;
+  --borde-fuerte: #cbd5e1;
+  --texto: #0f172a;
+  --texto-suave: #475569;
+  --primario: #0284c7;
+  --error: #dc2626;
+  --fondo-error: #fef2f2;
+  --exito: #16a34a;
+  --fondo-exito: #f0fdf4;
+  --encabezado-tabla: #f1f5f9;
+  --radio: 4px;
+  --radio-panel: 8px;
+  --alto-fila: 40px;
+  --alto-campo: 36px;
+  --fuente: Inter, system-ui, sans-serif;
+}
+
+body {
+  margin: 0;
+  background: var(--fondo);
+  color: var(--texto);
+  font-family: var(--fuente);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}

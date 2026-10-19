@@ -1,5 +1,6 @@
 // Cliente de prestaciones (design T5): habla con `GET/POST/PATCH /api/prestaciones` a través de la
 // función `pedidoDelPanel` que recibe (inyectada). No evalúa reglas: todo `4xx` pasa por `traducirRechazo`.
+import type { PedidoDelPanel } from '../../shared/api/clienteHttp'
 import { SinConexion } from '../../shared/api/errores'
 import { traducirRechazo } from '../../shared/api/rechazos'
 
@@ -27,8 +28,6 @@ export interface CambiosDePrestacion {
   reservable_online?: boolean
   activa?: boolean
 }
-
-export type PedidoDelPanel = (ruta: string, opciones?: RequestInit) => Promise<Response>
 
 const RUTA = '/api/prestaciones'
 const MENSAJE_SIN_CONEXION = 'No se pudo conectar con el servidor.'
