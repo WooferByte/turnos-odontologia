@@ -1,0 +1,35 @@
+{
+  "expectations": [
+    {
+      "text": "El informe declara un veredicto explícito",
+      "passed": true,
+      "evidence": "Sección «Veredicto»: estaba listo"
+    },
+    {
+      "text": "El veredicto no es 'no listo' (el change archivado estaba completo)",
+      "passed": true,
+      "evidence": "listo"
+    },
+    {
+      "text": "El informe muestra la cobertura de US-001 CA-1, CA-2 y CA-3",
+      "passed": true,
+      "evidence": "Menciona CA-1, CA-2, CA-3"
+    },
+    {
+      "text": "Cada hallazgo reportado cita una fuente (archivo de la KB, RN, D o regla de config.yaml)",
+      "passed": false,
+      "evidence": "Las observaciones 2 a 6 no citan una fuente de la KB, RN, D ni regla de config.yaml"
+    },
+    {
+      "text": "No reporta como bloqueante un defecto inexistente (falso positivo)",
+      "passed": true,
+      "evidence": "No reporta bloqueantes"
+    }
+  ],
+  "summary": {
+    "passed": 4,
+    "failed": 1,
+    "total": 5,
+    "pass_rate": 0.8
+  }
+}

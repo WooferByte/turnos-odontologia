@@ -1,0 +1,236 @@
+{
+  "metadata": {
+    "skill_name": "revisor-de-escenarios",
+    "skill_path": "<path/to/skill>",
+    "executor_model": "<model-name>",
+    "analyzer_model": "<model-name>",
+    "timestamp": "2026-10-19T12:33:49Z",
+    "evals_run": [
+      1,
+      2
+    ],
+    "runs_per_configuration": 3
+  },
+  "runs": [
+    {
+      "eval_id": 1,
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 5,
+        "failed": 0,
+        "total": 5,
+        "time_seconds": 75.3,
+        "tokens": 105787,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "El informe declara un veredicto expl\u00c3\u00adcito",
+          "passed": true,
+          "evidence": "\u00c2\u00abVeredicto: listo para implementar\u00c2\u00bb"
+        },
+        {
+          "text": "El veredicto no es 'no listo' (el change archivado estaba completo)",
+          "passed": true,
+          "evidence": "listo, sin bloqueantes"
+        },
+        {
+          "text": "El informe muestra la cobertura de US-001 CA-1, CA-2 y CA-3",
+          "passed": true,
+          "evidence": "Tabla de cobertura con US-001 CA-1, CA-2, CA-3"
+        },
+        {
+          "text": "Cada hallazgo reportado cita una fuente (archivo de la KB, RN, D o regla de config.yaml)",
+          "passed": true,
+          "evidence": "La tabla de hallazgos tiene columna Fuente completa"
+        },
+        {
+          "text": "No reporta como bloqueante un defecto inexistente (falso positivo)",
+          "passed": true,
+          "evidence": "Sin bloqueantes; el \u00c3\u00banico A corregir (excepci\u00c3\u00b3n al 3 a 6 escenarios sin D) es real: config.yaml rules.proposal y CHANGES.md l\u00c3\u00adnea 4"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 2,
+      "configuration": "with_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 5,
+        "failed": 0,
+        "total": 5,
+        "time_seconds": 84.0,
+        "tokens": 117479,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Detecta que el escenario de nombre repetido responde 409 sin RN-AG-15 en codigos",
+          "passed": true,
+          "evidence": "Bloqueante: 409 con codigos [] en lugar de RN-AG-15"
+        },
+        {
+          "text": "Detecta que la duraci\u00c3\u00b3n inv\u00c3\u00a1lida responde 400 cuando RN-GL-02 pide 422",
+          "passed": true,
+          "evidence": "Bloqueante: 400 debe ser 422 (RN-GL-02, D177)"
+        },
+        {
+          "text": "Detecta que el l\u00c3\u00admite de 50 prestaciones activas no tiene respaldo en la KB (regla inventada)",
+          "passed": true,
+          "evidence": "Bloqueante: tope de 50 sin respaldo en KB"
+        },
+        {
+          "text": "Detecta que el escenario del l\u00c3\u00admite cita RN-AG-01, que no trata de eso",
+          "passed": true,
+          "evidence": "Se\u00c3\u00b1ala que RN-AG-01 es la regla de duraci\u00c3\u00b3n"
+        },
+        {
+          "text": "El veredicto es 'no listo' o equivalente",
+          "passed": true,
+          "evidence": "\u00c2\u00abVeredicto: no listo\u00c2\u00bb"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 1,
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 0.8,
+        "passed": 4,
+        "failed": 1,
+        "total": 5,
+        "time_seconds": 45.1,
+        "tokens": 97237,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "El informe declara un veredicto expl\u00c3\u00adcito",
+          "passed": true,
+          "evidence": "Secci\u00c3\u00b3n \u00c2\u00abVeredicto\u00c2\u00bb: estaba listo"
+        },
+        {
+          "text": "El veredicto no es 'no listo' (el change archivado estaba completo)",
+          "passed": true,
+          "evidence": "listo"
+        },
+        {
+          "text": "El informe muestra la cobertura de US-001 CA-1, CA-2 y CA-3",
+          "passed": true,
+          "evidence": "Menciona CA-1, CA-2, CA-3"
+        },
+        {
+          "text": "Cada hallazgo reportado cita una fuente (archivo de la KB, RN, D o regla de config.yaml)",
+          "passed": false,
+          "evidence": "Las observaciones 2 a 6 no citan una fuente de la KB, RN, D ni regla de config.yaml"
+        },
+        {
+          "text": "No reporta como bloqueante un defecto inexistente (falso positivo)",
+          "passed": true,
+          "evidence": "No reporta bloqueantes"
+        }
+      ],
+      "notes": []
+    },
+    {
+      "eval_id": 2,
+      "configuration": "without_skill",
+      "run_number": 1,
+      "result": {
+        "pass_rate": 1.0,
+        "passed": 5,
+        "failed": 0,
+        "total": 5,
+        "time_seconds": 42.9,
+        "tokens": 90670,
+        "tool_calls": 0,
+        "errors": 0
+      },
+      "expectations": [
+        {
+          "text": "Detecta que el escenario de nombre repetido responde 409 sin RN-AG-15 en codigos",
+          "passed": true,
+          "evidence": "Detecta codigos [] vs RN-AG-15"
+        },
+        {
+          "text": "Detecta que la duraci\u00c3\u00b3n inv\u00c3\u00a1lida responde 400 cuando RN-GL-02 pide 422",
+          "passed": true,
+          "evidence": "Detecta 400 vs 422"
+        },
+        {
+          "text": "Detecta que el l\u00c3\u00admite de 50 prestaciones activas no tiene respaldo en la KB (regla inventada)",
+          "passed": true,
+          "evidence": "Regla inventada de 50"
+        },
+        {
+          "text": "Detecta que el escenario del l\u00c3\u00admite cita RN-AG-01, que no trata de eso",
+          "passed": true,
+          "evidence": "RN-AG-01 solo trata la duraci\u00c3\u00b3n"
+        },
+        {
+          "text": "El veredicto es 'no listo' o equivalente",
+          "passed": true,
+          "evidence": "No est\u00c3\u00a1 lista"
+        }
+      ],
+      "notes": []
+    }
+  ],
+  "run_summary": {
+    "with_skill": {
+      "pass_rate": {
+        "mean": 1.0,
+        "stddev": 0.0,
+        "min": 1.0,
+        "max": 1.0
+      },
+      "time_seconds": {
+        "mean": 79.65,
+        "stddev": 6.1518,
+        "min": 75.3,
+        "max": 84.0
+      },
+      "tokens": {
+        "mean": 111633.0,
+        "stddev": 8267.4925,
+        "min": 105787,
+        "max": 117479
+      }
+    },
+    "without_skill": {
+      "pass_rate": {
+        "mean": 0.9,
+        "stddev": 0.1414,
+        "min": 0.8,
+        "max": 1.0
+      },
+      "time_seconds": {
+        "mean": 44.0,
+        "stddev": 1.5556,
+        "min": 42.9,
+        "max": 45.1
+      },
+      "tokens": {
+        "mean": 93953.5,
+        "stddev": 4643.5702,
+        "min": 90670,
+        "max": 97237
+      }
+    },
+    "delta": {
+      "pass_rate": "+0.10",
+      "time_seconds": "+35.7",
+      "tokens": "+17680"
+    }
+  },
+  "notes": []
+}

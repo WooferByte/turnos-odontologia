@@ -1,0 +1,33 @@
+{
+  "skill_name": "revisor-de-escenarios",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "Revisá los escenarios del change gestion-de-prestaciones (está archivado en openspec/changes/archive/2026-10-14-gestion-de-prestaciones) y decime si estaba listo para implementar.",
+      "expected_output": "Informe con veredicto listo (o listo con correcciones menores), cobertura de US-001 CA-1..CA-3, sin bloqueantes inventados, cada hallazgo con fuente.",
+      "files": [],
+      "assertions": [
+        "El informe declara un veredicto explícito",
+        "El veredicto no es 'no listo' (el change archivado estaba completo)",
+        "El informe muestra la cobertura de US-001 CA-1, CA-2 y CA-3",
+        "Cada hallazgo reportado cita una fuente (archivo de la KB, RN, D o regla de config.yaml)",
+        "No reporta como bloqueante un defecto inexistente (falso positivo)"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "Revisá la spec y las tasks de la copia del change gestion-de-prestaciones que está en <fixture>, antes de aprobar el plan. ¿Está lista para el apply?",
+      "expected_output": "Detecta los tres defectos plantados: error de negocio de nombre repetido sin RN-AG-15 en codigos; 400 en vez de 422 para RN-AG-01; límite de 50 prestaciones inventado y con RN-AG-01 mal citado. Veredicto no listo.",
+      "files": [
+        "fixtures/2026-10-14-gestion-de-prestaciones"
+      ],
+      "assertions": [
+        "Detecta que el escenario de nombre repetido responde 409 sin RN-AG-15 en codigos",
+        "Detecta que la duración inválida responde 400 cuando RN-GL-02 pide 422",
+        "Detecta que el límite de 50 prestaciones activas no tiene respaldo en la KB (regla inventada)",
+        "Detecta que el escenario del límite cita RN-AG-01, que no trata de eso",
+        "El veredicto es 'no listo' o equivalente"
+      ]
+    }
+  ]
+}

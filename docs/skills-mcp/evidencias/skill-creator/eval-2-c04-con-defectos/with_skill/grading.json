@@ -1,0 +1,35 @@
+{
+  "expectations": [
+    {
+      "text": "Detecta que el escenario de nombre repetido responde 409 sin RN-AG-15 en codigos",
+      "passed": true,
+      "evidence": "Bloqueante: 409 con codigos [] en lugar de RN-AG-15"
+    },
+    {
+      "text": "Detecta que la duración inválida responde 400 cuando RN-GL-02 pide 422",
+      "passed": true,
+      "evidence": "Bloqueante: 400 debe ser 422 (RN-GL-02, D177)"
+    },
+    {
+      "text": "Detecta que el límite de 50 prestaciones activas no tiene respaldo en la KB (regla inventada)",
+      "passed": true,
+      "evidence": "Bloqueante: tope de 50 sin respaldo en KB"
+    },
+    {
+      "text": "Detecta que el escenario del límite cita RN-AG-01, que no trata de eso",
+      "passed": true,
+      "evidence": "Señala que RN-AG-01 es la regla de duración"
+    },
+    {
+      "text": "El veredicto es 'no listo' o equivalente",
+      "passed": true,
+      "evidence": "«Veredicto: no listo»"
+    }
+  ],
+  "summary": {
+    "passed": 5,
+    "failed": 0,
+    "total": 5,
+    "pass_rate": 1.0
+  }
+}
