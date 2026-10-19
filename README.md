@@ -513,7 +513,7 @@ npm test
 npm run typecheck
 ```
 
-`npm test` corre **85 tests en 6 archivos** («Tests 85 passed (85)»); no necesita el backend, Docker ni red. `npm run typecheck` (`tsc --noEmit`) termina sin salida. `npm run build` genera `frontend/dist/`.
+`npm test` corre **91 tests en 6 archivos** («Tests 91 passed (91)»); no necesita el backend, Docker ni red. `npm run typecheck` (`tsc --noEmit`) termina sin salida. `npm run build` genera `frontend/dist/`.
 
 ### Probar el panel (demo sin Docker, dos terminales)
 
@@ -586,11 +586,16 @@ Escenario → test (`src/features/prestaciones/`, API reemplazada por el servido
 | US-001 CA-1 (la recepcionista, `RN-AU-05`) | «US-001 CA-1: la recepcionista que crea ve RN-AU-05 en el aviso del panel, conserva lo escrito, la tabla no cambia y no hay refresh» y los otros tres de ese grupo |
 | US-001 CA-2 (duración inválida, `RN-AG-01`) | «US-001 CA-2: duración 47 muestra RN-AG-01 debajo del campo y no agrega filas», «US-001 CA-2: duración 0 y -5 llegan a la API y muestran RN-AG-01», «US-001 CA-2: la edición con 52 muestra RN-AG-01 y la fila sigue en 45; con 50 se guarda y el mensaje desaparece» |
 | US-001 CA-3 (la duración no cambia los turnos) | «US-001 CA-3: cambiar la duración muestra el aviso, manda solo duracion_minutos y no pide rutas de turnos» |
+| US-001 CA-1 (el listado general cuenta; contador en singular y oculto sin lista) | «US-001 CA-1: el listado general cuenta las prestaciones registradas», «US-001 CA-1: el contador dice «1 prestación registrada» y no aparece con la lista vacía, mientras carga ni sin conexión» |
+| US-001 CA-1 (marca «Editando» que sigue al panel) | «US-001 CA-1: la fila en edición se marca «Editando»», «US-001 CA-1: la marca Editando pasa a Obturación y desaparece al guardar y al abrir el alta» |
+| US-001 CA-1 (botón «Cerrar» del panel, sin peticiones) | «US-001 CA-1: el botón Cerrar del panel no pide nada», «US-001 CA-1: Cerrar en el alta no hace ningún POST y la tabla sigue con cinco filas» |
 | US-092 CA-1 (access vencido que se renueva) | «US-092 CA-1: un access vencido se renueva y la tabla carga» |
 | US-092 CA-1 (sesión irrenovable al abrir la pantalla) | «US-092 CA-1: una sesión irrenovable al abrir la pantalla vuelve a /ingresar con el aviso» |
 | US-092 CA-1 (la sesión termina al guardar un alta) | «US-092 CA-1: la sesión termina al guardar un alta, vuelve a /ingresar y no crea nada» |
 
-El cliente de la API (`apiPrestaciones.test.ts`, 12 tests) se prueba aparte, con el `pedidoDelPanel` real sobre el servidor falso. Resultado de `npm test`: «Tests 85 passed (85)».
+La disposición, la jerarquía y los textos siguen la pantalla generada en Stitch (referencia visual: `docs/skills-mcp/evidencias/sesion-nueva/stitch-c11-pantalla/pantalla.png`; comparación con la implementación en `docs/skills-mcp/evidencias/sesion-nueva/stitch-c11.md`, sección 5). `PaginaPrestaciones.test.tsx` tiene 41 tests (38 escenarios del spec más 3 de triangulación).
+
+El cliente de la API (`apiPrestaciones.test.ts`, 12 tests) se prueba aparte, con el `pedidoDelPanel` real sobre el servidor falso. Resultado de `npm test`: «Tests 91 passed (91)».
 
 ### Versiones fijadas del frontend
 
@@ -624,7 +629,7 @@ La API se reemplaza en los tests por un servidor falso escrito a mano (`frontend
 
 Hay además tests de la renovación compartida, del `403`, del cierre de sesión y de que ninguna URL contenga un token, y cuatro guards (`src/test/guards.test.ts`) que fallan si aparece `any`, `vi.mock`, `localStorage`, `dangerouslySetInnerHTML` o un archivo `index.ts` de reexportación.
 
-Resultado actual de las dos suites: frontend «Tests 85 passed (85)»; backend «528 passed, 47 deselected, 1 warning».
+Resultado actual de las dos suites: frontend «Tests 91 passed (91)»; backend «528 passed, 47 deselected, 1 warning».
 
 ## Levantar la API con PostgreSQL
 

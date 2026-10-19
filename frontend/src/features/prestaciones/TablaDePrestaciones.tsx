@@ -6,11 +6,19 @@ interface Propiedades {
   prestaciones: readonly Prestacion[]
   /** Ids con una acción de fila esperando respuesta: sus botones quedan deshabilitados. */
   ocupadas: ReadonlySet<number>
+  /** Id de la prestación que el panel lateral está editando, si hay una. */
+  editandoId: number | null
   onEditar(prestacion: Prestacion): void
   onCambiarActiva(prestacion: Prestacion): void
 }
 
-export function TablaDePrestaciones({ prestaciones, ocupadas, onEditar, onCambiarActiva }: Propiedades) {
+function claseDeFila(prestacion: Prestacion, editando: boolean): string {
+  return ['fila', prestacion.activa ? null : 'fila-inactiva', editando ? 'fila-editando' : null]
+    .filter((clase) => clase !== null)
+    .join(' ')
+}
+
+export function TablaDePrestaciones({ prestaciones, ocupadas, editandoId, onEditar, onCambiarActiva }: Propiedades) {
   return (
     <table className="tabla">
       <thead>
@@ -28,7 +36,7 @@ export function TablaDePrestaciones({ prestaciones, ocupadas, onEditar, onCambia
           const accion = prestacion.activa ? 'Desactivar' : 'Reactivar'
           const ocupada = ocupadas.has(prestacion.id)
           return (
-            <tr key={prestacion.id} className={prestacion.activa ? 'fila' : 'fila fila-inactiva'}>
+            <tr key={prestacion.id} className={claseDeFila(prestacion, prestacion.id === editandoId)}>
               <td>
                 <span
                   role="img"
@@ -37,7 +45,15 @@ export function TablaDePrestaciones({ prestaciones, ocupadas, onEditar, onCambia
                   style={{ backgroundColor: prestacion.color }}
                 />
               </td>
-              <td>{prestacion.nombre}</td>
+              <td>
+                {prestacion.nombre}
+                {prestacion.id === editandoId ? (
+                  <>
+                    {' '}
+                    <span className="marca-editando">Editando</span>
+                  </>
+                ) : null}
+              </td>
               <td className="cifras">{prestacion.duracion_minutos} min</td>
               <td>{prestacion.reservable_online ? 'Sí' : 'No'}</td>
               <td>
@@ -48,7 +64,7 @@ export function TablaDePrestaciones({ prestaciones, ocupadas, onEditar, onCambia
               <td className="acciones-de-fila">
                 <button
                   type="button"
-                  className="boton-secundario"
+                  className={prestacion.id === editandoId ? 'boton-de-fila boton-de-fila-en-edicion' : 'boton-de-fila'}
                   disabled={ocupada}
                   aria-label={`Editar ${prestacion.nombre}`}
                   onClick={() => onEditar(prestacion)}
@@ -57,7 +73,7 @@ export function TablaDePrestaciones({ prestaciones, ocupadas, onEditar, onCambia
                 </button>
                 <button
                   type="button"
-                  className="boton-secundario"
+                  className={prestacion.activa ? 'boton-de-fila' : 'boton-de-fila boton-de-fila-primario'}
                   disabled={ocupada}
                   aria-label={`${accion} ${prestacion.nombre}`}
                   onClick={() => onCambiarActiva(prestacion)}

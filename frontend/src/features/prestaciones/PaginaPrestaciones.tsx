@@ -12,8 +12,12 @@ import {
   MENSAJE_PRESTACION_INEXISTENTE,
   MENSAJE_SIN_CONEXION,
   SIN_ERRORES,
+  SUBTITULO_DE_PANTALLA,
+  textoDelContador,
   type ErroresDelPanel,
 } from './mensajes'
+import { IconoMas } from '../../shared/iconos/IconoMas'
+import { Aviso } from './Aviso'
 import { PanelDePrestacion } from './PanelDePrestacion'
 import { TablaDePrestaciones } from './TablaDePrestaciones'
 
@@ -129,35 +133,41 @@ export function PaginaPrestaciones() {
   return (
     <section aria-labelledby="titulo-prestaciones">
       <div className="barra-de-pantalla">
-        <h1 id="titulo-prestaciones">Prestaciones</h1>
+        <div>
+          <h1 id="titulo-prestaciones">Prestaciones</h1>
+          <p className="subtitulo-de-pantalla">{SUBTITULO_DE_PANTALLA}</p>
+        </div>
         <button type="button" className="boton-primario" onClick={() => abrirPanel({ modo: 'alta' })}>
+          <IconoMas />
           Nueva prestación
         </button>
       </div>
       <div className="pantalla-con-panel">
         <div className="zona-de-tabla">
-          {avisoDeTabla === null ? null : (
-            <div role="alert" className="aviso aviso-error">
-              {avisoDeTabla}
-            </div>
-          )}
+          {avisoDeTabla === null ? null : <Aviso mensaje={avisoDeTabla} />}
           {listado.tipo === 'cargando' ? <p>{MENSAJE_CARGANDO}</p> : null}
           {listado.tipo === 'sin-conexion' ? (
-            <div role="alert" className="aviso aviso-error">
-              <p>{MENSAJE_SIN_CONEXION}</p>
+            <Aviso mensaje={MENSAJE_SIN_CONEXION}>
               <button type="button" className="boton-secundario" onClick={reintentar}>
                 Reintentar
               </button>
-            </div>
+            </Aviso>
           ) : null}
           {listado.tipo === 'lista' && listado.prestaciones.length === 0 ? <p>{MENSAJE_LISTA_VACIA}</p> : null}
           {listado.tipo === 'lista' && listado.prestaciones.length > 0 ? (
-            <TablaDePrestaciones
-              prestaciones={listado.prestaciones}
-              ocupadas={ocupadas}
-              onEditar={(prestacion) => abrirPanel({ modo: 'edicion', prestacion })}
-              onCambiarActiva={(prestacion) => void cambiarActiva(prestacion)}
-            />
+            <section className="tarjeta" aria-labelledby="titulo-listado">
+              <div className="tarjeta-encabezado">
+                <h2 id="titulo-listado">Listado general</h2>
+                <span className="insignia-contador">{textoDelContador(listado.prestaciones.length)}</span>
+              </div>
+              <TablaDePrestaciones
+                prestaciones={listado.prestaciones}
+                ocupadas={ocupadas}
+                editandoId={panel.modo === 'edicion' ? panel.prestacion.id : null}
+                onEditar={(prestacion) => abrirPanel({ modo: 'edicion', prestacion })}
+                onCambiarActiva={(prestacion) => void cambiarActiva(prestacion)}
+              />
+            </section>
           ) : null}
         </div>
         {panel.modo === 'cerrado' ? null : (

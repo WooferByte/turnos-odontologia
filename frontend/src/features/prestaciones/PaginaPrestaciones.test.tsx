@@ -43,7 +43,8 @@ function filasDeDatos(): HTMLTableRowElement[] {
 }
 
 function filaDe(nombre: string): HTMLElement {
-  const fila = screen.getByRole('cell', { name: nombre }).closest('tr')
+  // La fila que se está editando lleva la marca «Editando» dentro de la celda del nombre (V5).
+  const fila = screen.getByRole('cell', { name: (n) => n === nombre || n === `${nombre} Editando` }).closest('tr')
   if (fila === null) throw new Error(`No hay fila para ${nombre}`)
   return fila
 }
@@ -298,7 +299,7 @@ describe('PaginaPrestaciones: alta', () => {
 
     await usuario.click(screen.getByRole('button', { name: 'Guardar' }))
 
-    expect((await screen.findByRole('alert')).textContent).toBe(MENSAJE_DE_CONEXION)
+    expect(within(await screen.findByRole('alert')).getByText(MENSAJE_DE_CONEXION)).toBeDefined()
     expect(screen.getByLabelText<HTMLInputElement>('Nombre').value).toBe('Blanqueamiento')
     expect(screen.getByLabelText<HTMLInputElement>('Duración en minutos').value).toBe('60')
     expect((screen.getByRole('button', { name: 'Guardar' }) as HTMLButtonElement).disabled).toBe(false)
@@ -564,7 +565,7 @@ describe('PaginaPrestaciones: edición, desactivación y aviso de CA-3', () => {
 
     await usuario.click(screen.getByRole('button', { name: 'Desactivar Extracción' }))
 
-    expect((await screen.findByRole('alert')).textContent).toBe(MENSAJE_DE_CONEXION)
+    expect(within(await screen.findByRole('alert')).getByText(MENSAJE_DE_CONEXION)).toBeDefined()
     const fila = filaDe('Extracción')
     expect(within(fila).getByText('Activa')).toBeDefined()
     expect(fila.className).not.toContain('inactiva')
@@ -621,7 +622,7 @@ describe('PaginaPrestaciones: la recepcionista lee y la API rechaza con RN-AU-05
     await usuario.click(screen.getByRole('button', { name: 'Guardar' }))
 
     const aviso = await within(screen.getByRole('complementary')).findByRole('alert')
-    expect(aviso.textContent).toBe(MENSAJE_SIN_PERMISO)
+    expect(within(aviso).getByText(MENSAJE_SIN_PERMISO)).toBeDefined()
     expect(screen.getByLabelText<HTMLInputElement>('Nombre').value).toBe('Blanqueamiento')
     expect(screen.getByLabelText<HTMLInputElement>('Duración en minutos').value).toBe('60')
     expect(filasDeDatos()).toHaveLength(5)
@@ -634,12 +635,12 @@ describe('PaginaPrestaciones: la recepcionista lee y la API rechaza con RN-AU-05
     const usuario = await abrirComoRecepcionista(servidor)
 
     await usuario.click(screen.getByRole('button', { name: 'Desactivar Limpieza' }))
-    expect((await screen.findByRole('alert')).textContent).toBe(MENSAJE_SIN_PERMISO)
+    expect(within(await screen.findByRole('alert')).getByText(MENSAJE_SIN_PERMISO)).toBeDefined()
     await usuario.click(screen.getByRole('button', { name: 'Reactivar Urgencia' }))
 
     await waitFor(() => expect(servidor.llamadas('PATCH', '/api/prestaciones/5')).toBe(1))
     expect(servidor.llamadas('PATCH', '/api/prestaciones/2')).toBe(1)
-    expect((await screen.findByRole('alert')).textContent).toBe(MENSAJE_SIN_PERMISO)
+    expect(within(await screen.findByRole('alert')).getByText(MENSAJE_SIN_PERMISO)).toBeDefined()
     expect(within(filaDe('Limpieza')).getByText('Activa')).toBeDefined()
     expect(within(filaDe('Urgencia')).getByText('Inactiva')).toBeDefined()
   })
@@ -667,9 +668,139 @@ describe('PaginaPrestaciones: la recepcionista lee y la API rechaza con RN-AU-05
     await usuario.click(screen.getByRole('button', { name: 'Guardar' }))
 
     const aviso = await within(screen.getByRole('complementary')).findByRole('alert')
-    expect(aviso.textContent).toBe(MENSAJE_SIN_PERMISO)
+    expect(within(aviso).getByText(MENSAJE_SIN_PERMISO)).toBeDefined()
     expect(duracion.value).toBe('50')
     expect(within(filaDe('Limpieza')).getByText('45 min')).toBeDefined()
     expect(servidor.llamadas('PATCH', '/api/prestaciones/2')).toBe(1)
+  })
+})
+
+describe('PaginaPrestaciones: listado general, marca «Editando» y botón «Cerrar» (pantalla de Stitch, D234)', () => {
+  beforeEach(() => {
+    sessionStorage.clear()
+  })
+  afterEach(() => {
+    cleanup()
+  })
+
+  it('US-001 CA-1: el listado general cuenta las prestaciones registradas', async () => {
+    const servidor = crearServidorFalso({ prestaciones: PRESTACIONES_DE_PARTIDA })
+    const usuario = await abrirPanel(servidor, '/panel/prestaciones')
+    await screen.findByRole('table')
+
+    expect(screen.getByText('Listado general')).toBeDefined()
+    expect(screen.getByText('5 prestaciones registradas')).toBeDefined()
+
+    await completarAlta(usuario, { nombre: 'Blanqueamiento', duracion: '60' })
+    await usuario.click(screen.getByRole('button', { name: 'Guardar' }))
+    await waitFor(() => expect(filasDeDatos()).toHaveLength(6))
+    expect(screen.getByText('6 prestaciones registradas')).toBeDefined()
+
+    await usuario.click(screen.getByRole('button', { name: 'Desactivar Extracción' }))
+    await within(filaDe('Extracción')).findByText('Inactiva')
+    expect(screen.getByText('6 prestaciones registradas')).toBeDefined()
+  })
+
+  it('US-001 CA-1: la fila en edición se marca «Editando»', async () => {
+    const servidor = crearServidorFalso({ prestaciones: PRESTACIONES_DE_PARTIDA })
+    const usuario = await abrirPanel(servidor, '/panel/prestaciones')
+    await screen.findByRole('table')
+
+    await usuario.click(screen.getByRole('button', { name: 'Editar Limpieza' }))
+
+    expect(screen.getAllByText('Editando')).toHaveLength(1)
+    expect(within(filaDe('Limpieza')).getByText('Editando')).toBeDefined()
+    const panel = screen.getByRole('complementary')
+    expect(within(panel).getByRole('heading', { name: 'Editar prestación' })).toBeDefined()
+    expect(within(panel).getByText('Modificando los atributos de «Limpieza»')).toBeDefined()
+  })
+
+  it('US-001 CA-1: el botón Cerrar del panel no pide nada', async () => {
+    const servidor = crearServidorFalso({ prestaciones: PRESTACIONES_DE_PARTIDA })
+    const usuario = await abrirPanel(servidor, '/panel/prestaciones')
+    await screen.findByRole('table')
+
+    await usuario.click(screen.getByRole('button', { name: 'Editar Limpieza' }))
+    const nombre = screen.getByLabelText('Nombre')
+    await usuario.clear(nombre)
+    await usuario.type(nombre, 'Limpieza profunda')
+    await usuario.click(screen.getByRole('button', { name: 'Cerrar' }))
+
+    expect(screen.queryByRole('complementary')).toBeNull()
+    expect(servidor.llamadas('PATCH', '/api/prestaciones/2')).toBe(0)
+    expect(screen.queryByText('Editando')).toBeNull()
+    expect(within(filaDe('Limpieza')).getByText('45 min')).toBeDefined()
+  })
+
+  it('US-001 CA-1: el contador dice «1 prestación registrada» y no aparece con la lista vacía, mientras carga ni sin conexión', async () => {
+    const una = crearServidorFalso({ prestaciones: PRESTACIONES_DE_PARTIDA.slice(0, 1) })
+    await abrirPanel(una, '/panel/prestaciones')
+    await screen.findByRole('table')
+    expect(screen.getByText('1 prestación registrada')).toBeDefined()
+    cleanup()
+    sessionStorage.clear()
+
+    await abrirPanel(crearServidorFalso(), '/panel/prestaciones')
+    await screen.findByText('Todavía no hay prestaciones.')
+    expect(screen.queryByText(/prestaci\w+ registrada/)).toBeNull()
+    cleanup()
+    sessionStorage.clear()
+
+    const cargando = crearServidorFalso({ prestaciones: PRESTACIONES_DE_PARTIDA })
+    const liberar = cargando.retener('/api/prestaciones')
+    await abrirPanel(cargando, '/panel/prestaciones')
+    await screen.findByText('Cargando prestaciones…')
+    expect(screen.queryByText(/prestaci\w+ registrada/)).toBeNull()
+    liberar()
+    await screen.findByRole('table')
+    cleanup()
+    sessionStorage.clear()
+
+    const caido = crearServidorFalso({ prestaciones: PRESTACIONES_DE_PARTIDA })
+    const usuario = await abrirPanel(caido)
+    await screen.findByText('Panel del consultorio')
+    caido.caerse()
+    await usuario.click(screen.getByRole('link', { name: 'Prestaciones' }))
+    await screen.findByRole('button', { name: 'Reintentar' })
+    expect(screen.queryByText(/prestaci\w+ registrada/)).toBeNull()
+  })
+
+  it('US-001 CA-1: la marca Editando pasa a Obturación y desaparece al guardar y al abrir el alta', async () => {
+    const servidor = crearServidorFalso({ prestaciones: PRESTACIONES_DE_PARTIDA })
+    const usuario = await abrirPanel(servidor, '/panel/prestaciones')
+    await screen.findByRole('table')
+
+    await usuario.click(screen.getByRole('button', { name: 'Editar Limpieza' }))
+    await usuario.click(screen.getByRole('button', { name: 'Editar Obturación' }))
+    expect(screen.getAllByText('Editando')).toHaveLength(1)
+    expect(within(filaDe('Obturación')).getByText('Editando')).toBeDefined()
+    expect(within(filaDe('Limpieza')).queryByText('Editando')).toBeNull()
+
+    const duracion = screen.getByLabelText('Duración en minutos')
+    await usuario.clear(duracion)
+    await usuario.type(duracion, '50')
+    await usuario.click(screen.getByRole('button', { name: 'Guardar' }))
+    await waitFor(() => expect(screen.queryByRole('complementary')).toBeNull())
+    expect(screen.queryByText('Editando')).toBeNull()
+
+    await usuario.click(screen.getByRole('button', { name: 'Editar Limpieza' }))
+    expect(screen.getAllByText('Editando')).toHaveLength(1)
+    await usuario.click(screen.getByRole('button', { name: 'Nueva prestación' }))
+    expect(screen.queryByText('Editando')).toBeNull()
+    expect(within(screen.getByRole('complementary')).getByText('Completá los datos de la nueva prestación.')).toBeDefined()
+  })
+
+  it('US-001 CA-1: Cerrar en el alta no hace ningún POST y la tabla sigue con cinco filas', async () => {
+    const servidor = crearServidorFalso({ prestaciones: PRESTACIONES_DE_PARTIDA })
+    const usuario = await abrirPanel(servidor, '/panel/prestaciones')
+    await screen.findByRole('table')
+
+    await completarAlta(usuario, { nombre: 'Blanqueamiento', duracion: '60' })
+    await usuario.click(screen.getByRole('button', { name: 'Cerrar' }))
+
+    expect(screen.queryByRole('complementary')).toBeNull()
+    expect(servidor.llamadas('POST', '/api/prestaciones')).toBe(0)
+    expect(filasDeDatos()).toHaveLength(5)
+    expect(screen.getByText('5 prestaciones registradas')).toBeDefined()
   })
 })

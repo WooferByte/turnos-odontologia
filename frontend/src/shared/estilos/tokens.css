@@ -1,21 +1,48 @@
-/* Tokens de «Clinical Ops» (design T12). Sin dependencias: la fuente es Inter si está instalada. */
+/* Tokens de «Clinical Ops» (design T12, T17). Sin dependencias: la fuente es Inter si está instalada.
+   Los colores, radios y alturas de panel.css salen de acá: ahí no se repiten valores sueltos. */
 :root {
-  --fondo: #f8fafc;
+  /* Colores */
+  --fondo: #f4f7fa;
   --superficie: #ffffff;
+  --superficie-suave: #f8fafc;
   --borde: #e2e8f0;
+  --borde-suave: #f1f5f9;
   --borde-fuerte: #cbd5e1;
   --texto: #0f172a;
+  --texto-medio: #334155;
   --texto-suave: #475569;
+  --texto-tenue: #64748b;
   --primario: #0284c7;
+  --primario-hover: #0369a1;
+  --primario-suave: #f0f9ff;
+  --primario-borde: #bae6fd;
+  --primario-translucido: rgb(2 132 199 / 8%);
   --error: #dc2626;
+  --error-oscuro: #9f1239;
+  --error-texto: #be123c;
   --fondo-error: #fef2f2;
-  --exito: #16a34a;
+  --borde-error: #fecdd3;
+  --exito: #15803d;
   --fondo-exito: #f0fdf4;
+  --borde-exito: #bbf7d0;
   --encabezado-tabla: #f1f5f9;
+  --gris-insignia: #e2e8f0;
+
+  /* Radios */
   --radio: 4px;
+  --radio-medio: 6px;
   --radio-panel: 8px;
-  --alto-fila: 40px;
+  --radio-pastilla: 999px;
+
+  /* Alturas y medidas */
+  --alto-barra: 64px;
   --alto-campo: 36px;
+  --alto-boton: 36px;
+  --ancho-contenido: 1280px;
+  --tamano-icono: 16px;
+  --tamano-muestra: 16px;
+  --sombra-tarjeta: 0 1px 2px rgb(15 23 42 / 6%);
+
   --fuente: Inter, system-ui, sans-serif;
 }
 

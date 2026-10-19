@@ -2,6 +2,8 @@
 // rechazo (design T6, T11). No se muestra el `detail` de la API.
 import { EntradaRechazada, PermisoInsuficiente, ReglaRechazada } from '../../shared/api/errores'
 
+export const SUBTITULO_DE_PANTALLA =
+  'Catálogo de prestaciones del consultorio: duración, color en la agenda y reserva online.'
 export const MENSAJE_SIN_CONEXION = 'No se pudo conectar con el servidor. Probá de nuevo en unos minutos.'
 export const MENSAJE_LISTA_VACIA = 'Todavía no hay prestaciones.'
 export const MENSAJE_CARGANDO = 'Cargando prestaciones…'
@@ -12,6 +14,24 @@ export const MENSAJE_PRESTACION_INEXISTENTE = 'La prestación ya no existe (RN-G
 export const MENSAJE_SIN_PERMISO = 'Tu usuario no tiene permiso para modificar prestaciones (RN-AU-05).'
 export const MENSAJE_NOMBRE_VACIO = 'Ingresá un nombre.'
 export const MENSAJE_REVISAR_DATOS = 'Revisá los datos de la prestación.'
+
+/** Título corto de un aviso; el `404` y «Revisá los datos…» van sin título porque lo repetirían. */
+export function tituloDelAviso(mensaje: string): string | null {
+  if (mensaje === MENSAJE_SIN_PERMISO) return 'Acceso restringido'
+  if (mensaje === MENSAJE_SIN_CONEXION) return 'Sin conexión'
+  return null
+}
+
+/** Texto de la insignia del listado general: cuenta activas e inactivas (la tabla muestra ambas). */
+export function textoDelContador(cantidad: number): string {
+  return cantidad === 1 ? '1 prestación registrada' : `${cantidad} prestaciones registradas`
+}
+
+export function subtituloDelPanel(prestacion: { nombre: string } | null): string {
+  return prestacion === null
+    ? 'Completá los datos de la nueva prestación.'
+    : `Modificando los atributos de «${prestacion.nombre}»`
+}
 
 /** Lo que el panel lateral muestra después de un rechazo: debajo de cada campo y en el aviso del panel. */
 export interface ErroresDelPanel {
