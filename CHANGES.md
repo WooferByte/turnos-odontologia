@@ -403,7 +403,7 @@ Primer change: `/opsx:propose crear-turno-sin-solapamientos`.
 ### [C-09] `gestion-de-usuarios`
 - **Estado**: `[ ]` pendiente · **Orden**: 3 · **Gobernanza**: CRITICO
 - **Objetivo** (US-093): que el odontólogo cree usuarios, les asigne roles y los desactive (parte de gestión).
-- **Alcance — dentro**: `GET/POST /usuarios` y `PATCH /usuarios/{id}` (roles, activar o desactivar); email único; contraseña inicial definida al crear; desactivar incrementa `token_version`; error de dominio RN-AU-06 para el último odontólogo activo y para desactivarse a sí mismo; pantalla de usuarios del panel; cablear `pedidoDelPanel` y `SesionTerminada` en `ProveedorDeSesion` (F8 del design de C-08: el proveedor recibe `SesionTerminada` y navega a `/ingresar` con el aviso; C-08 no lo llama).
+- **Alcance — dentro**: `GET/POST /usuarios` y `PATCH /usuarios/{id}` (roles, activar o desactivar); email único; contraseña inicial definida al crear; desactivar incrementa `token_version`; error de dominio RN-AU-06 para el último odontólogo activo y para desactivarse a sí mismo; pantalla de usuarios del panel (el cableado de `pedidoDelPanel` y `SesionTerminada` en `ProveedorDeSesion` ya se hizo en C-11, D231; C-09 solo lo reutiliza).
 - **Alcance — fuera**: restablecer y cambiar contraseñas (C-10); crear un `Profesional` al asignar el rol `odontologo` (Fase 2, D46).
 - **Depende de**: C-07, C-08
 - **Escenarios mínimos**: US-093: CA-1, CA-2, CA-3, CA-4, CA-5, CA-8
@@ -427,7 +427,7 @@ Primer change: `/opsx:propose crear-turno-sin-solapamientos`.
   - `knowledge-base/02_descripcion_general.md` §«API REST (resumen)», filas Auth y Usuarios
 
 ### [C-11] `panel-de-prestaciones`
-- **Estado**: `[~]` en curso (propuesto) · **Orden**: 3 · **Gobernanza**: BAJO
+- **Estado**: `[x]` archivado · **Orden**: 3 · **Gobernanza**: BAJO
 - **Objetivo** (US-001): dar a la gestión de prestaciones su pantalla del panel (parte de interfaz; la API es de C-04).
 - **Alcance — dentro**: listado, alta, edición y desactivación de prestaciones contra la API de C-04; selector de color; muestra el error de dominio RN-AG-01; solo el rol `odontologo` edita, los demás leen.
 - **Alcance — fuera**: cambios de API o de esquema; pantalla de sillones (US-004 no tiene interfaz).

@@ -1,6 +1,6 @@
 # Informe de aplicación: skill propia y MCP (Parte 2)
 
-Agente: Claude Code (app de escritorio, Windows). Fecha: 2026-10-19. Change preparado: **C-11 `panel-de-prestaciones`** (el mismo de la ficha; no cambió la elección).
+Agente: Claude Code (app de escritorio, Windows). Fecha: 2026-10-19. Change preparado en la entrega e implementado y archivado después: **C-11 `panel-de-prestaciones`** (el mismo de la ficha; no cambió la elección).
 
 ## 1. Resultados
 
@@ -9,7 +9,7 @@ Agente: Claude Code (app de escritorio, Windows). Fecha: 2026-10-19. Change prep
 | Skill propia `revisor-de-escenarios` | Creada con `skill-creator`. En su evaluación, con la skill se cumplió el 100 % de los criterios y sin ella el 90 % (2 casos sobre C-04, 3 corridas cada uno). Está versionada en `.claude/skills/` con el script `inventario.py`. | [benchmark](evidencias/skill-creator/benchmark.md), [visor](evidencias/skill-creator/visor.html) |
 | Uso en una sesión nueva | Se preguntó qué herramienta del proyecto revisa escenarios, sin nombrar la skill. El agente la encontró por `CLAUDE.md` y la corrió sobre C-04 archivado: «listo para implementar», 0 bloqueantes y 5 sugerencias. | [informe C-04](evidencias/sesion-nueva/revision-de-escenarios-gestion-de-prestaciones.md) |
 | MCP Google Stitch | Configurado en `.mcp.json`, con la key en `STITCH_API_KEY`. Se ejecutaron `list_projects`, `create_project`, `generate_screen_from_text`, `get_project` y `list_screens`. | [conexión](evidencias/sesion-nueva/stitch-conexion.md), [diseño C-11](evidencias/sesion-nueva/stitch-c11.md) |
-| Change C-11 | Propose completo (proposal, design, spec y tasks): 33 escenarios verificables (feliz 8, error de negocio 6, borde 19), 20 tareas con su verificación y `openspec validate --strict` sin errores. Quedó en `[~]` en `CHANGES.md`, sin implementar. | `openspec/changes/panel-de-prestaciones/` |
+| Change C-11 | Propose completo (proposal, design, spec y tasks): 33 escenarios verificables (feliz 8, error de negocio 6, borde 19), 20 tareas con su verificación y `openspec validate --strict` sin errores. Quedó en `[~]` en `CHANGES.md` al cierre de la entrega (después se implementó y se archivó como `[x]`). | `openspec/changes/panel-de-prestaciones/` |
 
 **Cómo se usaron en el change:**
 
@@ -35,7 +35,7 @@ Agente: Claude Code (app de escritorio, Windows). Fecha: 2026-10-19. Change prep
 | `docs/skills-mcp/investigacion.md` | Ficha recortada a dos páginas, con los pendientes de Stitch resueltos al conectar. |
 | `docs/skills-mcp/evidencias/` | Evaluación de `skill-creator`, revisión crítica y evidencias de la sesión nueva. |
 
-No se regeneró la fundación ni se marcaron como hechas etapas que no se hicieron. La resincronización de `CLAUDE.md` y `AGENTS.md` con D229 a D233 y el ajuste de la entrada de C-09 quedan para el archivado de C-11, como dice su `design.md`.
+No se regeneró la fundación ni se marcaron como hechas etapas que no se hicieron. La resincronización de `CLAUDE.md` y `AGENTS.md` con D229 a D233 y el ajuste de la entrada de C-09 quedaron para el archivado de C-11, como decía su `design.md`, y se hicieron entonces (D229 a D234 ya estaban en ambos archivos).
 
 ## 3. Revisión crítica
 
@@ -64,8 +64,8 @@ No se regeneró la fundación ni se marcaron como hechas etapas que no se hicier
 
 ## 4. Limitaciones
 
-- **Pantalla de Stitch:** `generate_screen_from_text` superó el tiempo de espera del cliente. Durante unos 15 minutos de consultas, Stitch generó el design system pero la pantalla no apareció en el proyecto. El design se apoya solo en los tokens y en el texto enviado, no en una imagen de la pantalla.
+- **Pantalla de Stitch:** `generate_screen_from_text` superó el tiempo de espera del cliente. Durante unos 15 minutos de consultas, Stitch generó el design system pero la pantalla no apareció en el proyecto, y el design del propose se apoyó solo en los tokens y en el texto enviado. **Actualización posterior:** la pantalla se regeneró más tarde y se documentó en [stitch-c11.md](evidencias/sesion-nueva/stitch-c11.md) (secciones 3b y 5); a raíz de eso se adoptó la regla D234 (toda pantalla del frontend parte de una pantalla de Stitch) y el change se ajustó con `/opsx:update`.
 - **Qué hace la skill:** revisa en forma estática; no corre tests ni contrasta la spec con el código. Los textos de interfaz marcados como «Propuesta» no tienen fuente en la KB contra la cual compararlos.
 - **Ambigüedad de configuración sin resolver:** `config.yaml` pide «E#» en el título de los escenarios, pero desde C-04 se usa `US-NNN CA-N`. Queda para que el autor aclare la regla.
 - **Costo y facturación de Stitch:** no se verificaron. Bastó la API key, pero no se revisó la facturación de la cuenta de Google.
-- **Implementación:** C-11 queda preparado; su implementación y su archivado son de una instancia posterior.
+- **Implementación:** en el alcance de esta entrega (commit `f731c01`) C-11 solo quedó preparado. Después se implementó (26 tareas, TDD estricto, suite del frontend y del backend en verde) y se archivó el 2026-10-19 como `2026-10-19-panel-de-prestaciones`; su `[x]` está en `CHANGES.md`.
