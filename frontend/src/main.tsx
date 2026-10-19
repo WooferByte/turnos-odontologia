@@ -1,5 +1,6 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
+import { BrowserRouter } from 'react-router'
 import { App } from './App'
 
 const raiz = document.getElementById('raiz')
@@ -9,6 +10,8 @@ if (raiz === null) {
 
 createRoot(raiz).render(
   <StrictMode>
-    <App />
+    <BrowserRouter>
+      <App />
+    </BrowserRouter>
   </StrictMode>,
 )
