@@ -16,3 +16,7 @@ venv/
 # Bases locales
 *.db
 *.sqlite3
+
+# Node (frontend)
+node_modules/
+dist/
