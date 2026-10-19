@@ -1,6 +1,7 @@
 // Cliente HTTP del panel (design F8, F12). Habla siempre con `/api` del mismo origen (F5) y recibe
 // `fetch` inyectado: en producción el real, en los tests el servidor falso.
-import { CredencialesRechazadas, EntradaRechazada, SesionTerminada, SinConexion } from './errores'
+import { CredencialesRechazadas, SesionTerminada, SinConexion } from './errores'
+import { traducirRechazo } from './rechazos'
 import type { Sesion } from './sesion'
 
 export type Fetch = (entrada: string, init?: RequestInit) => Promise<Response>
@@ -51,7 +52,7 @@ async function errorDeRespuesta(respuesta: Response, contexto: Contexto): Promis
     return new CredencialesRechazadas('Credenciales rechazadas.', await codigoDeRespuesta(respuesta))
   }
   if (contexto === 'login' && respuesta.status === 422) {
-    return new EntradaRechazada('Entrada rechazada.', await codigoDeRespuesta(respuesta))
+    return traducirRechazo(respuesta)
   }
   if (contexto === 'refresh' && respuesta.status === 401) {
     return new SesionTerminada(MENSAJE_SESION_TERMINADA, CODIGO_SESION_INVALIDA)
