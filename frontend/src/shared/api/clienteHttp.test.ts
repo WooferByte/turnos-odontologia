@@ -6,10 +6,8 @@ import {
   crearServidorFalso,
 } from '../../test/servidorFalso'
 import { crearClienteHttp } from './clienteHttp'
-import { CredencialesRechazadas } from './errores'
-import { crearSesion } from './sesion'
-
-const CLAVE_DE_SESION = 'turnos.sesion.v1'
+import { CredencialesRechazadas, EntradaRechazada, SinConexion } from './errores'
+import { CLAVE_DE_SESION, crearSesion } from './sesion'
 
 describe('clienteHttp: iniciarSesion', () => {
   beforeEach(() => {
@@ -80,5 +78,71 @@ describe('clienteHttp: iniciarSesion', () => {
     expect((error as CredencialesRechazadas).codigo).toBe('RN-AU-04')
     expect(sesion.access()).toBeNull()
     expect(sessionStorage.getItem(CLAVE_DE_SESION)).toBeNull()
+  })
+})
+
+describe('clienteHttp: iniciarSesion, bordes', () => {
+  beforeEach(() => {
+    sessionStorage.clear()
+  })
+
+  function nuevo(servidor = crearServidorFalso(), almacenamiento?: Parameters<typeof crearSesion>[0]) {
+    const sesion = almacenamiento === undefined ? crearSesion() : crearSesion(almacenamiento)
+    return { servidor, sesion, cliente: crearClienteHttp({ fetch: servidor.fetch, sesion }) }
+  }
+
+  it('US-090 CA-2: 422 levanta EntradaRechazada', async () => {
+    const { cliente, sesion } = nuevo()
+
+    const error = await cliente.iniciarSesion('no-es-un-email', CONTRASENA_FICTICIA).catch((e: unknown) => e)
+
+    expect(error).toBeInstanceOf(EntradaRechazada)
+    expect(sesion.access()).toBeNull()
+  })
+
+  it('US-090 CA-2: sin conexión o 5xx levanta SinConexion', async () => {
+    const caido = nuevo()
+    caido.servidor.caerse()
+    const falla5xx = nuevo()
+    falla5xx.servidor.responderConError(503)
+
+    const sinRed = await caido.cliente.iniciarSesion(EMAIL_ACTIVA, CONTRASENA_FICTICIA).catch((e: unknown) => e)
+    const con503 = await falla5xx.cliente.iniciarSesion(EMAIL_ACTIVA, CONTRASENA_FICTICIA).catch((e: unknown) => e)
+
+    expect(sinRed).toBeInstanceOf(SinConexion)
+    expect(con503).toBeInstanceOf(SinConexion)
+    expect(caido.sesion.access()).toBeNull()
+    expect(falla5xx.sesion.access()).toBeNull()
+  })
+
+  it('US-090 CA-2: un 401 del login no pide refresh aunque haya uno guardado', async () => {
+    sessionStorage.setItem(CLAVE_DE_SESION, JSON.stringify({ refresh: 'refresco-guardado' }))
+    const { cliente, servidor } = nuevo()
+
+    const error = await cliente.iniciarSesion(EMAIL_ACTIVA, 'otra-clave-ficticia').catch((e: unknown) => e)
+
+    expect(error).toBeInstanceOf(CredencialesRechazadas)
+    expect(servidor.peticiones('/api/auth/refresh')).toBe(0)
+    expect(servidor.peticiones('/api/auth/login')).toBe(1)
+  })
+
+  it('F7: sin sessionStorage disponible la sesión vive en memoria', async () => {
+    const almacenamientoQueLanza = {
+      getItem: () => null,
+      setItem: () => {
+        throw new DOMException('Almacenamiento bloqueado', 'SecurityError')
+      },
+      removeItem: () => {
+        throw new DOMException('Almacenamiento bloqueado', 'SecurityError')
+      },
+    }
+    const { cliente, sesion } = nuevo(crearServidorFalso(), almacenamientoQueLanza)
+
+    await cliente.iniciarSesion(EMAIL_ACTIVA, CONTRASENA_FICTICIA)
+    const accessGuardado = sesion.access()
+    sesion.borrar()
+
+    expect(accessGuardado).not.toBeNull()
+    expect(sesion.refresh()).toBeNull()
   })
 })
