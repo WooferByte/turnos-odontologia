@@ -184,6 +184,8 @@ Un `ProveedorDeSesion` (contexto de React) tiene tres estados: `verificando`, `c
 
 Reglas de React aplicadas (`vercel-react-best-practices`): estado derivado durante el render (si hay sesión se calcula, no se copia), `setState` funcional, dependencias primitivas en el único efecto (el del arranque, con limpieza para no actualizar un componente desmontado) y ternarios en lugar de `&&` en el JSX.
 
+**Desvío del Apply (aceptado por el orquestador, grupo 5):** mientras la sesión está en `verificando` (renovación al arrancar), `/ingresar` muestra «Cargando…» en vez del formulario; sin esto se veía el formulario durante la renovación del arranque.
+
 ### F11. Panel base y cierre de sesión — Decisión del autor (D225, D226)
 
 `/panel` muestra un encabezado con «Turnos Odontológicos AR» y el botón **«Cerrar sesión»**, y un cuerpo con «Panel del consultorio» y ningún dato. No se muestra quién inició sesión (no hay ruta que lo informe, y decodificar el JWT en el navegador daría solo el id; D225).

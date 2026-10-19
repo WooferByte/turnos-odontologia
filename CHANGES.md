@@ -388,7 +388,7 @@ Primer change: `/opsx:propose crear-turno-sin-solapamientos`.
   - `knowledge-base/08_arquitectura_propuesta.md` §Seguridad · `knowledge-base/04_modelo_de_datos.md` §«Usuario y UsuarioRol», §Profesional
 
 ### [C-08] `panel-base-e-inicio-de-sesion`
-- **Estado**: `[ ]` pendiente · **Orden**: 3 · **Gobernanza**: CRITICO
+- **Estado**: `[x]` archivado · **Orden**: 3 · **Gobernanza**: CRITICO
 - **Objetivo** (US-090): construir la base de la interfaz del panel y la pantalla de inicio de sesión (parte de interfaz); es el primer change con frontend.
 - **Alcance — dentro**: proyecto `frontend/` con React, TypeScript y Vite; pantalla de inicio de sesión contra `POST /auth/login`; renovación con `POST /auth/refresh` y vuelta al inicio de sesión ante un `401`; rutas del panel protegidas; servicio `frontend` en Docker Compose.
 - **Alcance — fuera**: pantallas de negocio (cada una va en su change); páginas públicas (C-28); cambios de API.
@@ -398,12 +398,12 @@ Primer change: `/opsx:propose crear-turno-sin-solapamientos`.
   - `knowledge-base/06_funcionalidades.md` nota «Changes técnicos y frontend» (D106) y §US-090
   - `knowledge-base/08_arquitectura_propuesta.md` §«Estructura de directorios» (frontend), párrafo «Interfaz» y §Seguridad
   - `knowledge-base/02_descripcion_general.md` §«Arquitectura general» y «Stack tecnológico»
-  - `knowledge-base/07_flujos_principales.md` Flujo 8 · `knowledge-base/05_reglas_de_negocio.md` RN-AU-03, RN-AU-04
+  - `knowledge-base/07_flujos_principales.md` Flujo 8 · `knowledge-base/05_reglas_de_negocio.md` RN-AU-03, RN-AU-04 · `knowledge-base/10_preguntas_abiertas.md` (ya implementado, D217 a D228)
 
 ### [C-09] `gestion-de-usuarios`
 - **Estado**: `[ ]` pendiente · **Orden**: 3 · **Gobernanza**: CRITICO
 - **Objetivo** (US-093): que el odontólogo cree usuarios, les asigne roles y los desactive (parte de gestión).
-- **Alcance — dentro**: `GET/POST /usuarios` y `PATCH /usuarios/{id}` (roles, activar o desactivar); email único; contraseña inicial definida al crear; desactivar incrementa `token_version`; error de dominio RN-AU-06 para el último odontólogo activo y para desactivarse a sí mismo; pantalla de usuarios del panel.
+- **Alcance — dentro**: `GET/POST /usuarios` y `PATCH /usuarios/{id}` (roles, activar o desactivar); email único; contraseña inicial definida al crear; desactivar incrementa `token_version`; error de dominio RN-AU-06 para el último odontólogo activo y para desactivarse a sí mismo; pantalla de usuarios del panel; cablear `pedidoDelPanel` y `SesionTerminada` en `ProveedorDeSesion` (F8 del design de C-08: el proveedor recibe `SesionTerminada` y navega a `/ingresar` con el aviso; C-08 no lo llama).
 - **Alcance — fuera**: restablecer y cambiar contraseñas (C-10); crear un `Profesional` al asignar el rol `odontologo` (Fase 2, D46).
 - **Depende de**: C-07, C-08
 - **Escenarios mínimos**: US-093: CA-1, CA-2, CA-3, CA-4, CA-5, CA-8
