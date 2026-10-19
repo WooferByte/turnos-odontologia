@@ -24,7 +24,7 @@ Reglas de trabajo para todos los grupos (no son tareas):
 
 ## 2. Guards del frontend
 
-- [ ] 2.1 RED y GREEN de los guards (regla dura 8; design F13, D227). RED: escribir `src/test/guards.test.ts` con `it('regla 8: no hay any en src')`, `it('regla 6: no hay vi.mock ni stubs de fetch')`, `it('F7: no hay localStorage ni dangerouslySetInnerHTML')` y `it('F4: no hay archivos barrel index.ts')`, que recorren `src/` con `node:fs` (excluido el propio archivo de guards); agregar a propósito un `const x: any = 1` en `src/main.tsx` y comprobar que el primero falla. GREEN: quitar la línea. Verificación: los cuatro pasan sin la línea y el primero falla con ella; `npm run typecheck` en verde.
+- [x] 2.1 RED y GREEN de los guards (regla dura 8; design F13, D227). RED: escribir `src/test/guards.test.ts` con `it('regla 8: no hay any en src')`, `it('regla 6: no hay vi.mock ni stubs de fetch')`, `it('F7: no hay localStorage ni dangerouslySetInnerHTML')` y `it('F4: no hay archivos barrel index.ts')`, que recorren `src/` con `node:fs` (excluido el propio archivo de guards); agregar a propósito un `const x: any = 1` en `src/main.tsx` y comprobar que el primero falla. GREEN: quitar la línea. Verificación: los cuatro pasan sin la línea y el primero falla con ella; `npm run typecheck` en verde.
 
 ## 3. Cliente de la API: inicio de sesión
 
