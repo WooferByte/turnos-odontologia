@@ -8,7 +8,7 @@ Las tareas 3.1, 3.3 y 4.2 a 4.4 aplican las decisiones del autor D236 (el «Carg
 
 ## 1. Preparación
 
-- [ ] 1.1 Red de seguridad. Desde `frontend/`: `npm test` y `npm run typecheck`; desde `backend/`: `python -m pytest` (con `backend/.venv/Scripts/python.exe`). Anotar las líneas finales (la base de 6.1) y, en particular, que los 8 tests de `PaginaIngreso.test.tsx` y los 10 de `RutaProtegida.test.tsx` pasan. Comprobar `git status` limpio salvo los artefactos del change, `openspec status --change inicio-de-sesion-con-diseno-de-stitch` con las cuatro piezas hechas y `node --version` con `v24.`. Verificación: las tres corridas en verde; si algo falla, se frena y se informa como falla previa.
+- [x] 1.1 Red de seguridad. Desde `frontend/`: `npm test` y `npm run typecheck`; desde `backend/`: `python -m pytest` (con `backend/.venv/Scripts/python.exe`). Anotar las líneas finales (la base de 6.1) y, en particular, que los 8 tests de `PaginaIngreso.test.tsx` y los 10 de `RutaProtegida.test.tsx` pasan. Comprobar `git status` limpio salvo los artefactos del change, `openspec status --change inicio-de-sesion-con-diseno-de-stitch` con las cuatro piezas hechas y `node --version` con `v24.`. Verificación: las tres corridas en verde; si algo falla, se frena y se informa como falla previa.
 
 ## 2. Marcado y avisos (F1, F2, E1, E2, B1; US-090 CA-1, CA-2, CA-3; US-092 CA-1; RN-AU-04, RN-AU-03)
 
