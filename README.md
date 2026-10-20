@@ -19,6 +19,8 @@ Sistema de gestión de turnos y agenda para odontólogos independientes y consul
 
 - `panel-de-prestaciones` (C-11): la **primera pantalla de negocio**, en `/panel/prestaciones`. Muestra el catálogo (activas e inactivas), permite dar de alta, editar (nombre, duración, color, reserva online), desactivar y reactivar una prestación, avisa que cambiar la duración no modifica los turnos ya creados y muestra los rechazos de la API con su código (`RN-AG-01`, `RN-AG-15`, `RN-GL-04`, `RN-AU-05`). Es solo interfaz: no cambia la API, el esquema ni las dependencias.
 
+- `inicio-de-sesion-con-diseno-de-stitch` (C-49): la pantalla de inicio de sesión (`/ingresar`) pasa a seguir la pantalla generada en Stitch. Es solo interfaz: no cambia el comportamiento, la API, el esquema ni las dependencias.
+
 La API se puede probar sin instalar nada más que Python (base SQLite en memoria) o sobre PostgreSQL con Docker; el panel necesita además Node 24 (ver «Panel (interfaz)»).
 
 > Todos los datos del proyecto, de los tests y de la demo son **ficticios**. No hay datos reales de pacientes ni secretos.
@@ -513,7 +515,7 @@ npm test
 npm run typecheck
 ```
 
-`npm test` corre **91 tests en 6 archivos** («Tests 91 passed (91)»); no necesita el backend, Docker ni red. `npm run typecheck` (`tsc --noEmit`) termina sin salida. `npm run build` genera `frontend/dist/`.
+`npm test` corre **100 tests en 6 archivos** («Tests 100 passed (100)»); no necesita el backend, Docker ni red. `npm run typecheck` (`tsc --noEmit`) termina sin salida. `npm run build` genera `frontend/dist/`.
 
 ### Probar el panel (demo sin Docker, dos terminales)
 
@@ -595,7 +597,23 @@ Escenario → test (`src/features/prestaciones/`, API reemplazada por el servido
 
 La disposición, la jerarquía y los textos siguen la pantalla generada en Stitch (referencia visual: `docs/skills-mcp/evidencias/sesion-nueva/stitch-c11-pantalla/pantalla.png`; comparación con la implementación en `docs/skills-mcp/evidencias/sesion-nueva/stitch-c11.md`, sección 5). `PaginaPrestaciones.test.tsx` tiene 41 tests (38 escenarios del spec más 3 de triangulación).
 
-El cliente de la API (`apiPrestaciones.test.ts`, 12 tests) se prueba aparte, con el `pedidoDelPanel` real sobre el servidor falso. Resultado de `npm test`: «Tests 91 passed (91)».
+El cliente de la API (`apiPrestaciones.test.ts`, 12 tests) se prueba aparte, con el `pedidoDelPanel` real sobre el servidor falso. Resultado de `npm test`: «Tests 100 passed (100)».
+
+### Pantalla de inicio de sesión
+
+Desde C-49 la pantalla `/ingresar` sigue la pantalla generada en Stitch (referencia visual: `docs/skills-mcp/evidencias/sesion-nueva/stitch-ingreso-pantalla/pantalla.png`; la comparación con la implementación se anota en `docs/skills-mcp/evidencias/sesion-nueva/stitch-ingreso.md`). Muestra la marca con el ícono de diente, el aviso de sesión terminada arriba de los campos, el aviso de error (sin título) entre la contraseña y el botón, y el botón «Ingresando…» con un ícono de espera. No cambia ningún mensaje, ruta ni petición, y no carga fuentes, estilos, scripts ni íconos de otro origen. Los 18 tests de C-08 siguen sin editarse; el escenario de cada test nuevo va en su nombre:
+
+| Escenario | Test titular |
+|---|---|
+| F1 (la marca y solo el formulario) | `PaginaIngreso.test.tsx` — «US-090 CA-1: la pantalla muestra la marca y solo el formulario de ingreso» y «US-090 CA-1: la marca está dentro de la tarjeta de ingreso, junto con el formulario» |
+| F2 (sin avisos al abrir) | `PaginaIngreso.test.tsx` — «US-090 CA-1: al abrir la pantalla no hay avisos» |
+| E1 (rechazo en el aviso de error) | `PaginaIngreso.test.tsx` — «US-090 CA-2: el rechazo se muestra en el aviso de error con el mensaje exacto, entre la contraseña y el botón» |
+| E2 (usuaria inactiva) | `PaginaIngreso.test.tsx` — «US-090 CA-3: la usuaria inactiva ve el mismo aviso, en el mismo lugar, que una contraseña incorrecta» |
+| B1 (sesión terminada antes de los campos) | `src/pages/RutaProtegida.test.tsx` — «US-092 CA-1: el aviso de sesión terminada va antes de los campos y se va al reintentar» |
+| B2 (botón de espera) | `PaginaIngreso.test.tsx` — «US-090 CA-1: mientras espera, el botón conserva el nombre «Ingresando…» con el ícono de espera» y «US-090 CA-1: sin conexión, el aviso muestra el mensaje de conexión en el lugar del genérico y el botón vuelve a «Ingresar» sin el ícono» |
+| STI-1 (sin recursos de otro origen) | `src/test/guards.test.ts` — «STI-1: ningún archivo de src ni index.html carga recursos de otro origen» (la consola sin violaciones de CSP se verifica en el navegador) |
+
+`npm test` termina con «Tests 100 passed (100)».
 
 ### Versiones fijadas del frontend
 
@@ -627,9 +645,9 @@ La API se reemplaza en los tests por un servidor falso escrito a mano (`frontend
 | US-090 CA-3 (usuaria inactiva) | `PaginaIngreso.test.tsx` — «US-090 CA-3: la usuaria inactiva ve el mismo mensaje y no entra» |
 | US-092 CA-1 (sesión inválida o vencida) | `src/pages/RutaProtegida.test.tsx` — «US-092 CA-1: el panel sin sesión lleva a /ingresar sin pedir nada a la API»; `src/shared/api/clienteHttp.test.ts` — «US-092 CA-1: access vencido se renueva una vez y repite la petición» |
 
-Hay además tests de la renovación compartida, del `403`, del cierre de sesión y de que ninguna URL contenga un token, y cuatro guards (`src/test/guards.test.ts`) que fallan si aparece `any`, `vi.mock`, `localStorage`, `dangerouslySetInnerHTML` o un archivo `index.ts` de reexportación.
+Hay además tests de la renovación compartida, del `403`, del cierre de sesión y de que ninguna URL contenga un token, y cinco guards (`src/test/guards.test.ts`) que fallan si aparece `any`, `vi.mock`, `localStorage`, `dangerouslySetInnerHTML`, un archivo `index.ts` de reexportación o un recurso de otro origen (STI-1).
 
-Resultado actual de las dos suites: frontend «Tests 91 passed (91)»; backend «528 passed, 47 deselected, 1 warning».
+Resultado actual de las dos suites: frontend «Tests 100 passed (100)»; backend «528 passed, 47 deselected, 1 warning».
 
 ## Levantar la API con PostgreSQL
 
