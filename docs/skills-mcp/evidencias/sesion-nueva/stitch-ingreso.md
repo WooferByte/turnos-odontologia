@@ -41,4 +41,35 @@ Es la **referencia visual** del `design.md` de `inicio-de-sesion-con-diseno-de-s
 
 ## 5. Comparación de la implementación con la pantalla
 
-Pendiente: la hace la tarea 5.2 del change, en el Apply.
+Tarea 5.2, el 2026-10-20, con el navegador integrado: primero la demo (`crear_app_demo` y `npm run dev`) y después Docker Compose (`http://127.0.0.1:5173`).
+
+Capturas de la implementación, a 1280 × 800, en [stitch-ingreso-pantalla/](stitch-ingreso-pantalla/):
+- `implementacion.jpg`: el error;
+- `implementacion-sesion-terminada.jpg`: la sesión terminada;
+- `implementacion-espera.jpg`: el botón de espera.
+
+- **Recorrido:**
+  - `/panel` sin sesión lleva a `/ingresar`, sin avisos.
+  - Con una contraseña incorrecta, `POST /api/auth/login` responde `401` con `["RN-AU-04"]`. Aparece un único `alert` con el texto exacto, sin título, entre la contraseña y el botón.
+  - Con la API detenida, el botón muestra «Ingresando…» con el ícono. Después aparece el mensaje de conexión en el lugar del genérico, y el botón vuelve a «Ingresar» sin ícono.
+  - El ingreso válido lleva a `/panel`.
+  - Al reiniciar la demo y recargar `/panel`, aparece el aviso de sesión terminada arriba de los campos. Al reintentar con una contraseña incorrecta, queda solo el `alert` y ningún `status`.
+  - A 375 px de ancho la tarjeta mide 343 px y no hay desplazamiento horizontal (`scrollWidth` 375).
+  - US-090 CA-3 (la usuaria inactiva) no se recorre: en la demo la recepcionista está activa y el caso está cubierto por la suite.
+- **Coincide con Stitch:**
+  - la tarjeta blanca centrada con borde suave;
+  - la marca con el ícono de diente y «Turnos Odontológicos AR»;
+  - las etiquetas «Email» y «Contraseña» arriba de campos de 40 px;
+  - el aviso de error con ícono, fondo y borde rojo suave;
+  - el aviso informativo azul con ícono, antes de los campos;
+  - el botón primario de ancho completo;
+  - el estado de espera atenuado con el ícono y «Ingresando…».
+- **Diferencias intencionales** (L10 y D237):
+  - no hay barra superior, pie, subtítulo ni etiquetas «Referencia: …»;
+  - los tres estados no se muestran a la vez, sino uno por vez según la situación;
+  - los campos no vienen precargados;
+  - la fuente Inter solo se ve si está instalada en el equipo (no se carga de ningún CDN);
+  - los íconos son SVG propios.
+- **V3 (Compose):** la respuesta trae `Content-Security-Policy: default-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'`. La consola no muestra violaciones de la CSP: solo el `401` esperado del rechazo. No se pidió ningún recurso de otro origen, y los íconos SVG en línea y la animación se ven bien.
+- **V4:** `/panel/prestaciones` se ve igual que en C-11, con la tabla, las etiquetas y los botones sin cambios.
+- **Seguridad:** ningún token apareció en la URL ni en la consola.
