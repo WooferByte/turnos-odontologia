@@ -5,6 +5,7 @@ import { Navigate, useLocation } from 'react-router'
 import { CredencialesRechazadas, EntradaRechazada } from '../../shared/api/errores'
 import { useSesionDelPanel } from '../../shared/api/ProveedorDeSesion'
 import { IconoDiente } from '../../shared/iconos/IconoDiente'
+import { IconoEspera } from '../../shared/iconos/IconoEspera'
 import { AvisoDeIngreso } from './AvisoDeIngreso'
 
 type Problema = 'credenciales' | 'entrada' | 'conexion'
@@ -96,7 +97,14 @@ export function PaginaIngreso() {
           </div>
           {problemaVisible === null ? null : <AvisoDeIngreso tipo="error" mensaje={MENSAJES[problemaVisible]} />}
           <button type="submit" className="boton-primario boton-ancho-completo" disabled={enviando}>
-            {enviando ? 'Ingresando…' : 'Ingresar'}
+            {enviando ? (
+            <>
+              <IconoEspera clase="icono icono-espera" />
+              Ingresando…
+            </>
+          ) : (
+            'Ingresar'
+          )}
           </button>
         </form>
       </section>

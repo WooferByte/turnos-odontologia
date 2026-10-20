@@ -42,4 +42,12 @@ describe('guards del frontend', () => {
     const barrels = archivosDeSrc(RAIZ_SRC).filter((ruta) => /^index\.tsx?$/.test(basename(ruta)))
     expect(barrels).toEqual([])
   })
+
+  it('STI-1: ningún archivo de src ni index.html carga recursos de otro origen', () => {
+    const index = join(RAIZ_SRC, '..', 'index.html')
+    const archivos = [...fuentes(), { ruta: index, texto: readFileSync(index, 'utf8') }]
+    const patron =
+      /@import\s+(?:url\()?\s*['"]?https?:\/\/|url\(\s*['"]?https?:\/\/|<(?:link|script)[^>]*(?:src|href)\s*=\s*['"]?https?:\/\/|(?:src|href)\s*=\s*['"]https?:\/\//i
+    expect(archivos.filter(({ texto }) => patron.test(texto)).map(({ ruta }) => basename(ruta))).toEqual([])
+  })
 })

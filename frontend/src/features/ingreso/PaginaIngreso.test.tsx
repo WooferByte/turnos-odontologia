@@ -195,4 +195,36 @@ describe('PaginaIngreso', () => {
     expectEntre(screen.getByLabelText('Contraseña'), aviso, screen.getByRole('button', { name: 'Ingresar' }))
     expect(screen.queryByText('Panel del consultorio')).toBeNull()
   })
+
+  it('US-090 CA-1: mientras espera, el botón conserva el nombre «Ingresando…» con el ícono de espera', async () => {
+    const servidor = crearServidorFalso()
+    const liberar = servidor.retener('/api/auth/login')
+    const usuario = montar('/ingresar', servidor)
+
+    await ingresar(usuario, EMAIL_ACTIVA, CONTRASENA_FICTICIA)
+    const boton = (await screen.findByRole('button', { name: 'Ingresando…' })) as HTMLButtonElement
+
+    expect(boton.disabled).toBe(true)
+    expect(boton.querySelector('svg')?.getAttribute('aria-hidden')).toBe('true')
+
+    liberar()
+    expect(await screen.findByText('Panel del consultorio')).toBeDefined()
+  })
+
+  it('US-090 CA-1: sin conexión, el aviso muestra el mensaje de conexión en el lugar del genérico y el botón vuelve a «Ingresar» sin el ícono', async () => {
+    const servidor = crearServidorFalso()
+    servidor.caerse()
+    const usuario = montar('/ingresar', servidor)
+
+    await ingresar(usuario, EMAIL_ACTIVA, CONTRASENA_FICTICIA)
+
+    const avisos = await screen.findAllByRole('alert')
+    expect(avisos).toHaveLength(1)
+    const aviso = avisos[0] as HTMLElement
+    expect(aviso.textContent).toBe(MENSAJE_DE_CONEXION)
+    const boton = screen.getByRole('button', { name: 'Ingresar' }) as HTMLButtonElement
+    expectEntre(screen.getByLabelText('Contraseña'), aviso, boton)
+    expect(boton.disabled).toBe(false)
+    expect(boton.querySelector('svg')).toBeNull()
+  })
 })

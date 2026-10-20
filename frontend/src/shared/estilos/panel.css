@@ -629,3 +629,20 @@ p.pantalla-de-ingreso {
   width: 100%;
   min-height: var(--alto-campo-grande);
 }
+
+/* Ícono de espera del botón de ingreso (D238): gira y, con movimiento reducido, queda quieto */
+.icono-espera {
+  animation: girar 0.9s linear infinite;
+}
+
+@keyframes girar {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .icono-espera {
+    animation: none;
+  }
+}
