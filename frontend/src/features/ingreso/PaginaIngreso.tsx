@@ -4,6 +4,8 @@ import { useState, type FormEvent } from 'react'
 import { Navigate, useLocation } from 'react-router'
 import { CredencialesRechazadas, EntradaRechazada } from '../../shared/api/errores'
 import { useSesionDelPanel } from '../../shared/api/ProveedorDeSesion'
+import { IconoDiente } from '../../shared/iconos/IconoDiente'
+import { AvisoDeIngreso } from './AvisoDeIngreso'
 
 type Problema = 'credenciales' | 'entrada' | 'conexion'
 
@@ -58,35 +60,46 @@ export function PaginaIngreso() {
   }
 
   return (
-    <main>
-      <h1>Turnos Odontológicos AR</h1>
-      <form method="post" onSubmit={(evento) => void enviar(evento)}>
-        <label htmlFor="email">Email</label>
-        <input
-          id="email"
-          name="email"
-          type="email"
-          autoComplete="username"
-          required
-          value={email}
-          onChange={(evento) => setEmail(evento.target.value)}
-        />
-        <label htmlFor="contrasena">Contraseña</label>
-        <input
-          id="contrasena"
-          name="contrasena"
-          type="password"
-          autoComplete="current-password"
-          required
-          value={contrasena}
-          onChange={(evento) => setContrasena(evento.target.value)}
-        />
-        {aviso === 'sesion-terminada' ? <p role="status">{MENSAJE_SESION_TERMINADA}</p> : null}
-        {problemaVisible === null ? null : <p role="alert">{MENSAJES[problemaVisible]}</p>}
-        <button type="submit" disabled={enviando}>
-          {enviando ? 'Ingresando…' : 'Ingresar'}
-        </button>
-      </form>
+    <main className="pantalla-de-ingreso">
+      <section className="tarjeta-de-ingreso" aria-labelledby="titulo-de-ingreso">
+        <header className="encabezado-de-ingreso">
+          <IconoDiente clase="icono icono-de-ingreso" />
+          <h1 id="titulo-de-ingreso">Turnos Odontológicos AR</h1>
+        </header>
+        {aviso === 'sesion-terminada' ? (
+          <AvisoDeIngreso tipo="informativo" mensaje={MENSAJE_SESION_TERMINADA} />
+        ) : null}
+        <form method="post" onSubmit={(evento) => void enviar(evento)}>
+          <div className="campo-de-ingreso">
+            <label htmlFor="email">Email</label>
+            <input
+              id="email"
+              name="email"
+              type="email"
+              autoComplete="username"
+              required
+              value={email}
+              onChange={(evento) => setEmail(evento.target.value)}
+            />
+          </div>
+          <div className="campo-de-ingreso">
+            <label htmlFor="contrasena">Contraseña</label>
+            <input
+              id="contrasena"
+              name="contrasena"
+              type="password"
+              autoComplete="current-password"
+              required
+              value={contrasena}
+              onChange={(evento) => setContrasena(evento.target.value)}
+            />
+          </div>
+          {problemaVisible === null ? null : <AvisoDeIngreso tipo="error" mensaje={MENSAJES[problemaVisible]} />}
+          <button type="submit" className="boton-primario boton-ancho-completo" disabled={enviando}>
+            {enviando ? 'Ingresando…' : 'Ingresar'}
+          </button>
+        </form>
+      </section>
     </main>
   )
 }

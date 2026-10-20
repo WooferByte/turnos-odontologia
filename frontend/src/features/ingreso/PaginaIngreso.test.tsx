@@ -31,6 +31,11 @@ function montar(ruta: string, servidor: ServidorFalso) {
   return userEvent.setup()
 }
 
+function expectEntre(antes: Element, medio: Element, despues: Element): void {
+  expect(antes.compareDocumentPosition(medio) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+  expect(medio.compareDocumentPosition(despues) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+}
+
 describe('PaginaIngreso', () => {
   beforeEach(() => {
     sessionStorage.clear()
@@ -130,5 +135,64 @@ describe('PaginaIngreso', () => {
 
     liberar()
     expect(await screen.findByText('Panel del consultorio')).toBeDefined()
+  })
+
+  it('US-090 CA-1: la pantalla muestra la marca y solo el formulario de ingreso', () => {
+    montar('/ingresar', crearServidorFalso())
+
+    const titulos = screen.getAllByRole('heading')
+    expect(titulos).toHaveLength(1)
+    expect(titulos[0]?.textContent).toBe('Turnos Odontológicos AR')
+    expect(screen.getByRole('heading', { level: 1, name: 'Turnos Odontológicos AR' })).toBeDefined()
+    expect(screen.getByLabelText('Email')).toBeDefined()
+    expect(screen.getByLabelText('Contraseña')).toBeDefined()
+    expect(screen.getAllByRole('button')).toHaveLength(1)
+    expect(screen.getByRole('button', { name: 'Ingresar' })).toBeDefined()
+    expect(screen.queryAllByRole('link')).toHaveLength(0)
+  })
+
+  it('US-090 CA-1: la marca está dentro de la tarjeta de ingreso, junto con el formulario', () => {
+    const { container } = render(
+      <MemoryRouter initialEntries={['/ingresar']}>
+        <App fetch={crearServidorFalso().fetch} />
+      </MemoryRouter>,
+    )
+
+    const tarjeta = screen.getByRole('region', { name: 'Turnos Odontológicos AR' })
+    expect(tarjeta.tagName).toBe('SECTION')
+    expect(tarjeta.contains(screen.getByRole('heading', { level: 1 }))).toBe(true)
+    expect(tarjeta.contains(container.querySelector('form'))).toBe(true)
+  })
+
+  it('US-090 CA-2: el rechazo se muestra en el aviso de error con el mensaje exacto, entre la contraseña y el botón', async () => {
+    const usuario = montar('/ingresar', crearServidorFalso())
+
+    await ingresar(usuario, EMAIL_ACTIVA, 'otra-clave-ficticia')
+
+    const avisos = await screen.findAllByRole('alert')
+    expect(avisos).toHaveLength(1)
+    const aviso = avisos[0] as HTMLElement
+    expect(aviso.textContent).toBe(MENSAJE_GENERICO)
+    expectEntre(screen.getByLabelText('Contraseña'), aviso, screen.getByRole('button', { name: 'Ingresar' }))
+  })
+
+  it('US-090 CA-1: al abrir la pantalla no hay avisos', () => {
+    montar('/ingresar', crearServidorFalso())
+
+    expect(screen.queryAllByRole('alert')).toHaveLength(0)
+    expect(screen.queryAllByRole('status')).toHaveLength(0)
+  })
+
+  it('US-090 CA-3: la usuaria inactiva ve el mismo aviso, en el mismo lugar, que una contraseña incorrecta', async () => {
+    const usuario = montar('/ingresar', crearServidorFalso())
+
+    await ingresar(usuario, EMAIL_INACTIVA, CONTRASENA_FICTICIA)
+
+    const avisos = await screen.findAllByRole('alert')
+    expect(avisos).toHaveLength(1)
+    const aviso = avisos[0] as HTMLElement
+    expect(aviso.textContent).toBe(MENSAJE_GENERICO)
+    expectEntre(screen.getByLabelText('Contraseña'), aviso, screen.getByRole('button', { name: 'Ingresar' }))
+    expect(screen.queryByText('Panel del consultorio')).toBeNull()
   })
 })

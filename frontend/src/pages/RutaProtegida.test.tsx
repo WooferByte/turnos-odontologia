@@ -221,4 +221,21 @@ describe('RutaProtegida y arranque', () => {
       expect(url).not.toContain(CONTRASENA_FICTICIA)
     }
   })
+
+  it('US-092 CA-1: el aviso de sesión terminada va antes de los campos y se va al reintentar', async () => {
+    const servidor = crearServidorFalso()
+    guardarRefresh('refresco-que-el-servidor-no-conoce')
+    const usuario = montar('/panel', servidor)
+
+    const aviso = await screen.findByRole('status')
+    expect(aviso.textContent).toBe(AVISO_SESION_TERMINADA)
+    expect(aviso.compareDocumentPosition(screen.getByLabelText('Email')) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy()
+
+    await usuario.type(screen.getByLabelText('Email'), EMAIL_ACTIVA)
+    await usuario.type(screen.getByLabelText('Contraseña'), 'otra-clave-ficticia')
+    await usuario.click(screen.getByRole('button', { name: 'Ingresar' }))
+
+    expect((await screen.findByRole('alert')).textContent).toBe('El email o la contraseña no son correctos.')
+    expect(screen.queryAllByRole('status')).toHaveLength(0)
+  })
 })
