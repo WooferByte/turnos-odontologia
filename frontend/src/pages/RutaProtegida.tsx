@@ -11,7 +11,7 @@ export function RutaProtegida({ children }: Propiedades) {
   const { estado } = useSesionDelPanel()
   const ubicacion = useLocation()
 
-  if (estado === 'verificando') return <p>Cargando…</p>
+  if (estado === 'verificando') return <p className="pantalla-de-ingreso">Cargando…</p>
   if (estado === 'sin-sesion') {
     return <Navigate to="/ingresar" replace state={{ desde: ubicacion.pathname + ubicacion.search }} />
   }

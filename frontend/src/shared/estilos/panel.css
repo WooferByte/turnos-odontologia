@@ -531,3 +531,101 @@
   padding-top: 16px;
   border-top: 1px solid var(--borde);
 }
+
+/* Pantalla de inicio de sesión (C-49, design L4 a L9), traducida de la pantalla de Stitch sin Tailwind ni CDN */
+.pantalla-de-ingreso {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-height: 100vh;
+  padding: 24px 16px;
+}
+
+p.pantalla-de-ingreso {
+  margin: 0;
+  color: var(--texto-tenue);
+}
+
+.tarjeta-de-ingreso {
+  box-sizing: border-box;
+  width: 100%;
+  max-width: 400px;
+  padding: 32px;
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-panel);
+  box-shadow: var(--sombra-tarjeta);
+}
+
+.encabezado-de-ingreso {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.encabezado-de-ingreso h1 {
+  margin: 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--texto);
+}
+
+.icono-de-ingreso {
+  width: 28px;
+  height: 28px;
+  color: var(--primario);
+}
+
+.campo-de-ingreso {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.campo-de-ingreso label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--texto);
+}
+
+.campo-de-ingreso input[type='email'],
+.campo-de-ingreso input[type='password'] {
+  box-sizing: border-box;
+  width: 100%;
+  height: var(--alto-campo-grande);
+  padding: 0 12px;
+  border: 1px solid var(--borde-fuerte);
+  border-radius: var(--radio);
+  background: var(--superficie);
+  color: var(--texto);
+  font: inherit;
+}
+
+.campo-de-ingreso input[type='email']:focus,
+.campo-de-ingreso input[type='password']:focus {
+  outline: none;
+  border-color: var(--primario);
+  box-shadow: 0 0 0 1px var(--primario);
+}
+
+.tarjeta-de-ingreso .aviso > p {
+  margin: 0;
+}
+
+.aviso-informativo {
+  color: var(--primario-oscuro);
+  background: var(--primario-suave);
+  border: 1px solid var(--primario-borde);
+}
+
+.aviso-informativo .icono-aviso {
+  color: var(--primario-oscuro);
+}
+
+.boton-ancho-completo {
+  width: 100%;
+  min-height: var(--alto-campo-grande);
+}

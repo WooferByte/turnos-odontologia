@@ -14,6 +14,7 @@
   --texto-tenue: #64748b;
   --primario: #0284c7;
   --primario-hover: #0369a1;
+  --primario-oscuro: #075985;
   --primario-suave: #f0f9ff;
   --primario-borde: #bae6fd;
   --primario-translucido: rgb(2 132 199 / 8%);
@@ -37,6 +38,7 @@
   /* Alturas y medidas */
   --alto-barra: 64px;
   --alto-campo: 36px;
+  --alto-campo-grande: 40px;
   --alto-boton: 36px;
   --ancho-contenido: 1280px;
   --tamano-icono: 16px;
