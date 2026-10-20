@@ -965,7 +965,7 @@ Primer change: `/opsx:propose crear-turno-sin-solapamientos`.
 > Changes que el autor sumó después de generar el índice. Van al final para que los códigos sigan siendo consecutivos en el orden en que aparecen (fila 12 de la verificación); su **Orden** dice a qué fase pertenecen, y el árbol y las puertas los ubican en su bloque.
 
 ### [C-49] `inicio-de-sesion-con-diseno-de-stitch`
-- **Estado**: `[~]` en curso · **Orden**: 3 · **Gobernanza**: MEDIO
+- **Estado**: `[x]` archivado · **Orden**: 3 · **Gobernanza**: MEDIO
 - **Objetivo** (US-090): que la pantalla de inicio de sesión de C-08 siga una pantalla generada en Stitch (D234), sin cambiar su comportamiento (parte de interfaz).
 - **Alcance — dentro**: marcado y estilos de `/ingresar` traducidos de la pantalla de Stitch a los tokens de C-11, sin dependencias nuevas; avisos de error y de sesión terminada con ícono y su texto exacto; botón de espera; un requisito nuevo de presentación en `ingreso-al-panel`.
 - **Alcance — fuera**: cambios de API, de esquema o de la lógica de sesión; recuperación de contraseña (C-10); otras pantallas del panel.

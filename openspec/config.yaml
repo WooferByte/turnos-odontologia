@@ -3,7 +3,7 @@ schema: spec-driven
 # Project context
 # Restricciones que guían los artefactos y que un agente no puede inferir leyendo el código.
 # Fuente: knowledge-base/ (decisiones del autor del 2026-10-02 al 2026-10-19; registro en
-# knowledge-base/10_preguntas_abiertas.md, D1..D234). Actualizado el 2026-10-15, tras archivar C-06: lo que
+# knowledge-base/10_preguntas_abiertas.md, D1..D240). Actualizado el 2026-10-15, tras archivar C-06: lo que
 # era propio del primer change pasó a sus artefactos archivados y aquí queda lo que vale para todos.
 context: |
   Proyecto: sistema de turnos y agenda para consultorios odontológicos (Argentina). Trabajo universitario.
