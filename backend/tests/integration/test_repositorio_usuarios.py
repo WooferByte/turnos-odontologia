@@ -214,3 +214,89 @@ def test_us091_ca4_el_profesional_se_vincula_a_un_usuario_y_el_vinculo_no_se_rep
     with pytest.raises(IntegrityError):
         un_profesional(sesion, consultorio, usuario_id=usuario.id)
     sesion.rollback()
+
+
+def test_us093_ca1_del_consultorio_devuelve_activos_e_inactivos_por_id(sesion: Session) -> None:
+    consultorio, otro_consultorio = un_consultorio(sesion), un_consultorio(sesion)
+    primero = un_usuario(sesion, consultorio)
+    inactivo = un_usuario(sesion, consultorio, activo=False)
+    tercero = un_usuario(sesion, consultorio)
+    un_usuario(sesion, otro_consultorio)
+
+    usuarios = RepositorioUsuariosSqlAlchemy(sesion).del_consultorio(consultorio.id)
+
+    assert [u.id for u in usuarios] == sorted([primero.id, inactivo.id, tercero.id])
+    assert [u.activo for u in usuarios] == [True, False, True]
+    assert all(isinstance(u, DatosUsuario) for u in usuarios)
+
+
+def test_us093_ca1_del_consultorio_sin_usuarios_devuelve_una_lista_vacia(sesion: Session) -> None:
+    assert RepositorioUsuariosSqlAlchemy(sesion).del_consultorio(un_consultorio(sesion).id) == []
+
+
+def test_us093_ca3_guardar_actualiza_activo_y_token_version(sesion: Session, fabrica_sesiones) -> None:
+    usuario = un_usuario(sesion, un_consultorio(sesion), token_version=2)
+    with fabrica_sesiones() as escritura:
+        repositorio = RepositorioUsuariosSqlAlchemy(escritura)
+        devuelto = repositorio.guardar(replace(repositorio.obtener(usuario.id), activo=False, token_version=3))
+        escritura.commit()
+
+    with fabrica_sesiones() as lectura:
+        leido = RepositorioUsuariosSqlAlchemy(lectura).obtener(usuario.id)
+
+    assert (leido.activo, leido.token_version) == (False, 3)
+    assert devuelto == leido
+    assert leido.email == usuario.email and leido.hash_password == usuario.hash_password
+
+
+def test_us093_ca3_guardar_no_toca_a_los_demas_usuarios(sesion: Session, fabrica_sesiones) -> None:
+    consultorio = un_consultorio(sesion)
+    editado, vecino = un_usuario(sesion, consultorio), un_usuario(sesion, consultorio, token_version=5)
+    with fabrica_sesiones() as escritura:
+        repositorio = RepositorioUsuariosSqlAlchemy(escritura)
+        repositorio.guardar(replace(repositorio.obtener(editado.id), activo=False))
+        escritura.commit()
+
+    leido = RepositorioUsuariosSqlAlchemy(sesion).obtener(vecino.id)
+
+    assert (leido.activo, leido.token_version) == (True, 5)
+
+
+def test_us093_ca1_reemplazar_roles_deja_exactamente_los_pedidos(sesion: Session, fabrica_sesiones) -> None:
+    usuario = un_usuario(sesion, un_consultorio(sesion), roles=(Rol.RECEPCIONISTA, Rol.DUENO))
+    with fabrica_sesiones() as escritura:
+        RepositorioUsuariosSqlAlchemy(escritura).reemplazar_roles(usuario.id, frozenset({Rol.DUENO, Rol.ODONTOLOGO}))
+        escritura.commit()
+
+    assert RepositorioUsuariosSqlAlchemy(sesion).roles_de(usuario.id) == frozenset({Rol.DUENO, Rol.ODONTOLOGO})
+
+
+def test_us093_ca1_reemplazar_roles_no_toca_los_de_otro_usuario(sesion: Session, fabrica_sesiones) -> None:
+    consultorio = un_consultorio(sesion)
+    uno = un_usuario(sesion, consultorio, roles=(Rol.RECEPCIONISTA,))
+    otro = un_usuario(sesion, consultorio, roles=(Rol.RECEPCIONISTA,))
+    with fabrica_sesiones() as escritura:
+        RepositorioUsuariosSqlAlchemy(escritura).reemplazar_roles(uno.id, frozenset({Rol.DUENO}))
+        escritura.commit()
+
+    repositorio = RepositorioUsuariosSqlAlchemy(sesion)
+
+    assert repositorio.roles_de(uno.id) == frozenset({Rol.DUENO})
+    assert repositorio.roles_de(otro.id) == frozenset({Rol.RECEPCIONISTA})
+
+
+def test_us093_ca4_odontologos_activos_no_cuenta_a_los_inactivos(sesion: Session) -> None:
+    consultorio, otro_consultorio = un_consultorio(sesion), un_consultorio(sesion)
+    activo = un_usuario(sesion, consultorio, roles=(Rol.ODONTOLOGO, Rol.DUENO))
+    un_usuario(sesion, consultorio, activo=False, roles=(Rol.ODONTOLOGO,))
+    un_usuario(sesion, consultorio, roles=(Rol.RECEPCIONISTA,))
+    un_usuario(sesion, otro_consultorio, roles=(Rol.ODONTOLOGO,))
+
+    assert RepositorioUsuariosSqlAlchemy(sesion).odontologos_activos(consultorio.id) == frozenset({activo.id})
+
+
+def test_us093_ca4_bloquear_administracion_no_falla_en_sqlite(sesion: Session) -> None:
+    consultorio = un_consultorio(sesion)
+
+    RepositorioUsuariosSqlAlchemy(sesion).bloquear_administracion(consultorio.id)
+    RepositorioUsuariosSqlAlchemy(sesion).bloquear_administracion(consultorio.id)

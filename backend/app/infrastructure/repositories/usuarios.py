@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from app.application.puertos import EmailRepetidoEnLaBase, RolInvalidoEnLaBase
 from app.domain.acceso.roles import Rol
 from app.domain.acceso.usuarios import DatosUsuario, normalizar_email
-from app.infrastructure.db.modelos import UsuarioModelo, UsuarioRolModelo
+from app.infrastructure.db.modelos import ConsultorioModelo, UsuarioModelo, UsuarioRolModelo
 
 SQLSTATE_UNICIDAD = "23505"  # unique_violation
 RESTRICCION_DE_EMAIL = "uq_usuario_email"
@@ -92,4 +92,48 @@ class RepositorioUsuariosSqlAlchemy:
             delete(UsuarioRolModelo).where(
                 UsuarioRolModelo.usuario_id == usuario_id, UsuarioRolModelo.rol == rol.value
             )
+        )
+
+    def del_consultorio(self, consultorio_id: int) -> list[DatosUsuario]:
+        modelos = self._sesion.scalars(
+            select(UsuarioModelo).where(UsuarioModelo.consultorio_id == consultorio_id).order_by(UsuarioModelo.id)
+        )
+        return [_a_dominio(modelo) for modelo in modelos]
+
+    def guardar(self, datos: DatosUsuario) -> DatosUsuario:
+        modelo = self._sesion.get_one(UsuarioModelo, datos.id)
+        modelo.activo = datos.activo
+        modelo.token_version = datos.token_version
+        self._sesion.flush()
+        return _a_dominio(modelo)
+
+    def reemplazar_roles(self, usuario_id: int, roles: frozenset[Rol]) -> None:
+        actuales = self.roles_de(usuario_id)
+        sobrantes = [rol.value for rol in actuales - roles]
+        if sobrantes:
+            self._sesion.execute(
+                delete(UsuarioRolModelo).where(
+                    UsuarioRolModelo.usuario_id == usuario_id, UsuarioRolModelo.rol.in_(sobrantes)
+                )
+            )
+        for rol in roles - actuales:
+            self.asignar_rol(usuario_id, rol)
+
+    def odontologos_activos(self, consultorio_id: int) -> frozenset[int]:
+        ids = self._sesion.scalars(
+            select(UsuarioModelo.id)
+            .join(UsuarioRolModelo, UsuarioRolModelo.usuario_id == UsuarioModelo.id)
+            .where(
+                UsuarioModelo.consultorio_id == consultorio_id,
+                UsuarioModelo.activo.is_(True),
+                UsuarioRolModelo.rol == Rol.ODONTOLOGO.value,
+            )
+        )
+        return frozenset(ids)
+
+    def bloquear_administracion(self, consultorio_id: int) -> None:
+        # FOR UPDATE sobre la fila del consultorio: serializa las ediciones que pueden bajar los
+        # odontólogos activos (DD-04, D248). SQLite omite la cláusula.
+        self._sesion.execute(
+            select(ConsultorioModelo.id).where(ConsultorioModelo.id == consultorio_id).with_for_update()
         )

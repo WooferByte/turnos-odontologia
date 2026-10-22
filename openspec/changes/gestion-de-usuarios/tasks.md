@@ -26,8 +26,8 @@ Reglas de trabajo para todos los grupos (no son tareas):
 
 ## 3. Persistencia del repositorio de usuarios
 
-- [ ] 3.1 RED (US-093 CA-1, CA-3, CA-4). En `tests/integration/test_repositorio_usuarios.py`: `del_consultorio devuelve activos e inactivos por id`, `guardar actualiza activo y token_version`, `reemplazar_roles deja exactamente los pedidos`, `odontologos_activos no cuenta a los inactivos` y `bloquear_administracion no falla en SQLite`. Verificación: fallan porque los métodos no existen en el puerto ni en `RepositorioUsuariosSqlAlchemy`.
-- [ ] 3.2 GREEN y REFACTOR (design U2, U12). Ampliar `RepositorioUsuarios` en `application/puertos.py` y su implementación SQLAlchemy (estilo 2.x síncrono; `bloquear_administracion` con `with_for_update()` sobre `ConsultorioModelo`). Verificación: los tests de 3.1 pasan; los de C-06 y C-07 sobre usuarios siguen en verde; `python -m pytest` en verde.
+- [x] 3.1 RED (US-093 CA-1, CA-3, CA-4). En `tests/integration/test_repositorio_usuarios.py`: `del_consultorio devuelve activos e inactivos por id`, `guardar actualiza activo y token_version`, `reemplazar_roles deja exactamente los pedidos`, `odontologos_activos no cuenta a los inactivos` y `bloquear_administracion no falla en SQLite`. Verificación: fallan porque los métodos no existen en el puerto ni en `RepositorioUsuariosSqlAlchemy`.
+- [x] 3.2 GREEN y REFACTOR (design U2, U12). Ampliar `RepositorioUsuarios` en `application/puertos.py` y su implementación SQLAlchemy (estilo 2.x síncrono; `bloquear_administracion` con `with_for_update()` sobre `ConsultorioModelo`). Verificación: los tests de 3.1 pasan; los de C-06 y C-07 sobre usuarios siguen en verde; `python -m pytest` en verde.
 
 ## 4. Listar y crear usuarios por la API (US-093 CA-1, CA-2, CA-8)
 

@@ -146,6 +146,26 @@ class RepositorioUsuarios(Protocol):
         """Quita el rol; si no lo tenía no pasa nada."""
         ...
 
+    def del_consultorio(self, consultorio_id: int) -> list[DatosUsuario]:
+        """Todos los usuarios del consultorio, activos e inactivos, ordenados por id (US-093 CA-1)."""
+        ...
+
+    def guardar(self, datos: DatosUsuario) -> DatosUsuario:
+        """Actualiza ``activo`` y ``token_version`` del usuario existente; el resto no se edita."""
+        ...
+
+    def reemplazar_roles(self, usuario_id: int, roles: frozenset[Rol]) -> None:
+        """Deja al usuario con exactamente esos roles (RN-AU-02)."""
+        ...
+
+    def odontologos_activos(self, consultorio_id: int) -> frozenset[int]:
+        """Los ids de los usuarios activos con el rol ``odontologo``; un inactivo no cuenta (RN-AU-06)."""
+        ...
+
+    def bloquear_administracion(self, consultorio_id: int) -> None:
+        """Serializa las ediciones que pueden bajar los odontólogos activos (DD-04, D248)."""
+        ...
+
 
 class UnidadDeTrabajo(Protocol):
     agenda: RepositorioAgenda
