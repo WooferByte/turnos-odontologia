@@ -409,7 +409,7 @@ Decisión del autor 2026-10-03 (fila «Usuarios y acceso» de la tabla del 2026-
 ### US-093 — Gestión de usuarios del consultorio
 **Como** odontólogo **quiero** crear, desactivar y asignar roles a los usuarios del consultorio **para** dar acceso a la recepcionista.
 - [ ] CA-1: el odontólogo crea usuarios y les asigna roles; la recepcionista no puede.
-- [ ] CA-2: el email es único.
+- [ ] CA-2: el email es único, sin distinguir mayúsculas ni espacios en los extremos (un usuario inactivo sigue ocupando su email); si se repite, se rechaza con `409` y el error de dominio `RN-AU-08` (decisión del autor 2026-10-22, D243).
 - [ ] CA-3: desactivar un usuario **corta su acceso de inmediato** (sus tokens dejan de valer, no solo su próximo inicio de sesión; `token_version` se incrementa); no se borra (RN-AU-03, RN-AU-04; decisión del autor 2026-10-05, D43).
 - [ ] CA-4 (error): no se puede desactivar ni quitar el rol `odontologo` al **último odontólogo activo**; se rechaza con el error de dominio `RN-AU-06` (D44).
 - [ ] CA-5 (error): un usuario **no puede desactivarse a sí mismo** (`RN-AU-06`, D44).
@@ -419,7 +419,7 @@ Decisión del autor 2026-10-03 (fila «Usuarios y acceso» de la tabla del 2026-
 - [ ] CA-9 (error): la contraseña (inicial, restablecida o cambiada por el propio usuario) tiene **mínimo 10 caracteres y máximo 72 bytes** (el tope de bcrypt); fuera de ese rango se rechaza y no se modifica el usuario (RN-AU-07, decisión del autor 2026-10-05, D74).
 **Orden**: 3
 **Depende de**: US-090, US-091
-**Reglas**: RN-AU-02, RN-AU-03, RN-AU-04, RN-AU-05, RN-AU-06, RN-AU-07
+**Reglas**: RN-AU-02, RN-AU-03, RN-AU-04, RN-AU-05, RN-AU-06, RN-AU-07, RN-AU-08
 
 ### US-094 — Renovar la sesión (confirmada por el autor 2026-10-05, D42 y D43)
 **Como** usuario del panel **quiero** renovar mi sesión sin volver a ingresar la contraseña **para** no ser interrumpido durante la jornada.

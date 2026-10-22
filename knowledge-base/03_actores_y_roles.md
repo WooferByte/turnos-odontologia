@@ -40,7 +40,7 @@ C = crear, R = leer, U = actualizar, D = eliminar/anular. "Propio" = solo sus tu
 | Registro de pagos y señas (un registro de pago no se edita: se corrige o anula con un registro nuevo, RN-SP-09) | CR | CR | R | C (pago de seña vía MP) |
 | Consentimiento de datos | R | R | R | C propio |
 | Reportes (ocupación, ausentismo, cobros) | R | — | R | — |
-| Usuarios del consultorio (alta con contraseña inicial, roles, desactivar, restablecer contraseña; RN-AU-06, RN-AU-07) | CRUD | — | R | — |
+| Usuarios del consultorio (alta con contraseña inicial, roles, desactivar, restablecer contraseña; RN-AU-06, RN-AU-07, RN-AU-08) | CRUD | — | R | — |
 | Cambiar la propia contraseña (pidiendo la actual, RN-AU-07) | U propio | U propio | U propio | — |
 
 **Decisión del autor (2026-10-02, P-09 / SU-04):** la recepcionista ve los datos **administrativos** del paciente (identificación, contacto, turnos, pagos) pero **no** los datos **clínicos** (anamnesis, evolución, odontograma), por minimización de datos de salud (Ley 25.326). Ver RN-FC-02.
