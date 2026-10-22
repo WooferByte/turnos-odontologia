@@ -38,11 +38,11 @@ Los criterios de US-010 usan IDs estables `E1..E12` (compartidos con `07_flujos_
 
 ### US-002 — Horario recurrente
 **Como** odontólogo **quiero** configurar mis días y franjas de atención **para** que solo se ofrezcan turnos dentro de ese horario.
-- [ ] CA-1: puedo cargar varias franjas por día (p. ej. mañana y tarde) sin que se superpongan entre sí.
+- [ ] CA-1: puedo cargar varias franjas por día (p. ej. mañana y tarde) sin que se superpongan entre sí; si dos franjas del mismo día se superponen o una no termina después de empezar, se rechaza con `422` y el error de dominio `RN-AG-16`, informando todas juntas (decisión del autor 2026-10-22, D257).
 - [ ] CA-2: un turno que excede el fin de la franja se rechaza.
 **Orden**: 3
 **Depende de**: US-092
-**Reglas**: RN-AG-04
+**Reglas**: RN-AG-04, RN-AG-16
 
 ### US-003 — Bloqueos puntuales
 **Como** odontólogo **quiero** bloquear días u horas (vacaciones, feriados, ausencias) **para** que no se reserven turnos en esos momentos.
