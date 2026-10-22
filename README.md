@@ -21,6 +21,8 @@ Sistema de gestión de turnos y agenda para odontólogos independientes y consul
 
 - `inicio-de-sesion-con-diseno-de-stitch` (C-49): la pantalla de inicio de sesión (`/ingresar`) pasa a seguir la pantalla generada en Stitch. Es solo interfaz: no cambia el comportamiento, la API, el esquema ni las dependencias.
 
+- `gestion-de-usuarios` (C-09, la API): `GET /usuarios`, `POST /usuarios` y `PATCH /usuarios/{id}`. La odontóloga lista los usuarios del consultorio con sus roles, crea uno con una contraseña inicial (de 10 caracteres a 72 bytes, `RN-AU-07`; un email repetido es `409` con `RN-AU-08`), le cambia los roles y lo desactiva o reactiva. Desactivar a alguien incrementa su `token_version` y le corta la sesión en la petición siguiente (`RN-AU-03`); nadie se desactiva a sí mismo ni deja al consultorio sin un odontólogo activo (`RN-AU-06`). El dueño solo lee.
+
 La API se puede probar sin instalar nada más que Python (base SQLite en memoria) o sobre PostgreSQL con Docker; el panel necesita además Node 24 (ver «Panel (interfaz)»).
 
 > Todos los datos del proyecto, de los tests y de la demo son **ficticios**. No hay datos reales de pacientes ni secretos.
@@ -102,7 +104,7 @@ python -m pytest
 
 Los tests corren con **SQLite en memoria**: no necesitan Docker, PostgreSQL ni Redis, ni ningún archivo de base de datos.
 
-La corrida termina con **«528 passed, 47 deselected, 1 warning»**. Los 47 «deselected» son los del perfil opcional con PostgreSQL (más abajo), que la corrida por defecto excluye a propósito. El warning es un aviso de deprecación interno de Starlette (`starlette/testclient.py`, sobre `anyio.abc.BlockingPortal`): viene de una dependencia con versión fijada, no del código del proyecto, y no indica ningún problema.
+La corrida termina con **«611 passed, 47 deselected, 1 warning»**. Los 47 «deselected» son los del perfil opcional con PostgreSQL (más abajo), que la corrida por defecto excluye a propósito. El warning es un aviso de deprecación interno de Starlette (`starlette/testclient.py`, sobre `anyio.abc.BlockingPortal`): viene de una dependencia con versión fijada, no del código del proyecto, y no indica ningún problema.
 
 ### Escenario → test
 
@@ -404,6 +406,49 @@ curl -i -X PATCH http://127.0.0.1:8000/sillones/2 -H "Authorization: Bearer PEGA
 
 En la API sobre PostgreSQL el id del sillón nuevo lo asigna la base: el seed deja la secuencia ajustada y el primer alta recibe el 2, pero si ya hubo otras altas será mayor; usá el `id` que devolvió el `201`.
 
+### Usuarios
+
+Las tres rutas piden el access token (leer: `odontologo` y `dueno`; `POST` y `PATCH`: solo `odontologo`; la recepcionista ni siquiera lee) y trabajan sobre el único consultorio de la instalación. Con la demo **recién arrancada** (los pasos dependen unos de otros) y el token de la odontóloga, en Swagger o con `curl`:
+
+1. `GET /usuarios` → `200`, con los dos usuarios de la demo ordenados por `id`, cada uno con `id`, `email`, `roles` (en el orden `odontologo`, `recepcionista`, `dueno`) y `activo`. Incluye los inactivos y **nunca** la contraseña ni la versión del token. Con el token de la recepcionista → `403`, con `codigos` igual a `["RN-AU-05"]`.
+2. `POST /usuarios` con `{"email": "turnos@consultorio-demo.test", "contrasena": "clave-ficticia-2026", "roles": ["recepcionista"]}` → `201`, con `id` 3 y `activo` `true`. Ese usuario ya puede iniciar sesión con esa contraseña (`POST /auth/login` → `200`). El email se guarda sin espacios de más y en minúsculas.
+3. El mismo `POST` con `"email": "otro@consultorio-demo.test"` y `"contrasena": "corta-123"` → `422`, con `codigos` igual a `["RN-AU-07"]` y el error en `errores` (campo `contrasena`): la contraseña inicial debe tener de 10 caracteres a 72 bytes.
+4. `POST /usuarios` con `"email": "RECEPCION@consultorio-demo.test"` → `409`, con `codigos` igual a `["RN-AU-08"]`: el email ya existe (no distingue mayúsculas, y también cuenta si el usuario está inactivo).
+5. `PATCH /usuarios/2` con `{"roles": ["recepcionista", "dueno"]}` → `200`, con los dos roles. Los roles **reemplazan** al conjunto anterior, y el access token que la recepcionista ya tenía sirve desde la petición siguiente para lo que el nuevo rol permite (por ejemplo, `GET /usuarios` pasa de `403` a `200`).
+6. Desactivar corta la sesión. Antes, `POST /auth/login` con la recepcionista y guardar su `access_token` y su `refresh_token`. Luego `PATCH /usuarios/2` con `{"activo": false}` → `200`, con `activo` `false`. Ahora: cualquier ruta con ese access token → `401` con `codigos` igual a `["RN-AU-03"]`; `POST /auth/refresh` con ese refresh → el mismo `401`; `POST /auth/login` con su contraseña → `401` con `["RN-AU-04"]`. El usuario sigue en `GET /usuarios`, con `activo` `false`.
+7. `PATCH /usuarios/2` con `{"activo": true}` → `200`. Los tokens anteriores **siguen sin servir** (`401`); un `POST /auth/login` nuevo → `200`.
+8. `PATCH /usuarios/1` con `{"activo": false}` (la odontóloga sobre sí misma) → `409`, con `codigos` igual a `["RN-AU-06"]`: nadie puede desactivarse a sí mismo. `PATCH /usuarios/1` con `{"roles": ["dueno"]}` → `409` con `["RN-AU-06"]`: es la única odontóloga activa y el consultorio no puede quedar sin ninguna. Con un segundo odontólogo activo, quitarse el rol `odontologo` sí se permite (D247).
+9. `PATCH /usuarios/999` con `{"activo": false}` → `404`, con `codigos` igual a `["RN-GL-04"]` y en `referencias` `{"recurso": "usuario", "recurso_id": 999, "motivo": "inexistente"}`. Un cuerpo mal formado (`{"roles": []}`, `{"activo": null}` o un campo como `email`) → `422`, con `codigos` igual a `[]`: el email y la contraseña no se editan por esta ruta.
+
+Un `PATCH` con `roles` y `activo` a la vez es de todo o nada: si una regla lo rechaza, no cambia ninguna de las dos cosas (D252). Los roles de un usuario inactivo se pueden editar; sigue inactivo (D253). Un `PATCH` vacío (`{}`) responde `200` sin cambiar nada.
+
+Con `curl` (el alta y la desactivación):
+
+```
+curl -i -X POST http://127.0.0.1:8000/usuarios -H "Authorization: Bearer PEGAR_EL_ACCESS_TOKEN" -H "Content-Type: application/json" -d "{\"email\": \"turnos@consultorio-demo.test\", \"contrasena\": \"clave-ficticia-2026\", \"roles\": [\"recepcionista\"]}"
+curl -i -X PATCH http://127.0.0.1:8000/usuarios/2 -H "Authorization: Bearer PEGAR_EL_ACCESS_TOKEN" -H "Content-Type: application/json" -d "{\"activo\": false}"
+```
+
+En la API sobre PostgreSQL el id del usuario nuevo lo asigna la base (puede no ser el 3); usá el `id` que devolvió el `201`.
+
+#### Escenario → test (usuarios, API)
+
+Los escenarios están en `openspec/changes/gestion-de-usuarios/specs/gestion-de-usuarios/spec.md`. Los 49 tests de la API están en `backend/tests/api/test_usuarios.py`; las reglas puras, en `backend/tests/unit/test_usuarios.py` y `test_roles.py`, y el repositorio, en `backend/tests/integration/test_repositorio_usuarios.py`:
+
+| Escenario | Qué verifica | Test titular (`test_usuarios.py` de la API, salvo que se indique) |
+|---|---|---|
+| US-093 CA-1 | La odontóloga lista los usuarios con sus roles; la lista no expone contraseña ni versión del token; el dueño lee y la recepcionista no | `test_us093_ca1_la_odontologa_lista_los_usuarios_con_sus_roles`, `test_us093_ca1_la_lista_no_expone_la_contrasena_ni_la_version_del_token`, `test_us093_ca1_el_dueno_lee_pero_la_recepcionista_no` |
+| US-093 CA-1 | El alta (`201`, hash bcrypt, inicio de sesión), el email normalizado, el cuerpo mal formado informado todo junto y el `401` antes que la entrada | `test_us093_ca1_la_odontologa_crea_una_recepcionista_que_inicia_sesion`, `test_us093_ca1_el_email_se_guarda_normalizado`, `test_us093_ca1_un_cuerpo_mal_formado_se_rechaza_con_un_422_de_formato`, `test_us093_ca1_sin_sesion_se_responde_401_antes_que_la_entrada` |
+| US-093 CA-1 | Sumar un rol (vale con el mismo token), un `PATCH` vacío, roles de un inactivo, `403` para el dueño y la recepcionista, `404` y `422` con su orden | `test_us093_ca1_la_odontologa_suma_el_rol_dueno_a_la_recepcionista`, `test_us093_ca1_un_patch_vacio_no_cambia_nada`, `test_us093_ca1_se_cambian_los_roles_de_un_usuario_inactivo`, `test_us093_ca1_el_dueno_no_puede_cambiar_roles`, `test_us093_ca1_un_usuario_inexistente_responde_404_rn_gl_04`, `test_us093_ca1_la_entrada_se_evalua_antes_que_el_usuario_de_la_url` |
+| US-093 CA-2 | Email repetido: `409` con `RN-AU-08` (otras mayúsculas, usuario inactivo; con contraseña corta se informa la entrada) | `test_us093_ca2_email_repetido_con_otras_mayusculas_responde_409_rn_au_08`, `test_us093_ca2_el_email_de_un_usuario_inactivo_sigue_ocupado`, `test_us093_ca2_con_email_repetido_y_contrasena_corta_se_informa_la_entrada` |
+| US-093 CA-3 | Desactivar corta la sesión; reactivar no revive los tokens anteriores; desactivar a un inactivo no cambia nada | `test_us093_ca3_desactivar_a_la_recepcionista_corta_su_sesion`, `test_us093_ca3_reactivar_no_revive_los_tokens_anteriores`, `test_us093_ca3_desactivar_a_quien_ya_esta_inactivo_no_cambia_nada` |
+| US-093 CA-4 | El consultorio no queda sin odontólogo activo (`RN-AU-06`): la única odontóloga no se quita el rol; un inactivo no cuenta; con otro activo se permite; roles y `activo` juntos | `test_us093_ca4_la_unica_odontologa_no_puede_quitarse_el_rol_odontologo`, `test_us093_ca4_un_odontologo_inactivo_no_cuenta`, `test_us093_ca4_con_otro_odontologo_activo_la_odontologa_deja_su_rol`, `test_us093_ca4_roles_y_activo_de_otro_odontologo_en_el_mismo_pedido_se_aplican_juntos`; la mitad «desactivar al último» en `test_us093_ca4_quedarse_sin_odontologos_activos_levanta_rn_au_06` (`unit/test_usuarios.py`) |
+| US-093 CA-5 | Nadie se desactiva a sí mismo (`RN-AU-06`); el permiso y la entrada se evalúan antes; un pedido combinado rechazado no cambia nada | `test_us093_ca5_la_odontologa_no_puede_desactivarse`, `test_us093_ca5_el_permiso_y_la_entrada_se_evaluan_antes`, `test_us093_ca5_roles_y_activo_en_el_mismo_pedido_no_cambian_nada_si_se_rechaza` |
+| US-093 CA-8 | Dar el rol `odontologo` no crea un profesional (al crear ni al editar) | `test_us093_ca8_asignar_odontologo_no_crea_un_profesional`, `test_us093_ca8_pasar_a_odontologo_a_otro_usuario_no_crea_un_profesional` |
+| US-093 CA-9 (contraseña inicial) | De 10 caracteres a 72 bytes; el formato se informa antes que el largo | `test_us093_ca9_contrasena_inicial_de_9_caracteres_responde_422_rn_au_07`, `test_us093_ca9_10_caracteres_y_72_bytes_se_aceptan_73_bytes_no`, `test_us093_ca9_el_formato_se_informa_antes_que_el_largo_de_la_contrasena` |
+
+Dos escenarios solo se prueban sobre PostgreSQL, en el perfil opcional (`backend/tests/postgres/test_administracion_concurrente.py`, tarea 6.4 todavía pendiente): dos odontólogos que se desactivan a la vez y dos altas simultáneas con el mismo email. La suite por defecto no los ejerce (SQLite, un solo hilo).
+
 ## Sesión del panel
 
 `POST /auth/login` y `POST /auth/refresh` están en la demo y en la API sobre PostgreSQL. Son las dos únicas rutas del panel que se llaman sin token; todas las demás lo exigen (ver «Protección del panel», abajo).
@@ -455,6 +500,8 @@ Un usuario puede tener varios roles y sus permisos **se suman**. Los roles se le
 | `POST /prestaciones`, `PATCH /prestaciones/{id}` | sí | no | no |
 | `GET /sillones` | sí | sí | sí |
 | `POST /sillones`, `PATCH /sillones/{id}` | sí | no | no |
+| `GET /usuarios` | sí | no | sí |
+| `POST /usuarios`, `PATCH /usuarios/{id}` | sí | no | no |
 
 ### Usuarios de prueba
 
@@ -719,8 +766,12 @@ La migración autogenerada **se revisa a mano** antes de usarla, y cada change q
 - **`/docs` y `/openapi.json` son públicos** (D214): se pueden leer sin token (las rutas que documentan, no). Es aceptable porque la API se publica solo en `127.0.0.1` y hay solo datos ficticios.
 - **Un cuerpo con JSON roto responde `422` antes que `401`** (design R12): FastAPI lee el cuerpo antes de evaluar el token. Un cuerpo bien formado sin token sí responde `401`, antes de cualquier validación.
 - **Deshacer la migración `0007` pierde los roles** (`alembic downgrade 0006` borra `usuario_rol`), el vínculo profesional-usuario y `creado_por`; los usuarios, los turnos y los eventos quedan.
-- **El rol se lee en cada petición, pero el token no se revoca de a uno**: tras quitarle **un** rol a un usuario, su access token sigue sirviendo hasta 15 minutos para lo que sus **otros** roles permiten (y deja de servir para lo que solo daba el rol quitado). Desactivar al usuario o subir su `token_version` lo corta en la petición siguiente. Todavía no hay ruta para dar o quitar roles ni para desactivar usuarios: se hace en la base, como en «Protección del panel».
+- **El rol se lee en cada petición, pero el token no se revoca de a uno**: tras quitarle **un** rol a un usuario, su access token sigue sirviendo hasta 15 minutos para lo que sus **otros** roles permiten (y deja de servir para lo que solo daba el rol quitado). Desactivar al usuario o subir su `token_version` lo corta en la petición siguiente. Desde C-09 se dan y quitan roles y se desactiva con `PATCH /usuarios/{id}` (ver «Usuarios»).
 - **`profesional.matricula` existe pero nadie la escribe ni la lee todavía** (D215).
+- **Dar el rol `odontologo` no crea ni vincula un profesional** (U16, D246): el usuario puede tener el permiso de la odontóloga y no aparecer como profesional en la agenda. El vínculo usuario-profesional se resuelve en un change posterior.
+- **El largo de la contraseña inicial se valida después del formato** (U5, D177): un cuerpo con un email mal formado y una contraseña corta informa solo el error del email; el de la contraseña aparece al corregirlo.
+- **No hay registro de auditoría de los cambios de usuarios**: no queda constancia de quién creó, desactivó o cambió los roles de quién. Tampoco hay `GET /auth/yo`: la interfaz no sabe qué usuario inició sesión.
+- **Desactivar a un usuario no pide confirmación** (D250) y la API no borra usuarios: un usuario desactivado se reactiva con `PATCH`.
 - Los turnos guardados antes de la migración `0003` (por ejemplo, los de la prueba manual de C-02 en el volumen de PostgreSQL) **no tienen historial**: la consulta devuelve `200` con `[]` (D160). La migración no inventa eventos del pasado.
 - **`/auth/login` no tiene límite de peticiones** (D195): cualquiera que llegue a la API puede probar contraseñas. Se acepta porque la API se publica solo en `127.0.0.1` y bcrypt con 12 rondas ya frena cada intento; el límite se decide en el change de la reserva pública. Tampoco hay registro de eventos de seguridad.
 - **No hay cierre de sesión en el servidor** ni revocación de un token puntual (RN-AU-03): un refresh vale hasta su vencimiento o hasta que cambie la `token_version` del usuario.

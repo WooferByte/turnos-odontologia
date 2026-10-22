@@ -50,7 +50,7 @@ Reglas de trabajo para todos los grupos (no son tareas):
 
 ## 7. API en el README
 
-- [ ] 7.1 Completar el `README.md` de la raíz (design U22): sección «Usuarios» en «Probar desde Swagger» (crear con la contraseña inicial, `RN-AU-07`, `RN-AU-08`, cambiar roles, desactivar y ver el `401` con el token anterior, `RN-AU-06` al desactivarse), la tabla escenario → test de la API (US-093 CA-1, CA-2, CA-3, CA-4, CA-5, CA-8) con la cantidad real de tests, y los límites conocidos (profesional vinculado, U16; formato antes que largo, U5; sin auditoría). Verificación: cada paso nuevo se ejecutó tal cual con la demo (`crear_app_demo`) en `/docs` y dio lo que dice.
+- [x] 7.1 Completar el `README.md` de la raíz (design U22): sección «Usuarios» en «Probar desde Swagger» (crear con la contraseña inicial, `RN-AU-07`, `RN-AU-08`, cambiar roles, desactivar y ver el `401` con el token anterior, `RN-AU-06` al desactivarse), la tabla escenario → test de la API (US-093 CA-1, CA-2, CA-3, CA-4, CA-5, CA-8) con la cantidad real de tests, y los límites conocidos (profesional vinculado, U16; formato antes que largo, U5; sin auditoría). Verificación: cada paso nuevo se ejecutó tal cual con la demo (`crear_app_demo`) en `/docs` y dio lo que dice.
 
 ## 8. Servidor falso y cliente de usuarios
 
