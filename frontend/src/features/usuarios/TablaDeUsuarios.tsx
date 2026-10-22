@@ -5,13 +5,21 @@ import { nombreDelRol } from './mensajes'
 
 interface Propiedades {
   usuarios: readonly Usuario[]
+  /** Ids con una acción de fila esperando respuesta: sus botones quedan deshabilitados. */
+  ocupadas: ReadonlySet<number>
+  /** Id del usuario que el panel lateral está editando, si hay uno. */
+  editandoId: number | null
+  onEditar(usuario: Usuario): void
+  onCambiarActivo(usuario: Usuario): void
 }
 
-function claseDeFila(usuario: Usuario): string {
-  return usuario.activo ? 'fila' : 'fila fila-inactiva'
+function claseDeFila(usuario: Usuario, editando: boolean): string {
+  return ['fila', usuario.activo ? null : 'fila-inactiva', editando ? 'fila-editando' : null]
+    .filter((clase) => clase !== null)
+    .join(' ')
 }
 
-export function TablaDeUsuarios({ usuarios }: Propiedades) {
+export function TablaDeUsuarios({ usuarios, ocupadas, editandoId, onEditar, onCambiarActivo }: Propiedades) {
   return (
     <table className="tabla">
       <thead>
@@ -25,9 +33,18 @@ export function TablaDeUsuarios({ usuarios }: Propiedades) {
       <tbody>
         {usuarios.map((usuario) => {
           const accion = usuario.activo ? 'Desactivar' : 'Reactivar'
+          const ocupada = ocupadas.has(usuario.id)
           return (
-            <tr key={usuario.id} className={claseDeFila(usuario)}>
-              <td>{usuario.email}</td>
+            <tr key={usuario.id} className={claseDeFila(usuario, usuario.id === editandoId)}>
+              <td>
+                {usuario.email}
+                {usuario.id === editandoId ? (
+                  <>
+                    {' '}
+                    <span className="marca-editando">Editando</span>
+                  </>
+                ) : null}
+              </td>
               <td>
                 <ul className="roles-del-usuario">
                   {usuario.roles.map((rol) => (
@@ -43,13 +60,21 @@ export function TablaDeUsuarios({ usuarios }: Propiedades) {
                 </span>
               </td>
               <td className="acciones-de-fila">
-                <button type="button" className="boton-de-fila" aria-label={`Editar ${usuario.email}`}>
+                <button
+                  type="button"
+                  className={usuario.id === editandoId ? 'boton-de-fila boton-de-fila-en-edicion' : 'boton-de-fila'}
+                  disabled={ocupada}
+                  aria-label={`Editar ${usuario.email}`}
+                  onClick={() => onEditar(usuario)}
+                >
                   Editar
                 </button>
                 <button
                   type="button"
                   className={usuario.activo ? 'boton-de-fila' : 'boton-de-fila boton-de-fila-primario'}
+                  disabled={ocupada}
                   aria-label={`${accion} ${usuario.email}`}
+                  onClick={() => onCambiarActivo(usuario)}
                 >
                   {accion}
                 </button>

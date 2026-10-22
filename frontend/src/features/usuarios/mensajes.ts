@@ -12,6 +12,9 @@ export const MENSAJE_CONTRASENA_FUERA_DE_RANGO = 'La contraseña debe tener de 1
 export const MENSAJE_SIN_ROLES = 'Elegí al menos un rol.'
 export const MENSAJE_EMAIL_INVALIDO = 'Ingresá un email válido.'
 export const MENSAJE_REVISAR_DATOS = 'Revisá los datos del usuario.'
+export const MENSAJE_SIN_ODONTOLOGO =
+  'El consultorio no puede quedar sin un odontólogo activo y nadie puede desactivarse a sí mismo (RN-AU-06).'
+export const MENSAJE_USUARIO_INEXISTENTE = 'El usuario ya no existe (RN-GL-04).'
 export const MENSAJE_SIN_PERMISO_DE_ESCRITURA = 'Tu usuario no tiene permiso para modificar usuarios (RN-AU-05).'
 
 const NOMBRES_DE_ROL: Record<Rol, string> = {
@@ -26,8 +29,9 @@ export function nombreDelRol(rol: Rol): string {
 
 /** Título corto de un aviso; los demás van sin título porque lo repetirían. */
 export function tituloDelAviso(mensaje: string): string | null {
-  if (mensaje === MENSAJE_SIN_PERMISO_DE_LECTURA) return 'Acceso restringido'
+  if (mensaje === MENSAJE_SIN_PERMISO_DE_LECTURA || mensaje === MENSAJE_SIN_PERMISO_DE_ESCRITURA) return 'Acceso restringido'
   if (mensaje === MENSAJE_SIN_CONEXION) return 'Sin conexión'
+  if (mensaje === MENSAJE_SIN_ODONTOLOGO) return 'No se pudo completar'
   return null
 }
 
@@ -68,6 +72,20 @@ export function erroresDelPanel(error: unknown): ErroresDelPanel {
   if (error instanceof ReglaRechazada && error.codigo === 'RN-AU-08') {
     return { ...SIN_ERRORES, email: MENSAJE_EMAIL_REPETIDO }
   }
+  if (error instanceof ReglaRechazada && error.codigo === 'RN-AU-06') {
+    return { ...SIN_ERRORES, aviso: MENSAJE_SIN_ODONTOLOGO }
+  }
   if (error instanceof EntradaRechazada) return erroresDeEntrada(error)
   return { ...SIN_ERRORES, aviso: MENSAJE_SIN_CONEXION }
+}
+
+export function subtituloDelPanel(usuario: { email: string } | null): string {
+  return usuario === null ? 'Completá los datos del nuevo usuario.' : `Modificando los roles de «${usuario.email}»`
+}
+
+/** Aviso de la tabla cuando falla una acción de fila (desactivar o reactivar). */
+export function avisoDeAccionDeFila(error: unknown): string {
+  if (error instanceof PermisoInsuficiente) return MENSAJE_SIN_PERMISO_DE_ESCRITURA
+  if (error instanceof ReglaRechazada && error.codigo === 'RN-AU-06') return MENSAJE_SIN_ODONTOLOGO
+  return MENSAJE_SIN_CONEXION
 }

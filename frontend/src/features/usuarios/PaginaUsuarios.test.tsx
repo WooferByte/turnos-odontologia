@@ -321,3 +321,243 @@ describe('PaginaUsuarios: errores del alta', () => {
     expect(servidor.usuariosActuales()).toHaveLength(3)
   })
 })
+
+const MENSAJE_RN_AU_06 =
+  'El consultorio no puede quedar sin un odontólogo activo y nadie puede desactivarse a sí mismo (RN-AU-06).'
+const MENSAJE_SIN_PERMISO_DE_ESCRITURA = 'Tu usuario no tiene permiso para modificar usuarios (RN-AU-05).'
+const MENSAJE_USUARIO_INEXISTENTE = 'El usuario ya no existe (RN-GL-04).'
+
+function panelLateral(): HTMLElement {
+  return screen.getByRole('complementary')
+}
+
+/** El aviso de la tabla: el `role="alert"` que no está dentro del panel lateral. */
+function avisoDeLaTabla(): HTMLElement | undefined {
+  return screen.queryAllByRole('alert').find((aviso) => aviso.closest('aside') === null)
+}
+
+function casillaDeRol(rol: string): HTMLInputElement {
+  return within(screen.getByRole('group', { name: 'Roles' })).getByRole<HTMLInputElement>('checkbox', { name: rol })
+}
+
+function botonDeFila(accion: string, email: string): HTMLButtonElement {
+  return within(filaDe(email)).getByRole<HTMLButtonElement>('button', { name: `${accion} ${email}` })
+}
+
+describe('PaginaUsuarios: edición de roles y desactivación', () => {
+  beforeEach(() => {
+    sessionStorage.clear()
+  })
+  afterEach(() => {
+    cleanup()
+  })
+
+  it('US-093 CA-1: sumar el rol dueno a la recepcionista', async () => {
+    const servidor = crearServidorFalso()
+    const usuario = await abrirPanel(servidor, '/panel/usuarios')
+    await screen.findByRole('table')
+
+    await usuario.click(botonDeFila('Editar', EMAIL_RECEPCIONISTA))
+    expect(within(filaDe(EMAIL_RECEPCIONISTA)).getByText('Editando')).toBeDefined()
+    expect(within(panelLateral()).getByText(EMAIL_RECEPCIONISTA)).toBeDefined()
+    expect(casillaDeRol('Recepcionista').checked).toBe(true)
+    await usuario.click(casillaDeRol('Dueño'))
+    await usuario.click(screen.getByRole('button', { name: 'Guardar' }))
+
+    await waitFor(() => expect(screen.queryByRole('complementary')).toBeNull())
+    expect(servidor.llamadas('PATCH', '/api/usuarios/2')).toBe(1)
+    expect(servidor.cuerpos('PATCH', '/api/usuarios/2')).toEqual([{ roles: ['recepcionista', 'dueno'] }])
+    expect(rolesDe(EMAIL_RECEPCIONISTA)).toEqual(['Recepcionista', 'Dueño'])
+    expect(within(filaDe(EMAIL_RECEPCIONISTA)).queryByText('Editando')).toBeNull()
+  })
+
+  it('US-093 CA-3: desactivar a la recepcionista', async () => {
+    const servidor = crearServidorFalso()
+    const usuario = await abrirPanel(servidor, '/panel/usuarios')
+    await screen.findByRole('table')
+
+    await usuario.click(botonDeFila('Desactivar', EMAIL_RECEPCIONISTA))
+
+    await within(filaDe(EMAIL_RECEPCIONISTA)).findByText('Inactivo')
+    expect(servidor.llamadas('PATCH', '/api/usuarios/2')).toBe(1)
+    expect(servidor.cuerpos('PATCH', '/api/usuarios/2')).toEqual([{ activo: false }])
+    expect(filaDe(EMAIL_RECEPCIONISTA).className).toContain('inactiva')
+    expect(botonDeFila('Reactivar', EMAIL_RECEPCIONISTA)).toBeDefined()
+    expect(filasDeDatos()).toHaveLength(3)
+    expect(screen.getByText('3 usuarios registrados')).toBeDefined()
+    expect(screen.queryByRole('button', { name: /borrar|eliminar/i })).toBeNull()
+  })
+
+  it('US-093 CA-4: la única odontóloga no puede dejar su rol', async () => {
+    const servidor = crearServidorFalso()
+    const usuario = await abrirPanel(servidor, '/panel/usuarios')
+    await screen.findByRole('table')
+
+    await usuario.click(botonDeFila('Editar', EMAIL_ACTIVA))
+    await usuario.click(casillaDeRol('Odontólogo'))
+    await usuario.click(screen.getByRole('button', { name: 'Guardar' }))
+
+    expect((await within(panelLateral()).findByRole('alert')).textContent).toContain(MENSAJE_RN_AU_06)
+    expect(casillaDeRol('Odontólogo').checked).toBe(false)
+    expect(casillaDeRol('Dueño').checked).toBe(true)
+    expect(rolesDe(EMAIL_ACTIVA)).toEqual(['Odontólogo', 'Dueño'])
+    expect(servidor.usuariosActuales()[0]?.roles).toEqual(['odontologo', 'dueno'])
+  })
+
+  it('US-093 CA-5: la odontóloga no puede desactivarse', async () => {
+    const servidor = crearServidorFalso()
+    const usuario = await abrirPanel(servidor, '/panel/usuarios')
+    await screen.findByRole('table')
+
+    await usuario.click(botonDeFila('Desactivar', EMAIL_ACTIVA))
+
+    await waitFor(() => expect(avisoDeLaTabla()?.textContent).toContain(MENSAJE_RN_AU_06))
+    expect(within(filaDe(EMAIL_ACTIVA)).getByText('Activo')).toBeDefined()
+    expect(servidor.llamadas('POST', '/api/auth/refresh')).toBe(1)
+    expect(screen.getByTestId('lugar').textContent).toBe('/panel/usuarios')
+  })
+
+  it('US-093 CA-3: mientras espera, los botones de la fila quedan deshabilitados', async () => {
+    const servidor = crearServidorFalso()
+    const usuario = await abrirPanel(servidor, '/panel/usuarios')
+    await screen.findByRole('table')
+    const liberar = servidor.retener('/api/usuarios/2')
+
+    await usuario.click(botonDeFila('Desactivar', EMAIL_RECEPCIONISTA))
+    await usuario.click(botonDeFila('Desactivar', EMAIL_RECEPCIONISTA))
+
+    expect(botonDeFila('Editar', EMAIL_RECEPCIONISTA).disabled).toBe(true)
+    expect(botonDeFila('Desactivar', EMAIL_RECEPCIONISTA).disabled).toBe(true)
+    expect(botonDeFila('Editar', EMAIL_ACTIVA).disabled).toBe(false)
+    liberar()
+
+    await within(filaDe(EMAIL_RECEPCIONISTA)).findByText('Inactivo')
+    expect(servidor.llamadas('PATCH', '/api/usuarios/2')).toBe(1)
+    expect(botonDeFila('Reactivar', EMAIL_RECEPCIONISTA).disabled).toBe(false)
+  })
+})
+
+const USUARIOS_CON_DUENO = [...USUARIOS_DE_PARTIDA, USUARIO_DUENO]
+
+describe('PaginaUsuarios: más casos de edición y reactivación', () => {
+  beforeEach(() => {
+    sessionStorage.clear()
+  })
+  afterEach(() => {
+    cleanup()
+  })
+
+  it('US-093 CA-1: guardar sin cambios no pide nada', async () => {
+    const servidor = crearServidorFalso()
+    const usuario = await abrirPanel(servidor, '/panel/usuarios')
+    await screen.findByRole('table')
+
+    await usuario.click(botonDeFila('Editar', EMAIL_RECEPCIONISTA))
+    await usuario.click(screen.getByRole('button', { name: 'Guardar' }))
+
+    expect(screen.queryByRole('complementary')).toBeNull()
+    expect(servidor.llamadas('PATCH', '/api/usuarios/2')).toBe(0)
+    expect(within(filaDe(EMAIL_RECEPCIONISTA)).queryByText('Editando')).toBeNull()
+  })
+
+  it('US-093 CA-3: reactivar a un usuario inactivo', async () => {
+    const servidor = crearServidorFalso()
+    const usuario = await abrirPanel(servidor, '/panel/usuarios')
+    await screen.findByRole('table')
+
+    await usuario.click(botonDeFila('Reactivar', EMAIL_ADMINISTRACION))
+
+    await within(filaDe(EMAIL_ADMINISTRACION)).findByText('Activo')
+    expect(servidor.cuerpos('PATCH', '/api/usuarios/3')).toEqual([{ activo: true }])
+    expect(filaDe(EMAIL_ADMINISTRACION).className).not.toContain('inactiva')
+    expect(botonDeFila('Desactivar', EMAIL_ADMINISTRACION)).toBeDefined()
+  })
+
+  it('US-093 CA-3: un usuario que ya no existe', async () => {
+    const servidor = crearServidorFalso()
+    const usuario = await abrirPanel(servidor, '/panel/usuarios')
+    await screen.findByRole('table')
+    servidor.quitarUsuario(2)
+
+    await usuario.click(botonDeFila('Desactivar', EMAIL_RECEPCIONISTA))
+
+    await waitFor(() => expect(avisoDeLaTabla()?.textContent).toContain(MENSAJE_USUARIO_INEXISTENTE))
+    await waitFor(() => expect(servidor.llamadas('GET', '/api/usuarios')).toBe(2))
+    await waitFor(() => expect(filasDeDatos()).toHaveLength(2))
+    expect(screen.queryByText(EMAIL_RECEPCIONISTA)).toBeNull()
+  })
+
+  it('US-093 CA-1: el dueño intenta crear y desactivar', async () => {
+    const servidor = crearServidorFalso({ usuarios: USUARIOS_CON_DUENO })
+    const usuario = await abrirPanel(servidor, '/panel/usuarios', EMAIL_DUENO)
+    await screen.findByRole('table')
+
+    await completarAlta(usuario, { email: EMAIL_NUEVO, contrasena: CONTRASENA_NUEVA, roles: ['Recepcionista'] })
+    await usuario.click(screen.getByRole('button', { name: 'Guardar' }))
+
+    expect((await within(panelLateral()).findByRole('alert')).textContent).toContain(MENSAJE_SIN_PERMISO_DE_ESCRITURA)
+    expect(screen.getByLabelText<HTMLInputElement>('Email').value).toBe(EMAIL_NUEVO)
+    await usuario.click(botonDeFila('Desactivar', EMAIL_RECEPCIONISTA))
+
+    await waitFor(() => expect(avisoDeLaTabla()?.textContent).toContain(MENSAJE_SIN_PERMISO_DE_ESCRITURA))
+    expect(filasDeDatos()).toHaveLength(4)
+    expect(within(filaDe(EMAIL_RECEPCIONISTA)).getByText('Activo')).toBeDefined()
+    expect(servidor.llamadas('POST', '/api/auth/refresh')).toBe(1)
+    expect(screen.getByTestId('lugar').textContent).toBe('/panel/usuarios')
+    expect(servidor.usuariosActuales()).toHaveLength(4)
+  })
+
+  it('US-093 CA-1: el dueño intenta editar roles y reactivar', async () => {
+    const servidor = crearServidorFalso({ usuarios: USUARIOS_CON_DUENO })
+    const usuario = await abrirPanel(servidor, '/panel/usuarios', EMAIL_DUENO)
+    await screen.findByRole('table')
+
+    await usuario.click(botonDeFila('Editar', EMAIL_RECEPCIONISTA))
+    await usuario.click(casillaDeRol('Dueño'))
+    await usuario.click(screen.getByRole('button', { name: 'Guardar' }))
+
+    expect((await within(panelLateral()).findByRole('alert')).textContent).toContain(MENSAJE_SIN_PERMISO_DE_ESCRITURA)
+    expect(casillaDeRol('Dueño').checked).toBe(true)
+    await usuario.click(botonDeFila('Reactivar', EMAIL_ADMINISTRACION))
+
+    await waitFor(() => expect(avisoDeLaTabla()?.textContent).toContain(MENSAJE_SIN_PERMISO_DE_ESCRITURA))
+    expect(rolesDe(EMAIL_RECEPCIONISTA)).toEqual(['Recepcionista'])
+    expect(within(filaDe(EMAIL_ADMINISTRACION)).getByText('Inactivo')).toBeDefined()
+    expect(servidor.llamadas('POST', '/api/auth/refresh')).toBe(1)
+    expect(screen.getByTestId('lugar').textContent).toBe('/panel/usuarios')
+  })
+
+  it('US-093 CA-1: sin permiso y con una contraseña corta se ve el permiso', async () => {
+    const servidor = crearServidorFalso({ usuarios: USUARIOS_CON_DUENO })
+    const usuario = await abrirPanel(servidor, '/panel/usuarios', EMAIL_DUENO)
+    await screen.findByRole('table')
+
+    await completarAlta(usuario, { email: EMAIL_NUEVO, contrasena: 'corta-123', roles: ['Recepcionista'] })
+    await usuario.click(screen.getByRole('button', { name: 'Guardar' }))
+
+    expect((await within(panelLateral()).findByRole('alert')).textContent).toContain(MENSAJE_SIN_PERMISO_DE_ESCRITURA)
+    expect(screen.queryByText(MENSAJE_CONTRASENA_CORTA)).toBeNull()
+  })
+})
+
+describe('PaginaUsuarios: desactivarse con un colega odontólogo', () => {
+  beforeEach(() => {
+    sessionStorage.clear()
+  })
+  afterEach(() => {
+    cleanup()
+  })
+
+  it('US-093 CA-5: la odontóloga no puede desactivarse aunque haya un colega odontólogo activo', async () => {
+    const colega = { id: 5, email: 'colega@consultorio-demo.test', roles: ['odontologo'], activo: true }
+    const servidor = crearServidorFalso({ usuarios: [...USUARIOS_DE_PARTIDA, colega] })
+    const usuario = await abrirPanel(servidor, '/panel/usuarios')
+    await screen.findByRole('table')
+
+    await usuario.click(botonDeFila('Desactivar', EMAIL_ACTIVA))
+
+    await waitFor(() => expect(avisoDeLaTabla()?.textContent).toContain(MENSAJE_RN_AU_06))
+    expect(within(filaDe(EMAIL_ACTIVA)).getByText('Activo')).toBeDefined()
+    expect(servidor.usuariosActuales()[0]?.activo).toBe(true)
+  })
+})

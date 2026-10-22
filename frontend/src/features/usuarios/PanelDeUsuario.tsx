@@ -4,18 +4,21 @@
 import { useId, useState, type SyntheticEvent } from 'react'
 import { Aviso } from '../../shared/componentes/Aviso'
 import { IconoAlerta } from '../../shared/iconos/IconoAlerta'
+import { IconoLapiz } from '../../shared/iconos/IconoLapiz'
 import { IconoPersonaMas } from '../../shared/iconos/IconoPersonaMas'
-import { ROLES, type DatosDeAltaDeUsuario, type Rol } from './apiUsuarios'
-import { nombreDelRol, tituloDelAviso, type ErroresDelPanel } from './mensajes'
+import { ROLES, type DatosDeAltaDeUsuario, type Rol, type Usuario } from './apiUsuarios'
+import { nombreDelRol, subtituloDelPanel, tituloDelAviso, type ErroresDelPanel } from './mensajes'
 
 interface Propiedades {
+  /** El usuario cuyos roles se editan; `null` abre el alta. */
+  usuario: Usuario | null
   guardando: boolean
   errores: ErroresDelPanel
   onGuardar(datos: DatosDeAltaDeUsuario): void
   onCancelar(): void
 }
 
-export function PanelDeUsuario({ guardando, errores, onGuardar, onCancelar }: Propiedades) {
+export function PanelDeUsuario({ usuario, guardando, errores, onGuardar, onCancelar }: Propiedades) {
   const idTitulo = useId()
   const idEmail = useId()
   const idContrasena = useId()
@@ -25,7 +28,7 @@ export function PanelDeUsuario({ guardando, errores, onGuardar, onCancelar }: Pr
   const idErrorRoles = useId()
   const [email, setEmail] = useState('')
   const [contrasena, setContrasena] = useState('')
-  const [marcados, setMarcados] = useState<ReadonlySet<Rol>>(new Set())
+  const [marcados, setMarcados] = useState<ReadonlySet<Rol>>(new Set(usuario?.roles ?? []))
 
   function alternar(rol: Rol, marcado: boolean): void {
     setMarcados((anteriores) => {
@@ -46,69 +49,78 @@ export function PanelDeUsuario({ guardando, errores, onGuardar, onCancelar }: Pr
       <header className="panel-encabezado">
         <div>
           <h2 id={idTitulo}>
-            <IconoPersonaMas />
-            Nuevo usuario
+            {usuario === null ? <IconoPersonaMas /> : <IconoLapiz />}
+            {usuario === null ? 'Nuevo usuario' : 'Editar usuario'}
           </h2>
-          <p className="panel-subtitulo">Completá los datos del nuevo usuario.</p>
+          <p className="panel-subtitulo">{subtituloDelPanel(usuario)}</p>
         </div>
       </header>
       <div className="panel-cuerpo">
         {errores.aviso === null ? null : <Aviso mensaje={errores.aviso} titulo={tituloDelAviso(errores.aviso)} />}
         <form onSubmit={guardar}>
-          <div className={errores.email === null ? 'campo' : 'campo campo-con-error'}>
-            <div className="campo-etiqueta">
-              <label htmlFor={idEmail} className="etiqueta-obligatoria">
-                Email
-              </label>
+          {usuario === null ? (
+            <>
+            <div className={errores.email === null ? 'campo' : 'campo campo-con-error'}>
+              <div className="campo-etiqueta">
+                <label htmlFor={idEmail} className="etiqueta-obligatoria">
+                  Email
+                </label>
+              </div>
+              <div className="entrada-con-icono">
+                <input
+                  id={idEmail}
+                  type="email"
+                  required
+                  autoFocus
+                  autoComplete="off"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  aria-invalid={errores.email === null ? undefined : true}
+                  aria-describedby={errores.email === null ? undefined : idErrorEmail}
+                />
+                {errores.email === null ? null : <IconoAlerta clase="icono icono-en-campo" />}
+              </div>
+              {errores.email === null ? null : (
+                <p id={idErrorEmail} className="error-de-campo">
+                  {errores.email}
+                </p>
+              )}
             </div>
-            <div className="entrada-con-icono">
-              <input
-                id={idEmail}
-                type="email"
-                required
-                autoFocus
-                autoComplete="off"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                aria-invalid={errores.email === null ? undefined : true}
-                aria-describedby={errores.email === null ? undefined : idErrorEmail}
-              />
-              {errores.email === null ? null : <IconoAlerta clase="icono icono-en-campo" />}
+            <div className={errores.contrasena === null ? 'campo' : 'campo campo-con-error'}>
+              <div className="campo-etiqueta">
+                <label htmlFor={idContrasena} className="etiqueta-obligatoria">
+                  Contraseña inicial
+                </label>
+                <p id={idAyuda} className="ayuda">
+                  De 10 caracteres a 72 bytes.
+                </p>
+              </div>
+              <div className="entrada-con-icono">
+                <input
+                  id={idContrasena}
+                  type="password"
+                  required
+                  autoComplete="new-password"
+                  value={contrasena}
+                  onChange={(e) => setContrasena(e.target.value)}
+                  aria-invalid={errores.contrasena === null ? undefined : true}
+                  aria-describedby={errores.contrasena === null ? idAyuda : `${idAyuda} ${idErrorContrasena}`}
+                />
+                {errores.contrasena === null ? null : <IconoAlerta clase="icono icono-en-campo" />}
+              </div>
+              {errores.contrasena === null ? null : (
+                <p id={idErrorContrasena} className="error-de-campo">
+                  {errores.contrasena}
+                </p>
+              )}
             </div>
-            {errores.email === null ? null : (
-              <p id={idErrorEmail} className="error-de-campo">
-                {errores.email}
-              </p>
-            )}
-          </div>
-          <div className={errores.contrasena === null ? 'campo' : 'campo campo-con-error'}>
-            <div className="campo-etiqueta">
-              <label htmlFor={idContrasena} className="etiqueta-obligatoria">
-                Contraseña inicial
-              </label>
-              <p id={idAyuda} className="ayuda">
-                De 10 caracteres a 72 bytes.
-              </p>
+            </>
+          ) : (
+            <div className="campo">
+              <span className="etiqueta-de-dato">Email</span>
+              <p className="dato-de-solo-lectura">{usuario.email}</p>
             </div>
-            <div className="entrada-con-icono">
-              <input
-                id={idContrasena}
-                type="password"
-                required
-                autoComplete="new-password"
-                value={contrasena}
-                onChange={(e) => setContrasena(e.target.value)}
-                aria-invalid={errores.contrasena === null ? undefined : true}
-                aria-describedby={errores.contrasena === null ? idAyuda : `${idAyuda} ${idErrorContrasena}`}
-              />
-              {errores.contrasena === null ? null : <IconoAlerta clase="icono icono-en-campo" />}
-            </div>
-            {errores.contrasena === null ? null : (
-              <p id={idErrorContrasena} className="error-de-campo">
-                {errores.contrasena}
-              </p>
-            )}
-          </div>
+          )}
           <fieldset
             className="campo campo-roles"
             aria-describedby={errores.roles === null ? undefined : idErrorRoles}
