@@ -35,9 +35,35 @@ export const PRESTACIONES_DE_PARTIDA: readonly PrestacionFalsa[] = [
   { id: 5, nombre: 'Urgencia', duracion_minutos: 30, color: '#8E24AA', reservable_online: false, activa: false },
 ]
 
+export interface UsuarioFalso {
+  id: number
+  email: string
+  roles: string[]
+  activo: boolean
+}
+
+export const EMAIL_DUENO = 'dueno@consultorio-demo.test'
+export const EMAIL_ADMINISTRACION = 'administracion@consultorio-demo.test'
+
+/**
+ * Los usuarios de la API real (design U21): la odontóloga, la recepcionista y `administracion`, inactivo y solo
+ * `dueno`. De este catálogo salen los roles de cada sesión. La recepcionista figura activa porque es lo que
+ * devuelve la API; en el login del falso sigue inactiva (C-08), ver `EMAIL_RECEPCIONISTA`.
+ */
+export const USUARIOS_DE_PARTIDA: readonly UsuarioFalso[] = [
+  { id: 1, email: EMAIL_ACTIVA, roles: ['odontologo', 'dueno'], activo: true },
+  { id: 2, email: EMAIL_RECEPCIONISTA, roles: ['recepcionista'], activo: true },
+  { id: 3, email: EMAIL_ADMINISTRACION, roles: ['dueno'], activo: false },
+]
+
+/** Un usuario solo `dueno` y activo, que el catálogo de partida no trae (H12). */
+export const USUARIO_DUENO: UsuarioFalso = { id: 4, email: EMAIL_DUENO, roles: ['dueno'], activo: true }
+
 export interface OpcionesDelServidorFalso {
   /** Catálogo inicial de prestaciones; por defecto vacío. */
   prestaciones?: readonly PrestacionFalsa[]
+  /** Usuarios del consultorio; por defecto `USUARIOS_DE_PARTIDA`. */
+  usuarios?: readonly UsuarioFalso[]
 }
 
 export interface ServidorFalso {
@@ -52,6 +78,10 @@ export interface ServidorFalso {
   cuerpos(metodo: string, ruta: string): Record<string, unknown>[]
   /** Copia del catálogo del falso en este momento (para comprobar que algo no se creó). */
   catalogoActual(): PrestacionFalsa[]
+  /** Copia de los usuarios del falso en este momento. */
+  usuariosActuales(): UsuarioFalso[]
+  /** Saca un usuario del catálogo (la API real no borra usuarios; sirve para simular un `404`). */
+  quitarUsuario(id: number): void
   /** Saca una prestación del catálogo (la API no borra, RN-GL-03; sirve para simular una base recreada). */
   quitarPrestacion(id: number): void
   /** A partir de ahora toda petición falla como una red caída (fetch rechaza). */
@@ -117,10 +147,13 @@ function leerCuerpo(init: RequestInit | undefined): Record<string, unknown> | nu
   }
 }
 
-const ROLES: Record<string, readonly string[]> = {
-  [EMAIL_ACTIVA]: ['odontologo', 'dueno'],
-  [EMAIL_RECEPCIONISTA]: ['recepcionista'],
-}
+const ORDEN_DE_ROLES = ['odontologo', 'recepcionista', 'dueno']
+const CAMPOS_DEL_ALTA_DE_USUARIO = new Set(['email', 'contrasena', 'roles'])
+const CAMPOS_DEL_PATCH_DE_USUARIO = new Set(['roles', 'activo'])
+const FORMATO_DE_EMAIL = /^[^@\s]+@[^@\s]+$/
+const MENSAJE_RN_AU_07 = 'La contraseña debe tener de 10 caracteres a 72 bytes.'
+const DETALLE_DESACTIVARSE = 'Nadie puede desactivarse a sí mismo.'
+const DETALLE_SIN_ODONTOLOGO = 'El consultorio no puede quedar sin un odontólogo activo.'
 const COLOR_HEX = /^#[0-9A-Fa-f]{6}$/
 const CAMPOS_DEL_ALTA = new Set(['nombre', 'duracion_minutos', 'color', 'reservable_online'])
 const CAMPOS_DEL_PATCH = new Set(['nombre', 'duracion_minutos', 'color', 'reservable_online', 'activa'])
@@ -174,24 +207,93 @@ function duracionInvalida(duracion: unknown): boolean {
   return typeof duracion === 'number' && (duracion <= 0 || duracion % 5 !== 0)
 }
 
+function rolesValidos(valor: unknown): boolean {
+  return (
+    Array.isArray(valor) &&
+    valor.length >= 1 &&
+    valor.length <= ORDEN_DE_ROLES.length &&
+    valor.every((rol) => typeof rol === 'string' && ORDEN_DE_ROLES.includes(rol)) &&
+    new Set(valor).size === valor.length
+  )
+}
+
+/** Errores de formato del alta y del `PATCH` de usuarios: lo que valida Pydantic antes que el dominio. */
+function erroresDeFormatoDeUsuario(cuerpo: Record<string, unknown> | null, esAlta: boolean): ErrorDeCampoFalso[] {
+  if (cuerpo === null) return [errorDeFormato('cuerpo', 'El cuerpo debe ser un objeto JSON.')]
+  const errores: ErrorDeCampoFalso[] = []
+  const permitidos = esAlta ? CAMPOS_DEL_ALTA_DE_USUARIO : CAMPOS_DEL_PATCH_DE_USUARIO
+  for (const campo of Object.keys(cuerpo)) {
+    if (!permitidos.has(campo)) errores.push(errorDeFormato(campo, 'Campo no permitido.'))
+  }
+  if (esAlta) {
+    for (const campo of ['email', 'contrasena', 'roles']) {
+      if (!(campo in cuerpo)) errores.push(errorDeFormato(campo, 'Campo obligatorio.'))
+    }
+  }
+  const { email, contrasena, roles, activo } = cuerpo
+  if (email !== undefined) {
+    const recortado = typeof email === 'string' ? email.trim() : ''
+    if (recortado.length < 3 || recortado.length > 254 || !FORMATO_DE_EMAIL.test(recortado)) {
+      errores.push(errorDeFormato('email', 'Debe ser un email válido de hasta 254 caracteres.'))
+    }
+  }
+  if (contrasena !== undefined && typeof contrasena !== 'string') {
+    errores.push(errorDeFormato('contrasena', 'Debe ser un texto.'))
+  }
+  if (roles !== undefined && !rolesValidos(roles)) {
+    errores.push(errorDeFormato('roles', 'Elegí de uno a tres roles distintos.'))
+  }
+  if (activo !== undefined && typeof activo !== 'boolean') {
+    errores.push(errorDeFormato('activo', 'Debe ser verdadero o falso.'))
+  }
+  return errores
+}
+
+function contrasenaFueraDeRango(contrasena: string): boolean {
+  return contrasena.length < 10 || new TextEncoder().encode(contrasena).length > 72
+}
+
 export function crearServidorFalso(opciones: OpcionesDelServidorFalso = {}): ServidorFalso {
   const catalogo: PrestacionFalsa[] = (opciones.prestaciones ?? []).map((prestacion) => ({ ...prestacion }))
+  const usuarios: UsuarioFalso[] = (opciones.usuarios ?? USUARIOS_DE_PARTIDA).map((u) => ({
+    ...u,
+    roles: [...u.roles],
+  }))
+  // Versión del token de cada usuario: desactivar la sube y los tokens anteriores dejan de servir (RN-AU-03).
+  const versiones = new Map<number, number>()
   const cuerposRecibidos = new Map<string, Record<string, unknown>[]>()
   const llamadasPorMetodo = new Map<string, number>()
   const contadores = new Map<string, number>()
   let caido = false
   let estado5xx: number | null = null
   let secuencia = 0
-  const accesos = new Map<string, string>()
-  const refrescos = new Map<string, string>()
+  const accesos = new Map<string, { email: string; version: number }>()
+  const refrescos = new Map<string, { email: string; version: number }>()
   const sinPermiso = new Set<string>()
   let accessSiempreRechazado = false
   const retenciones = new Map<string, Promise<void>>()
 
+  function usuarioPorEmail(email: string): UsuarioFalso | undefined {
+    return usuarios.find((u) => u.email === email)
+  }
+
+  function versionDe(email: string): number {
+    const usuario = usuarioPorEmail(email)
+    return usuario === undefined ? 0 : (versiones.get(usuario.id) ?? 0)
+  }
+
+  /** El usuario de un token emitido, si sigue activo y su versión no cambió; si no, undefined (RN-AU-03). */
+  function usuarioVigente(emitido: { email: string; version: number } | undefined): UsuarioFalso | undefined {
+    if (emitido === undefined) return undefined
+    const usuario = usuarioPorEmail(emitido.email)
+    if (usuario === undefined || !usuario.activo || versionDe(emitido.email) !== emitido.version) return undefined
+    return usuario
+  }
+
   function emitirAccess(email: string): string {
     secuencia += 1
     const token = `acceso-${secuencia}`
-    accesos.set(token, email)
+    accesos.set(token, { email, version: versionDe(email) })
     return token
   }
 
@@ -207,16 +309,28 @@ export function crearServidorFalso(opciones: OpcionesDelServidorFalso = {}): Ser
     return typeof valor === 'string' && valor.startsWith('Bearer ') ? valor.slice('Bearer '.length) : null
   }
 
-  /** Autenticación y permiso (D208: antes que la validación). Devuelve el rechazo, o null si pasa. */
-  function autorizar(init: RequestInit | undefined, escribe: boolean): Response | null {
+  interface Acceso {
+    rechazo: Response | null
+    actor: UsuarioFalso | null
+  }
+
+  /**
+   * Autenticación y permiso (D208: antes que la validación). `permitidos` son los roles que alcanzan; `null`
+   * deja pasar a cualquier sesión válida (la lectura de los catálogos). Los roles se leen del catálogo de
+   * usuarios en cada petición, como la API real.
+   */
+  function autorizar(init: RequestInit | undefined, permitidos: readonly string[] | null): Acceso {
     const token = bearer(init)
-    const email = token === null ? undefined : accesos.get(token)
-    if (email === undefined || accessSiempreRechazado) return sesionInvalida()
-    const roles = ROLES[email] ?? []
-    if (sinPermiso.has(email) || (escribe && !roles.includes('odontologo'))) {
-      return problema(403, '/errores/permiso-insuficiente', 'Permiso insuficiente', TEXTO_PERMISO, ['RN-AU-05'])
+    const actor = token === null ? undefined : usuarioVigente(accesos.get(token))
+    if (actor === undefined || accessSiempreRechazado) return { rechazo: sesionInvalida(), actor: null }
+    const alcanza = permitidos === null || actor.roles.some((rol) => permitidos.includes(rol))
+    if (sinPermiso.has(actor.email) || !alcanza) {
+      const rechazo = problema(403, '/errores/permiso-insuficiente', 'Permiso insuficiente', TEXTO_PERMISO, [
+        'RN-AU-05',
+      ])
+      return { rechazo, actor }
     }
-    return null
+    return { rechazo: null, actor }
   }
 
   function entradaInvalida(errores: ErrorDeCampoFalso[], codigos: string[]): Response {
@@ -244,11 +358,11 @@ export function crearServidorFalso(opciones: OpcionesDelServidorFalso = {}): Ser
   }
 
   function listarPrestaciones(init: RequestInit | undefined): Response {
-    return autorizar(init, false) ?? json(200, catalogo.map((p) => ({ ...p })))
+    return autorizar(init, null).rechazo ?? json(200, catalogo.map((p) => ({ ...p })))
   }
 
   function crearPrestacion(init: RequestInit | undefined): Response {
-    const rechazo = autorizar(init, true)
+    const { rechazo } = autorizar(init, ['odontologo'])
     if (rechazo !== null) return rechazo
     const cuerpo = leerCuerpo(init)
     const errores = erroresDeFormato(cuerpo, CAMPOS_DEL_ALTA, true)
@@ -269,7 +383,7 @@ export function crearServidorFalso(opciones: OpcionesDelServidorFalso = {}): Ser
   }
 
   function editarPrestacion(id: number, init: RequestInit | undefined): Response {
-    const rechazo = autorizar(init, true)
+    const { rechazo } = autorizar(init, ['odontologo'])
     if (rechazo !== null) return rechazo
     const cuerpo = leerCuerpo(init)
     const errores = erroresDeFormato(cuerpo, CAMPOS_DEL_PATCH, false)
@@ -291,13 +405,86 @@ export function crearServidorFalso(opciones: OpcionesDelServidorFalso = {}): Ser
     return json(200, { ...actual })
   }
 
+  function salidaDeUsuario(usuario: UsuarioFalso): UsuarioFalso {
+    return {
+      id: usuario.id,
+      email: usuario.email,
+      roles: ORDEN_DE_ROLES.filter((rol) => usuario.roles.includes(rol)),
+      activo: usuario.activo,
+    }
+  }
+
+  function listarUsuarios(init: RequestInit | undefined): Response {
+    const { rechazo } = autorizar(init, ['odontologo', 'dueno'])
+    return rechazo ?? json(200, [...usuarios].sort((a, b) => a.id - b.id).map(salidaDeUsuario))
+  }
+
+  function crearUsuario(init: RequestInit | undefined): Response {
+    const { rechazo } = autorizar(init, ['odontologo'])
+    if (rechazo !== null) return rechazo
+    const cuerpo = leerCuerpo(init)
+    const errores = erroresDeFormatoDeUsuario(cuerpo, true)
+    if (cuerpo === null || errores.length > 0) return entradaInvalida(errores, [])
+    if (contrasenaFueraDeRango(String(cuerpo.contrasena))) {
+      return entradaInvalida([{ campo: 'contrasena', codigo: 'RN-AU-07', mensaje: MENSAJE_RN_AU_07 }], ['RN-AU-07'])
+    }
+    const email = String(cuerpo.email).trim().toLowerCase()
+    if (usuarioPorEmail(email) !== undefined) {
+      return problema(409, '/errores/email-repetido', 'Email repetido', 'Ya existe un usuario con ese email.', [
+        'RN-AU-08',
+      ])
+    }
+    const nuevo: UsuarioFalso = {
+      id: Math.max(0, ...usuarios.map((u) => u.id)) + 1,
+      email,
+      roles: [...(cuerpo.roles as string[])],
+      activo: true,
+    }
+    usuarios.push(nuevo)
+    return json(201, salidaDeUsuario(nuevo))
+  }
+
+  function sinOdontologo(detalle: string): Response {
+    return problema(409, '/errores/administracion-sin-odontologo', 'Operación no permitida', detalle, ['RN-AU-06'])
+  }
+
+  function editarUsuario(id: number, init: RequestInit | undefined): Response {
+    const { rechazo, actor } = autorizar(init, ['odontologo'])
+    if (rechazo !== null || actor === null) return rechazo ?? sesionInvalida()
+    const cuerpo = leerCuerpo(init)
+    const errores = erroresDeFormatoDeUsuario(cuerpo, false)
+    if (cuerpo === null || errores.length > 0) return entradaInvalida(errores, [])
+    const usuario = usuarios.find((u) => u.id === id)
+    if (usuario === undefined) {
+      return problema(404, '/errores/recurso-no-encontrado', 'Recurso no encontrado', 'No existe.', ['RN-GL-04'], {
+        referencias: [{ recurso: 'usuario', recurso_id: id, motivo: 'inexistente' }],
+      })
+    }
+    const rolesPedidos = Array.isArray(cuerpo.roles) ? (cuerpo.roles as string[]) : null
+    const activoPedido = typeof cuerpo.activo === 'boolean' ? cuerpo.activo : null
+    // RN-AU-06 sobre el resultado combinado del pedido (D252): primero desactivarse, después el último odontólogo.
+    if (activoPedido === false && actor.id === usuario.id) return sinOdontologo(DETALLE_DESACTIVARSE)
+    const dejaDeSerOdontologoActivo =
+      usuario.activo &&
+      usuario.roles.includes('odontologo') &&
+      ((rolesPedidos !== null && !rolesPedidos.includes('odontologo')) || activoPedido === false)
+    const activosDespues = usuarios.filter((u) => u.activo && u.roles.includes('odontologo')).length - 1
+    if (dejaDeSerOdontologoActivo && activosDespues === 0) return sinOdontologo(DETALLE_SIN_ODONTOLOGO)
+    if (rolesPedidos !== null) usuario.roles = [...rolesPedidos]
+    if (activoPedido !== null && activoPedido !== usuario.activo) {
+      if (usuario.activo) versiones.set(usuario.id, (versiones.get(usuario.id) ?? 0) + 1)
+      usuario.activo = activoPedido
+    }
+    return json(200, salidaDeUsuario(usuario))
+  }
+
   async function refrescar(init: RequestInit | undefined): Promise<Response> {
     // Una vuelta del bucle de eventos: da tiempo a que lleguen varios 401 antes de contestar.
     await new Promise<void>((resolver) => setTimeout(resolver, 0))
     const token = leerCuerpo(init)?.refresh_token
-    const email = typeof token === 'string' ? refrescos.get(token) : undefined
-    if (email === undefined) return sesionInvalida()
-    return json(200, { access_token: emitirAccess(email), token_type: 'bearer', expires_in: 900 })
+    const usuario = typeof token === 'string' ? usuarioVigente(refrescos.get(token)) : undefined
+    if (usuario === undefined) return sesionInvalida()
+    return json(200, { access_token: emitirAccess(usuario.email), token_type: 'bearer', expires_in: 900 })
   }
 
   function login(init: RequestInit | undefined): Response {
@@ -315,7 +502,7 @@ export function crearServidorFalso(opciones: OpcionesDelServidorFalso = {}): Ser
     }
     const accessToken = emitirAccess(EMAIL_ACTIVA)
     const refreshToken = `refresco-${secuencia}`
-    refrescos.set(refreshToken, EMAIL_ACTIVA)
+    refrescos.set(refreshToken, { email: EMAIL_ACTIVA, version: versionDe(EMAIL_ACTIVA) })
     return json(200, {
       access_token: accessToken,
       refresh_token: refreshToken,
@@ -345,6 +532,12 @@ export function crearServidorFalso(opciones: OpcionesDelServidorFalso = {}): Ser
     const metodo = init?.method ?? 'GET'
     if (entrada === '/api/prestaciones' && metodo === 'GET') return Promise.resolve(listarPrestaciones(init))
     if (entrada === '/api/prestaciones' && metodo === 'POST') return Promise.resolve(crearPrestacion(init))
+    if (entrada === '/api/usuarios' && metodo === 'GET') return Promise.resolve(listarUsuarios(init))
+    if (entrada === '/api/usuarios' && metodo === 'POST') return Promise.resolve(crearUsuario(init))
+    const delPatchDeUsuario = /^\/api\/usuarios\/(\d+)$/.exec(entrada)
+    if (delPatchDeUsuario !== null && metodo === 'PATCH') {
+      return Promise.resolve(editarUsuario(Number(delPatchDeUsuario[1]), init))
+    }
     const delPatch = /^\/api\/prestaciones\/(\d+)$/.exec(entrada)
     if (delPatch !== null && metodo === 'PATCH') {
       return Promise.resolve(editarPrestacion(Number(delPatch[1]), init))
@@ -359,6 +552,11 @@ export function crearServidorFalso(opciones: OpcionesDelServidorFalso = {}): Ser
     llamadas: (metodo, ruta) => llamadasPorMetodo.get(`${metodo} ${ruta}`) ?? 0,
     cuerpos: (metodo, ruta) => cuerposRecibidos.get(`${metodo} ${ruta}`) ?? [],
     catalogoActual: () => catalogo.map((p) => ({ ...p })),
+    usuariosActuales: () => usuarios.map((u) => ({ ...u, roles: [...u.roles] })),
+    quitarUsuario: (id) => {
+      const indice = usuarios.findIndex((u) => u.id === id)
+      if (indice >= 0) usuarios.splice(indice, 1)
+    },
     quitarPrestacion: (id) => {
       const indice = catalogo.findIndex((p) => p.id === id)
       if (indice >= 0) catalogo.splice(indice, 1)
@@ -398,7 +596,7 @@ export function crearServidorFalso(opciones: OpcionesDelServidorFalso = {}): Ser
     emitirSesion: (email = EMAIL_ACTIVA) => {
       const access = emitirAccess(email)
       const refresh = `refresco-${secuencia}`
-      refrescos.set(refresh, email)
+      refrescos.set(refresh, { email, version: versionDe(email) })
       return { access, refresh }
     },
   }
