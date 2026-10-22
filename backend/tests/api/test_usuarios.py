@@ -489,3 +489,96 @@ def test_us093_ca1_se_cambian_los_roles_de_un_usuario_inactivo(cliente, demo, se
         "/auth/login", json={"email": EMAIL_RECEPCIONISTA, "contrasena": CONTRASENA_DE_PRUEBA}
     )
     assert login.status_code == 401
+
+
+DETALLE_DESACTIVARSE = "Nadie puede desactivarse a sí mismo."
+DETALLE_SIN_ODONTOLOGO = "El consultorio no puede quedar sin un odontólogo activo."
+
+
+def _un_colega(sesion: Session, demo: Escenario, **kw) -> UsuarioModelo:
+    """Un segundo odontólogo ficticio (sin profesional vinculado, U16)."""
+    return un_usuario(sesion, _consultorio_de(sesion, demo), roles=kw.pop("roles", (Rol.ODONTOLOGO,)), **kw)
+
+
+def _es_rn_au_06(respuesta, detalle: str) -> None:
+    assert respuesta.status_code == 409
+    assert respuesta.headers["content-type"].startswith(PROBLEMA_JSON)
+    assert respuesta.json()["codigos"] == ["RN-AU-06"]
+    assert respuesta.json()["detail"] == detalle
+
+
+def test_us093_ca5_la_odontologa_no_puede_desactivarse(cliente, demo, sesion) -> None:
+    _un_colega(sesion, demo)
+
+    respuesta = _patch(cliente, demo.odontologa.id, {"activo": False}, demo.odontologa)
+
+    _es_rn_au_06(respuesta, DETALLE_DESACTIVARSE)
+    assert _token_version_en_la_base(sesion, demo.odontologa.id) == 0
+    assert sesion.get_one(UsuarioModelo, demo.odontologa.id).activo is True
+    assert cliente.get("/usuarios", headers=_con_token_de(demo.odontologa)).status_code == 200
+
+
+def test_us093_ca4_la_unica_odontologa_no_puede_quitarse_el_rol_odontologo(cliente, demo, sesion) -> None:
+    respuesta = _patch(cliente, demo.odontologa.id, {"roles": ["dueno"]}, demo.odontologa)
+
+    _es_rn_au_06(respuesta, DETALLE_SIN_ODONTOLOGO)
+    assert _roles_en_la_base(sesion, demo.odontologa.id) == {"odontologo", "dueno"}
+
+
+def test_us093_ca4_un_odontologo_inactivo_no_cuenta(cliente, demo, sesion) -> None:
+    _un_colega(sesion, demo, activo=False)
+
+    respuesta = _patch(cliente, demo.odontologa.id, {"roles": ["recepcionista"]}, demo.odontologa)
+
+    _es_rn_au_06(respuesta, DETALLE_SIN_ODONTOLOGO)
+    assert _roles_en_la_base(sesion, demo.odontologa.id) == {"odontologo", "dueno"}
+
+
+def test_us093_ca4_con_otro_odontologo_activo_la_odontologa_deja_su_rol(cliente, demo, sesion) -> None:
+    _un_colega(sesion, demo)
+
+    respuesta = _patch(cliente, demo.odontologa.id, {"roles": ["dueno"]}, demo.odontologa)
+
+    assert respuesta.status_code == 200 and respuesta.json()["roles"] == ["dueno"]
+    assert _roles_en_la_base(sesion, demo.odontologa.id) == {"dueno"}
+    # Ya sin el rol, el mismo token pierde el permiso de escribir usuarios (RN-AU-02).
+    siguiente = cliente.post("/usuarios", json=_cuerpo_de_alta(), headers=_con_token_de(demo.odontologa))
+    assert siguiente.status_code == 403 and siguiente.json()["codigos"] == ["RN-AU-05"]
+
+
+def test_us093_ca5_el_permiso_y_la_entrada_se_evaluan_antes(cliente, demo, sesion) -> None:
+    _un_colega(sesion, demo)
+
+    sin_permiso = _patch(cliente, demo.odontologa.id, {"activo": False}, demo.recepcionista)
+    mal_formado = _patch(cliente, demo.odontologa.id, {"activo": False, "roles": []}, demo.odontologa)
+
+    assert sin_permiso.status_code == 403 and sin_permiso.json()["codigos"] == ["RN-AU-05"]
+    assert mal_formado.status_code == 422 and mal_formado.json()["codigos"] == []
+    assert sesion.get_one(UsuarioModelo, demo.odontologa.id).activo is True
+
+
+def test_us093_ca5_roles_y_activo_en_el_mismo_pedido_no_cambian_nada_si_se_rechaza(
+    cliente, demo, sesion
+) -> None:
+    respuesta = _patch(cliente, demo.odontologa.id, {"roles": ["dueno"], "activo": False}, demo.odontologa)
+
+    _es_rn_au_06(respuesta, DETALLE_DESACTIVARSE)
+    assert _roles_en_la_base(sesion, demo.odontologa.id) == {"odontologo", "dueno"}
+    sesion.expire_all()
+    assert sesion.get_one(UsuarioModelo, demo.odontologa.id).activo is True
+    assert _token_version_en_la_base(sesion, demo.odontologa.id) == 0
+
+
+def test_us093_ca4_roles_y_activo_de_otro_odontologo_en_el_mismo_pedido_se_aplican_juntos(
+    cliente, demo, sesion
+) -> None:
+    colega = _un_colega(sesion, demo)
+
+    respuesta = _patch(cliente, colega.id, {"roles": ["dueno"], "activo": False}, demo.odontologa)
+
+    assert respuesta.status_code == 200
+    assert respuesta.json()["roles"] == ["dueno"] and respuesta.json()["activo"] is False
+    assert _token_version_en_la_base(sesion, colega.id) == 1
+    assert _roles_en_la_base(sesion, colega.id) == {"dueno"}
+    en_la_lista = {u["id"]: u for u in cliente.get("/usuarios", headers=_con_token_de(demo.odontologa)).json()}
+    assert "odontologo" in en_la_lista[demo.odontologa.id]["roles"] and en_la_lista[demo.odontologa.id]["activo"]

@@ -5,7 +5,13 @@ from datetime import datetime
 
 from app.application.puertos import EmailRepetidoEnLaBase, HasherDeContrasenas, UnidadDeTrabajo
 from app.domain.acceso.roles import Rol, UsuarioDelPanel
-from app.domain.acceso.usuarios import DatosUsuario, normalizar_email, validar_contrasena_inicial
+from app.domain.acceso.usuarios import (
+    DatosUsuario,
+    exigir_no_desactivarse,
+    exigir_que_quede_un_odontologo,
+    normalizar_email,
+    validar_contrasena_inicial,
+)
 from app.domain.errors import EmailRepetido, UsuarioNoEncontrado
 
 
@@ -73,6 +79,12 @@ def crear_usuario(
         return UsuarioConRoles(creado, comando.roles)
 
 
+def _puede_bajar_los_odontologos(comando: EditarUsuarioComando) -> bool:
+    """El pedido quita el rol ``odontologo`` o desactiva (RN-AU-06)."""
+    quita_el_rol = comando.roles is not None and Rol.ODONTOLOGO not in comando.roles
+    return quita_el_rol or comando.activo is False
+
+
 def editar_usuario(
     usuario_id: int, comando: EditarUsuarioComando, actor: UsuarioDelPanel, uow: UnidadDeTrabajo
 ) -> UsuarioConRoles:
@@ -81,6 +93,15 @@ def editar_usuario(
         actual = uow.usuarios.obtener(usuario_id)
         if actual is None:
             raise UsuarioNoEncontrado(usuario_id)
+        if actual.activo and _puede_bajar_los_odontologos(comando):
+            # Serializa las ediciones que cuentan odontólogos antes de leer (DD-04, D248).
+            uow.usuarios.bloquear_administracion(actual.consultorio_id)
+        exigir_no_desactivarse(actor.id, usuario_id, comando.activo)
+        if actual.activo and _puede_bajar_los_odontologos(comando):
+            activos = uow.usuarios.odontologos_activos(actual.consultorio_id)
+            # Un inactivo no cuenta (U10): solo baja la cuenta quien hoy es odontólogo activo.
+            if usuario_id in activos:
+                exigir_que_quede_un_odontologo(len(activos) - 1)
         if comando.roles is not None:
             uow.usuarios.reemplazar_roles(usuario_id, comando.roles)
         if comando.activo is not None and comando.activo != actual.activo:
