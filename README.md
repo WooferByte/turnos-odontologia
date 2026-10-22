@@ -104,7 +104,7 @@ python -m pytest
 
 Los tests corren con **SQLite en memoria**: no necesitan Docker, PostgreSQL ni Redis, ni ningún archivo de base de datos.
 
-La corrida termina con **«611 passed, 47 deselected, 1 warning»**. Los 47 «deselected» son los del perfil opcional con PostgreSQL (más abajo), que la corrida por defecto excluye a propósito. El warning es un aviso de deprecación interno de Starlette (`starlette/testclient.py`, sobre `anyio.abc.BlockingPortal`): viene de una dependencia con versión fijada, no del código del proyecto, y no indica ningún problema.
+La corrida termina con **«611 passed, 49 deselected, 1 warning»**. Los 49 «deselected» son los del perfil opcional con PostgreSQL (más abajo), que la corrida por defecto excluye a propósito. El warning es un aviso de deprecación interno de Starlette (`starlette/testclient.py`, sobre `anyio.abc.BlockingPortal`): viene de una dependencia con versión fijada, no del código del proyecto, y no indica ningún problema.
 
 ### Escenario → test
 
@@ -253,7 +253,7 @@ Una parte de los tests (la que prueba lo que solo PostgreSQL garantiza) está fu
 
    Se usa `127.0.0.1` y no `localhost`: en Windows `localhost` resuelve primero a IPv6 y la conexión espera varios segundos antes de caer a IPv4.
 
-Con la base levantada, la corrida termina con **«47 passed, 528 deselected, 1 warning»**. **Si PostgreSQL no está disponible** (Docker apagado, `TEST_DATABASE_URL` sin definir o base que no responde), los 47 tests del perfil **se omiten con el motivo en el resumen** (**«47 skipped, 528 deselected»**) y la corrida termina con código de salida 0. Si la base de `TEST_DATABASE_URL` no termina en `_test`, el perfil falla a propósito para no borrar otra base.
+Con la base levantada, la corrida termina con **«49 passed, 611 deselected, 1 warning»**. **Si PostgreSQL no está disponible** (Docker apagado, `TEST_DATABASE_URL` sin definir o base que no responde), los 49 tests del perfil **se omiten con el motivo en el resumen** (**«49 skipped, 611 deselected»**) y la corrida termina con código de salida 0. Si la base de `TEST_DATABASE_URL` no termina en `_test`, el perfil falla a propósito para no borrar otra base.
 
 El esquema de estos tests sale siempre de las migraciones, nunca de `create_all`. Por eso el perfil también comprueba que las migraciones y los modelos coinciden (INF-1): si alguien cambia un modelo sin escribir su migración, ese test se pone en rojo. **La suite por defecto no avisa de esto**: hay que correr el perfil cada vez que se toque el esquema.
 
@@ -447,7 +447,7 @@ Los escenarios están en `openspec/changes/gestion-de-usuarios/specs/gestion-de-
 | US-093 CA-8 | Dar el rol `odontologo` no crea un profesional (al crear ni al editar) | `test_us093_ca8_asignar_odontologo_no_crea_un_profesional`, `test_us093_ca8_pasar_a_odontologo_a_otro_usuario_no_crea_un_profesional` |
 | US-093 CA-9 (contraseña inicial) | De 10 caracteres a 72 bytes; el formato se informa antes que el largo | `test_us093_ca9_contrasena_inicial_de_9_caracteres_responde_422_rn_au_07`, `test_us093_ca9_10_caracteres_y_72_bytes_se_aceptan_73_bytes_no`, `test_us093_ca9_el_formato_se_informa_antes_que_el_largo_de_la_contrasena` |
 
-Dos escenarios solo se prueban sobre PostgreSQL, en el perfil opcional (`backend/tests/postgres/test_administracion_concurrente.py`, tarea 6.4 todavía pendiente): dos odontólogos que se desactivan a la vez y dos altas simultáneas con el mismo email. La suite por defecto no los ejerce (SQLite, un solo hilo).
+Dos escenarios solo se prueban sobre PostgreSQL, en el perfil opcional (`backend/tests/postgres/test_administracion_concurrente.py`): dos odontólogos que se desactivan a la vez y dos altas simultáneas con el mismo email. La suite por defecto no los ejerce (SQLite, un solo hilo).
 
 ## Sesión del panel
 
@@ -694,7 +694,7 @@ La API se reemplaza en los tests por un servidor falso escrito a mano (`frontend
 
 Hay además tests de la renovación compartida, del `403`, del cierre de sesión y de que ninguna URL contenga un token, y cinco guards (`src/test/guards.test.ts`) que fallan si aparece `any`, `vi.mock`, `localStorage`, `dangerouslySetInnerHTML`, un archivo `index.ts` de reexportación o un recurso de otro origen (STI-1).
 
-Resultado actual de las dos suites: frontend «Tests 100 passed (100)»; backend «528 passed, 47 deselected, 1 warning».
+Resultado actual de las dos suites: frontend «Tests 100 passed (100)»; backend «611 passed, 49 deselected, 1 warning».
 
 ## Levantar la API con PostgreSQL
 
