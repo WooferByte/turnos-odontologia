@@ -125,3 +125,10 @@ Con la demo recién arrancada (`python -m uvicorn app.main:crear_app_demo --fact
 6. **Sin permiso.** Con la recepcionista sin «Dueño», «Usuarios» muestra «Acceso restringido» con «…permiso para ver los usuarios (RN-AU-05)». Creá por la pantalla un usuario solo «Dueño»; ingresá con él: ve la tabla, pero crear, desactivar, editar roles y reactivar dan «…permiso para modificar usuarios (RN-AU-05)» sin cerrar la sesión.
 7. **Compose** (`docker compose up -d`, `http://127.0.0.1:5173`, el usuario del seed con la contraseña de `SEED_USUARIO_PASSWORD` de tu `.env`): repetí un recorrido breve (listar, alta, desactivar y reactivar) con la consola abierta: no deben aparecer errores de CSP («Refused to…») ni recursos de otro origen, y los íconos deben verse. Al terminar: `docker compose stop`.
 8. Ningún token ni contraseña debe aparecer en la barra de direcciones ni en la consola.
+
+### Resultado de la prueba manual del autor (tarea 13.2, 2026-10-22)
+
+El autor probó a mano, en la demo, el corte de sesión al desactivar (paso 2). Sus palabras: «Todo okey! Entré como recepcionista en incógnito, en la ventana normal entré como odontólogo, como odontólogo desactivé la cuenta de la recepcionista, en la ventana de incógnito hice click en cualquiera de los botones y me mandó de nuevo al "ingresar", intenté ingresar nuevamente como recepcionista y no pude, volví a activar la cuenta de la recepcionista desde odontólogo y ahí sí pude entrar nuevamente como recepcionista».
+
+- **Verificado por el autor**: la sesión de la recepcionista se corta en la acción siguiente a su desactivación (vuelve a `/ingresar`); mientras está inactiva no puede ingresar; reactivada, ingresa de nuevo.
+- **No informado por el autor**: los dos `409` `RN-AU-06` (desactivarse a sí mismo y quitarse `odontologo`) quedan verificados solo por el agente en 13.1 y por las suites; y el recorrido con sesión iniciada en Compose bajo la CSP (paso 7), por lo que **V5 sigue parcial**: la pantalla de usuarios no se vio renderizada bajo la CSP (ver «Límites conocidos» del README).
