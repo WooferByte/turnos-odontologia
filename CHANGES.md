@@ -403,7 +403,7 @@ Primer change: `/opsx:propose crear-turno-sin-solapamientos`.
   - `knowledge-base/07_flujos_principales.md` Flujo 8 · `knowledge-base/05_reglas_de_negocio.md` RN-AU-03, RN-AU-04 · `knowledge-base/10_preguntas_abiertas.md` (ya implementado, D217 a D228)
 
 ### [C-09] `gestion-de-usuarios`
-- **Estado**: `[ ]` pendiente · **Orden**: 3 · **Gobernanza**: CRITICO
+- **Estado**: `[~]` en curso · **Orden**: 3 · **Gobernanza**: CRITICO
 - **Objetivo** (US-093): que el odontólogo cree usuarios, les asigne roles y los desactive (parte de gestión).
 - **Alcance — dentro**: `GET/POST /usuarios` y `PATCH /usuarios/{id}` (roles, activar o desactivar); email único; contraseña inicial definida al crear; desactivar incrementa `token_version`; error de dominio RN-AU-06 para el último odontólogo activo y para desactivarse a sí mismo; pantalla de usuarios del panel (el cableado de `pedidoDelPanel` y `SesionTerminada` en `ProveedorDeSesion` ya se hizo en C-11, D231; C-09 solo lo reutiliza).
 - **Alcance — fuera**: restablecer y cambiar contraseñas (C-10); crear un `Profesional` al asignar el rol `odontologo` (Fase 2, D46).
