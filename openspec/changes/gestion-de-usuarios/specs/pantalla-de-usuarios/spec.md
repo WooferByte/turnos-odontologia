@@ -4,7 +4,7 @@
 
 Define cómo el panel muestra y mantiene los usuarios del consultorio desde el navegador: la tabla, el alta con la contraseña inicial y los roles, la edición de roles, desactivar y reactivar, cómo se ven los rechazos de la API con su código y qué pasa si la sesión termina en la pantalla (US-093, US-092 CA-1).
 
-Convenciones de los escenarios: la API es la de `gestion-de-usuarios`, que decide todas las reglas; la pantalla no valida roles, contraseñas ni emails más allá de los campos obligatorios, y muestra cada rechazo con su código RN. «Con sesión de X» significa que X inició sesión en el panel (capability `ingreso-al-panel`). Los usuarios de partida de la suite son ficticios: «la odontóloga» (`odontologa@consultorio-demo.test`, activa, `odontologo` + `dueno`), «la recepcionista» (`recepcion@consultorio-demo.test`, activa, `recepcionista`) y `administracion@consultorio-demo.test` (inactivo, `dueno`); «el dueño» es un usuario con sesión y solo `dueno`. La pantalla no conoce el rol ni el id de quien inició sesión (D249): las acciones se ven para todos y la API decide. Todos los datos son ficticios (RN-PR-01). Los escenarios se verifican en la suite del frontend (`npm test`) y se repiten en la prueba en el navegador, salvo los que dicen que solo se verifican contra el servidor falso.
+Convenciones de los escenarios: la API es la de `gestion-de-usuarios`, que decide todas las reglas; la pantalla no valida roles, contraseñas ni emails más allá de los campos obligatorios, y muestra cada rechazo con su código RN. «Con sesión de X» significa que X inició sesión en el panel (capability `ingreso-al-panel`). Los usuarios de partida de la suite son ficticios: «la odontóloga» (`odontologa@consultorio-demo.test`, activa, `odontologo` + `dueno`), «la recepcionista» (`recepcion@consultorio-demo.test`, activa, `recepcionista`) y `administracion@consultorio-demo.test` (inactivo, `dueno`); «el dueño» es un usuario con sesión y solo `dueno`. «El botón «Cerrar»» es el de la esquina del encabezado del panel lateral (la disposición viene de la pantalla de Stitch, D234; lo puramente visual no tiene escenario). La pantalla no conoce el rol ni el id de quien inició sesión (D249): las acciones se ven para todos y la API decide. Todos los datos son ficticios (RN-PR-01). Los escenarios se verifican en la suite del frontend (`npm test`) y se repiten en la prueba en el navegador, salvo los que dicen que solo se verifican contra el servidor falso.
 
 ## ADDED Requirements
 
@@ -84,7 +84,7 @@ La ruta `/panel/usuarios`, a la que se llega desde el enlace «Usuarios» de la 
 
 ### Requirement: Edición de los roles de un usuario
 
-«Editar» SHALL abrir el panel lateral con el email como texto de solo lectura y las casillas con los roles actuales, y marcar la fila como «Editando». «Guardar» SHALL mandar `PATCH /usuarios/{id}` con solo `roles` si cambiaron; sin cambios SHALL cerrar el panel sin pedir nada. Con `200` SHALL reemplazar la fila.
+«Editar» SHALL abrir el panel lateral con el email como texto de solo lectura y las casillas con los roles actuales, y marcar la fila como «Editando». «Guardar» SHALL mandar `PATCH /usuarios/{id}` con solo `roles` si cambiaron; sin cambios SHALL cerrar el panel sin pedir nada. Con `200` SHALL reemplazar la fila. El panel de edición SHALL mostrar la nota «Quitar o asignar un rol vale desde la próxima acción del usuario, sin cerrar su sesión.» (los roles valen desde la petición siguiente, RN-AU-02, D254); el alta MUST NOT mostrarla. «Cancelar» SHALL cerrar el panel sin pedir nada, y el botón «Cerrar» del encabezado del panel SHALL hacer lo mismo, en el alta y en la edición: quita la marca «Editando» y descarta lo escrito, incluida la contraseña (D254).
 
 #### Scenario: US-093 CA-1 Feliz - sumar el rol dueno a la recepcionista
 
@@ -97,6 +97,20 @@ La ruta `/panel/usuarios`, a la que se llega desde el enlace «Usuarios» de la 
 
 - **WHEN** la odontóloga abre «Editar» de la recepcionista y pulsa «Guardar» sin tocar nada
 - **THEN** el panel se cierra y no se manda ningún `PATCH`
+
+#### Scenario: US-093 CA-1 Borde - el botón «Cerrar» del panel no pide nada
+
+- **GIVEN** con sesión de la odontóloga, editando a la recepcionista, con «Dueño» marcado
+- **WHEN** pulsa el botón «Cerrar» del encabezado del panel
+- **THEN** el panel lateral se cierra, la fila sigue con «Recepcionista», sin la marca «Editando», y no se mandó ningún `PATCH`
+- **AND** si abre «Nuevo usuario», escribe `turnos@consultorio-demo.test` y `clave-ficticia-2026`, marca «Recepcionista» y pulsa «Cerrar», el panel se cierra, no se mandó ningún `POST`, la tabla sigue con tres filas y, al volver a pulsar «Nuevo usuario», el email, la contraseña y las casillas están vacíos
+
+#### Scenario: US-093 CA-1 Borde - la edición avisa desde cuándo valen los roles
+
+- **GIVEN** con sesión de la odontóloga, en la pantalla de usuarios
+- **WHEN** pulsa «Editar» en la fila de la recepcionista
+- **THEN** el panel muestra la nota «Quitar o asignar un rol vale desde la próxima acción del usuario, sin cerrar su sesión.»
+- **AND** al pulsar «Nuevo usuario», el panel de alta no muestra esa nota
 
 #### Scenario: US-093 CA-4 Error de negocio - la única odontóloga no puede dejar su rol
 

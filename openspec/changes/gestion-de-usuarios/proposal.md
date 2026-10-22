@@ -27,7 +27,7 @@ No hay migración ni dependencias nuevas. No hay **BREAKING**: las rutas existen
 
 ### Escenarios
 
-Cubre los seis mínimos de la entrada C-09 de `CHANGES.md` (dentro del «3 a 6») y la parte inicial de US-093 CA-9 (D242). El spec de la API los detalla en 34 escenarios y el de la pantalla en 22 (56 en total: 9 felices, 13 de error de negocio y 34 de borde), después de incorporar los dos informes de `revisor-de-escenarios`.
+Cubre los seis mínimos de la entrada C-09 de `CHANGES.md` (dentro del «3 a 6») y la parte inicial de US-093 CA-9 (D242). El spec de la API los detalla en 34 escenarios y el de la pantalla en 24 (58 en total: 9 felices, 13 de error de negocio y 36 de borde), después de incorporar los dos informes de `revisor-de-escenarios` y los dos escenarios de D254 (botón «Cerrar» y nota de roles de la pantalla de Stitch).
 
 | ID | Qué verifica | Dónde corre |
 |---|---|---|
@@ -74,5 +74,5 @@ Ninguna. Se revisaron:
 - **Frontend, código nuevo**: `frontend/src/features/usuarios/` (cliente de la API, página, tabla, panel lateral, mensajes y tests). **Se modifica**: `App.tsx` (ruta), `pages/PanelBase.tsx` (enlace «Usuarios»), `test/servidorFalso.ts` (contrato de usuarios), `shared/estilos/panel.css` y `tokens.css` (lo que pida la pantalla de Stitch), un ícono SVG nuevo en `shared/iconos/`.
 - **Esquema y migraciones**: sin cambios (D248 usa un bloqueo de fila sobre `consultorio`, no una tabla ni restricción nueva).
 - **Dependencias y variables de entorno**: ninguna nueva (`backend/pyproject.toml`, `frontend/package.json` y `package-lock.json` no cambian).
-- **Documentación**: `README.md`; evidencia de Stitch en `docs/skills-mcp/evidencias/sesion-nueva/stitch-usuarios.md` y `stitch-usuarios-pantalla/`. Las respuestas a Q1 a Q11 ya están registradas en `knowledge-base/10_preguntas_abiertas.md` (D241 a D253) y el código nuevo `RN-AU-08` en `05` (citado en US-093 CA-2 de `06` y en la matriz de `03`).
-- **Tamaño**: 35 tareas en 14 grupos para 56 escenarios, frente a «alrededor de 20» de `CHANGES.md`: excepción aceptada por el autor y limitada a C-09 (**D251**).
+- **Documentación**: `README.md`; evidencia de Stitch en `docs/skills-mcp/evidencias/sesion-nueva/stitch-usuarios.md` y `stitch-usuarios-pantalla/`. Las respuestas a Q1 a Q12 ya están registradas en `knowledge-base/10_preguntas_abiertas.md` (D241 a D254) y el código nuevo `RN-AU-08` en `05` (citado en US-093 CA-2 de `06` y en la matriz de `03`).
+- **Tamaño**: 36 tareas en 14 grupos para 58 escenarios, frente a «alrededor de 20» de `CHANGES.md`: excepción aceptada por el autor y limitada a C-09 (**D251**, ampliada por **D254**).
