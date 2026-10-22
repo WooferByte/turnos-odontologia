@@ -6,7 +6,7 @@ import { traducirRechazo } from '../../shared/api/rechazos'
 
 export type Rol = 'odontologo' | 'recepcionista' | 'dueno'
 
-const ROLES: readonly Rol[] = ['odontologo', 'recepcionista', 'dueno']
+export const ROLES: readonly Rol[] = ['odontologo', 'recepcionista', 'dueno']
 
 export interface Usuario {
   id: number

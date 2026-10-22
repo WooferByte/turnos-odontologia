@@ -1,0 +1,141 @@
+// Panel lateral de alta y edición de usuarios (design U18, U19). Recibe los errores ya traducidos a mensajes y no
+// valida reglas: el formato del email, el largo de la contraseña y los roles los decide la API (D232, D242).
+// La contraseña vive solo en el estado de este formulario y se descarta al desmontarse el panel.
+import { useId, useState, type SyntheticEvent } from 'react'
+import { Aviso } from '../../shared/componentes/Aviso'
+import { IconoAlerta } from '../../shared/iconos/IconoAlerta'
+import { IconoPersonaMas } from '../../shared/iconos/IconoPersonaMas'
+import { ROLES, type DatosDeAltaDeUsuario, type Rol } from './apiUsuarios'
+import { nombreDelRol, tituloDelAviso, type ErroresDelPanel } from './mensajes'
+
+interface Propiedades {
+  guardando: boolean
+  errores: ErroresDelPanel
+  onGuardar(datos: DatosDeAltaDeUsuario): void
+  onCancelar(): void
+}
+
+export function PanelDeUsuario({ guardando, errores, onGuardar, onCancelar }: Propiedades) {
+  const idTitulo = useId()
+  const idEmail = useId()
+  const idContrasena = useId()
+  const idAyuda = useId()
+  const idErrorEmail = useId()
+  const idErrorContrasena = useId()
+  const idErrorRoles = useId()
+  const [email, setEmail] = useState('')
+  const [contrasena, setContrasena] = useState('')
+  const [marcados, setMarcados] = useState<ReadonlySet<Rol>>(new Set())
+
+  function alternar(rol: Rol, marcado: boolean): void {
+    setMarcados((anteriores) => {
+      const siguientes = new Set(anteriores)
+      if (marcado) siguientes.add(rol)
+      else siguientes.delete(rol)
+      return siguientes
+    })
+  }
+
+  function guardar(evento: SyntheticEvent<HTMLFormElement>): void {
+    evento.preventDefault()
+    onGuardar({ email, contrasena, roles: ROLES.filter((rol) => marcados.has(rol)) })
+  }
+
+  return (
+    <aside aria-labelledby={idTitulo} className="panel-lateral">
+      <header className="panel-encabezado">
+        <div>
+          <h2 id={idTitulo}>
+            <IconoPersonaMas />
+            Nuevo usuario
+          </h2>
+          <p className="panel-subtitulo">Completá los datos del nuevo usuario.</p>
+        </div>
+      </header>
+      <div className="panel-cuerpo">
+        {errores.aviso === null ? null : <Aviso mensaje={errores.aviso} titulo={tituloDelAviso(errores.aviso)} />}
+        <form onSubmit={guardar}>
+          <div className={errores.email === null ? 'campo' : 'campo campo-con-error'}>
+            <div className="campo-etiqueta">
+              <label htmlFor={idEmail} className="etiqueta-obligatoria">
+                Email
+              </label>
+            </div>
+            <div className="entrada-con-icono">
+              <input
+                id={idEmail}
+                type="email"
+                required
+                autoFocus
+                autoComplete="off"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                aria-invalid={errores.email === null ? undefined : true}
+                aria-describedby={errores.email === null ? undefined : idErrorEmail}
+              />
+              {errores.email === null ? null : <IconoAlerta clase="icono icono-en-campo" />}
+            </div>
+            {errores.email === null ? null : (
+              <p id={idErrorEmail} className="error-de-campo">
+                {errores.email}
+              </p>
+            )}
+          </div>
+          <div className={errores.contrasena === null ? 'campo' : 'campo campo-con-error'}>
+            <div className="campo-etiqueta">
+              <label htmlFor={idContrasena} className="etiqueta-obligatoria">
+                Contraseña inicial
+              </label>
+              <p id={idAyuda} className="ayuda">
+                De 10 caracteres a 72 bytes.
+              </p>
+            </div>
+            <div className="entrada-con-icono">
+              <input
+                id={idContrasena}
+                type="password"
+                required
+                autoComplete="new-password"
+                value={contrasena}
+                onChange={(e) => setContrasena(e.target.value)}
+                aria-invalid={errores.contrasena === null ? undefined : true}
+                aria-describedby={errores.contrasena === null ? idAyuda : `${idAyuda} ${idErrorContrasena}`}
+              />
+              {errores.contrasena === null ? null : <IconoAlerta clase="icono icono-en-campo" />}
+            </div>
+            {errores.contrasena === null ? null : (
+              <p id={idErrorContrasena} className="error-de-campo">
+                {errores.contrasena}
+              </p>
+            )}
+          </div>
+          <fieldset
+            className="campo campo-roles"
+            aria-describedby={errores.roles === null ? undefined : idErrorRoles}
+          >
+            <legend>Roles</legend>
+            {ROLES.map((rol) => (
+              <label key={rol} className="casilla-de-rol">
+                <input type="checkbox" checked={marcados.has(rol)} onChange={(e) => alternar(rol, e.target.checked)} />
+                {nombreDelRol(rol)}
+              </label>
+            ))}
+            {errores.roles === null ? null : (
+              <p id={idErrorRoles} className="error-de-campo">
+                {errores.roles}
+              </p>
+            )}
+          </fieldset>
+          <div className="panel-pie">
+            <button type="button" className="boton-secundario" onClick={onCancelar}>
+              Cancelar
+            </button>
+            <button type="submit" className="boton-primario" disabled={guardando}>
+              {guardando ? 'Guardando…' : 'Guardar'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </aside>
+  )
+}

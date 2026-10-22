@@ -447,7 +447,9 @@
 }
 
 .campo input[type='text'],
-.campo input[type='number'] {
+.campo input[type='number'],
+.campo input[type='email'],
+.campo input[type='password'] {
   flex: 1;
   min-width: 0;
   height: var(--alto-campo);
@@ -530,6 +532,51 @@
   gap: 12px;
   padding-top: 16px;
   border-top: 1px solid var(--borde);
+}
+
+/* Pantalla de usuarios (C-09): roles en columna, dentro de un fieldset con legend */
+.campo-roles {
+  min-width: 0;
+  padding: 0;
+  border: 0;
+}
+
+.campo-roles legend {
+  padding: 0;
+  margin-bottom: 6px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--texto-medio);
+}
+
+.campo .casilla-de-rol {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  text-transform: none;
+  letter-spacing: 0;
+  font-weight: 500;
+}
+
+.roles-del-usuario {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.insignia-de-rol {
+  padding: 2px 8px;
+  border: 1px solid var(--borde-fuerte);
+  border-radius: var(--radio);
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--texto-medio);
 }
 
 /* Pantalla de inicio de sesión (C-49, design L4 a L9), traducida de la pantalla de Stitch sin Tailwind ni CDN */
