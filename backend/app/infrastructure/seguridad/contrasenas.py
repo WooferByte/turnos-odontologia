@@ -3,7 +3,9 @@ from functools import cache
 
 import bcrypt
 
-MAXIMO_DE_BYTES = 72  # bcrypt 5 levanta ValueError con más; nunca puede coincidir con un hash guardado
+from app.domain.acceso.usuarios import MAXIMO_DE_BYTES_DE_CONTRASENA
+
+MAXIMO_DE_BYTES = MAXIMO_DE_BYTES_DE_CONTRASENA  # bcrypt 5 levanta ValueError con más; nunca puede coincidir con un hash guardado
 
 
 @cache

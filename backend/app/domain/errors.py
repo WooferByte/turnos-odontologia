@@ -43,7 +43,7 @@ class DuracionInvalida(ErrorDeDominio):
 
 @dataclass(frozen=True)
 class ReferenciaInvalida:
-    recurso: Literal["prestacion", "paciente", "profesional", "sillon", "turno"]
+    recurso: Literal["prestacion", "paciente", "profesional", "sillon", "turno", "usuario"]
     recurso_id: int | None
     motivo: Literal["inexistente", "inactivo", "ninguno_activo", "varios_activos"]
 
@@ -68,7 +68,7 @@ class RecursoDeLaUrlNoEncontrado(ErrorDeDominio):
 
     def __init__(
         self,
-        recurso: Literal["prestacion", "sillon", "turno"],
+        recurso: Literal["prestacion", "sillon", "turno", "usuario"],
         recurso_id: int,
         mensaje: str,
     ) -> None:
@@ -89,6 +89,21 @@ class PrestacionNoEncontrada(RecursoDeLaUrlNoEncontrado):
 class SillonNoEncontrado(RecursoDeLaUrlNoEncontrado):
     def __init__(self, sillon_id: int) -> None:
         super().__init__("sillon", sillon_id, f"No existe el sillón {sillon_id}.")
+
+
+class UsuarioNoEncontrado(RecursoDeLaUrlNoEncontrado):
+    def __init__(self, usuario_id: int) -> None:
+        super().__init__("usuario", usuario_id, f"No existe el usuario {usuario_id}.")
+
+
+class ContrasenaFueraDeRango(ErrorDeDominio):
+    """La contraseña inicial no tiene de 10 caracteres a 72 bytes (RN-AU-07); el mensaje no la repite."""
+
+    codigo = "RN-AU-07"
+
+    def __init__(self, campo: str = "contrasena") -> None:
+        self.campo = campo
+        super().__init__("La contraseña debe tener de 10 caracteres a 72 bytes.")
 
 
 class EntradaInvalida(ErrorDeDominio):
@@ -123,6 +138,21 @@ class NombreDePrestacionRepetido(ErrorDeDominio):
     def __init__(self, nombre_existente: str) -> None:
         self.nombre_existente = nombre_existente
         super().__init__(f"Ya existe una prestación llamada «{nombre_existente}».")
+
+
+class EmailRepetido(ErrorDeDominio):
+    """Otro usuario, activo o inactivo, ya usa ese email normalizado (RN-AU-08, D243); no lo repite."""
+
+    codigo = "RN-AU-08"
+
+    def __init__(self) -> None:
+        super().__init__("Ya existe un usuario con ese email.")
+
+
+class AdministracionSinOdontologo(ErrorDeDominio):
+    """El consultorio quedaría sin un odontólogo activo o alguien se desactiva a sí mismo (RN-AU-06)."""
+
+    codigo = "RN-AU-06"
 
 
 class IntervaloInvalido(ErrorDeDominio):

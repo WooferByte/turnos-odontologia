@@ -14,6 +14,8 @@ TABLA_R4 = [
     ("prestaciones.editar", True, False, False),
     ("sillones.leer", True, True, True),
     ("sillones.editar", True, False, False),
+    ("usuarios.leer", True, False, True),
+    ("usuarios.editar", True, False, False),
 ]
 CASOS_MATRIZ = [
     (permiso, rol, esperado)
@@ -27,9 +29,9 @@ def test_us091_ca3_matriz_de_las_rutas_existentes(permiso, rol, esperado):
     assert puede(frozenset({rol}), Permiso(permiso)) is esperado
 
 
-def test_us091_ca3_la_tabla_cubre_los_6_permisos_y_los_3_roles():
+def test_us091_ca3_la_tabla_cubre_los_8_permisos_y_los_3_roles():
     assert {Permiso(p) for p, *_ in TABLA_R4} == set(Permiso)
-    assert len(CASOS_MATRIZ) == 6 * 3
+    assert len(CASOS_MATRIZ) == 8 * 3
 
 
 def test_us091_ca1_los_permisos_son_la_union_de_los_roles():
@@ -71,3 +73,9 @@ def test_us091_ca3_la_matriz_tiene_un_renglon_por_permiso():
 def test_us091_ca1_rol_desconocido_no_existe():
     with pytest.raises(ValueError):
         Rol("administrador")
+
+
+def test_us093_ca1_usuarios_leer_para_odontologo_y_dueno_usuarios_editar_solo_para_odontologo() -> None:
+    assert MATRIZ[Permiso.USUARIOS_LEER] == {ODONTOLOGO, DUENO}
+    assert MATRIZ[Permiso.USUARIOS_EDITAR] == {ODONTOLOGO}
+    assert not puede(frozenset({RECEPCIONISTA}), Permiso.USUARIOS_LEER)
