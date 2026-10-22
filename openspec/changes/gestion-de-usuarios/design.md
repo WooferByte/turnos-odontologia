@@ -225,15 +225,40 @@ El enlace «Usuarios» y todas las acciones se muestran a todos los roles. La re
 
 **Regla (D234, Decisión del autor):** toda pantalla del frontend se implementa a partir de una pantalla generada en Stitch con el design system del proyecto; el design cita el id de la pantalla y su evidencia; si Stitch no entrega la pantalla, el change de interfaz no se cierra; la KB y el spec mandan sobre el contenido.
 
-**Estado en el propose (2026-10-22): la pantalla NO quedó disponible.** Evidencia de los intentos en `docs/skills-mcp/evidencias/sesion-nueva/stitch-usuarios.md`:
+**Pantalla:** `projects/14200813501064679723/screens/a9ea01c76448418b9168e729229a36e5`, «Usuarios - Turnos Odontológicos AR» (2560 × 2126 en Stitch, de escritorio), del proyecto de C-11 y C-49 con el design system «Clinical Ops» (`assets/b683d44391ab410db2dd48aa71ed0b47`). **Cómo se obtuvo (tarea 1.2, 2026-10-22):** en el propose, dos llamadas a `generate_screen_from_text` con `GEMINI_3_8_FLASH` superaron el tiempo de espera del cliente y una tercera con `GEMINI_3_5_FLASH_LITE` dejó la pantalla en el canvas **sin devolver el id**; `list_screens` devuelve `{}` para el proyecto (también para las pantallas de C-11 y C-49, que `get_screen` sí encuentra por id) y `get_project` no trae `screenInstances`. El autor copió el id de la URL del canvas de Stitch el 2026-10-22, y `get_screen` lo devolvió. **Evidencia:**
 
-- Proyecto `projects/14200813501064679723` y design system «Clinical Ops» (`assets/b683d44391ab410db2dd48aa71ed0b47`), los de C-11 y C-49.
-- Dos llamadas a `generate_screen_from_text` con `GEMINI_3_8_FLASH` superaron el tiempo de espera del cliente; una tercera con `GEMINI_3_5_FLASH_LITE` respondió con un texto («Ya tenemos disponible la pantalla de «Usuarios»… Puedes visualizarla en el canvas») pero **sin el id de la pantalla**.
-- `list_screens` devuelve una lista vacía para el proyecto (también para las pantallas de C-11 y C-49, que `get_screen` sí encuentra por id) y `get_project` no trae `screenInstances`: **no hay forma de obtener el id desde el MCP**.
+- `docs/skills-mcp/evidencias/sesion-nueva/stitch-usuarios.md`: el texto enviado (solo textos de los specs y datos ficticios, sin pacientes ni secretos), los intentos, el id y lo que devolvió;
+- `docs/skills-mcp/evidencias/sesion-nueva/stitch-usuarios-pantalla/pantalla.png`: la captura (1280 × 1063) con la que se compara la implementación en la prueba en el navegador (U22, grupo 13);
+- `docs/skills-mcp/evidencias/sesion-nueva/stitch-usuarios-pantalla/pantalla.html`: el HTML generado (Tailwind, Google Fonts y Material Symbols por CDN): **no se copia**; se traduce (tarea 12.1).
 
-**Qué falta, antes del grupo 9 de `tasks.md` (tarea 1.2, bloqueante):** obtener el id de la pantalla «Usuarios» (desde el canvas de Stitch en el navegador, donde la generación dice estar, o regenerándola), descargar con `get_screen` y `download_file` la captura (`stitch-usuarios-pantalla/pantalla.png`) y el HTML (`stitch-usuarios-pantalla/pantalla.html`), completar la evidencia y sumar a este design, con `/opsx:update`, el id y la lista de **qué se toma y qué se rechaza** de la pantalla. Sin eso el change no se archiva (D234).
+**Qué muestra:** la barra del panel con la marca, las pastillas «Prestaciones» y «Usuarios» (activa) y «Cerrar sesión»; el encabezado «Usuarios» con subtítulo y «Nuevo usuario»; el aviso de `RN-AU-06` a todo el ancho; a la izquierda, la tarjeta «Listado general» con el contador y la tabla EMAIL / ROLES / ESTADO / ACCIONES (la odontóloga con «Odontólogo» y «Dueño»; la recepcionista marcada «Editando»; `administracion@consultorio-demo.test` inactivo y atenuado con «Reactivar»); a la derecha, el panel «Editar usuario» y, debajo, una tarjeta de referencia «Nuevo usuario» con el error de `RN-AU-08` bajo el email.
 
-**Lo que la pantalla tiene que traer** (texto enviado, solo datos ficticios, sin pacientes ni secretos; ver la evidencia): la barra del panel con «Prestaciones» y «Usuarios», el encabezado con «Nuevo usuario», la tarjeta «Listado general» con el contador, la tabla email / roles / estado / acciones con una fila «Editando» y una inactiva, el aviso de `RN-AU-06`, el panel lateral de edición con las casillas de roles y una tarjeta de referencia del alta con «Contraseña inicial» y el error de `RN-AU-08`.
+**Qué se toma** (todo visual, con los tokens de `tokens.css` y `panel.css`; un token nuevo solo si ninguno existente sirve; todo lo observable ya tiene escenario en `pantalla-de-usuarios`) — **Propuesta (pantalla de Stitch)**:
+
+- **Disposición** de C-11: el encabezado, el aviso de la tabla entre el encabezado y el contenido, y la tabla con el panel lateral a la derecha cuando está abierto (en Stitch, 7/12 y 5/12 de la grilla).
+- **Encabezado**: «Usuarios» con el subtítulo «Usuarios del consultorio: acceso al panel y roles.» (texto del pedido a Stitch, sin datos) y el botón primario «Nuevo usuario» con ícono de más. Stitch escribió «+ Nuevo usuario» además del ícono: el «+» del texto no se toma (el nombre accesible queda «Nuevo usuario», el del spec).
+- **Tarjeta «Listado general»** con la insignia del contador «N usuarios registrados» (spec, requisito del listado).
+- **Tabla densa**: encabezado gris claro con mayúsculas de 11 px (por CSS, como C-11), filas separadas por una línea, acciones alineadas a la derecha. **Insignias de rol** con borde y radio de 4 px, todas con el mismo estilo (el rol lo dice el texto; Stitch variaba el color sin significado). **Insignia de estado** con un punto: «Activo» en verde (`--exito`, `--fondo-exito`, `--borde-exito`) e «Inactivo» en gris; el estado no depende solo del color (spec).
+- **Fila «Editando»**: fondo `--primario-suave`, borde izquierdo de 4 px `--primario`, la insignia «Editando» junto al email y «Editar» relleno con el primario (spec, requisito de edición).
+- **Fila inactiva atenuada** (opacidad en las celdas de datos) con las acciones con contraste normal (tarea 12.1); «Desactivar» con borde y texto `--error`, «Reactivar» con borde, fondo y texto de éxito.
+- **Panel lateral**: tarjeta con encabezado (ícono de lápiz en la edición, de persona con más en el alta, en SVG en línea), un subtítulo y pie con una línea arriba y «Cancelar» y «Guardar» a la derecha (el orden de Stitch y de C-11). Subtítulo de la edición: «Modificando los roles de «<email>»» (de Stitch, con el email tal como vino de la API); del alta: «Completá los datos del nuevo usuario.» (equivalente propio, como en C-11: Stitch solo muestra el alta como tarjeta de referencia).
+- **Etiquetas en mayúsculas por CSS** (`text-transform`), así el texto del DOM sigue siendo «Email», «Contraseña inicial» y «Roles» (el `legend` del `fieldset`) y los tests por etiqueta valen; la **ayuda** «De 10 caracteres a 72 bytes.» alineada a la derecha en la línea de la etiqueta, enlazada con `aria-describedby` (con el punto final del spec, que Stitch omitió). Campos de 36 px (`--alto-campo`), radio de 4 px.
+- **Casillas de roles** en columna, en el orden «Odontólogo», «Recepcionista», «Dueño», en los dos modos.
+- **Errores de campo** en rojo debajo del campo, con el borde del campo en `--error` (el de `RN-AU-08` de la captura; los textos son los de U19).
+- **Avisos** con ícono de alerta, fondo y borde rojo suave, y **título** dentro del mismo `role="alert"`, antes del mensaje de U19, que no cambia: «No se pudo completar» para `RN-AU-06` (de Stitch), y los de C-11 para el `403` («Acceso restringido») y la falta de conexión («Sin conexión»); los demás, sin título (como T17 de C-11).
+
+**Qué se rechaza** — **Propuesta (pantalla de Stitch)**, salvo donde dice otra cosa:
+
+- La insignia «OPS DENTAL» de la barra, la etiqueta «CONTROL CLÍNICO» del listado y el pie de la tabla («Módulo administrativo con control de integridad clínica», «Filtrado: 3 de 3 registros»): textos sin respaldo en la KB; no hay filtros, búsqueda ni paginación en el spec.
+- **El panel de edición y la tarjeta de alta a la vez**: el panel es uno solo, `cerrado | alta | edicion` (U18); la tarjeta de alta era una referencia pedida a Stitch.
+- La insignia «Alta administrativa» y el botón de ancho completo «Crear usuario» de la tarjeta de alta: el alta usa el mismo pie que la edición, «Cancelar» y «Guardar» (el spec dice «Guardar»).
+- El email de la edición como `input` de solo lectura: va como texto (U18).
+- El tachado del email de la fila inactiva: la fila se atenúa y lleva «Inactivo», sin sugerir un borrado (RN-GL-03, no hay borrar).
+- Los valores precargados de la captura (el email repetido en el alta y la contraseña de ejemplo, ver la evidencia): los campos empiezan vacíos; la contraseña solo vive en su campo (U18).
+- El botón «Cerrar» (X) del encabezado del panel y la nota informativa «Quitar o asignar un rol vale desde la próxima acción del usuario, sin cerrar su sesión.»: **no se implementan** sin escenario; quedan como pregunta al autor (ver «Open Questions», Q12).
+- Tailwind, Inter y Material Symbols por CDN y los colores del tema Material del HTML: se traducen a los tokens del proyecto y a SVG en línea con `aria-hidden="true"` y `focusable="false"` (la CSP de nginx es `default-src 'self'`).
+
+**Dónde manda la KB sobre Stitch:** los textos son los de U19 y del spec (Stitch reprodujo exactos el de `RN-AU-06`, el de `RN-AU-08` y la ayuda de la contraseña, salvo el punto, porque se le enviaron); Stitch no agrega reglas ni acciones (no hay avatares, nombres, restablecer contraseña, que es C-10, ni datos de quien inició sesión); la pantalla no cambia la API.
 
 **Ya decidido sin la pantalla, por la KB y el spec** (se mantiene aunque Stitch muestre otra cosa): sin datos de quien inició sesión (D225); sin avatares, nombres ni datos personales (el modelo no los tiene); acciones visibles para todos (U20); los textos de U19; la contraseña nunca visible fuera de su campo; ningún estado combinado imposible (por ejemplo `RN-AU-05` junto a `RN-AU-07`, D208). El HTML de Stitch **no se copia**: se traduce a `frontend/src/shared/estilos/tokens.css` y `panel.css` y a marcado de React, **sin dependencias nuevas** (ni Tailwind ni fuentes o íconos por CDN; la CSP de nginx es `default-src 'self'`), con íconos en SVG en línea.
 
@@ -246,7 +271,7 @@ El enlace «Usuarios» y todas las acciones se muestran a todos los roles. La re
 5. **`ReferenciaInvalida.recurso`** no admite `usuario`. → U8: se amplía el `Literal`.
 6. **El servidor falso** tiene a la recepcionista inactiva para el login y activa como rol (C-08, C-11), y el catálogo de usuarios la mostrará activa. → U21: se documenta, sin cambiar los tests de C-08.
 7. **`02` dice «el dueño solo lee»** y `03` dice `R` para el dueño y `—` para la recepcionista: coinciden. Ninguna fuente dice si la recepcionista lee; se sigue `03` (D205: `03` es la matriz).
-8. **Stitch no entregó el id de la pantalla** en el propose. → «Referencia visual (Stitch)» y tarea 1.2.
+8. **Stitch no entregó el id de la pantalla** en el propose. → «Referencia visual (Stitch)» y tarea 1.2 (resuelto el 2026-10-22: el autor copió el id del canvas).
 
 ## Risks / Trade-offs
 
@@ -255,7 +280,7 @@ El enlace «Usuarios» y todas las acciones se muestran a todos los roles. La re
 - [El bloqueo de `consultorio` serializa todas las ediciones de usuarios que bajan odontólogos] → Son operaciones raras y cortas; el bloqueo se toma solo cuando el pedido puede bajar la cantidad (U8).
 - [bcrypt con 12 rondas hace lentos los tests de alta] → Los tests usan `rondas_bcrypt` bajas (U21); la demo y Compose siguen con 12.
 - [El profesional queda vinculado a una usuaria desactivada] → Límite conocido (U16, D46).
-- [Stitch no entregó la pantalla] → Tarea 1.2 bloqueante antes del frontend; el backend (grupos 2 a 7) no depende de ella.
+- [Stitch no entregó la pantalla] → Tarea 1.2 bloqueante antes del frontend; el backend (grupos 2 a 7) no depende de ella. Resuelto en la tarea 1.2 (2026-10-22).
 - [El servidor falso se aparta de la API] → Cuerpos copiados del spec y de `api/errores.py`; la prueba en el navegador repite los escenarios contra la API real.
 
 ## A verificar en el change
@@ -286,7 +311,7 @@ No se editan ahora ni durante el Apply:
 
 ## Open Questions
 
-Ninguna. Las once preguntas del propose quedaron cerradas por el autor el 2026-10-22, todas con la recomendación del agente:
+Una, abierta por la tarea 1.2 (Q12, al final). Las once preguntas del propose quedaron cerradas por el autor el 2026-10-22, todas con la recomendación del agente:
 
 - **Q1 → D241.** Dos capabilities nuevas, `gestion-de-usuarios` (API) y `pantalla-de-usuarios` (interfaz), como excepción a «una sola capability» limitada a C-09 (U1).
 - **Q2 → D242.** C-09 valida la contraseña inicial de 10 caracteres a 72 bytes con `422` `RN-AU-07` (US-093 CA-9, parte inicial); C-10 la restablecida y la cambiada; la entrada de C-10 se ajusta al archivar (U5).
@@ -313,3 +338,7 @@ Texto de las preguntas tal como se propusieron (para la trazabilidad):
 - **Q9. Rol e id del usuario en la interfaz.** (a) Sin ruta nueva: enlace y acciones visibles para todos, y la pantalla muestra el `403` o el `409` de la API (como D230); (b) agregar `GET /auth/yo` (id y roles) para ocultar el enlace a la recepcionista y «Desactivar» en la propia fila. **Recomendación: (a)**: (b) es un cambio de API de sesión que merece su propio change (U20).
 - **Q10. Confirmar antes de desactivar.** (a) Sin confirmación, como C-11 (reversible con «Reactivar»); (b) una confirmación propia en la fila («¿Desactivar a …? Su sesión se cierra.») con un estado más y sus escenarios. **Recomendación: (a)**; (b) se puede sumar en un change de interfaz si el autor lo pide.
 - **Q11. Tamaño y gobernanza del Apply.** (a) Aceptar **35 tareas en 14 grupos** como excepción registrada al «alrededor de 20» (API y pantalla en el mismo change, perfil `postgres`, tarea bloqueante de Stitch y la prueba manual del autor por CRÍTICO); (b) juntar RED y GREEN para bajar a unas 24 (contra el TDD estricto); (c) Q1 (c), partir el change. **Recomendación: (a)**, con las tareas agrupadas por tema y la excepción limitada a C-09.
+
+**Pregunta abierta por la tarea 1.2 (pantalla de Stitch, 2026-10-22):**
+
+- **Q12. Dos elementos de la pantalla de Stitch sin escenario.** La pantalla trae (1) un botón «Cerrar» (X) en el encabezado del panel lateral, que en C-11 se tomó con escenarios propios (T17), y (2) en la edición, la nota informativa «Quitar o asignar un rol vale desde la próxima acción del usuario, sin cerrar su sesión.» (coherente con D102 y U8 punto 4: los roles no cambian `token_version`). Ninguno está en `pantalla-de-usuarios`. (a) **No implementarlos** en C-09 (el panel se cierra con «Cancelar», como dice el spec); (b) tomar el «Cerrar» con un escenario nuevo («Cerrar no pide nada», como C-11) y dejar la nota afuera; (c) tomar los dos, con un escenario cada uno. **Recomendación: (a)**: el spec ya cubre cerrar el panel y la nota es un texto nuevo de producto; (b) o (c) suman escenarios y tareas a un change que ya es excepción de tamaño (D251). Hasta que el autor responda, «Qué se rechaza» los deja afuera.

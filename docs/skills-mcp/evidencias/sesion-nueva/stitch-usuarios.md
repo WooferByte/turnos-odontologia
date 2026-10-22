@@ -34,10 +34,18 @@ Fecha: 2026-10-22. Herramientas del MCP `stitch` ejecutadas por el agente en la 
 - Con el MCP **no hay forma de obtener el id** de la pantalla generada: no se descargó captura ni HTML y la carpeta `stitch-usuarios-pantalla/` todavía no existe.
 - Las sugerencias de Stitch («Ver pantalla de Prestaciones», «Simular alta de nuevo usuario», «Modificar permisos de roles») no se aceptaron.
 
-## 4. Qué falta (tarea 1.2 del change, bloqueante para el frontend)
+## 3b. Pantalla obtenida (tarea 1.2, 2026-10-22)
 
-1. Obtener el id de la pantalla «Usuarios» desde el canvas de Stitch en el navegador (el autor puede copiarlo de la URL), o regenerarla con el texto de la sección 2.
-2. `get_screen` con ese id y `download_file` de la captura y del HTML a `stitch-usuarios-pantalla/pantalla.png` y `pantalla.html`.
-3. Completar esta evidencia (sección 3b) y sumar al `design.md` del change, con `/opsx:update`, el id y qué se toma y qué se rechaza de la pantalla.
+- **Cómo se obtuvo el id**: la tercera generación del propose quedó en el canvas de Stitch sin que el MCP devolviera su id. El autor abrió el proyecto en la web de Stitch y copió el `node-id` de la URL de la pantalla el 2026-10-22.
+- **Pantalla**: `projects/14200813501064679723/screens/a9ea01c76448418b9168e729229a36e5`, «Usuarios - Turnos Odontológicos AR», `DESKTOP`, 2560 × 2126 en Stitch. `get_screen` la devuelve por su id.
+- **Rareza de `list_screens`**: después de obtener el id, `list_screens` sigue devolviendo `{}` para el proyecto (como con las pantallas de C-11 y C-49). La única forma de llegar a una pantalla desde el MCP es tener su id; si una generación no lo devuelve, hay que sacarlo del canvas.
+- **Archivos guardados** en [stitch-usuarios-pantalla/](stitch-usuarios-pantalla/):
+  - `pantalla.png`: la captura (`projects/14200813501064679723/files/2cb23b170419458e8df3b9b10d82c07a`), descargada a 1280 × 1063 (el ancho de las de C-11 y C-49; el alto sigue la proporción de la pantalla);
+  - `pantalla.html`: el HTML generado (`projects/14200813501064679723/files/7a554220d1964fafb7a1d17791bec5e6`), descargado con `download_file`. Usa Tailwind, Google Fonts (Inter) y Material Symbols por CDN, así que **no se copia**: la implementación lo traduce a los tokens CSS del proyecto, sin dependencias nuevas.
+- **Revisión del HTML** (datos y secretos): solo emails ficticios del dominio `consultorio-demo.test` (`odontologa@`, `recepcion@`, `administracion@`); sin nombres de personas, pacientes, teléfonos ni documentos. Trae, en el campo «Contraseña inicial» de la tarjeta de alta, un valor de ejemplo inventado por Stitch (`type="password"`, se ve como puntos): no es un secreto del proyecto, no se usa y la implementación arranca con los campos vacíos. Ninguna clave ni token.
+- **Qué muestra**: la barra del panel (marca, pastillas «Prestaciones» y «Usuarios» activa, «Cerrar sesión», sin datos de quien inició sesión); «Usuarios» con el subtítulo y «Nuevo usuario»; el aviso de `RN-AU-06` con el título «No se pudo completar:» y el texto exacto de U19; la tarjeta «Listado general» con «3 usuarios registrados» y la tabla EMAIL / ROLES / ESTADO / ACCIONES (odontóloga con «Odontólogo» y «Dueño»; recepcionista «Editando»; `administracion@` inactivo, atenuado, con «Reactivar»); el panel «Editar usuario» (subtítulo «Modificando los roles de «recepcion@consultorio-demo.test»», casillas de roles, «Cancelar» y «Guardar»); y la tarjeta de referencia «Nuevo usuario» con el error «Ya existe un usuario con ese email (RN-AU-08).» y la ayuda «De 10 caracteres a 72 bytes».
+- **Lo que Stitch agregó sin que se pidiera** (se rechaza en el design, «Referencia visual (Stitch)»): la insignia «OPS DENTAL», la etiqueta «CONTROL CLÍNICO», el pie de la tabla («Módulo administrativo con control de integridad clínica», «Filtrado: 3 de 3 registros»), la insignia «Alta administrativa», el botón «Crear usuario», el «+» repetido en «+ Nuevo usuario», el tachado del email inactivo, el botón «Cerrar» (X) del panel y la nota «Quitar o asignar un rol vale desde la próxima acción del usuario, sin cerrar su sesión.» (estos dos últimos quedan como pregunta Q12 del design).
 
-Sin la pantalla, el change de interfaz no se cierra (D234). La API (grupos 2 a 7 de `tasks.md`) no depende de ella.
+## 4. Cómo se usa en el change
+
+Es la **referencia visual** del `design.md` de `gestion-de-usuarios` (sección «Referencia visual (Stitch)»: qué se toma y qué se rechaza). La KB y los specs mandan: los textos son los de U19 y de `pantalla-de-usuarios`, y nada de la pantalla agrega reglas de dominio. La traducción visual es la tarea 12.1 y la comparación con la captura, la prueba en el navegador (grupo 13), que se anota acá al cerrar el change.

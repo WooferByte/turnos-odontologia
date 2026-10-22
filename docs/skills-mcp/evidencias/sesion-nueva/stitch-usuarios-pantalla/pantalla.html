@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+
+<html class="h-full bg-background text-on-surface" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Usuarios - Turnos Odontológicos AR</title>
+<!-- Inter Google Font -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS v3 with Plugins -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "on-error": "#ffffff",
+            "error-container": "#ffdad6",
+            "on-surface-variant": "#3f4850",
+            "tertiary": "#00628d",
+            "primary-fixed": "#cce5ff",
+            "tertiary-container": "#007cb1",
+            "on-primary-fixed": "#001d31",
+            "inverse-on-surface": "#eef0ff",
+            "surface-container-highest": "#dae2fd",
+            "tertiary-fixed-dim": "#89ceff",
+            "surface-tint": "#006398",
+            "surface-dim": "#d2d9f4",
+            "on-tertiary-fixed-variant": "#004c6e",
+            "on-tertiary-container": "#fcfcff",
+            "surface-bright": "#faf8ff",
+            "secondary-fixed-dim": "#b4c5ff",
+            "outline-variant": "#bfc7d2",
+            "primary": "#006194",
+            "on-error-container": "#93000a",
+            "surface-variant": "#dae2fd",
+            "inverse-surface": "#283044",
+            "on-tertiary": "#ffffff",
+            "outline": "#707881",
+            "error": "#ba1a1a",
+            "on-primary-fixed-variant": "#004b73",
+            "inverse-primary": "#93ccff",
+            "background": "#faf8ff",
+            "on-tertiary-fixed": "#001e2f",
+            "secondary-container": "#316bf3",
+            "on-secondary-fixed-variant": "#003ea8",
+            "surface-container": "#eaedff",
+            "on-secondary-container": "#fefcff",
+            "primary-container": "#007bb9",
+            "on-secondary": "#ffffff",
+            "on-secondary-fixed": "#00174b",
+            "surface-container-low": "#f2f3ff",
+            "primary-fixed-dim": "#93ccff",
+            "surface-container-high": "#e2e7ff",
+            "surface": "#faf8ff",
+            "on-background": "#131b2e",
+            "on-primary": "#ffffff",
+            "surface-container-lowest": "#ffffff",
+            "tertiary-fixed": "#c9e6ff",
+            "on-surface": "#131b2e",
+            "on-primary-container": "#fdfcff",
+            "secondary-fixed": "#dbe1ff",
+            "secondary": "#0051d5"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.125rem",
+            "lg": "0.25rem",
+            "xl": "0.5rem",
+            "full": "0.75rem"
+          },
+          "spacing": {
+            "space-xl": "1.5rem",
+            "margin-desktop": "2rem",
+            "space-lg": "1rem",
+            "space-sm": "0.5rem",
+            "space-md": "0.75rem",
+            "gutter": "1rem",
+            "space-xxs": "0.125rem",
+            "space-xs": "0.25rem",
+            "margin": "1rem",
+            "space-2xl": "2rem",
+            "gutter-desktop": "1.5rem"
+          },
+          "fontFamily": {
+            "code-tabular": ["Inter"],
+            "headline-md": ["Inter"],
+            "label-sm": ["Inter"],
+            "headline-lg": ["Inter"],
+            "body-sm": ["Inter"],
+            "body-md": ["Inter"],
+            "label-md": ["Inter"],
+            "title-md": ["Inter"],
+            "headline-sm": ["Inter"]
+          },
+          "fontSize": {
+            "code-tabular": ["0.875rem", { "lineHeight": "1.25rem", "letterSpacing": "-0.01em", "fontWeight": "500" }],
+            "headline-md": ["1.375rem", { "lineHeight": "1.875rem", "letterSpacing": "-0.015em", "fontWeight": "600" }],
+            "label-sm": ["0.6875rem", { "lineHeight": "0.875rem", "letterSpacing": "0.03em", "fontWeight": "500" }],
+            "headline-lg": ["1.75rem", { "lineHeight": "2.25rem", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+            "body-sm": ["0.8125rem", { "lineHeight": "1.25rem", "fontWeight": "400" }],
+            "body-md": ["0.875rem", { "lineHeight": "1.375rem", "fontWeight": "400" }],
+            "label-md": ["0.75rem", { "lineHeight": "1rem", "letterSpacing": "0.02em", "fontWeight": "600" }],
+            "title-md": ["1rem", { "lineHeight": "1.5rem", "letterSpacing": "-0.005em", "fontWeight": "600" }],
+            "headline-sm": ["1.125rem", { "lineHeight": "1.625rem", "letterSpacing": "-0.01em", "fontWeight": "600" }]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+      font-size: 1.15rem;
+      line-height: 1;
+      display: inline-block;
+      vertical-align: middle;
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-[#F8FAFC] text-on-surface antialiased flex flex-col font-body-md text-body-md selection:bg-primary-fixed selection:text-on-primary-fixed">
+<!-- BARRA SUPERIOR (Shared TopNavBar Architecture) -->
+<header class="bg-surface-container-lowest border-b border-outline-variant/60 w-full sticky top-0 z-40">
+<div class="max-w-[1440px] mx-auto px-6 h-14 flex items-center justify-between">
+<!-- Izquierda: Isotipo y Brand -->
+<div class="flex items-center gap-3">
+<div class="w-8 h-8 rounded-lg bg-surface-container flex items-center justify-center text-primary border border-outline-variant/40">
+<span class="material-symbols-outlined text-[20px]" data-icon="dentistry">dentistry</span>
+</div>
+<span class="text-headline-sm font-headline-sm text-on-surface tracking-tight">Turnos Odontológicos AR</span>
+<span class="ml-2 px-1.5 py-0.5 rounded text-[10px] font-semibold tracking-wide bg-slate-100 text-slate-600 border border-slate-200">OPS DENTAL</span>
+</div>
+<!-- Centro: Navegación de pastillas redondeadas con bordes finos -->
+<nav class="flex items-center gap-2">
+<a class="px-3.5 py-1.5 rounded-lg border border-outline-variant/60 text-on-surface-variant font-label-md text-label-md hover:bg-slate-50 transition-colors" href="#">
+          Prestaciones
+        </a>
+<a class="px-3.5 py-1.5 rounded-lg border border-primary/50 bg-[#F0F9FF] text-primary font-semibold text-label-md" href="#">
+          Usuarios
+        </a>
+</nav>
+<!-- Derecha: Botón Cerrar sesión sin datos personales -->
+<div class="flex items-center gap-3">
+<button class="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-outline-variant/80 text-on-surface-variant hover:text-error hover:border-error/40 hover:bg-error-container/20 transition-colors font-label-md text-label-md" type="button">
+<span class="material-symbols-outlined text-[18px]" data-icon="logout">logout</span>
+<span>Cerrar sesión</span>
+</button>
+</div>
+</div>
+</header>
+<!-- WORKSPACE CANVAS -->
+<main class="flex-1 max-w-[1440px] w-full mx-auto px-6 py-6 space-y-5">
+<!-- ENCABEZADO PRINCIPAL -->
+<div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-1">
+<div>
+<h1 class="text-headline-lg font-headline-lg text-slate-900 tracking-tight">Usuarios</h1>
+<p class="text-body-sm font-body-sm text-slate-500 mt-0.5">Usuarios del consultorio: acceso al panel y roles.</p>
+</div>
+<div class="flex items-center gap-2.5">
+<button class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-[#0284C7] text-white hover:bg-[#0369A1] focus:ring-2 focus:ring-[#0284C7] focus:ring-offset-2 transition-all font-label-md text-label-md font-semibold shadow-none border border-[#0284C7]" type="button">
+<span class="material-symbols-outlined text-[18px]" data-icon="add">add</span>
+<span>+ Nuevo usuario</span>
+</button>
+</div>
+</div>
+<!-- BANNER DE ALERTA DE REGLA DE NEGOCIO -->
+<div class="w-full bg-[#FEF2F2] border border-[#FECACA] rounded-lg p-3.5 flex items-start gap-3" role="alert">
+<span class="material-symbols-outlined text-[#DC2626] text-[20px] shrink-0 mt-0.5" data-icon="error">error</span>
+<div class="text-body-sm font-body-sm text-[#991B1B] leading-relaxed">
+<strong class="font-semibold text-[#7F1D1D]">No se pudo completar:</strong> El consultorio no puede quedar sin un odontólogo activo y nadie puede desactivarse a sí mismo (RN-AU-06).
+      </div>
+</div>
+<!-- DISPOSICIÓN EN DOS COLUMNAS (60% / 40%) -->
+<div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+<!-- COLUMNA IZQUIERDA: LISTADO GENERAL (60% -> 7 cols en 12-grid) -->
+<div class="lg:col-span-7 bg-white border border-[#CBD5E1] rounded-lg flex flex-col">
+<!-- Header de la Tarjeta Listado -->
+<div class="px-4 py-3.5 border-b border-[#E2E8F0] flex items-center justify-between bg-white">
+<div class="flex items-center gap-2.5">
+<h2 class="text-title-md font-title-md text-slate-900">Listado general</h2>
+<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-100 text-slate-700 border border-slate-200">
+              3 usuarios registrados
+            </span>
+</div>
+<span class="text-label-sm font-label-sm text-slate-400 font-code-tabular">CONTROL CLÍNICO</span>
+</div>
+<!-- Tabla Densa -->
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-[#F1F5F9] border-b border-[#CBD5E1] text-[#334155] font-semibold text-[11px] uppercase tracking-wider">
+<th class="py-2.5 px-4 font-semibold" scope="col">EMAIL</th>
+<th class="py-2.5 px-3 font-semibold" scope="col">ROLES</th>
+<th class="py-2.5 px-3 font-semibold" scope="col">ESTADO</th>
+<th class="py-2.5 px-4 text-right font-semibold" scope="col">ACCIONES</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-[#E2E8F0] text-body-sm font-body-sm">
+<!-- FILA 1 -->
+<tr class="hover:bg-[#F8FAFC] transition-colors">
+<td class="py-3 px-4 font-medium text-slate-900">
+                  odontologa@consultorio-demo.test
+                </td>
+<td class="py-3 px-3">
+<div class="flex items-center gap-1.5 flex-wrap">
+<span class="px-2 py-0.5 rounded text-[11px] font-medium bg-[#F0F9FF] text-[#0369A1] border border-[#BAE6FD]">Odontólogo</span>
+<span class="px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-700 border border-slate-200">Dueño</span>
+</div>
+</td>
+<td class="py-3 px-3">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-[#F0FDF4] text-[#16A34A] border border-[#86EFAC]">
+<span class="h-1.5 w-1.5 rounded-full bg-[#16A34A]"></span>
+                    Activo
+                  </span>
+</td>
+<td class="py-3 px-4 text-right whitespace-nowrap">
+<div class="inline-flex items-center gap-1.5">
+<button class="px-2.5 py-1 text-[12px] font-medium rounded-lg border border-[#CBD5E1] text-slate-700 hover:bg-slate-50 transition-colors" type="button">Editar</button>
+<button class="px-2.5 py-1 text-[12px] font-medium rounded-lg border border-[#FCA5A5] text-[#DC2626] hover:bg-[#FEF2F2] transition-colors" type="button">Desactivar</button>
+</div>
+</td>
+</tr>
+<!-- FILA 2 (SELECCIONADA / EN EDICIÓN) -->
+<tr class="bg-[#F0F9FF] border-l-4 border-l-[#0284C7]">
+<td class="py-3 px-4 font-medium text-slate-900">
+<div class="flex items-center gap-2">
+<span>recepcion@consultorio-demo.test</span>
+<span class="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-[#0284C7] text-white">Editando</span>
+</div>
+</td>
+<td class="py-3 px-3">
+<span class="px-2 py-0.5 rounded text-[11px] font-medium bg-white text-[#0369A1] border border-[#BAE6FD]">Recepcionista</span>
+</td>
+<td class="py-3 px-3">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-[#F0FDF4] text-[#16A34A] border border-[#86EFAC]">
+<span class="h-1.5 w-1.5 rounded-full bg-[#16A34A]"></span>
+                    Activo
+                  </span>
+</td>
+<td class="py-3 px-4 text-right whitespace-nowrap">
+<div class="inline-flex items-center gap-1.5">
+<button class="px-2.5 py-1 text-[12px] font-semibold rounded-lg border border-[#0284C7] bg-[#0284C7] text-white" type="button">Editar</button>
+<button class="px-2.5 py-1 text-[12px] font-medium rounded-lg border border-[#CBD5E1] bg-white text-slate-700 hover:bg-slate-50 transition-colors" type="button">Desactivar</button>
+</div>
+</td>
+</tr>
+<!-- FILA 3 (INACTIVO ATENUADO) -->
+<tr class="opacity-60 bg-slate-50/50 hover:opacity-80 transition-opacity">
+<td class="py-3 px-4 font-medium text-slate-500 line-through decoration-slate-300">
+                  administracion@consultorio-demo.test
+                </td>
+<td class="py-3 px-3">
+<span class="px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-600 border border-slate-200">Dueño</span>
+</td>
+<td class="py-3 px-3">
+<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold bg-[#F3F4F6] text-[#6B7280] border border-slate-300">
+<span class="h-1.5 w-1.5 rounded-full bg-slate-400"></span>
+                    Inactivo
+                  </span>
+</td>
+<td class="py-3 px-4 text-right whitespace-nowrap">
+<div class="inline-flex items-center gap-1.5">
+<button class="px-2.5 py-1 text-[12px] font-medium rounded-lg border border-[#CBD5E1] text-slate-600 hover:bg-slate-100 transition-colors" type="button">Editar</button>
+<button class="px-2.5 py-1 text-[12px] font-medium rounded-lg border border-[#86EFAC] text-[#15803D] bg-[#F0FDF4] hover:bg-[#DCFCE7] transition-colors" type="button">Reactivar</button>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</div>
+<!-- Pie de Tabla -->
+<div class="px-4 py-2.5 border-t border-[#E2E8F0] bg-[#F8FAFC] flex items-center justify-between text-[11px] text-slate-500">
+<span>Módulo administrativo con control de integridad clínica</span>
+<span class="font-code-tabular font-medium text-slate-600">Filtrado: 3 de 3 registros</span>
+</div>
+</div>
+<!-- COLUMNA DERECHA: PANELES DE FORMULARIO (40% -> 5 cols en 12-grid) -->
+<div class="lg:col-span-5 space-y-5">
+<!-- TARJETA 1: EDITAR USUARIO -->
+<div class="bg-white border border-[#CBD5E1] rounded-lg">
+<!-- Encabezado Tarjeta Editar -->
+<div class="px-4 py-3.5 border-b border-[#E2E8F0] flex items-center justify-between bg-white">
+<div class="flex items-center gap-2 text-slate-900">
+<span class="material-symbols-outlined text-[#0284C7] text-[18px]" data-icon="edit">edit</span>
+<h2 class="text-title-md font-title-md text-slate-900">Editar usuario</h2>
+</div>
+<button class="text-slate-400 hover:text-slate-700 p-1 rounded-lg hover:bg-slate-100 transition-colors" title="Cerrar" type="button">
+<span class="material-symbols-outlined text-[18px]" data-icon="close">close</span>
+</button>
+</div>
+<div class="p-4 space-y-4">
+<p class="text-body-sm font-body-sm text-slate-500">
+              Modificando los roles de <strong class="text-slate-800">«recepcion@consultorio-demo.test»</strong>
+</p>
+<!-- Campo EMAIL de solo lectura -->
+<div class="space-y-1.5">
+<label class="block text-label-sm font-label-sm text-slate-700 uppercase tracking-wider font-semibold">EMAIL</label>
+<input class="w-full h-9 px-3 text-body-sm font-body-sm rounded-lg border border-[#CBD5E1] bg-[#F9FAFB] text-slate-700 cursor-not-allowed focus:outline-none" readonly="" type="email" value="recepcion@consultorio-demo.test"/>
+</div>
+<!-- Grupo ROLES -->
+<div class="space-y-2">
+<label class="block text-label-sm font-label-sm text-slate-700 uppercase tracking-wider font-semibold">ROLES</label>
+<div class="space-y-2 pt-0.5">
+<label class="flex items-center gap-2.5 text-body-sm font-body-sm text-slate-800 cursor-pointer select-none">
+<input class="h-4 w-4 rounded text-[#0284C7] border-slate-300 focus:ring-[#0284C7]" type="checkbox"/>
+<span>Odontólogo</span>
+</label>
+<label class="flex items-center gap-2.5 text-body-sm font-body-sm text-slate-800 cursor-pointer select-none">
+<input checked="" class="h-4 w-4 rounded text-[#0284C7] border-slate-300 focus:ring-[#0284C7]" type="checkbox"/>
+<span class="font-medium text-slate-900">Recepcionista</span>
+</label>
+<label class="flex items-center gap-2.5 text-body-sm font-body-sm text-slate-800 cursor-pointer select-none">
+<input class="h-4 w-4 rounded text-[#0284C7] border-slate-300 focus:ring-[#0284C7]" type="checkbox"/>
+<span>Dueño</span>
+</label>
+</div>
+</div>
+<!-- Mensaje Informativo Sutil -->
+<div class="p-2.5 bg-sky-50/60 border border-sky-100 rounded-lg flex items-start gap-2 text-[12px] text-sky-900 leading-snug">
+<span class="material-symbols-outlined text-[#0284C7] text-[16px] shrink-0 mt-0.5" data-icon="info">info</span>
+<span>Quitar o asignar un rol vale desde la próxima acción del usuario, sin cerrar su sesión.</span>
+</div>
+<!-- Footer con Botones alineados a la derecha -->
+<div class="pt-2 border-t border-[#E2E8F0] flex items-center justify-end gap-2.5">
+<button class="px-3.5 py-1.5 rounded-lg border border-[#CBD5E1] text-slate-700 hover:bg-slate-50 transition-colors font-label-md text-label-md" type="button">
+                Cancelar
+              </button>
+<button class="px-4 py-1.5 rounded-lg bg-[#0284C7] text-white hover:bg-[#0369A1] transition-colors font-label-md text-label-md font-semibold border border-[#0284C7]" type="button">
+                Guardar
+              </button>
+</div>
+</div>
+</div>
+<!-- TARJETA 2: NUEVO USUARIO (REFERENCIA Y VALIDACIÓN) -->
+<div class="bg-white border border-[#CBD5E1] rounded-lg">
+<!-- Encabezado Tarjeta Nuevo Usuario -->
+<div class="px-4 py-3 border-b border-[#E2E8F0] flex items-center justify-between bg-white">
+<div class="flex items-center gap-2 text-slate-900">
+<span class="material-symbols-outlined text-slate-600 text-[18px]" data-icon="person_add">person_add</span>
+<h2 class="text-headline-sm font-headline-sm text-slate-900">Nuevo usuario</h2>
+</div>
+<span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-slate-100 text-slate-600 border border-slate-200">
+              Alta administrativa
+            </span>
+</div>
+<div class="p-4 space-y-3.5">
+<!-- Campo EMAIL con Error de Validación -->
+<div class="space-y-1">
+<label class="block text-label-sm font-label-sm text-slate-700 uppercase tracking-wider font-semibold">EMAIL</label>
+<div class="relative">
+<input class="w-full h-9 px-3 pr-9 text-body-sm font-body-sm rounded-lg border border-[#DC2626] bg-[#FEF2F2]/30 text-slate-900 focus:outline-none focus:ring-1 focus:ring-[#DC2626]" type="email" value="recepcion@consultorio-demo.test"/>
+<span class="material-symbols-outlined text-[#DC2626] text-[18px] absolute right-2.5 top-2 pointer-events-none" data-icon="error">error</span>
+</div>
+<p class="text-[11px] text-[#DC2626] font-medium flex items-center gap-1 mt-1">
+<span>Ya existe un usuario con ese email (RN-AU-08).</span>
+</p>
+</div>
+<!-- Campo CONTRASEÑA INICIAL -->
+<div class="space-y-1">
+<div class="flex items-center justify-between">
+<label class="block text-label-sm font-label-sm text-slate-700 uppercase tracking-wider font-semibold">CONTRASEÑA INICIAL</label>
+<span class="text-[11px] text-slate-500">De 10 caracteres a 72 bytes</span>
+</div>
+<input class="w-full h-9 px-3 text-body-sm font-body-sm rounded-lg border border-[#CBD5E1] bg-white text-slate-900 focus:border-[#0284C7] focus:ring-1 focus:ring-[#0284C7] font-code-tabular" type="password" value="secretpassword123"/>
+</div>
+<!-- Grupo ROLES -->
+<div class="space-y-1.5 pt-0.5">
+<label class="block text-label-sm font-label-sm text-slate-700 uppercase tracking-wider font-semibold">ROLES</label>
+<div class="flex items-center gap-4 pt-0.5 flex-wrap">
+<label class="flex items-center gap-2 text-body-sm font-body-sm text-slate-700 cursor-pointer">
+<input class="h-4 w-4 rounded text-[#0284C7] border-slate-300 focus:ring-[#0284C7]" type="checkbox"/>
+<span>Odontólogo</span>
+</label>
+<label class="flex items-center gap-2 text-body-sm font-body-sm text-slate-700 cursor-pointer">
+<input class="h-4 w-4 rounded text-[#0284C7] border-slate-300 focus:ring-[#0284C7]" type="checkbox"/>
+<span>Recepcionista</span>
+</label>
+<label class="flex items-center gap-2 text-body-sm font-body-sm text-slate-700 cursor-pointer">
+<input class="h-4 w-4 rounded text-[#0284C7] border-slate-300 focus:ring-[#0284C7]" type="checkbox"/>
+<span>Dueño</span>
+</label>
+</div>
+</div>
+<!-- Botón Crear Usuario -->
+<div class="pt-2">
+<button class="w-full py-2 px-4 rounded-lg bg-[#0284C7] hover:bg-[#0369A1] text-white font-label-md text-label-md font-semibold transition-colors border border-[#0284C7]" type="button">
+                Crear usuario
+              </button>
+</div>
+</div>
+</div>
+</div>
+</div>
+</main>
+</body></html>
