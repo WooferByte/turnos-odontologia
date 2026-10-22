@@ -421,6 +421,8 @@ Decisión del autor 2026-10-03 (fila «Usuarios y acceso» de la tabla del 2026-
 **Depende de**: US-090, US-091
 **Reglas**: RN-AU-02, RN-AU-03, RN-AU-04, RN-AU-05, RN-AU-06, RN-AU-07, RN-AU-08
 
+> Nota de implementación (C-09, archivado 2026-10-22): cubre CA-1 a CA-5, CA-8 y la parte inicial de CA-9 (contraseña inicial de 10 a 72 bytes, D242); lo restante de CA-6, CA-7 y CA-9 queda para C-10.
+
 ### US-094 — Renovar la sesión (confirmada por el autor 2026-10-05, D42 y D43)
 **Como** usuario del panel **quiero** renovar mi sesión sin volver a ingresar la contraseña **para** no ser interrumpido durante la jornada.
 - [ ] CA-1: `POST /auth/refresh` con un refresh token válido devuelve un nuevo access token.

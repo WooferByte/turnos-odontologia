@@ -61,6 +61,7 @@ proyecto/
 │       ├── main.tsx, App.tsx    # rutas del panel (ingreso y panel base)
 │       ├── shared/api/          # clienteHttp, sesion, errores
 │       ├── features/ingreso/    # pantalla de inicio de sesión
+│       ├── features/usuarios/    # pantalla de usuarios (C-09)
 │       ├── pages/               # panel base y rutas protegidas
 │       └── test/                # servidor falso de la API para las pruebas
 ├── docker-compose.yml           # api, worker, postgres, redis, frontend (C-02 crea api y postgres, D151)

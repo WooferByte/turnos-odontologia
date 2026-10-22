@@ -403,7 +403,7 @@ Primer change: `/opsx:propose crear-turno-sin-solapamientos`.
   - `knowledge-base/07_flujos_principales.md` Flujo 8 · `knowledge-base/05_reglas_de_negocio.md` RN-AU-03, RN-AU-04 · `knowledge-base/10_preguntas_abiertas.md` (ya implementado, D217 a D228)
 
 ### [C-09] `gestion-de-usuarios`
-- **Estado**: `[~]` en curso · **Orden**: 3 · **Gobernanza**: CRITICO
+- **Estado**: `[x]` archivado · **Orden**: 3 · **Gobernanza**: CRITICO
 - **Objetivo** (US-093): que el odontólogo cree usuarios, les asigne roles y los desactive (parte de gestión).
 - **Alcance — dentro**: `GET/POST /usuarios` y `PATCH /usuarios/{id}` (roles, activar o desactivar); email único; contraseña inicial definida al crear; desactivar incrementa `token_version`; error de dominio RN-AU-06 para el último odontólogo activo y para desactivarse a sí mismo; pantalla de usuarios del panel (el cableado de `pedidoDelPanel` y `SesionTerminada` en `ProveedorDeSesion` ya se hizo en C-11, D231; C-09 solo lo reutiliza).
 - **Alcance — fuera**: restablecer y cambiar contraseñas (C-10); crear un `Profesional` al asignar el rol `odontologo` (Fase 2, D46).
@@ -411,20 +411,20 @@ Primer change: `/opsx:propose crear-turno-sin-solapamientos`.
 - **Escenarios mínimos**: US-093: CA-1, CA-2, CA-3, CA-4, CA-5, CA-8
 - **Leer antes**:
   - `knowledge-base/06_funcionalidades.md` §US-093
-  - `knowledge-base/05_reglas_de_negocio.md` RN-AU-02, RN-AU-03, RN-AU-04, RN-AU-05, RN-AU-06, RN-AU-07
+  - `knowledge-base/05_reglas_de_negocio.md` RN-AU-02, RN-AU-03, RN-AU-04, RN-AU-05, RN-AU-06, RN-AU-07, RN-AU-08 · `knowledge-base/10_preguntas_abiertas.md` (ya implementado, D241 a D254)
   - `knowledge-base/03_actores_y_roles.md` matriz, fila «Usuarios del consultorio» · `knowledge-base/04_modelo_de_datos.md` §«Usuario y UsuarioRol»
   - `knowledge-base/02_descripcion_general.md` §«API REST (resumen)», fila Usuarios
 
 ### [C-10] `contrasenas-de-usuarios`
 - **Estado**: `[ ]` pendiente · **Orden**: 3 · **Gobernanza**: CRITICO
 - **Objetivo** (US-093): restablecer la contraseña de un usuario y que cada usuario cambie la propia (parte de contraseñas).
-- **Alcance — dentro**: `POST /usuarios/{id}/restablecer-contrasena` (solo odontólogo) y `POST /auth/cambiar-contrasena` (pide la actual); ambos incrementan `token_version`; largo de 10 caracteres como mínimo y 72 bytes como máximo, también para la contraseña inicial de C-09; formularios en el panel.
+- **Alcance — dentro**: `POST /usuarios/{id}/restablecer-contrasena` (solo odontólogo) y `POST /auth/cambiar-contrasena` (pide la actual); ambos incrementan `token_version`; largo de 10 caracteres como mínimo y 72 bytes como máximo para la contraseña restablecida y la cambiada (la inicial la valida C-09, D242); formularios en el panel.
 - **Alcance — fuera**: recuperación de contraseña por email (ninguna historia la pide); revocación de tokens de a uno.
 - **Depende de**: C-09
 - **Escenarios mínimos**: US-093: CA-6, CA-7, CA-9
 - **Leer antes**:
   - `knowledge-base/06_funcionalidades.md` §US-093 (CA-6, CA-7, CA-9)
-  - `knowledge-base/05_reglas_de_negocio.md` RN-AU-03, RN-AU-07
+  - `knowledge-base/05_reglas_de_negocio.md` RN-AU-03, RN-AU-07, RN-AU-08
   - `knowledge-base/08_arquitectura_propuesta.md` §Seguridad · `knowledge-base/09_decisiones_y_supuestos.md` SU-09
   - `knowledge-base/02_descripcion_general.md` §«API REST (resumen)», filas Auth y Usuarios
 
