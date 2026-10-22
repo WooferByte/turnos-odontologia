@@ -562,7 +562,7 @@ npm test
 npm run typecheck
 ```
 
-`npm test` corre **100 tests en 6 archivos** («Tests 100 passed (100)»); no necesita el backend, Docker ni red. `npm run typecheck` (`tsc --noEmit`) termina sin salida. `npm run build` genera `frontend/dist/`.
+`npm test` corre **140 tests en 9 archivos** («Tests 140 passed (140)»); no necesita el backend, Docker ni red. `npm run typecheck` (`tsc --noEmit`) termina sin salida. `npm run build` genera `frontend/dist/`.
 
 ### Probar el panel (demo sin Docker, dos terminales)
 
@@ -662,6 +662,42 @@ Desde C-49 la pantalla `/ingresar` sigue la pantalla generada en Stitch (referen
 
 `npm test` termina con «Tests 100 passed (100)».
 
+### Pantalla de usuarios
+
+Desde C-09 el panel tiene la pantalla «Usuarios». Cómo llegar: iniciar sesión y pulsar **Usuarios** en el encabezado (`/panel/usuarios`). La pantalla usa `GET`, `POST` y `PATCH /api/usuarios` (el contrato es el de «Usuarios»); no cambia la API ni valida reglas: el largo de la contraseña, el email repetido y `RN-AU-06` los decide la API, y la pantalla muestra su mensaje con el código.
+
+Recorrido con la demo sin Docker (las dos terminales de «Probar el panel», con la demo **recién arrancada**; la demo tiene dos usuarios, los dos activos):
+
+1. Ingresar con `odontologa@consultorio-demo.test` y pulsar «Usuarios»: la tabla muestra a la odontóloga («Odontólogo», «Dueño») y a la recepcionista («Recepcionista»), las dos «Activo», con «Editar» y «Desactivar», y el contador «2 usuarios registrados». En la pestaña de red, `GET /api/usuarios` responde `200` (con `npm run dev` aparece dos veces porque el modo estricto de React monta la pantalla dos veces en desarrollo; la suite verifica que la pantalla pide una sola vez).
+2. «Nuevo usuario»: email `turnos@consultorio-demo.test`, contraseña inicial `clave-ficticia-2026`, «Recepcionista» y «Guardar» → `POST` con `201`; el panel se cierra, aparece la tercera fila y el contador dice «3 usuarios registrados». Al volver a abrir «Nuevo usuario», los campos están vacíos.
+3. «Nuevo usuario» con `otro@consultorio-demo.test`, la contraseña `corta-123` y «Recepcionista» → `422` con `["RN-AU-07"]` y, debajo de la contraseña, «La contraseña debe tener de 10 caracteres a 72 bytes (RN-AU-07).». Cambiar el email a `recepcion@consultorio-demo.test` y la contraseña a `clave-ficticia-2026` → `409` con `["RN-AU-08"]` y «Ya existe un usuario con ese email (RN-AU-08).» debajo del email. Pulsar la **X** («Cerrar») del encabezado del panel: se cierra sin pedir nada y la tabla no cambia.
+4. «Editar» en la recepcionista: la fila se marca «Editando» y el panel muestra su email como texto, sus roles y la nota «Quitar o asignar un rol vale desde la próxima acción del usuario, sin cerrar su sesión.». Marcar «Dueño» y «Guardar» → `PATCH /api/usuarios/2` con un cuerpo que tiene solo `roles`; la fila muestra «Recepcionista» y «Dueño». «Editar» y «Guardar» sin tocar nada → no hay ningún `PATCH`.
+5. «Desactivar» en la recepcionista → `PATCH` con `{"activo": false}`: la fila queda atenuada, con «Inactivo» y «Reactivar», y el contador no cambia. «Reactivar» manda `{"activo": true}`. No hay acción de borrar.
+6. «Desactivar» en la fila de la odontóloga → `409` con `["RN-AU-06"]` y, en el aviso de la tabla, «No se pudo completar» con «El consultorio no puede quedar sin un odontólogo activo y nadie puede desactivarse a sí mismo (RN-AU-06).». «Editar» en su fila, desmarcar «Odontólogo» y «Guardar» → el mismo mensaje en el aviso del panel, que sigue abierto.
+7. «Cerrar sesión» e ingresar con `recepcion@consultorio-demo.test`: como en el paso 4 recibió «Dueño», ve la tabla; «Desactivar» en `turnos@consultorio-demo.test` → `403` con `["RN-AU-05"]` y «Tu usuario no tiene permiso para modificar usuarios (RN-AU-05).» en el aviso de la tabla, sin perder la sesión. Si la odontóloga le quita «Dueño», la recepcionista ve «Tu usuario no tiene permiso para ver los usuarios (RN-AU-05).» en lugar de la tabla.
+
+Con la API detenida, la pantalla muestra «No se pudo conectar con el servidor. Probá de nuevo en unos minutos.» con «Reintentar». Si la sesión termina mientras se usa la pantalla, la interfaz vuelve a `/ingresar` con «Tu sesión terminó. Iniciá sesión de nuevo.».
+
+Escenario → test (`src/features/usuarios/`, API reemplazada por el servidor falso). Los 24 escenarios de `openspec/changes/gestion-de-usuarios/specs/pantalla-de-usuarios/spec.md` están en `PaginaUsuarios.test.tsx`, con 27 tests (24 escenarios más 3 de triangulación):
+
+| Escenario | Test titular |
+|---|---|
+| US-093 CA-1 (listado, carga, sin conexión, permisos de lectura) | «US-093 CA-1: la odontóloga ve los tres usuarios», «US-093 CA-1: mientras carga y sin conexión», «US-093 CA-1: la recepcionista no ve los usuarios», «US-093 CA-1: el dueño ve la tabla» |
+| US-093 CA-1 (alta y sus bordes) | «US-093 CA-1: alta de una recepcionista», «US-093 CA-1: un email que la API rechaza se muestra debajo del email», «US-093 CA-1: sin roles, campos vacíos y sin conexión», «US-093 CA-1: cerrar el alta borra la contraseña» |
+| US-093 CA-2 (email repetido, `RN-AU-08`) | «US-093 CA-2: el email repetido se muestra debajo del email» |
+| US-093 CA-9 (contraseña inicial corta, `RN-AU-07`) | «US-093 CA-9: la contraseña inicial corta se muestra debajo de la contraseña» |
+| US-093 CA-1 (edición de roles) | «US-093 CA-1: sumar el rol dueno a la recepcionista», «US-093 CA-1: guardar sin cambios no pide nada» |
+| US-093 CA-1 (botón «Cerrar» y nota de roles, D254) | «US-093 CA-1: el botón Cerrar del panel no pide nada», «US-093 CA-1: Cerrar en el alta no manda nada y descarta la contraseña», «US-093 CA-1: la edición avisa desde cuándo valen los roles», «US-093 CA-1: el alta no muestra la nota de roles» |
+| US-093 CA-3 (desactivar, reactivar, botones en espera, usuario que ya no existe) | «US-093 CA-3: desactivar a la recepcionista», «US-093 CA-3: reactivar a un usuario inactivo», «US-093 CA-3: mientras espera, los botones de la fila quedan deshabilitados», «US-093 CA-3: un usuario que ya no existe» (solo contra el servidor falso: la API real no borra usuarios) |
+| US-093 CA-4 (la única odontóloga, `RN-AU-06`) | «US-093 CA-4: la única odontóloga no puede dejar su rol» |
+| US-093 CA-5 (desactivarse, `RN-AU-06`) | «US-093 CA-5: la odontóloga no puede desactivarse», «US-093 CA-5: la odontóloga no puede desactivarse aunque haya un colega odontólogo activo» |
+| US-093 CA-1 (el dueño sin permiso de escritura, `RN-AU-05`) | «US-093 CA-1: el dueño intenta crear y desactivar», «US-093 CA-1: el dueño intenta editar roles y reactivar», «US-093 CA-1: sin permiso y con una contraseña corta se ve el permiso» |
+| US-092 CA-1 (la sesión termina al guardar un alta) | «US-092 CA-1: una sesión irrenovable al guardar un alta» |
+
+El cliente de la API (`apiUsuarios.test.ts`, 10 tests) y los mensajes de U19 (`mensajes.test.ts`, 3 tests) se prueban aparte. La disposición, la jerarquía, el botón «Cerrar» y la nota de roles siguen la pantalla generada en Stitch (`projects/14200813501064679723/screens/a9ea01c76448418b9168e729229a36e5`; referencia visual: `docs/skills-mcp/evidencias/sesion-nueva/stitch-usuarios-pantalla/pantalla.png`; qué se tomó y qué no, en «Referencia visual (Stitch)» del design del change), traducida a `tokens.css` y `panel.css` sin Tailwind ni recursos de otro origen.
+
+Límites conocidos de la pantalla: el enlace «Usuarios» y todas las acciones se ven con cualquier rol, porque la interfaz no sabe quién inició sesión (U20, D249): la API decide con `403` o `409` y la pantalla lo muestra; «Desactivar» no pide confirmación (D250) y se deshace con «Reactivar».
+
 ### Versiones fijadas del frontend
 
 Las versiones exactas viven en `frontend/package.json`; `frontend/package-lock.json` se generó con `npm install --before=2026-10-12` (ningún paquete publicado desde esa fecha) y se instala siempre con `npm ci`.
@@ -694,7 +730,7 @@ La API se reemplaza en los tests por un servidor falso escrito a mano (`frontend
 
 Hay además tests de la renovación compartida, del `403`, del cierre de sesión y de que ninguna URL contenga un token, y cinco guards (`src/test/guards.test.ts`) que fallan si aparece `any`, `vi.mock`, `localStorage`, `dangerouslySetInnerHTML`, un archivo `index.ts` de reexportación o un recurso de otro origen (STI-1).
 
-Resultado actual de las dos suites: frontend «Tests 100 passed (100)»; backend «611 passed, 49 deselected, 1 warning».
+Resultado actual de las dos suites: frontend «Tests 140 passed (140)»; backend «611 passed, 49 deselected, 1 warning».
 
 ## Levantar la API con PostgreSQL
 

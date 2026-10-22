@@ -561,3 +561,67 @@ describe('PaginaUsuarios: desactivarse con un colega odontólogo', () => {
     expect(servidor.usuariosActuales()[0]?.activo).toBe(true)
   })
 })
+
+const NOTA_DE_ROLES = 'Quitar o asignar un rol vale desde la próxima acción del usuario, sin cerrar su sesión.'
+
+describe('PaginaUsuarios: botón «Cerrar» y nota de roles (pantalla de Stitch, D254)', () => {
+  beforeEach(() => {
+    sessionStorage.clear()
+  })
+  afterEach(() => {
+    cleanup()
+  })
+
+  it('US-093 CA-1: el botón Cerrar del panel no pide nada', async () => {
+    const servidor = crearServidorFalso()
+    const usuario = await abrirPanel(servidor, '/panel/usuarios')
+    await screen.findByRole('table')
+
+    await usuario.click(botonDeFila('Editar', EMAIL_RECEPCIONISTA))
+    await usuario.click(casillaDeRol('Dueño'))
+    await usuario.click(within(panelLateral()).getByRole('button', { name: 'Cerrar' }))
+
+    expect(screen.queryByRole('complementary')).toBeNull()
+    expect(rolesDe(EMAIL_RECEPCIONISTA)).toEqual(['Recepcionista'])
+    expect(within(filaDe(EMAIL_RECEPCIONISTA)).queryByText('Editando')).toBeNull()
+    expect(servidor.llamadas('PATCH', '/api/usuarios/2')).toBe(0)
+  })
+
+  it('US-093 CA-1: la edición avisa desde cuándo valen los roles', async () => {
+    const servidor = crearServidorFalso()
+    const usuario = await abrirPanel(servidor, '/panel/usuarios')
+    await screen.findByRole('table')
+
+    await usuario.click(botonDeFila('Editar', EMAIL_RECEPCIONISTA))
+
+    expect(within(panelLateral()).getByText(NOTA_DE_ROLES)).toBeDefined()
+  })
+
+  it('US-093 CA-1: Cerrar en el alta no manda nada y descarta la contraseña', async () => {
+    const servidor = crearServidorFalso()
+    const usuario = await abrirPanel(servidor, '/panel/usuarios')
+    await screen.findByRole('table')
+
+    await completarAlta(usuario, { email: EMAIL_NUEVO, contrasena: CONTRASENA_NUEVA, roles: ['Recepcionista'] })
+    await usuario.click(within(panelLateral()).getByRole('button', { name: 'Cerrar' }))
+
+    expect(screen.queryByRole('complementary')).toBeNull()
+    expect(servidor.llamadas('POST', '/api/usuarios')).toBe(0)
+    expect(filasDeDatos()).toHaveLength(3)
+    await usuario.click(screen.getByRole('button', { name: 'Nuevo usuario' }))
+    expect(screen.getByLabelText<HTMLInputElement>('Email').value).toBe('')
+    expect(screen.getByLabelText<HTMLInputElement>('Contraseña inicial').value).toBe('')
+    expect(casillaDeRol('Recepcionista').checked).toBe(false)
+    expect(document.body.textContent).not.toContain(CONTRASENA_NUEVA)
+  })
+
+  it('US-093 CA-1: el alta no muestra la nota de roles', async () => {
+    const servidor = crearServidorFalso()
+    const usuario = await abrirPanel(servidor, '/panel/usuarios')
+    await screen.findByRole('table')
+
+    await usuario.click(screen.getByRole('button', { name: 'Nuevo usuario' }))
+
+    expect(within(panelLateral()).queryByText(NOTA_DE_ROLES)).toBeNull()
+  })
+})

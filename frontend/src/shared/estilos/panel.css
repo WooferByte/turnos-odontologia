@@ -579,6 +579,107 @@
   color: var(--texto-medio);
 }
 
+/* Tabla de usuarios (C-09, pantalla de Stitch, D234): estado con punto, fila «Editando» marcada con el primario y
+   acciones de fila con el color de lo que hacen; el texto de cada botón y de cada insignia dice lo mismo sin color. */
+.tabla-de-usuarios td:first-child {
+  font-weight: 500;
+  color: var(--texto);
+}
+
+.tabla-de-usuarios .insignia {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.tabla-de-usuarios .insignia::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.tabla-de-usuarios .insignia-inactiva::before {
+  background: var(--texto-tenue);
+}
+
+.tabla-de-usuarios .insignia-de-rol {
+  font-size: 11px;
+}
+
+.tabla-de-usuarios .fila-editando {
+  background: var(--primario-suave);
+  box-shadow: inset 4px 0 0 var(--primario);
+}
+
+.tabla-de-usuarios .marca-editando {
+  border-color: var(--primario);
+  background: var(--primario);
+  color: var(--superficie);
+  letter-spacing: 0;
+  text-transform: none;
+}
+
+.tabla-de-usuarios .boton-de-fila-en-edicion {
+  background: var(--primario);
+  color: var(--superficie);
+}
+
+.boton-de-fila-peligro {
+  color: var(--error);
+  border-color: var(--borde-error);
+}
+
+.boton-de-fila-peligro:hover:not(:disabled) {
+  background: var(--fondo-error);
+}
+
+.boton-de-fila-exito {
+  color: var(--exito);
+  background: var(--fondo-exito);
+  border-color: var(--borde-exito);
+}
+
+/* Panel lateral de usuarios: campos con radio de 4 px, el email de la edición como texto y la nota de roles (D254)
+   con el fondo suave del primario. */
+.panel-de-usuario .campo input[type='email'],
+.panel-de-usuario .campo input[type='password'] {
+  border-radius: var(--radio);
+}
+
+.etiqueta-de-dato {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--texto-medio);
+}
+
+.dato-de-solo-lectura {
+  margin: 0;
+  padding: 8px 12px;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  background: var(--superficie-suave);
+  color: var(--texto-medio);
+  overflow-wrap: anywhere;
+}
+
+.nota-de-roles {
+  margin-bottom: 16px;
+  border-color: var(--primario-borde);
+  background: var(--primario-suave);
+  color: var(--primario-oscuro);
+}
+
+.nota-de-roles .icono {
+  flex-shrink: 0;
+  color: var(--primario);
+}
+
 /* Pantalla de inicio de sesión (C-49, design L4 a L9), traducida de la pantalla de Stitch sin Tailwind ni CDN */
 .pantalla-de-ingreso {
   display: flex;

@@ -4,10 +4,12 @@
 import { useId, useState, type SyntheticEvent } from 'react'
 import { Aviso } from '../../shared/componentes/Aviso'
 import { IconoAlerta } from '../../shared/iconos/IconoAlerta'
+import { IconoCerrar } from '../../shared/iconos/IconoCerrar'
+import { IconoInfo } from '../../shared/iconos/IconoInfo'
 import { IconoLapiz } from '../../shared/iconos/IconoLapiz'
 import { IconoPersonaMas } from '../../shared/iconos/IconoPersonaMas'
 import { ROLES, type DatosDeAltaDeUsuario, type Rol, type Usuario } from './apiUsuarios'
-import { nombreDelRol, subtituloDelPanel, tituloDelAviso, type ErroresDelPanel } from './mensajes'
+import { NOTA_DE_ROLES, nombreDelRol, subtituloDelPanel, tituloDelAviso, type ErroresDelPanel } from './mensajes'
 
 interface Propiedades {
   /** El usuario cuyos roles se editan; `null` abre el alta. */
@@ -45,7 +47,7 @@ export function PanelDeUsuario({ usuario, guardando, errores, onGuardar, onCance
   }
 
   return (
-    <aside aria-labelledby={idTitulo} className="panel-lateral">
+    <aside aria-labelledby={idTitulo} className="panel-lateral panel-de-usuario">
       <header className="panel-encabezado">
         <div>
           <h2 id={idTitulo}>
@@ -54,6 +56,9 @@ export function PanelDeUsuario({ usuario, guardando, errores, onGuardar, onCance
           </h2>
           <p className="panel-subtitulo">{subtituloDelPanel(usuario)}</p>
         </div>
+        <button type="button" className="boton-cerrar" aria-label="Cerrar" onClick={onCancelar}>
+          <IconoCerrar />
+        </button>
       </header>
       <div className="panel-cuerpo">
         {errores.aviso === null ? null : <Aviso mensaje={errores.aviso} titulo={tituloDelAviso(errores.aviso)} />}
@@ -138,6 +143,12 @@ export function PanelDeUsuario({ usuario, guardando, errores, onGuardar, onCance
               </p>
             )}
           </fieldset>
+          {usuario === null ? null : (
+            <p className="nota-informativa nota-de-roles">
+              <IconoInfo />
+              {NOTA_DE_ROLES}
+            </p>
+          )}
           <div className="panel-pie">
             <button type="button" className="boton-secundario" onClick={onCancelar}>
               Cancelar

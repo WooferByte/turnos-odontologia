@@ -21,7 +21,7 @@ function claseDeFila(usuario: Usuario, editando: boolean): string {
 
 export function TablaDeUsuarios({ usuarios, ocupadas, editandoId, onEditar, onCambiarActivo }: Propiedades) {
   return (
-    <table className="tabla">
+    <table className="tabla tabla-de-usuarios">
       <thead>
         <tr>
           <th scope="col">Email</th>
@@ -71,7 +71,7 @@ export function TablaDeUsuarios({ usuarios, ocupadas, editandoId, onEditar, onCa
                 </button>
                 <button
                   type="button"
-                  className={usuario.activo ? 'boton-de-fila' : 'boton-de-fila boton-de-fila-primario'}
+                  className={usuario.activo ? 'boton-de-fila boton-de-fila-peligro' : 'boton-de-fila boton-de-fila-exito'}
                   disabled={ocupada}
                   aria-label={`${accion} ${usuario.email}`}
                   onClick={() => onCambiarActivo(usuario)}

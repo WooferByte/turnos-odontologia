@@ -16,6 +16,8 @@ export const MENSAJE_SIN_ODONTOLOGO =
   'El consultorio no puede quedar sin un odontólogo activo y nadie puede desactivarse a sí mismo (RN-AU-06).'
 export const MENSAJE_USUARIO_INEXISTENTE = 'El usuario ya no existe (RN-GL-04).'
 export const MENSAJE_SIN_PERMISO_DE_ESCRITURA = 'Tu usuario no tiene permiso para modificar usuarios (RN-AU-05).'
+/** Nota del panel de edición (D254): los roles valen desde la petición siguiente (RN-AU-02). */
+export const NOTA_DE_ROLES = 'Quitar o asignar un rol vale desde la próxima acción del usuario, sin cerrar su sesión.'
 
 const NOMBRES_DE_ROL: Record<Rol, string> = {
   odontologo: 'Odontólogo',
