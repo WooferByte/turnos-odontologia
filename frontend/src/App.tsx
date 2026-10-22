@@ -2,6 +2,7 @@
 import { Navigate, Route, Routes } from 'react-router'
 import { PaginaIngreso } from './features/ingreso/PaginaIngreso'
 import { PaginaPrestaciones } from './features/prestaciones/PaginaPrestaciones'
+import { PaginaUsuarios } from './features/usuarios/PaginaUsuarios'
 import { InicioDelPanel } from './pages/InicioDelPanel'
 import { PanelBase } from './pages/PanelBase'
 import { RutaProtegida } from './pages/RutaProtegida'
@@ -27,6 +28,7 @@ export function App({ fetch }: Propiedades) {
         >
           <Route index element={<InicioDelPanel />} />
           <Route path="prestaciones" element={<PaginaPrestaciones />} />
+          <Route path="usuarios" element={<PaginaUsuarios />} />
           <Route path="*" element={<InicioDelPanel />} />
         </Route>
         <Route path="*" element={<Navigate to="/panel" replace />} />

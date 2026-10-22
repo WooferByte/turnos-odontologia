@@ -5,6 +5,7 @@ import { useSesionDelPanel } from '../shared/api/ProveedorDeSesion'
 import { IconoDiente } from '../shared/iconos/IconoDiente'
 import { IconoMaletin } from '../shared/iconos/IconoMaletin'
 import { IconoSalida } from '../shared/iconos/IconoSalida'
+import { IconoUsuarios } from '../shared/iconos/IconoUsuarios'
 
 export function PanelBase() {
   const { cerrarSesion } = useSesionDelPanel()
@@ -27,6 +28,10 @@ export function PanelBase() {
             <NavLink to="/panel/prestaciones" className="enlace-del-panel">
               <IconoMaletin />
               Prestaciones
+            </NavLink>
+            <NavLink to="/panel/usuarios" className="enlace-del-panel">
+              <IconoUsuarios />
+              Usuarios
             </NavLink>
           </nav>
           <button type="button" className="boton-secundario" onClick={cerrar}>

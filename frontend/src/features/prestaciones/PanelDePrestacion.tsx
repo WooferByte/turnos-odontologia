@@ -1,14 +1,14 @@
 // Panel lateral de alta y edición (design T9, T10, T17). Recibe los errores ya traducidos a mensajes y no
 // valida reglas de dominio: la duración la decide la API (D232).
 import { useId, useState, type SyntheticEvent } from 'react'
+import { Aviso } from '../../shared/componentes/Aviso'
 import { IconoAlerta } from '../../shared/iconos/IconoAlerta'
 import { IconoCerrar } from '../../shared/iconos/IconoCerrar'
 import { IconoInfo } from '../../shared/iconos/IconoInfo'
 import { IconoLapiz } from '../../shared/iconos/IconoLapiz'
 import { IconoMas } from '../../shared/iconos/IconoMas'
 import type { DatosDeAlta, Prestacion } from './apiPrestaciones'
-import { Aviso } from './Aviso'
-import { MENSAJE_AVISO_DE_DURACION, subtituloDelPanel, type ErroresDelPanel } from './mensajes'
+import { MENSAJE_AVISO_DE_DURACION, subtituloDelPanel, tituloDelAviso, type ErroresDelPanel } from './mensajes'
 
 const COLOR_INICIAL = '#1E88E5'
 
@@ -66,7 +66,7 @@ export function PanelDePrestacion({ prestacion, guardando, errores, onGuardar, o
         </button>
       </header>
       <div className="panel-cuerpo">
-        {errores.aviso === null ? null : <Aviso mensaje={errores.aviso} />}
+        {errores.aviso === null ? null : <Aviso mensaje={errores.aviso} titulo={tituloDelAviso(errores.aviso)} />}
         <form onSubmit={guardar}>
           <div className={errores.nombre === null ? 'campo' : 'campo campo-con-error'}>
             <div className="campo-etiqueta">

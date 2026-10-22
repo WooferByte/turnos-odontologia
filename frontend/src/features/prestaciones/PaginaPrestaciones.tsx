@@ -14,10 +14,11 @@ import {
   SIN_ERRORES,
   SUBTITULO_DE_PANTALLA,
   textoDelContador,
+  tituloDelAviso,
   type ErroresDelPanel,
 } from './mensajes'
+import { Aviso } from '../../shared/componentes/Aviso'
 import { IconoMas } from '../../shared/iconos/IconoMas'
-import { Aviso } from './Aviso'
 import { PanelDePrestacion } from './PanelDePrestacion'
 import { TablaDePrestaciones } from './TablaDePrestaciones'
 
@@ -144,10 +145,10 @@ export function PaginaPrestaciones() {
       </div>
       <div className="pantalla-con-panel">
         <div className="zona-de-tabla">
-          {avisoDeTabla === null ? null : <Aviso mensaje={avisoDeTabla} />}
+          {avisoDeTabla === null ? null : <Aviso mensaje={avisoDeTabla} titulo={tituloDelAviso(avisoDeTabla)} />}
           {listado.tipo === 'cargando' ? <p>{MENSAJE_CARGANDO}</p> : null}
           {listado.tipo === 'sin-conexion' ? (
-            <Aviso mensaje={MENSAJE_SIN_CONEXION}>
+            <Aviso mensaje={MENSAJE_SIN_CONEXION} titulo={tituloDelAviso(MENSAJE_SIN_CONEXION)}>
               <button type="button" className="boton-secundario" onClick={reintentar}>
                 Reintentar
               </button>
