@@ -8,7 +8,7 @@ from sqlalchemy import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.api.errores import registrar_manejadores
-from app.api.routers import auth, prestaciones, sillones, turnos
+from app.api.routers import auth, prestaciones, sillones, turnos, usuarios
 from app.application.sesion import Vigencias
 from app.infrastructure.db.modelos import Base
 from app.infrastructure.configuracion import (
@@ -46,6 +46,7 @@ def crear_app(engine: Engine, sesion: ConfiguracionDeSesion | None = None) -> Fa
     app.include_router(turnos.router)
     app.include_router(prestaciones.router)
     app.include_router(sillones.router)
+    app.include_router(usuarios.router)
     registrar_manejadores(app)
     return app
 

@@ -2,8 +2,10 @@
 from datetime import datetime
 from typing import Annotated, Any
 
-from pydantic import AfterValidator, BaseModel, ConfigDict, Field, field_validator
+from pydantic import AfterValidator, BaseModel, BeforeValidator, ConfigDict, Field, StringConstraints, field_validator
 
+from app.application.usuarios import UsuarioConRoles
+from app.domain.acceso.roles import Rol
 from app.domain.agenda.nombres import normalizar_espacios
 from app.domain.agenda.prestaciones import DatosPrestacion
 from app.domain.agenda.sillones import DatosSillon
@@ -272,3 +274,66 @@ class Problema(BaseModel):
     conflictos: list[ConflictoSalida] | None = None
     referencias: list[ReferenciaSalida] | None = None
     errores: list[ErrorDeCampoSalida] | None = None
+
+
+def _recortado(valor: Any) -> Any:
+    return valor.strip() if isinstance(valor, str) else valor
+
+
+def _sin_roles_repetidos(roles: list[Rol]) -> list[Rol]:
+    if len(set(roles)) != len(roles):
+        raise ValueError("Los roles no pueden repetirse.")
+    return roles
+
+
+# Formato mínimo del email (D245): una sola @ con texto a los dos lados y sin espacios, hasta 254
+# caracteres. Sin EmailStr: pide una dependencia nueva y rechaza el dominio .test de la demo.
+EmailDeUsuario = Annotated[
+    str,
+    BeforeValidator(_recortado),
+    StringConstraints(min_length=3, max_length=254, pattern=r"^[^@\s]+@[^@\s]+$"),
+]
+# Al menos un rol, sin repetir, de los tres válidos (D244).
+RolesDeUsuario = Annotated[
+    list[Rol], Field(min_length=1, max_length=len(Rol)), AfterValidator(_sin_roles_repetidos)
+]
+
+
+class CrearUsuarioEntrada(BaseModel):
+    """Cuerpo de ``POST /usuarios``. El largo de la contraseña lo valida el dominio (RN-AU-07), no Pydantic."""
+
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "examples": [
+                {
+                    "email": "turnos@consultorio-demo.test",
+                    "contrasena": "clave-ficticia-2026",
+                    "roles": ["recepcionista"],
+                }
+            ]
+        },
+    )
+
+    email: EmailDeUsuario
+    contrasena: str
+    roles: RolesDeUsuario
+
+
+class UsuarioSalida(BaseModel):
+    """Un usuario del consultorio; nunca el hash, ``token_version``, ``consultorio_id`` ni ``creado_en``."""
+
+    id: int
+    email: str
+    roles: list[Rol]
+    activo: bool
+
+    @classmethod
+    def desde_usuario(cls, usuario: UsuarioConRoles) -> "UsuarioSalida":
+        assert usuario.datos.id is not None
+        return cls(
+            id=usuario.datos.id,
+            email=usuario.datos.email,
+            roles=[rol for rol in Rol if rol in usuario.roles],  # en el orden del enum, no el de la base
+            activo=usuario.datos.activo,
+        )

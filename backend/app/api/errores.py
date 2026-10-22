@@ -5,8 +5,11 @@ from fastapi.responses import JSONResponse
 
 from app.api.esquemas import ConflictoSalida, ErrorDeCampoSalida, Problema, ReferenciaSalida
 from app.domain.errors import (
+    AdministracionSinOdontologo,
+    ContrasenaFueraDeRango,
     CredencialesInvalidas,
     DuracionInvalida,
+    EmailRepetido,
     EntradaInvalida,
     ErrorDeDominio,
     ErrorDeSolapamiento,
@@ -33,6 +36,8 @@ _CLASES_DE_ERROR: dict[type[ErrorDeDominio], tuple[int, str, str]] = {
     CredencialesInvalidas: (401, "/errores/credenciales-invalidas", "Credenciales inválidas"),
     SesionInvalida: (401, "/errores/sesion-invalida", "Sesión inválida"),
     PermisoInsuficiente: (403, "/errores/permiso-insuficiente", "Permiso insuficiente"),
+    EmailRepetido: (409, "/errores/email-repetido", "Email repetido"),
+    AdministracionSinOdontologo: (409, "/errores/administracion-sin-odontologo", "Operación no permitida"),
 }
 # Los dos 401 llevan RFC 6750 §3 y un texto fijo que no depende de la causa (design J13).
 _CABECERAS_DE_NO_AUTENTICADO = {"WWW-Authenticate": "Bearer"}
@@ -41,7 +46,12 @@ _ERRORES_DE_TEXTO_FIJO = (
     CredencialesInvalidas,
     SesionInvalida,
     PermisoInsuficiente,
+    EmailRepetido,
+    AdministracionSinOdontologo,
 )
+
+
+ErrorDeCampo = FechaNoUTC | DuracionInvalida | ContrasenaFueraDeRango
 
 
 def _problemas(cantidad: int) -> str:
@@ -65,20 +75,22 @@ def _texto_de_referencia(referencia: ReferenciaSalida) -> str:
     return f"{recurso} ({referencia.motivo})"
 
 
-def _error_de_campo(error: FechaNoUTC | DuracionInvalida) -> ErrorDeCampoSalida:
+def _error_de_campo(error: ErrorDeCampo) -> ErrorDeCampoSalida:
     """Cada error de campo lleva su propio mensaje (design P5)."""
     mensaje = MENSAJE_FECHA_NO_UTC if isinstance(error, FechaNoUTC) else error.mensaje
     return ErrorDeCampoSalida(campo=error.campo, codigo=error.codigo, mensaje=mensaje)
 
 
-def _texto_de_error_de_campo(error: FechaNoUTC | DuracionInvalida) -> str:
+def _texto_de_error_de_campo(error: ErrorDeCampo) -> str:
     if isinstance(error, FechaNoUTC):
         return f"{error.campo} debe tener zona y estar en UTC"
+    if isinstance(error, ContrasenaFueraDeRango):
+        return f"{error.campo} debe tener de 10 caracteres a 72 bytes"
     return f"{error.campo} debe ser mayor que 0 y múltiplo de {error.granularidad} minutos"
 
 
 def _problema_de_entrada(problema: dict, error: EntradaInvalida) -> Problema:
-    de_campo = [e for e in error.errores if isinstance(e, (FechaNoUTC, DuracionInvalida))]
+    de_campo = [e for e in error.errores if isinstance(e, (FechaNoUTC, DuracionInvalida, ContrasenaFueraDeRango))]
     errores = [_error_de_campo(e) for e in de_campo]
     referencias = [
         ReferenciaSalida(recurso=r.recurso, recurso_id=r.recurso_id, motivo=r.motivo)

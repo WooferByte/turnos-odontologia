@@ -339,7 +339,7 @@ def test_openapi_declara_bearer_401_y_403_en_las_rutas_protegidas(engine) -> Non
             for estado in ("401", "403"):
                 contenido = operacion["responses"][estado]["content"]
                 assert "application/problem+json" in contenido, (metodo, ruta, estado)
-    assert protegidas == 8
+    assert protegidas == 10  # + GET y POST /usuarios (C-09)
 
 
 # --- E9 y US-092 CA-2 (borde): el turno guarda quién lo creó -----------------------------------

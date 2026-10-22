@@ -300,3 +300,9 @@ def test_us093_ca4_bloquear_administracion_no_falla_en_sqlite(sesion: Session) -
 
     RepositorioUsuariosSqlAlchemy(sesion).bloquear_administracion(consultorio.id)
     RepositorioUsuariosSqlAlchemy(sesion).bloquear_administracion(consultorio.id)
+
+
+def test_us093_ca1_consultorio_unico_devuelve_el_id_del_unico_consultorio(sesion: Session) -> None:
+    consultorio = un_consultorio(sesion)
+
+    assert RepositorioUsuariosSqlAlchemy(sesion).consultorio_unico() == consultorio.id

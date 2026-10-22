@@ -123,6 +123,10 @@ class RepositorioSillones(Protocol):
 class RepositorioUsuarios(Protocol):
     """Usuarios del panel (design J6). El email se busca y se guarda normalizado (D199)."""
 
+    def consultorio_unico(self) -> int:
+        """El id del único consultorio de la instalación (D173); si no hay uno solo, falla."""
+        ...
+
     def por_email(self, email_normalizado: str) -> DatosUsuario | None: ...
 
     def obtener(self, usuario_id: int) -> DatosUsuario | None: ...

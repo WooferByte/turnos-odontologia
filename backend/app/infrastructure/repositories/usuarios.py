@@ -7,6 +7,7 @@ from app.application.puertos import EmailRepetidoEnLaBase, RolInvalidoEnLaBase
 from app.domain.acceso.roles import Rol
 from app.domain.acceso.usuarios import DatosUsuario, normalizar_email
 from app.infrastructure.db.modelos import ConsultorioModelo, UsuarioModelo, UsuarioRolModelo
+from app.infrastructure.repositories.consultorio import consultorio_unico
 
 SQLSTATE_UNICIDAD = "23505"  # unique_violation
 RESTRICCION_DE_EMAIL = "uq_usuario_email"
@@ -47,6 +48,9 @@ def _es_rol_rechazado(error: IntegrityError) -> bool:
 class RepositorioUsuariosSqlAlchemy:
     def __init__(self, sesion: Session) -> None:
         self._sesion = sesion
+
+    def consultorio_unico(self) -> int:
+        return consultorio_unico(self._sesion)
 
     def por_email(self, email_normalizado: str) -> DatosUsuario | None:
         modelo = self._sesion.scalar(select(UsuarioModelo).where(UsuarioModelo.email == email_normalizado))
