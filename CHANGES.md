@@ -442,7 +442,7 @@ Primer change: `/opsx:propose crear-turno-sin-solapamientos`.
   - `knowledge-base/08_arquitectura_propuesta.md` §«Estructura de directorios» (frontend) · `knowledge-base/05_reglas_de_negocio.md` RN-AG-01
 
 ### [C-12] `horario-recurrente`
-- **Estado**: `[ ]` pendiente · **Orden**: 3 · **Gobernanza**: MEDIO
+- **Estado**: `[~]` en curso · **Orden**: 3 · **Gobernanza**: MEDIO
 - **Objetivo** (US-002): configurar los días y las franjas de atención y que un turno solo se cree dentro de una franja vigente (RN-AG-04).
 - **Alcance — dentro**: tabla `FranjaHoraria`; `GET/PUT /profesionales/{id}/horario`; franjas del mismo día sin superposición; `crear_turno` rechaza con RN-AG-04 el turno que no cae completo en una franja, evaluado en la zona del consultorio (parte de horario de E10, US-010); horario de ejemplo en el seed; pantalla de horario.
 - **Alcance — fuera**: bloqueos (C-13); excepción de horario puntual (Fase 2, D86); cálculo de disponibilidad (C-24).
