@@ -1,12 +1,12 @@
 """Casos de uso de la administración de usuarios (US-093; RN-AU-06, RN-AU-07, RN-AU-08). Sin ``commit()`` ni SQL."""
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import datetime
 
 from app.application.puertos import EmailRepetidoEnLaBase, HasherDeContrasenas, UnidadDeTrabajo
-from app.domain.acceso.roles import Rol
+from app.domain.acceso.roles import Rol, UsuarioDelPanel
 from app.domain.acceso.usuarios import DatosUsuario, normalizar_email, validar_contrasena_inicial
-from app.domain.errors import EmailRepetido
+from app.domain.errors import EmailRepetido, UsuarioNoEncontrado
 
 
 @dataclass(frozen=True)
@@ -22,6 +22,14 @@ class CrearUsuarioComando:
     email: str
     contrasena: str
     roles: frozenset[Rol]
+
+
+@dataclass(frozen=True)
+class EditarUsuarioComando:
+    """Un campo en ``None`` significa «no cambia»: el ``null`` explícito ya lo rechazó la API (U4)."""
+
+    roles: frozenset[Rol] | None = None
+    activo: bool | None = None
 
 
 def listar_usuarios(uow: UnidadDeTrabajo) -> list[UsuarioConRoles]:
@@ -63,3 +71,20 @@ def crear_usuario(
             raise EmailRepetido() from error
         uow.usuarios.reemplazar_roles(creado.id, comando.roles)
         return UsuarioConRoles(creado, comando.roles)
+
+
+def editar_usuario(
+    usuario_id: int, comando: EditarUsuarioComando, actor: UsuarioDelPanel, uow: UnidadDeTrabajo
+) -> UsuarioConRoles:
+    """Reemplaza los roles y/o cambia ``activo`` (RN-AU-02, RN-AU-03); todo o nada en una transacción (D252)."""
+    with uow:
+        actual = uow.usuarios.obtener(usuario_id)
+        if actual is None:
+            raise UsuarioNoEncontrado(usuario_id)
+        if comando.roles is not None:
+            uow.usuarios.reemplazar_roles(usuario_id, comando.roles)
+        if comando.activo is not None and comando.activo != actual.activo:
+            # Solo desactivar corta las sesiones (RN-AU-03); reactivar no revive los tokens viejos.
+            version = actual.token_version + 1 if actual.activo else actual.token_version
+            actual = uow.usuarios.guardar(replace(actual, activo=comando.activo, token_version=version))
+        return UsuarioConRoles(actual, uow.usuarios.roles_de(usuario_id))

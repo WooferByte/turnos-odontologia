@@ -320,6 +320,15 @@ class CrearUsuarioEntrada(BaseModel):
     roles: RolesDeUsuario
 
 
+class EditarUsuarioEntrada(EntradaDeEdicion):
+    """Cuerpo de ``PATCH /usuarios/{id}``: ``roles`` y/o ``activo``; el email y la contraseña no se editan."""
+
+    model_config = ConfigDict(extra="forbid", json_schema_extra={"examples": [{"roles": ["recepcionista", "dueno"]}]})
+
+    roles: RolesDeUsuario | None = None
+    activo: bool | None = None
+
+
 class UsuarioSalida(BaseModel):
     """Un usuario del consultorio; nunca el hash, ``token_version``, ``consultorio_id`` ni ``creado_en``."""
 

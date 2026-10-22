@@ -16,7 +16,7 @@ from app.infrastructure.configuracion import ConfiguracionDeSesion
 from app.infrastructure.db.modelos import ConsultorioModelo, ProfesionalModelo, UsuarioModelo, UsuarioRolModelo
 from app.main import crear_app
 from tests.conftest import SECRETO_DE_PRUEBA, reloj_fijo, token_de
-from tests.factories import un_consultorio, un_profesional, un_usuario
+from tests.factories import CONTRASENA_DE_PRUEBA, un_consultorio, un_profesional, un_usuario
 
 PROBLEMA_JSON = "application/problem+json"
 CONTRASENA_VALIDA = "clave-ficticia-2026"
@@ -318,3 +318,174 @@ def test_us093_ca8_asignar_odontologo_no_crea_un_profesional(cliente, demo, sesi
     assert respuesta.status_code == 201
     profesionales = list(sesion.scalars(select(ProfesionalModelo)))
     assert [p.usuario_id for p in profesionales] == [demo.odontologa.id]
+
+
+def _roles_en_la_base(sesion: Session, usuario_id: int) -> set[str]:
+    sesion.expire_all()
+    return set(sesion.scalars(select(UsuarioRolModelo.rol).where(UsuarioRolModelo.usuario_id == usuario_id)))
+
+
+def _token_version_en_la_base(sesion: Session, usuario_id: int) -> int:
+    sesion.expire_all()
+    return sesion.get_one(UsuarioModelo, usuario_id).token_version
+
+
+def test_us093_ca1_la_odontologa_suma_el_rol_dueno_a_la_recepcionista(cliente, demo, sesion) -> None:
+    de_la_recepcionista = _con_token_de(demo.recepcionista)
+    assert cliente.get("/usuarios", headers=de_la_recepcionista).status_code == 403
+
+    respuesta = cliente.patch(
+        f"/usuarios/{demo.recepcionista.id}",
+        json={"roles": ["recepcionista", "dueno"]},
+        headers=_con_token_de(demo.odontologa),
+    )
+
+    assert respuesta.status_code == 200
+    assert respuesta.json() == {
+        "id": demo.recepcionista.id,
+        "email": EMAIL_RECEPCIONISTA,
+        "roles": ["recepcionista", "dueno"],
+        "activo": True,
+    }
+    assert _roles_en_la_base(sesion, demo.recepcionista.id) == {"recepcionista", "dueno"}
+    assert _token_version_en_la_base(sesion, demo.recepcionista.id) == 0
+    # Los roles se leen de la base en cada petición (RN-AU-02, D102): el mismo token ya vale.
+    assert cliente.get("/usuarios", headers=de_la_recepcionista).status_code == 200
+
+
+def test_us093_ca3_desactivar_a_la_recepcionista_corta_su_sesion(cliente, demo, sesion) -> None:
+    login = cliente.post(
+        "/auth/login", json={"email": EMAIL_RECEPCIONISTA, "contrasena": CONTRASENA_DE_PRUEBA}
+    )
+    assert login.status_code == 200
+    access, refresh = login.json()["access_token"], login.json()["refresh_token"]
+    assert cliente.get("/prestaciones", headers={"Authorization": f"Bearer {access}"}).status_code == 200
+
+    respuesta = cliente.patch(
+        f"/usuarios/{demo.recepcionista.id}", json={"activo": False}, headers=_con_token_de(demo.odontologa)
+    )
+
+    assert respuesta.status_code == 200
+    assert respuesta.json()["activo"] is False
+    assert _token_version_en_la_base(sesion, demo.recepcionista.id) == 1
+    con_access = cliente.get("/prestaciones", headers={"Authorization": f"Bearer {access}"})
+    assert con_access.status_code == 401 and con_access.json()["codigos"] == ["RN-AU-03"]
+    con_refresh = cliente.post("/auth/refresh", json={"refresh_token": refresh})
+    assert con_refresh.status_code == 401 and con_refresh.json()["codigos"] == ["RN-AU-03"]
+    nuevo_login = cliente.post(
+        "/auth/login", json={"email": EMAIL_RECEPCIONISTA, "contrasena": CONTRASENA_DE_PRUEBA}
+    )
+    assert nuevo_login.status_code == 401
+    en_la_lista = cliente.get("/usuarios", headers=_con_token_de(demo.odontologa)).json()
+    assert [u["activo"] for u in en_la_lista if u["id"] == demo.recepcionista.id] == [False]
+
+
+def _patch(cliente, usuario_id: int, cuerpo: dict, quien: UsuarioModelo):
+    return cliente.patch(f"/usuarios/{usuario_id}", json=cuerpo, headers=_con_token_de(quien))
+
+
+def test_us093_ca3_reactivar_no_revive_los_tokens_anteriores(cliente, demo, sesion) -> None:
+    anterior = {"Authorization": f"Bearer {token_de(demo.recepcionista.id, token_version=0)}"}
+    assert cliente.get("/prestaciones", headers=anterior).status_code == 200
+
+    assert _patch(cliente, demo.recepcionista.id, {"activo": False}, demo.odontologa).status_code == 200
+    reactivada = _patch(cliente, demo.recepcionista.id, {"activo": True}, demo.odontologa)
+
+    assert reactivada.status_code == 200 and reactivada.json()["activo"] is True
+    assert _token_version_en_la_base(sesion, demo.recepcionista.id) == 1
+    assert cliente.get("/prestaciones", headers=anterior).status_code == 401
+    nuevo = {"Authorization": f"Bearer {token_de(demo.recepcionista.id, token_version=1)}"}
+    assert cliente.get("/prestaciones", headers=nuevo).status_code == 200
+
+
+def test_us093_ca3_desactivar_a_quien_ya_esta_inactivo_no_cambia_nada(cliente, demo, sesion) -> None:
+    respuesta = _patch(cliente, demo.administracion.id, {"activo": False}, demo.odontologa)
+
+    assert respuesta.status_code == 200 and respuesta.json()["activo"] is False
+    assert _token_version_en_la_base(sesion, demo.administracion.id) == 0
+
+
+def test_us093_ca8_pasar_a_odontologo_a_otro_usuario_no_crea_un_profesional(cliente, demo, sesion) -> None:
+    respuesta = _patch(cliente, demo.recepcionista.id, {"roles": ["odontologo"]}, demo.odontologa)
+
+    assert respuesta.status_code == 200 and respuesta.json()["roles"] == ["odontologo"]
+    assert [p.usuario_id for p in sesion.scalars(select(ProfesionalModelo))] == [demo.odontologa.id]
+
+
+@pytest.mark.parametrize("usuario_id", ["recepcionista", "999"])
+def test_us093_ca1_el_dueno_no_puede_cambiar_roles(cliente, demo, sesion, usuario_id) -> None:
+    dueno = un_usuario(sesion, _consultorio_de(sesion, demo), roles=(Rol.DUENO,))
+    destino = demo.recepcionista.id if usuario_id == "recepcionista" else int(usuario_id)
+
+    respuesta = _patch(cliente, destino, {"roles": ["dueno"]}, dueno)
+
+    assert respuesta.status_code == 403
+    assert respuesta.json()["codigos"] == ["RN-AU-05"]
+    assert _roles_en_la_base(sesion, demo.recepcionista.id) == {"recepcionista"}
+
+
+def test_us093_ca1_un_usuario_inexistente_responde_404_rn_gl_04(cliente, demo) -> None:
+    respuesta = _patch(cliente, 999, {"activo": False}, demo.odontologa)
+
+    assert respuesta.status_code == 404
+    assert respuesta.headers["content-type"].startswith(PROBLEMA_JSON)
+    cuerpo = respuesta.json()
+    assert cuerpo["codigos"] == ["RN-GL-04"]
+    assert cuerpo["referencias"] == [{"recurso": "usuario", "recurso_id": 999, "motivo": "inexistente"}]
+
+
+@pytest.mark.parametrize(
+    ("cuerpo", "campo"),
+    [
+        ({"roles": []}, "roles"),
+        ({"email": "otro@consultorio-demo.test"}, "email"),
+        ({"contrasena": "otra-clave-2026"}, "contrasena"),
+        ({"activo": None}, "activo"),
+        ({"roles": None}, "roles"),
+        ({"activo": "quizas"}, "activo"),
+    ],
+)
+def test_us093_ca1_un_cuerpo_invalido_del_patch_responde_422_de_formato(
+    cliente, demo, sesion, cuerpo, campo
+) -> None:
+    respuesta = _patch(cliente, demo.recepcionista.id, cuerpo, demo.odontologa)
+
+    assert respuesta.status_code == 422
+    assert respuesta.json()["codigos"] == []
+    assert [e["campo"].split(".")[0] for e in respuesta.json()["errores"]] == [campo]
+    assert _roles_en_la_base(sesion, demo.recepcionista.id) == {"recepcionista"}
+
+
+def test_us093_ca1_la_entrada_se_evalua_antes_que_el_usuario_de_la_url(cliente, demo) -> None:
+    respuesta = _patch(cliente, 999, {"roles": []}, demo.odontologa)
+
+    assert respuesta.status_code == 422
+    assert respuesta.json()["codigos"] == []
+
+
+def test_us093_ca1_un_patch_vacio_no_cambia_nada(cliente, demo, sesion) -> None:
+    respuesta = _patch(cliente, demo.recepcionista.id, {}, demo.odontologa)
+
+    assert respuesta.status_code == 200
+    assert respuesta.json() == {
+        "id": demo.recepcionista.id,
+        "email": EMAIL_RECEPCIONISTA,
+        "roles": ["recepcionista"],
+        "activo": True,
+    }
+    assert _token_version_en_la_base(sesion, demo.recepcionista.id) == 0
+    assert _roles_en_la_base(sesion, demo.recepcionista.id) == {"recepcionista"}
+
+
+def test_us093_ca1_se_cambian_los_roles_de_un_usuario_inactivo(cliente, demo, sesion) -> None:
+    assert _patch(cliente, demo.recepcionista.id, {"activo": False}, demo.odontologa).status_code == 200
+
+    respuesta = _patch(cliente, demo.recepcionista.id, {"roles": ["dueno"]}, demo.odontologa)
+
+    assert respuesta.status_code == 200
+    assert respuesta.json()["roles"] == ["dueno"] and respuesta.json()["activo"] is False
+    assert _token_version_en_la_base(sesion, demo.recepcionista.id) == 1
+    login = cliente.post(
+        "/auth/login", json={"email": EMAIL_RECEPCIONISTA, "contrasena": CONTRASENA_DE_PRUEBA}
+    )
+    assert login.status_code == 401
