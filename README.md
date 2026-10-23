@@ -23,6 +23,8 @@ Sistema de gestión de turnos y agenda para odontólogos independientes y consul
 
 - `gestion-de-usuarios` (C-09, la API): `GET /usuarios`, `POST /usuarios` y `PATCH /usuarios/{id}`. La odontóloga lista los usuarios del consultorio con sus roles, crea uno con una contraseña inicial (de 10 caracteres a 72 bytes, `RN-AU-07`; un email repetido es `409` con `RN-AU-08`), le cambia los roles y lo desactiva o reactiva. Desactivar a alguien incrementa su `token_version` y le corta la sesión en la petición siguiente (`RN-AU-03`); nadie se desactiva a sí mismo ni deja al consultorio sin un odontólogo activo (`RN-AU-06`). El dueño solo lee.
 
+- `horario-recurrente` (C-12, la API): `GET /profesionales`, `GET /profesionales/{id}/horario` y `PUT /profesionales/{id}/horario`. La odontóloga carga el horario semanal de un profesional (franjas por día, en hora del consultorio); la recepcionista y el dueño lo leen. Franjas superpuestas o invertidas son `422` con `RN-AG-16`. Y `POST /turnos` ahora exige que el turno caiga completo dentro de una franja: si no, `422` con `RN-AG-04`. La migración `0008` crea la tabla `franja_horaria` y la demo trae el horario de ejemplo (lunes a viernes, 09:00-13:00 y 15:00-19:00). La pantalla del horario llega en los grupos siguientes del change.
+
 La API se puede probar sin instalar nada más que Python (base SQLite en memoria) o sobre PostgreSQL con Docker; el panel necesita además Node 24 (ver «Panel (interfaz)»).
 
 > Todos los datos del proyecto, de los tests y de la demo son **ficticios**. No hay datos reales de pacientes ni secretos.
@@ -104,7 +106,7 @@ python -m pytest
 
 Los tests corren con **SQLite en memoria**: no necesitan Docker, PostgreSQL ni Redis, ni ningún archivo de base de datos.
 
-La corrida termina con **«611 passed, 49 deselected, 1 warning»**. Los 49 «deselected» son los del perfil opcional con PostgreSQL (más abajo), que la corrida por defecto excluye a propósito. El warning es un aviso de deprecación interno de Starlette (`starlette/testclient.py`, sobre `anyio.abc.BlockingPortal`): viene de una dependencia con versión fijada, no del código del proyecto, y no indica ningún problema.
+La corrida termina con **«709 passed, 53 deselected, 1 warning»**. Los 53 «deselected» son los del perfil opcional con PostgreSQL (más abajo), que la corrida por defecto excluye a propósito. El warning es un aviso de deprecación interno de Starlette (`starlette/testclient.py`, sobre `anyio.abc.BlockingPortal`): viene de una dependencia con versión fijada, no del código del proyecto, y no indica ningún problema.
 
 ### Escenario → test
 
@@ -253,7 +255,7 @@ Una parte de los tests (la que prueba lo que solo PostgreSQL garantiza) está fu
 
    Se usa `127.0.0.1` y no `localhost`: en Windows `localhost` resuelve primero a IPv6 y la conexión espera varios segundos antes de caer a IPv4.
 
-Con la base levantada, la corrida termina con **«49 passed, 611 deselected, 1 warning»**. **Si PostgreSQL no está disponible** (Docker apagado, `TEST_DATABASE_URL` sin definir o base que no responde), los 49 tests del perfil **se omiten con el motivo en el resumen** (**«49 skipped, 611 deselected»**) y la corrida termina con código de salida 0. Si la base de `TEST_DATABASE_URL` no termina en `_test`, el perfil falla a propósito para no borrar otra base.
+Con la base levantada, la corrida termina con **«53 passed, 709 deselected, 1 warning»**. **Si PostgreSQL no está disponible** (Docker apagado, `TEST_DATABASE_URL` sin definir o base que no responde), los 53 tests del perfil **se omiten con el motivo en el resumen** (**«53 skipped, 709 deselected»**) y la corrida termina con código de salida 0. Si la base de `TEST_DATABASE_URL` no termina en `_test`, el perfil falla a propósito para no borrar otra base.
 
 El esquema de estos tests sale siempre de las migraciones, nunca de `create_all`. Por eso el perfil también comprueba que las migraciones y los modelos coinciden (INF-1): si alguien cambia un modelo sin escribir su migración, ese test se pone en rojo. **La suite por defecto no avisa de esto**: hay que correr el perfil cada vez que se toque el esquema.
 
@@ -265,12 +267,15 @@ Los escenarios están en `openspec/changes/infraestructura-postgresql/specs/pers
 
 | Escenario | Qué verifica | Test titular |
 |---|---|---|
-| INF-1 | Una base vacía migrada queda con el esquema de los modelos (siete tablas desde C-03; con `color` y `reservable_online` desde C-04; ocho con `usuario` desde C-06; nueve con `usuario_rol` desde C-07), sin diferencias | `test_inf1_base_vacia_migrada_queda_con_el_esquema_del_modelo` (`test_migraciones.py`) |
+| INF-1 | Una base vacía migrada queda con el esquema de los modelos (siete tablas desde C-03; con `color` y `reservable_online` desde C-04; ocho con `usuario` desde C-06; nueve con `usuario_rol` desde C-07; diez con `franja_horaria` desde C-12), sin diferencias | `test_inf1_base_vacia_migrada_queda_con_el_esquema_del_modelo` (`test_migraciones.py`) |
 | INF-1 | Deshacer las migraciones deja la base vacía | `test_inf1_deshacer_las_migraciones_deja_la_base_vacia` (`test_migraciones.py`) |
 | INF-1 | Deshacer solo las migraciones del historial deja el esquema de C-01 | `test_inf1_deshacer_las_migraciones_del_historial_deja_el_esquema_de_c01` (`test_migraciones.py`) |
 | INF-1 | La migración `0005` completa las prestaciones existentes con gris (`#9E9E9E`) y `reservable_online` en `false` (D174) | `test_inf1_la_migracion_0005_completa_las_prestaciones_existentes` (`test_migraciones.py`) |
 | INF-1 | La migración `0006` crea la tabla `usuario` (ocho tablas desde C-06); deshacer solo esa migración deja el esquema anterior | `test_inf1_deshacer_solo_la_migracion_de_usuarios_deja_el_esquema_anterior` (`test_migraciones.py`) |
 | INF-1 | La migración `0007` crea `usuario_rol` y las columnas `profesional.usuario_id`, `profesional.matricula` y `turno.creado_por`; deshacer solo esa migración deja el esquema de C-06 con los datos que ya había | `test_inf1_deshacer_solo_la_migracion_de_roles_deja_el_esquema_de_la_sesion` (`test_migraciones.py`) |
+| INF-1 | La migración `0008` crea `franja_horaria`; deshacer solo esa migración deja el esquema de los roles con los profesionales intactos | `test_inf1_deshacer_solo_la_migracion_del_horario_deja_el_esquema_de_los_roles` (`test_migraciones.py`) |
+| INF-1 | La base rechaza una franja con las horas invertidas, un día fuera de 0 a 6 o una vigencia invertida (`CHECK`); acepta una vigencia de un día o con una sola fecha | `test_inf1_la_base_rechaza_una_franja_invalida` (`test_migraciones.py`) |
+| US-002 CA-1 | Volver a cargar el seed no duplica el horario de la demo; un volumen anterior a C-12 lo recibe | `test_us002_ca1_volver_a_cargar_la_demo_no_duplica_el_horario`, `test_us002_ca1_volumen_sembrado_antes_de_c12_recibe_el_horario` (`test_seed_y_api.py`) |
 | US-091 CA-1 | La base rechaza un rol fuera de la lista (`CHECK`) | `test_us091_ca1_la_base_rechaza_un_rol_invalido` (`test_migraciones.py`) |
 | US-091 CA-4 | Un volumen sembrado en C-06 (usuario sin roles) recibe los roles, el vínculo y la recepcionista, sin duplicar nada y con la secuencia de `usuario` avanzada | `test_us091_ca4_volumen_sembrado_en_c06_recibe_roles_y_vinculo` (`test_seed_y_api.py`) |
 | US-091 CA-3 | Sobre PostgreSQL, la recepcionista recibe `403` en `POST /prestaciones` y `201` en `POST /turnos` | `test_us091_ca3_la_recepcionista_recibe_403_en_prestaciones_y_201_en_turnos` (`test_seed_y_api.py`) |
@@ -308,6 +313,7 @@ La demo usa una base SQLite en memoria con datos ficticios. Cada arranque parte 
 | Consultorio | 1 — «Consultorio Demo» |
 | Profesional | 1 — «Dra. Demo Ficticia» |
 | Sillón | 1 — «Sillón 1» |
+| Horario del profesional 1 | Lunes a viernes, 09:00-13:00 y 15:00-19:00 (hora del consultorio); sábado y domingo sin atención. El ejemplo de abajo (lunes 10:00 del consultorio) cae dentro |
 | Prestaciones | 1 «Consulta / control» (30 min, `#1E88E5`), 2 «Limpieza» (45 min, `#43A047`), 3 «Obturación» (60 min, `#FB8C00`), 4 «Extracción» (45 min, `#E53935`), 5 «Urgencia» (30 min, `#8E24AA`); ninguna es reservable online |
 | Pacientes | 1 «Ana Ejemplo», 2 «Bruno Ficticio», 3 «Carla Inventada» |
 
@@ -448,6 +454,48 @@ Los escenarios están en `openspec/changes/gestion-de-usuarios/specs/gestion-de-
 | US-093 CA-9 (contraseña inicial) | De 10 caracteres a 72 bytes; el formato se informa antes que el largo | `test_us093_ca9_contrasena_inicial_de_9_caracteres_responde_422_rn_au_07`, `test_us093_ca9_10_caracteres_y_72_bytes_se_aceptan_73_bytes_no`, `test_us093_ca9_el_formato_se_informa_antes_que_el_largo_de_la_contrasena` |
 
 Dos escenarios solo se prueban sobre PostgreSQL, en el perfil opcional (`backend/tests/postgres/test_administracion_concurrente.py`): dos odontólogos que se desactivan a la vez y dos altas simultáneas con el mismo email. La suite por defecto no los ejerce (SQLite, un solo hilo).
+
+### Horario
+
+Desde C-12 cada profesional tiene un horario semanal (franjas por día de la semana, en hora del consultorio) y **un turno solo se crea si cae completo dentro de una franja** (RN-AG-04). Las rutas piden el access token: `GET /profesionales` y `GET /profesionales/{id}/horario` las leen los tres roles; `PUT /profesionales/{id}/horario` (reemplaza **todas** las franjas del profesional) solo `odontologo`. Las horas van como `HH:MM` de 00:00 a 23:59 y `dia_semana` de 0 (lunes) a 6 (domingo). Con la demo **recién arrancada** (los pasos dependen unos de otros), en Swagger o con `curl`:
+
+1. `GET /profesionales` (con el token de la recepcionista) → `200`, con `[{"id": 1, "nombre": "Dra. Demo Ficticia", "activo": true}]`. Incluye los inactivos, ordenados por `id`.
+2. `GET /profesionales/1/horario` → `200`, con `zona_horaria` `America/Argentina/Buenos_Aires` y diez franjas: 09:00-13:00 y 15:00-19:00 de lunes (0) a viernes (4), ordenadas por día y hora; sábado y domingo sin atención.
+3. `PUT /profesionales/1/horario` con las diez franjas del paso 2 más `{"dia_semana": 5, "hora_inicio": "09:00", "hora_fin": "13:00"}` (token de la odontóloga) → `200`, con once franjas; la última es la del sábado.
+4. `POST /turnos` con `{"paciente_id": 1, "prestacion_id": 1, "inicio": "2026-11-07T13:00:00Z"}` (sábado 10:00 del consultorio) → `201`: antes del paso 3 respondía `422`.
+5. `POST /turnos` con `"inicio": "2026-11-02T11:00:00Z"` (lunes 08:00 del consultorio, antes de la primera franja) → `422`, con `codigos` igual a `["RN-AG-04"]` y `type` `/errores/fuera-de-horario`. Con `"inicio": "2026-11-02T15:45:00Z"` (12:45 a 13:15 del consultorio, se pasa del fin de la franja) → el mismo `422`. Con `"inicio": "2026-11-02T15:30:00Z"` (12:30 a 13:00, justo hasta el fin) → `201`. No se crea ningún turno en los `422`.
+6. `PUT /profesionales/1/horario` con `{"franjas": [{"dia_semana": 2, "hora_inicio": "09:00", "hora_fin": "13:00"}, {"dia_semana": 2, "hora_inicio": "12:00", "hora_fin": "16:00"}]}` → `422`, con `codigos` igual a `["RN-AG-16"]` y un solo error en `errores`: `campo` `franjas.1` y `mensaje` `franjas.1 se superpone con otra franja del mismo día`. El horario no cambia. Una franja con la hora de inicio igual o posterior a la de fin da el mensaje `franjas.<i> debe terminar después de empezar`; todas las franjas inválidas se informan juntas.
+7. El mismo `PUT` con el token de la recepcionista → `403`, con `codigos` igual a `["RN-AU-05"]`. Un día fuera de 0 a 6 o una hora que no sea `HH:MM` de 00:00 a 23:59 (por ejemplo `"24:00"`) → `422`, con `codigos` igual a `[]` y el campo en `errores` (por ejemplo `franjas.0.dia_semana`); lo mismo con más de 70 franjas en total o un campo de más.
+8. `GET /profesionales/999/horario` → `404`, con `codigos` igual a `["RN-GL-04"]` y en `referencias` `{"recurso": "profesional", "recurso_id": 999, "motivo": "inexistente"}`. Un profesional de otro consultorio también es `404`.
+9. `PUT /profesionales/1/horario` con `{"franjas": []}` → `200`, con `franjas` vacía. Un profesional sin franjas **no admite ningún turno**: `POST /turnos` con `"inicio": "2026-11-03T13:00:00Z"` → `422` con `["RN-AG-04"]`. Los turnos ya creados no se tocan: `GET /turnos/1/historial` sigue mostrando solo el evento `creado` del turno del paso 4.
+
+Reiniciar la demo la deja otra vez con el horario de ejemplo. Con `curl` (la consulta, el reemplazo y un turno fuera de horario):
+
+```
+curl -i http://127.0.0.1:8000/profesionales/1/horario -H "Authorization: Bearer PEGAR_EL_ACCESS_TOKEN"
+curl -i -X PUT http://127.0.0.1:8000/profesionales/1/horario -H "Authorization: Bearer PEGAR_EL_ACCESS_TOKEN" -H "Content-Type: application/json" -d "{\"franjas\": [{\"dia_semana\": 0, \"hora_inicio\": \"09:00\", \"hora_fin\": \"13:00\"}, {\"dia_semana\": 0, \"hora_inicio\": \"15:00\", \"hora_fin\": \"19:00\"}]}"
+curl -i -X POST http://127.0.0.1:8000/turnos -H "Authorization: Bearer PEGAR_EL_ACCESS_TOKEN" -H "Content-Type: application/json" -d "{\"paciente_id\": 1, \"prestacion_id\": 1, \"inicio\": \"2026-11-02T11:00:00Z\"}"
+```
+
+Las horas de las franjas y el día de la semana son los **del consultorio** (UTC-3), no los de UTC: el lunes 21:30 del consultorio es el martes 00:30 UTC y cuenta como lunes. El turno debe caber en **una sola** franja: dos contiguas (09:00-13:00 y 13:00-17:00) no se suman, y quien atiende corrido carga una sola (09:00-17:00). Una franja termina como mucho a las 23:59, así que un turno que termina exactamente a las 00:00 del consultorio nunca cabe (D265). Las reglas se evalúan de a una en este orden: entrada inválida, medianoche (`RN-AG-10d`), horario (`RN-AG-04`) y solapamiento (`RN-AG-05`, `RN-AG-08`).
+
+#### Escenario → test (horario, API)
+
+Los escenarios están en `openspec/changes/horario-recurrente/specs/` (`horario-recurrente`, `creacion-de-turnos` y `persistencia-postgresql`). Las reglas puras (`backend/tests/unit/test_horario.py`, 24 tests, sin base de datos), el repositorio (`backend/tests/integration/test_repositorio_horario.py`, 6) y las fábricas (`test_fabricas.py`, 3), la API (`backend/tests/api/test_horario.py`, 23) y el caso de uso y `POST /turnos` con el horario (`test_crear_turno.py` y `test_post_turnos.py`, 23 tests de E10 y US-002):
+
+| Escenario | Qué verifica | Test titular |
+|---|---|---|
+| US-002 CA-1 | Las franjas de mañana y de tarde se leen ordenadas; un profesional sin horario responde la lista vacía; el `id` no entero es `422` y el inexistente `404` (`RN-GL-04`) | `test_us002_ca1_se_leen_las_franjas_de_manana_y_de_tarde`, `test_us002_ca1_un_profesional_sin_horario_responde_la_lista_vacia`, `test_us002_ca1_un_profesional_inexistente_responde_404_con_rn_gl_04`, `test_us002_ca1_un_id_que_no_es_entero_responde_422_de_formato_y_no_404` (`tests/api/test_horario.py`) |
+| US-002 CA-1 | La odontóloga carga mañana y tarde; contiguas y mismo horario en días distintos se aceptan; reemplazar quita las anteriores y no toca los turnos | `test_us002_ca1_la_odontologa_carga_manana_y_tarde`, `test_us002_ca1_franjas_contiguas_y_el_mismo_horario_en_dias_distintos_se_aceptan`, `test_us002_ca1_reemplazar_quita_las_anteriores_y_no_toca_un_turno_existente` |
+| HOR-1 (`RN-AG-16`) | Franjas superpuestas, invertidas o de duración cero: `422` con todos los errores juntos, `franjas.<i>` y mensaje fijo; en una cadena de tres se informan las dos posteriores | `test_hor1_dos_franjas_superpuestas_del_mismo_dia_se_rechazan`, `test_hor1_se_informan_juntas_las_superposiciones_de_varios_dias_y_una_franja_invertida`, `test_hor1_en_una_cadena_de_tres_franjas_se_informan_las_dos_posteriores`, `test_hor1_una_franja_de_duracion_cero_se_rechaza`, `test_hor1_dos_franjas_identicas_del_mismo_dia_se_superponen`; y las reglas puras en `tests/unit/test_horario.py` |
+| US-002 CA-1 | Cuerpo mal formado (día, hora, campo de más, más de 70 franjas): `422` sin código; el formato se evalúa antes que `RN-AG-16` | `test_us002_ca1_dia_y_hora_mal_formados_se_informan_juntos`, `test_us002_ca1_con_formato_invalido_no_se_evalua_la_superposicion`, `test_us002_ca1_mas_de_70_franjas_se_rechazan_como_formato` |
+| US-002 CA-1 | Permisos y orden: recepcionista y dueño `403`; permiso y entrada antes que el profesional; `401` antes que la entrada; un inactivo se edita; uno de otro consultorio es `404` | `test_us002_ca1_la_recepcionista_y_el_dueno_no_pueden_reemplazar_el_horario`, `test_us002_ca1_el_permiso_y_la_entrada_se_evaluan_antes_que_el_profesional`, `test_us002_ca1_sin_sesion_se_responde_401_antes_que_la_entrada`, `test_us002_ca1_el_horario_de_un_profesional_inactivo_se_puede_editar`, `test_us002_ca1_un_profesional_de_otro_consultorio_responde_404` |
+| US-002 CA-1 | `GET /profesionales` lista activos e inactivos para los tres roles | `test_us002_ca1_la_recepcionista_lista_los_profesionales`, `test_us002_ca1_sin_sesion_no_se_listan_los_profesionales` |
+| US-002 CA-1 | La demo arranca con el horario de ejemplo; cargarlo no duplica | `test_us002_ca1_la_demo_arranca_con_el_horario_de_ejemplo` (`test_seed_demo.py`), `test_us002_ca1_la_demo_arranca_con_el_horario_de_ejemplo_y_el_turno_de_las_08_es_rechazado` (`test_demo.py`), `test_us002_ca1_cargar_horario_demo_si_falta_completa_un_volumen_sin_franjas_y_no_duplica` |
+| US-002 CA-2 / E10 (`RN-AG-04`) | El turno que excede el fin de la franja es `422`; el que cabe justo se acepta; antes, entre franjas, sábado y sin franjas se rechazan | `test_us002_ca2_el_turno_excede_el_fin_de_la_franja`, `test_e10_un_turno_que_empieza_o_termina_justo_en_el_limite_de_la_franja_se_acepta`, `test_e10_antes_de_la_franja_entre_franjas_o_en_un_dia_sin_franjas_se_rechaza`, `test_e10_con_un_profesional_sin_franjas_no_se_crea_ningun_turno` (`test_crear_turno.py`) y `test_us002_ca2_post_turnos_fuera_de_la_franja_responde_422_rn_ag_04` (`test_post_turnos.py`) |
+| E10 | Día y hora del consultorio, no de UTC; contiguas no se suman; vigencia; 00:00 del consultorio | `test_e10_el_dia_y_la_hora_son_los_del_consultorio_y_no_los_de_utc`, `test_e10_un_turno_que_pasa_de_una_franja_a_otra_contigua_se_rechaza`, `test_e10_una_franja_fuera_de_vigencia_no_cuenta`, `test_e10_un_turno_que_termina_justo_a_las_0000_del_consultorio_no_cabe_en_ninguna_franja` |
+| E10 | Orden de las reglas: entrada inválida, `RN-AG-10d`, `RN-AG-04`, solapamiento | `test_e10_con_la_entrada_invalida_no_se_evalua_el_horario`, `test_e10_cruzar_la_medianoche_se_informa_antes_que_el_horario`, `test_e10_el_horario_se_informa_antes_que_el_solapamiento` |
+| INF-1 y US-002 CA-1 (PostgreSQL) | La migración `0008`, los `CHECK` de la tabla y la carga repetible del horario de la demo | Ver «Escenario → test (perfil con PostgreSQL)» |
 
 ## Sesión del panel
 
@@ -730,7 +778,7 @@ La API se reemplaza en los tests por un servidor falso escrito a mano (`frontend
 
 Hay además tests de la renovación compartida, del `403`, del cierre de sesión y de que ninguna URL contenga un token, y cinco guards (`src/test/guards.test.ts`) que fallan si aparece `any`, `vi.mock`, `localStorage`, `dangerouslySetInnerHTML`, un archivo `index.ts` de reexportación o un recurso de otro origen (STI-1).
 
-Resultado actual de las dos suites: frontend «Tests 140 passed (140)»; backend «611 passed, 49 deselected, 1 warning».
+Resultado actual de las dos suites: frontend «Tests 140 passed (140)»; backend «709 passed, 53 deselected, 1 warning».
 
 ## Levantar la API con PostgreSQL
 
@@ -828,7 +876,12 @@ La migración autogenerada **se revisa a mano** antes de usarla, y cada change q
 - En Windows, si el repositorio está en una ruta muy larga (más de unos 200 caracteres), el perfil opcional falla al importar `psycopg` con «El nombre del archivo o la extensión es demasiado largo». Cloná en una ruta corta.
 - Las credenciales, la contraseña del usuario del seed y el `JWT_SECRET` de los ejemplos y de `.env.example` son de prueba. No hay configuración de producción: TLS, copias de respaldo, roles con privilegios mínimos ni ajuste del pool.
 - La API migra al arrancar el contenedor: sirve para una sola réplica.
-- No se valida el horario de atención del profesional ni del consultorio.
+- **El horario de atención se valida solo para el profesional** (RN-AG-04, desde C-12): no hay horario del consultorio ni bloqueos (C-13), y un turno que termina exactamente a las 00:00 del consultorio nunca cabe, porque una franja llega como mucho a las 23:59 (D265).
+- **Un profesional sin franjas no admite turnos** (D256): vaciar el horario con un `PUT` abre la puerta a `422` `RN-AG-04` en todos sus turnos. El `PUT` no modifica ni avisa de los turnos ya creados que queden fuera del horario nuevo (D261).
+- **La vigencia de las franjas (`vigente_desde`, `vigente_hasta`) existe en la base pero no en la API** (D259): el dominio la respeta, pero solo se carga guardando la franja directo en la base; las franjas de la API siempre están vigentes.
+- **Cambiar el horario y crear un turno al mismo tiempo**: el `PUT` no toma el bloqueo del profesional, así que un turno creado mientras se reemplaza el horario se evalúa con el horario anterior o el nuevo según qué transacción lea primero (H11).
+- **Reiniciar el contenedor repone el horario de ejemplo** si el profesional 1 quedó sin franjas (H12): el seed carga el horario solo cuando no tiene ninguna.
+- **Las franjas superpuestas no las impide la base**: no hay restricción de exclusión para franjas; solo el `PUT` escribe franjas y valida antes (H3).
 - No hay Redis ni pantallas de turnos ni de sillones en la interfaz (la de prestaciones sí existe, desde C-11): llegan en changes posteriores.
 - En `/docs`, las respuestas `409` y `422` figuran bajo `application/problem+json` y también bajo `application/json`. La respuesta real sale siempre como `application/problem+json`.
 - Los mensajes de validación de formato que genera Pydantic salen en inglés.
