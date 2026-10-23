@@ -45,3 +45,86 @@ Fecha: 2026-10-22. Herramientas del MCP `stitch` ejecutadas por el agente en la 
 ## 4. Cómo se usa en el change
 
 Es la **referencia visual** del `design.md` de `horario-recurrente`. La KB y los specs mandan: los textos son los de `pantalla-de-horario` y del design (H17), y nada de la pantalla agrega reglas de dominio. El error del miércoles del pedido era un ejemplo visual: el mensaje real es el de `RN-AG-16` del spec. La traducción visual y la comparación con la captura en el navegador se hacen en el Apply y se anotan acá al cerrar el change.
+
+## 5. Prueba en el navegador (tarea 12.1, 2026-10-22)
+
+La hizo el agente en el navegador del panel, con la demo (`crear_app_demo`, recién arrancada) y `npm run dev` (`127.0.0.1:5173`), y con el escritorio a 1280 × 1100. Todos los datos y contraseñas son ficticios. Ningún token ni contraseña apareció en una URL (solo `/ingresar`, `/panel` y `/panel/horario`) ni en la consola.
+
+### API (demo)
+
+Ejecutado con los pedidos del README sobre la demo. Antes, se comprobó que `/docs` responde `200`.
+
+| Paso | Esperado | Observado | Ok |
+|---|---|---|---|
+| `GET /profesionales` y `GET /profesionales/1/horario` (odontóloga) | `200`, diez franjas, zona `America/Argentina/Buenos_Aires` | Igual | sí |
+| `PUT` con el miércoles 12:00-16:00 sumado al final | `422` `["RN-AG-16"]`, error en `franjas.10` con el mensaje fijo | Igual | sí |
+| `PUT` de la recepcionista | `403` `["RN-AU-05"]` | Igual | sí |
+| `POST /turnos` el miércoles a las `13:00Z` | `201` | Igual | sí |
+| `POST /turnos` el miércoles a las `11:00Z` (08:00 local) | `422` `["RN-AG-04"]` | Igual | sí |
+| `POST /turnos` el sábado a las `13:00Z`, antes de guardar el sábado | `422` `["RN-AG-04"]` | Igual | sí |
+| El mismo `POST`, después de guardar el sábado 09:00-12:00 por la pantalla | `201` | Igual | sí |
+| `POST /turnos` el viernes a las `19:00Z` (16:00 local), después de quitar la tarde del viernes | `422` `["RN-AG-04"]` | Igual | sí |
+
+### Pantalla (demo)
+
+| Paso | Esperado | Observado | Ok |
+|---|---|---|---|
+| La odontóloga pulsa «Horario» | Selector «Dra. Demo Ficticia», subtítulo con la zona, nota de `RN-AG-04`, lunes a viernes con dos franjas, sábado y domingo «Sin atención» | Igual (captura `implementacion-semana.jpg`) | sí |
+| Agregar al miércoles 12:00-16:00 y «Guardar horario» | `422`; quedan marcadas 12-16 y 15-19, la de 09-13 no (D266); un solo mensaje de `RN-AG-16` en la fila; lo editado se conserva | Igual (captura `implementacion-error-miercoles.jpg`) | sí |
+| Sábado 12:00 a 09:00 y «Guardar horario» | El `PUT` se manda; `RN-AG-16` marcado en el sábado | Igual | sí |
+| Corregir el sábado a 09:00-12:00, quitar la tarde del viernes y guardar | `200` y «Horario guardado.»; la semana muestra lo guardado | Igual | sí |
+| La recepcionista abre «Horario» | Ve la semana guardada | Igual | sí |
+| La recepcionista agrega el domingo y guarda | `403`, aviso «Acceso restringido» con `RN-AU-05`, sigue en el panel sin perder la sesión | Igual (captura `implementacion-403-recepcionista.jpg`) | sí |
+
+En la consola solo aparecen los «Failed to load resource» del navegador, por los `422` y el `403` esperados; no hay ningún error de la aplicación.
+
+Un detalle observado, que no es un error: al quitar la franja que causaba la superposición, la marca roja de la otra franja sigue visible hasta el próximo guardado. Las marcas reflejan la última respuesta de la API, sin validación local (D232, H15).
+
+### Compose
+
+Se levantó con `docker compose up -d --build`, con imágenes reconstruidas sobre el código actual, en `127.0.0.1:5173`. Los tres servicios quedaron `healthy`.
+
+- El inicio de sesión con el usuario del seed funcionó con la contraseña de prueba de `.env.example`.
+- El volumen de PostgreSQL ya existía, y al arrancar `cargar_horario_demo_si_falta` le cargó el horario de ejemplo (D263 y H12).
+- La pantalla «Horario» muestra la semana de la demo.
+- Se agregó el sábado 09:00-12:00 y se guardó: «Horario guardado.». Después se quitó esa franja y se guardó de nuevo, para dejar el horario como estaba.
+- La consola no registró ningún mensaje: no hay violaciones de la CSP ni recursos de otro origen.
+- Al terminar se corrió `docker compose stop`, sin borrar volúmenes.
+
+### Comparación con `stitch-horario-pantalla/pantalla.png`
+
+Las capturas de la implementación están en [stitch-horario-pantalla/](stitch-horario-pantalla/), tomadas a 1280 px de ancho y entregadas a 800 px por el panel de capturas:
+
+- `implementacion-semana.jpg`: la semana de la demo;
+- `implementacion-error-miercoles.jpg`: el error `RN-AG-16` del miércoles;
+- `implementacion-403-recepcionista.jpg`: el `403` de la recepcionista.
+
+Coincide con Stitch en:
+
+- **Encabezado**: barra con la pastilla «Horario» activa, título y subtítulo con la zona, «PROFESIONAL» con el selector y el botón primario «Guardar horario» con ícono.
+- **Nota y tarjeta**: nota informativa azul con ícono y tarjeta «Semana» con una fila por día.
+- **Franjas**: cajas grises con «Desde» y «Hasta», papelera y «+ Agregar franja»; «Sin atención» en cursiva gris.
+- **Error**: borde rojo en las franjas informadas, fondo rosado y borde izquierdo rojo en la fila, y un solo mensaje con ícono debajo.
+
+Diferencias, todas previstas en «Referencia visual (Stitch)» del `design.md` o en H17:
+
+| Diferencia | Motivo |
+|---|---|
+| Sin «Aviso regulatorio:», sin la insignia «7 días», sin «Doble turno estándar…» y sin el ícono de la tarjeta | Textos y adornos sin respaldo en la KB |
+| Sin «2 franjas», «Cerrado» ni «Conflicto detectado» bajo cada día | Datos que repiten lo que se ve; el error ya se marca en la fila |
+| Sin el pie de la tarjeta ni el pie de página | Textos inventados («agenda online», «Sede Central») |
+| El mensaje del error es el de `RN-AG-16` (H17), no «Las franjas del miércoles se superponen.» | El spec fija el texto |
+| Se marcan solo las franjas que informa la API, no las dos de un par | D266: se informa la posterior de cada superposición |
+| Las horas son `<input type="time">`, no campos de texto | Control nativo, sin validación local (H15) |
+| El selector solo muestra a los profesionales de la API (en la demo, uno) | Stitch inventó dos profesionales más |
+| Las pastillas van a la izquierda, junto a la marca | Es la barra compartida de C-08 y C-11 |
+| La fuente es Inter solo si está instalada en el equipo | Sin CDN (CSP `default-src 'self'`) |
+
+### Paso a paso para el autor (opcional, gobernanza MEDIO)
+
+Con la demo recién arrancada (`python -m uvicorn app.main:crear_app_demo --factory` en `backend/` y `npm run dev` en `frontend/`), usuarios `odontologa@consultorio-demo.test` y `recepcion@consultorio-demo.test`, contraseña `demo-consultorio-2026`:
+
+1. Ingresá como la odontóloga y pulsá «Horario». Deberías ver de lunes a viernes de 09:00 a 13:00 y de 15:00 a 19:00, y el sábado y el domingo «Sin atención».
+2. Agregá al miércoles una franja de 12:00 a 16:00 y pulsá «Guardar horario». Se marcan en rojo 12-16 y 15-19, con un solo mensaje `RN-AG-16`.
+3. Quitá esa franja, agregá el sábado de 09:00 a 12:00 y guardá. Deberías ver «Horario guardado.». En `/docs`, un `POST /turnos` el sábado `2026-11-07T13:00:00Z` da `201`.
+4. Cerrá sesión, ingresá como la recepcionista, cambiá algo y guardá. Deberías ver «Acceso restringido» con `RN-AU-05` y seguir en el panel.
