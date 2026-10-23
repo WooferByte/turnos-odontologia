@@ -489,6 +489,19 @@ Continúan la numeración de la tabla anterior. Salen del propose del change `ho
 | Error de red al guardar el horario (D269; design H15; sigue D231 y los escenarios de guardado de C-11 y C-09) | **Decisión del autor** (aprobada por el autor tal como la propuso el design): si el `PUT` del horario no responde, la pantalla muestra el **mensaje de conexión de C-11** («No se pudo conectar con el servidor. Probá de nuevo en unos minutos.») **sin «Reintentar»**, **conserva lo editado**, no muestra «Horario guardado.» y **vuelve a habilitar «Guardar horario»**. «Reintentar» es solo de la carga inicial, como en `pantalla-de-prestaciones` y `pantalla-de-usuarios`. **Motivo:** consistencia con las pantallas archivadas; volver a pulsar «Guardar horario» ya es el reintento. **Alternativa descartada:** un «Reintentar» propio del guardado |
 | Consultorio de las rutas del horario (D270; design H5; sale del Apply de C-12, grupo 4) | **Decisión del autor** (2026-10-22, «Sí, las rutas del horario toman el consultorio del usuario del token. Registralo como D270»): `GET /profesionales` y `GET`/`PUT /profesionales/{id}/horario` toman el consultorio **del usuario del token** (`usuario.consultorio_id`), no `consultorio_unico()`; un profesional de otro consultorio da `404` y no aparece en la lista. **Motivo:** el escenario «profesional de otro consultorio» arma dos consultorios con las fábricas, y `consultorio_unico()` falla con más de uno; además es la forma correcta cuando haya varios consultorios. **Alternativa descartada:** `consultorio_unico()` como en las demás rutas (prestaciones, sillones, usuarios), que se alinearán cuando lo pida un change |
 
+**Hallazgos del Apply de C-12 (V1 a V5, 2026-10-22).** Las referencias V# son las del design archivado (`openspec/changes/archive/2026-10-22-horario-recurrente/design.md`).
+
+- **V1:** `weekday()` del `inicio` convertido con la zona del consultorio da el día local en los bordes de E10 (lunes 21:30 local = martes 00:30 UTC).
+- **V2:** el guard de columnas de fecha-hora con zona solo mira `DateTime`; las columnas `Time` y `Date` de `franja_horaria` no se ven afectadas y el guard no se tocó.
+- **V3:** ningún test del frontend cuenta los enlaces de la barra, así que sumar «Horario» no rompió nada.
+- **V4:** la API informa el campo de un error de Pydantic dentro de una lista como `franjas.0.dia_semana`, y `RN-AG-16` usa la misma forma (`franjas.<i>`).
+- **V5:** el autogenerate de `0008` solo propuso la tabla nueva, la comparación modelo-base da vacía sobre PostgreSQL 17.10, los `CHECK` quedan creados y `downgrade 0007` deja el esquema de los roles.
+
+Dos ajustes de los tests existentes:
+
+- **Contadores:** los tests de permisos (8 → 11), de rutas protegidas (11 → 14) y de deshacer 0007 y 0006 (conjunto de tablas) se actualizaron solo en su número esperado.
+- **`flush()` en `cargar_demo`:** se agregó antes de insertar las franjas, porque sin `relationship()` el ORM no ordena por clave foránea. SQLite no lo detecta y PostgreSQL sí.
+
 ## Skills recomendadas por `find-skill` (2026-10-06, D121)
 
 `find-skill` solo recomienda; la instalación la decidió el autor. Una línea por recomendación:
