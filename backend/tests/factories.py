@@ -2,16 +2,19 @@
 
 Cada función guarda, hace ``commit()`` y devuelve el modelo con su ``id``.
 """
-from datetime import datetime, timedelta
+from collections.abc import Sequence
+from datetime import date, datetime, time, timedelta
 from itertools import count
 
 from sqlalchemy.orm import Session
 
 from app.domain.acceso.roles import Rol
+from app.domain.agenda.horario import Franja
 from app.domain.turnos.eventos import Actor, ActorTipo
 from app.infrastructure.db.modelos import (
     ConsultorioModelo,
     EventoTurnoModelo,
+    FranjaHorariaModelo,
     PacienteModelo,
     PrestacionModelo,
     ProfesionalModelo,
@@ -45,9 +48,49 @@ def un_consultorio(sesion: Session, **kw) -> ConsultorioModelo:
     return _guardar(sesion, ConsultorioModelo(**{**datos, **kw}))
 
 
-def un_profesional(sesion: Session, consultorio: ConsultorioModelo, **kw) -> ProfesionalModelo:
+def franja(
+    dia: int,
+    desde: str,
+    hasta: str,
+    vigente_desde: date | None = None,
+    vigente_hasta: date | None = None,
+) -> Franja:
+    """Franja ficticia: ``dia`` de 0 (lunes) a 6, horas ``HH:MM`` del consultorio."""
+    return Franja(
+        dia_semana=dia,
+        hora_inicio=time.fromisoformat(desde),
+        hora_fin=time.fromisoformat(hasta),
+        vigente_desde=vigente_desde,
+        vigente_hasta=vigente_hasta,
+    )
+
+
+# D263: sin pedir otra cosa, el profesional atiende todo el día, todos los días: así los tests
+# que no hablan del horario no dependen de él. ``horario=()`` lo deja sin franjas.
+HORARIO_DE_PRUEBA = tuple(franja(dia, "00:00", "23:59") for dia in range(7))
+
+
+def un_profesional(
+    sesion: Session,
+    consultorio: ConsultorioModelo,
+    horario: Sequence[Franja] = HORARIO_DE_PRUEBA,
+    **kw,
+) -> ProfesionalModelo:
     datos = {"nombre": "Profesional de Prueba", "activo": True}
-    return _guardar(sesion, ProfesionalModelo(consultorio_id=consultorio.id, **{**datos, **kw}))
+    profesional = _guardar(sesion, ProfesionalModelo(consultorio_id=consultorio.id, **{**datos, **kw}))
+    for f in horario:
+        sesion.add(
+            FranjaHorariaModelo(
+                profesional_id=profesional.id,
+                dia_semana=f.dia_semana,
+                hora_inicio=f.hora_inicio,
+                hora_fin=f.hora_fin,
+                vigente_desde=f.vigente_desde,
+                vigente_hasta=f.vigente_hasta,
+            )
+        )
+    sesion.commit()
+    return profesional
 
 
 def un_sillon(sesion: Session, consultorio: ConsultorioModelo, **kw) -> SillonModelo:

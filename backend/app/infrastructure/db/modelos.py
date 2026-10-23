@@ -1,7 +1,7 @@
 """Modelos ORM del subconjunto del primer change (D130). Estilo SQLAlchemy 2.x."""
-from datetime import datetime
+from datetime import date, datetime, time
 
-from sqlalchemy import JSON, CheckConstraint, ForeignKey, Index, MetaData, String, UniqueConstraint
+from sqlalchemy import JSON, CheckConstraint, ForeignKey, Index, MetaData, SmallInteger, String, UniqueConstraint
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 from app.domain.acceso.roles import Rol
@@ -47,6 +47,29 @@ class ProfesionalModelo(Base):
     activo: Mapped[bool] = mapped_column(default=True)
     usuario_id: Mapped[int | None] = mapped_column(_fk("usuario"))
     matricula: Mapped[str | None] = mapped_column(String)  # sin uso todavía (D215)
+
+
+class FranjaHorariaModelo(Base):
+    """Franja semanal de atención de un profesional, en hora del consultorio (US-002; design H3)."""
+
+    __tablename__ = "franja_horaria"
+    __table_args__ = (
+        CheckConstraint("dia_semana BETWEEN 0 AND 6", name="ck_franja_horaria_dia_semana"),
+        CheckConstraint("hora_inicio < hora_fin", name="ck_franja_horaria_inicio_antes_del_fin"),
+        CheckConstraint(
+            "vigente_desde IS NULL OR vigente_hasta IS NULL OR vigente_hasta >= vigente_desde",
+            name="ck_franja_horaria_vigencia",
+        ),
+        Index("ix_franja_horaria_profesional_dia", "profesional_id", "dia_semana"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    profesional_id: Mapped[int] = mapped_column(_fk("profesional"))
+    dia_semana: Mapped[int] = mapped_column(SmallInteger)
+    hora_inicio: Mapped[time]
+    hora_fin: Mapped[time]
+    vigente_desde: Mapped[date | None]
+    vigente_hasta: Mapped[date | None]
 
 
 class SillonModelo(Base):

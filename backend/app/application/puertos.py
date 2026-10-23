@@ -6,8 +6,10 @@ from typing import Literal, Protocol
 from app.domain.acceso.roles import Rol
 from app.domain.acceso.sesion import ClaimsDeSesion
 from app.domain.acceso.usuarios import DatosUsuario
+from app.domain.agenda.horario import Franja
 from app.domain.agenda.intervalo import Intervalo
 from app.domain.agenda.prestaciones import DatosPrestacion
+from app.domain.agenda.profesionales import DatosProfesional
 from app.domain.agenda.recursos import Paciente, Prestacion, Profesional, Sillon
 from app.domain.agenda.sillones import DatosSillon
 from app.domain.agenda.solapamiento import TurnoOcupado
@@ -120,6 +122,28 @@ class RepositorioSillones(Protocol):
         ...
 
 
+class RepositorioHorario(Protocol):
+    """Horario recurrente de los profesionales y su lista (US-002; design H2)."""
+
+    def consultorio_unico(self) -> int:
+        """El id del único consultorio de la instalación (D173); si no hay uno solo, falla."""
+        ...
+
+    def profesionales_del_consultorio(self, consultorio_id: int) -> Sequence[DatosProfesional]:
+        """Los del consultorio, activos e inactivos, por ``id`` (D260)."""
+        ...
+
+    def profesional(self, profesional_id: int) -> DatosProfesional | None: ...
+
+    def franjas_de(self, profesional_id: int) -> Sequence[Franja]:
+        """Todas las franjas del profesional, con su vigencia, por día y hora de inicio."""
+        ...
+
+    def reemplazar(self, profesional_id: int, franjas: Sequence[Franja]) -> None:
+        """Borra las franjas del profesional e inserta estas, sin confirmar (lo hace la unidad de trabajo)."""
+        ...
+
+
 class RepositorioUsuarios(Protocol):
     """Usuarios del panel (design J6). El email se busca y se guarda normalizado (D199)."""
 
@@ -174,6 +198,7 @@ class RepositorioUsuarios(Protocol):
 class UnidadDeTrabajo(Protocol):
     agenda: RepositorioAgenda
     historial: RepositorioHistorial
+    horario: RepositorioHorario
     prestaciones: RepositorioPrestaciones
     sillones: RepositorioSillones
     usuarios: RepositorioUsuarios

@@ -3,6 +3,7 @@ from sqlalchemy.orm import Session, sessionmaker
 
 from app.infrastructure.repositories.agenda import RepositorioAgendaSqlAlchemy
 from app.infrastructure.repositories.historial import RepositorioHistorialSqlAlchemy
+from app.infrastructure.repositories.horario import RepositorioHorarioSqlAlchemy
 from app.infrastructure.repositories.prestaciones import RepositorioPrestacionesSqlAlchemy
 from app.infrastructure.repositories.sillones import RepositorioSillonesSqlAlchemy
 from app.infrastructure.repositories.usuarios import RepositorioUsuariosSqlAlchemy
@@ -14,6 +15,7 @@ class UnidadDeTrabajoSqlAlchemy:
         self._sesion: Session | None = None
         self.agenda: RepositorioAgendaSqlAlchemy
         self.historial: RepositorioHistorialSqlAlchemy
+        self.horario: RepositorioHorarioSqlAlchemy
         self.prestaciones: RepositorioPrestacionesSqlAlchemy
         self.sillones: RepositorioSillonesSqlAlchemy
         self.usuarios: RepositorioUsuariosSqlAlchemy
@@ -22,6 +24,7 @@ class UnidadDeTrabajoSqlAlchemy:
         self._sesion = self._fabrica_sesiones()
         self.agenda = RepositorioAgendaSqlAlchemy(self._sesion)
         self.historial = RepositorioHistorialSqlAlchemy(self._sesion)
+        self.horario = RepositorioHorarioSqlAlchemy(self._sesion)
         self.prestaciones = RepositorioPrestacionesSqlAlchemy(self._sesion)
         self.sillones = RepositorioSillonesSqlAlchemy(self._sesion)
         self.usuarios = RepositorioUsuariosSqlAlchemy(self._sesion)
