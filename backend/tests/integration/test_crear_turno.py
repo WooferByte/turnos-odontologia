@@ -1,7 +1,7 @@
 """Caso de uso ``crear_turno`` con repositorio real sobre SQLite en memoria (D12, D16)."""
 import re
 from dataclasses import replace
-from datetime import datetime
+from datetime import date, datetime
 
 import pytest
 from sqlalchemy import event, select
@@ -905,3 +905,140 @@ def test_e10_con_un_profesional_sin_franjas_no_se_crea_ningun_turno(sesion, fabr
 
     assert excinfo.value.codigos == ["RN-AG-04"]
     _no_quedo_nada(fabrica_sesiones)
+
+
+def _crear(datos, uow, inicio, **cambios):
+    return crear_turno(
+        replace(_comando(datos, inicio), **cambios),
+        uow,
+        reloj_fijo,
+        actor=ACTOR_DE_PRUEBA,
+        creado_por=ID_DE_USUARIO_DE_PRUEBA,
+    )
+
+
+def _cantidad_de_turnos(fabrica_sesiones) -> int:
+    with fabrica_sesiones() as otra_sesion:
+        return len(otra_sesion.scalars(select(TurnoModelo)).all())
+
+
+def test_e1_feliz_con_la_franja_que_cubre_el_turno(sesion, uow):
+    # Lunes 07:00-08:00 del consultorio = 10:00-11:00 UTC.
+    datos = _escenario(sesion, horario=(franja(0, "07:00", "08:00"),))
+
+    turno = _crear(datos, uow, a_las(10))
+
+    assert (turno.estado, turno.inicio, turno.fin) == (EstadoTurno.RESERVADO, a_las(10), a_las(10, 30))
+
+
+@pytest.mark.parametrize(
+    "inicio", [pytest.param(a_las(15, 30), id="termina-justo-al-fin"), pytest.param(a_las(12), id="empieza-justo-al-inicio")]
+)
+def test_e10_un_turno_que_empieza_o_termina_justo_en_el_limite_de_la_franja_se_acepta(sesion, uow, inicio):
+    datos = _escenario(sesion, horario=MANANA_DE_LOS_LUNES)
+
+    assert _crear(datos, uow, inicio).inicio == inicio
+
+
+@pytest.mark.parametrize(
+    "inicio",
+    [
+        pytest.param(a_las(11, 45), id="antes-de-la-franja"),
+        pytest.param(a_las(16, 30), id="entre-franjas"),
+        pytest.param(datetime(2026, 11, 7, 13, 0, tzinfo=UTC), id="sabado"),
+    ],
+)
+def test_e10_antes_de_la_franja_entre_franjas_o_en_un_dia_sin_franjas_se_rechaza(
+    sesion, fabrica_sesiones, uow, inicio
+):
+    datos = _escenario(sesion, horario=(franja(0, "09:00", "13:00"), franja(0, "15:00", "19:00")))
+
+    with pytest.raises(FueraDeHorario) as excinfo:
+        _crear(datos, uow, inicio)
+
+    assert excinfo.value.codigos == ["RN-AG-04"]
+    assert _cantidad_de_turnos(fabrica_sesiones) == 0
+
+
+def test_e10_el_dia_y_la_hora_son_los_del_consultorio_y_no_los_de_utc(sesion, fabrica_sesiones, uow):
+    martes_en_utc = datetime(2026, 11, 3, 0, 30, tzinfo=UTC)  # lunes 21:30 del consultorio
+    datos = _escenario(sesion, horario=(franja(0, "21:00", "23:00"),))
+    assert _crear(datos, uow, martes_en_utc).inicio == martes_en_utc
+
+    otro = _escenario(sesion, horario=(franja(1, "21:00", "23:00"),))
+    with pytest.raises(FueraDeHorario):
+        _crear(otro, uow, martes_en_utc)
+
+
+def test_e10_un_turno_que_pasa_de_una_franja_a_otra_contigua_se_rechaza(sesion, fabrica_sesiones, uow):
+    datos = _escenario(sesion, horario=(franja(0, "09:00", "13:00"), franja(0, "13:00", "17:00")))
+
+    with pytest.raises(FueraDeHorario) as excinfo:
+        _crear(datos, uow, a_las(15, 45))  # 12:45 a 13:15 del consultorio
+
+    assert excinfo.value.codigos == ["RN-AG-04"]
+    assert _cantidad_de_turnos(fabrica_sesiones) == 0
+
+
+def test_e10_una_franja_fuera_de_vigencia_no_cuenta(sesion, fabrica_sesiones, uow):
+    # D259: la vigencia no viaja en la API; se guarda la franja directo con la fábrica.
+    vencida = _escenario(sesion, horario=(franja(0, "09:00", "13:00", vigente_hasta=date(2026, 10, 31)),))
+    with pytest.raises(FueraDeHorario) as excinfo:
+        _crear(vencida, uow, a_las(13))
+    assert excinfo.value.codigos == ["RN-AG-04"]
+    assert _cantidad_de_turnos(fabrica_sesiones) == 0
+
+    futura = _escenario(sesion, horario=(franja(0, "09:00", "13:00", vigente_desde=date(2026, 11, 3)),))
+    with pytest.raises(FueraDeHorario):
+        _crear(futura, uow, a_las(13))
+
+    vigente = _escenario(sesion, horario=(franja(0, "09:00", "13:00", vigente_desde=date(2026, 11, 2)),))
+    assert _crear(vigente, uow, a_las(13)).inicio == a_las(13)
+
+
+def test_e10_un_turno_que_termina_justo_a_las_0000_del_consultorio_no_cabe_en_ninguna_franja(
+    sesion, fabrica_sesiones, uow
+):
+    datos = _escenario(sesion, horario=(franja(0, "21:00", "23:59"),))
+
+    with pytest.raises(FueraDeHorario) as excinfo:  # 23:30 a 00:00 del consultorio: RN-AG-04 y no RN-AG-10d
+        _crear(datos, uow, datetime(2026, 11, 3, 2, 30, tzinfo=UTC))
+
+    assert excinfo.value.codigos == ["RN-AG-04"]
+    assert _crear(datos, uow, datetime(2026, 11, 3, 2, 0, tzinfo=UTC)).inicio == datetime(2026, 11, 3, 2, 0, tzinfo=UTC)
+    assert _cantidad_de_turnos(fabrica_sesiones) == 1
+
+
+def test_e10_cruzar_la_medianoche_se_informa_antes_que_el_horario(sesion, uow):
+    datos = _escenario(sesion, horario=MANANA_DE_LOS_LUNES)
+
+    with pytest.raises(IntervaloInvalido) as excinfo:  # 23:45 a 00:15 del consultorio
+        _crear(datos, uow, datetime(2026, 11, 3, 2, 45, tzinfo=UTC))
+
+    assert excinfo.value.codigos == ["RN-AG-10d"]
+
+
+def test_e10_el_horario_se_informa_antes_que_el_solapamiento(sesion, uow):
+    datos = _escenario(sesion, horario=MANANA_DE_LOS_LUNES)
+    un_turno(
+        sesion,
+        paciente=datos["paciente"],
+        profesional=datos["profesional"],
+        sillon=datos["sillon"],
+        prestacion=datos["prestacion"],
+        inicio=a_las(10),  # guardado antes de configurar el horario
+    )
+
+    with pytest.raises(FueraDeHorario) as excinfo:  # 07:00 del consultorio, y choca con el existente
+        _crear(datos, uow, a_las(10))
+
+    assert excinfo.value.codigos == ["RN-AG-04"]
+
+
+def test_e10_con_la_entrada_invalida_no_se_evalua_el_horario(sesion, uow):
+    datos = _escenario(sesion, horario=MANANA_DE_LOS_LUNES)
+
+    with pytest.raises(EntradaInvalida) as excinfo:  # 10:00 UTC esta fuera de la franja, pero la prestacion no existe
+        _crear(datos, uow, a_las(10), prestacion_id=999)
+
+    assert excinfo.value.codigos == ["RN-GL-04"]

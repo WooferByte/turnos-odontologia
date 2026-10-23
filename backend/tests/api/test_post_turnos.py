@@ -424,3 +424,66 @@ def test_e10_post_turnos_con_un_profesional_sin_franjas_responde_422_rn_ag_04(cl
     assert respuesta.status_code == 422
     assert respuesta.json() == _problema_de_fuera_de_horario()
     _sin_turnos_ni_eventos(sesion)
+
+
+def test_e10_post_turnos_en_el_limite_de_la_franja_responde_201(cliente, sesion):
+    datos = _escenario(sesion, horario=MANANA_DE_LOS_LUNES)
+
+    termina_justo = cliente.post("/turnos", json=_peticion(datos, "2026-11-02T15:30:00Z"))
+    empieza_justo = cliente.post("/turnos", json=_peticion(datos, "2026-11-02T12:00:00Z"))
+
+    assert (termina_justo.status_code, empieza_justo.status_code) == (201, 201)
+
+
+@pytest.mark.parametrize(
+    "inicio",
+    [
+        pytest.param("2026-11-02T11:45:00Z", id="antes-de-la-franja"),
+        pytest.param("2026-11-02T16:30:00Z", id="entre-franjas"),
+        pytest.param("2026-11-07T13:00:00Z", id="sabado"),
+    ],
+)
+def test_e10_post_turnos_fuera_de_las_franjas_responde_422_rn_ag_04(cliente, sesion, inicio):
+    datos = _escenario(sesion, horario=(franja(0, "09:00", "13:00"), franja(0, "15:00", "19:00")))
+
+    respuesta = cliente.post("/turnos", json=_peticion(datos, inicio))
+
+    assert respuesta.status_code == 422
+    assert respuesta.json() == _problema_de_fuera_de_horario()
+    _sin_turnos_ni_eventos(sesion)
+
+
+def test_e10_post_turnos_cruzar_la_medianoche_se_informa_antes_que_el_horario(cliente, sesion):
+    datos = _escenario(sesion, horario=MANANA_DE_LOS_LUNES)
+
+    respuesta = cliente.post("/turnos", json=_peticion(datos, "2026-11-03T02:45:00Z"))
+
+    assert respuesta.status_code == 422
+    assert respuesta.json()["codigos"] == ["RN-AG-10d"]
+
+
+def test_e10_post_turnos_el_horario_se_informa_antes_que_el_solapamiento(cliente, sesion):
+    datos = _escenario(sesion, horario=MANANA_DE_LOS_LUNES)
+    un_turno(
+        sesion,
+        paciente=datos["paciente"],
+        profesional=datos["profesional"],
+        sillon=datos["sillon"],
+        prestacion=datos["prestacion"],
+        inicio=_fecha("2026-11-02T10:00:00+00:00"),
+    )
+
+    respuesta = cliente.post("/turnos", json=_peticion(datos, "2026-11-02T10:00:00Z"))
+
+    assert respuesta.status_code == 422
+    assert respuesta.json()["codigos"] == ["RN-AG-04"]
+    assert "conflictos" not in respuesta.json()
+
+
+def test_e10_post_turnos_con_la_entrada_invalida_no_se_evalua_el_horario(cliente, sesion):
+    datos = _escenario(sesion, horario=MANANA_DE_LOS_LUNES)
+
+    respuesta = cliente.post("/turnos", json={**_peticion(datos, "2026-11-02T10:00:00Z"), "prestacion_id": 999})
+
+    assert respuesta.status_code == 422
+    assert respuesta.json()["codigos"] == ["RN-GL-04"]
