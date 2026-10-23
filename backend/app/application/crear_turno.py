@@ -4,6 +4,7 @@ from datetime import datetime
 from typing import Literal
 
 from app.application.puertos import SolapamientoEnLaBase, UnidadDeTrabajo
+from app.domain.agenda.horario import exigir_dentro_del_horario
 from app.domain.agenda.intervalo import Intervalo
 from app.domain.agenda.recursos import Paciente, Prestacion, Profesional, Sillon
 from app.domain.agenda.solapamiento import detectar_conflictos
@@ -118,6 +119,8 @@ def _intentar_crear_turno(
         profesional, prestacion, sillon = _validar_entrada(comando, uow)
         zona = uow.agenda.zona_horaria(profesional.consultorio_id)
         intervalo = Intervalo.para_turno(comando.inicio, prestacion.duracion_minutos, zona)
+        # RN-AG-04, después de RN-AG-10d y antes del solapamiento (07 Flujo 1); sin tomar bloqueos de fila.
+        exigir_dentro_del_horario(intervalo, uow.horario.franjas_de(profesional.id), zona)
         # Serializa por recurso: la reserva que llega segunda espera acá y, al seguir, lee el
         # turno que la primera ya confirmó (E11, design I8).
         uow.agenda.bloquear_recursos(profesional.id, sillon.id)

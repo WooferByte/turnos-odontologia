@@ -4,12 +4,15 @@ Los identificadores se asignan a mano para que sean fijos y el README pueda docu
 Hay un solo profesional y un solo sillón a propósito: así omitirlos funciona (RN-AG-14) y un
 segundo turno a la misma hora muestra el ``409`` con los dos códigos (E4).
 """
-from sqlalchemy import select, text
+from datetime import time
+
+from sqlalchemy import func, select, text
 from sqlalchemy.orm import Session
 
 from app.domain.acceso.roles import Rol
 from app.infrastructure.db.modelos import (
     ConsultorioModelo,
+    FranjaHorariaModelo,
     PacienteModelo,
     PrestacionModelo,
     ProfesionalModelo,
@@ -28,6 +31,11 @@ _PRESTACIONES = (
     (5, "Urgencia", 30, "#8E24AA"),
 )
 
+# Horario de ejemplo del profesional 1 (04, «Seed data inicial», D56): lunes a viernes 09:00-13:00 y
+# 15:00-19:00; sábado y domingo sin atención. Horas del consultorio.
+_DIAS_DE_ATENCION = range(5)
+_TURNOS_DEL_DIA = ((time(9, 0), time(13, 0)), (time(15, 0), time(19, 0)))
+
 # Nombres inventados; el bloque 5555-01xx hace de «prefijo de prueba».
 _PACIENTES = (
     (1, "Ana", "Ejemplo", "+5491155550101"),
@@ -43,6 +51,15 @@ EMAIL_RECEPCION_DEMO = "recepcion@consultorio-demo.test"
 CONTRASENA_DEMO = "demo-consultorio-2026"
 
 
+def _agregar_horario_demo(sesion: Session) -> None:
+    """Las diez franjas del profesional 1, sin confirmar. Sin id fijo: nadie las cita (design H12)."""
+    for dia in _DIAS_DE_ATENCION:
+        for desde, hasta in _TURNOS_DEL_DIA:
+            sesion.add(
+                FranjaHorariaModelo(profesional_id=1, dia_semana=dia, hora_inicio=desde, hora_fin=hasta)
+            )
+
+
 def cargar_demo(sesion: Session) -> None:
     """Carga el consultorio de demo y confirma. Se espera una base recién creada y vacía."""
     sesion.add(
@@ -55,6 +72,8 @@ def cargar_demo(sesion: Session) -> None:
     )
     sesion.add(ProfesionalModelo(id=1, consultorio_id=1, nombre="Dra. Demo Ficticia", activo=True))
     sesion.add(SillonModelo(id=1, consultorio_id=1, nombre="Sillón 1", activo=True))
+    sesion.flush()  # sin relationship(), el ORM no ordena la franja después de su profesional
+    _agregar_horario_demo(sesion)
     for id_, nombre, duracion, color in _PRESTACIONES:
         sesion.add(
             PrestacionModelo(
@@ -88,6 +107,24 @@ def cargar_demo_si_falta(sesion: Session) -> bool:
     if sesion.get(ConsultorioModelo, 1) is not None:
         return False
     cargar_demo(sesion)
+    return True
+
+
+def cargar_horario_demo_si_falta(sesion: Session) -> bool:
+    """Carga el horario de ejemplo si el profesional 1 existe y no tiene ninguna franja; devuelve si cargó (design H12).
+
+    Va aparte de ``cargar_demo_si_falta``: un volumen sembrado antes de C-12 ya tiene al profesional
+    y tiene que recibir el horario igual. Si el horario tiene alguna franja, no toca nada.
+    """
+    if sesion.get(ProfesionalModelo, 1) is None:
+        return False
+    cantidad = sesion.scalar(
+        select(func.count()).select_from(FranjaHorariaModelo).where(FranjaHorariaModelo.profesional_id == 1)
+    )
+    if cantidad:
+        return False
+    _agregar_horario_demo(sesion)
+    sesion.commit()
     return True
 
 

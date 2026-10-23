@@ -2,12 +2,15 @@
 
 Sin dobles: sesión y base SQLite en memoria reales del ``conftest.py``.
 """
-from sqlalchemy import func, select
+from datetime import time
+
+from sqlalchemy import delete, func, select
 from sqlalchemy.orm import Session
 
 from app.domain.acceso.roles import Rol
 from app.infrastructure.db.modelos import (
     ConsultorioModelo,
+    FranjaHorariaModelo,
     PacienteModelo,
     PrestacionModelo,
     ProfesionalModelo,
@@ -18,6 +21,7 @@ from app.infrastructure.db.seed_demo import (
     CONTRASENA_DEMO,
     EMAIL_RECEPCION_DEMO,
     cargar_demo_si_falta,
+    cargar_horario_demo_si_falta,
     cargar_recepcionista_demo_si_falta,
     cargar_roles_demo_si_faltan,
     cargar_usuario_demo,
@@ -146,3 +150,59 @@ def test_us091_ca3_recepcionista_de_la_demo(sesion: Session):
     assert hasher.verificar(CONTRASENA_DEMO, recepcionista.hash_password) is True
     assert RepositorioUsuariosSqlAlchemy(sesion).roles_de(2) == frozenset({Rol.RECEPCIONISTA})
     assert sesion.scalar(select(func.count()).select_from(UsuarioModelo)) == 2
+
+
+# --- US-002 CA-1: el horario de ejemplo de la demo (D56, design H12) --------------------------------
+HORARIO_DE_LA_DEMO = [
+    (dia, time(desde), time(hasta)) for dia in range(5) for desde, hasta in ((9, 13), (15, 19))
+]
+
+
+def _franjas_del_profesional_1(sesion: Session) -> list[tuple[int, time, time]]:
+    consulta = (
+        select(FranjaHorariaModelo.dia_semana, FranjaHorariaModelo.hora_inicio, FranjaHorariaModelo.hora_fin)
+        .where(FranjaHorariaModelo.profesional_id == 1)
+        .order_by(FranjaHorariaModelo.dia_semana, FranjaHorariaModelo.hora_inicio)
+    )
+    return [tuple(fila) for fila in sesion.execute(consulta)]
+
+
+def test_us002_ca1_la_demo_arranca_con_el_horario_de_ejemplo(sesion: Session):
+    cargar_demo_si_falta(sesion)
+
+    # Diez franjas: 09-13 y 15-19 de lunes a viernes; sábado y domingo sin atención.
+    assert _franjas_del_profesional_1(sesion) == HORARIO_DE_LA_DEMO
+    assert len(HORARIO_DE_LA_DEMO) == 10
+
+
+def test_us002_ca1_cargar_horario_demo_si_falta_completa_un_volumen_sin_franjas_y_no_duplica(sesion: Session):
+    # Volumen sembrado antes de C-12: el profesional 1 existe y no tiene franjas.
+    cargar_demo_si_falta(sesion)
+    sesion.execute(delete(FranjaHorariaModelo))
+    sesion.commit()
+    assert _franjas_del_profesional_1(sesion) == []
+
+    primera = cargar_horario_demo_si_falta(sesion)
+    segunda = cargar_horario_demo_si_falta(sesion)
+
+    assert (primera, segunda) == (True, False)
+    assert _franjas_del_profesional_1(sesion) == HORARIO_DE_LA_DEMO
+
+
+def test_us002_ca1_cargar_horario_demo_si_falta_respeta_el_horario_que_ya_tiene(sesion: Session):
+    cargar_demo_si_falta(sesion)
+    sesion.execute(delete(FranjaHorariaModelo))
+    sesion.add(
+        FranjaHorariaModelo(profesional_id=1, dia_semana=6, hora_inicio=time(10, 0), hora_fin=time(12, 0))
+    )
+    sesion.commit()
+
+    cargado = cargar_horario_demo_si_falta(sesion)
+
+    assert cargado is False
+    assert _franjas_del_profesional_1(sesion) == [(6, time(10, 0), time(12, 0))]
+
+
+def test_us002_ca1_cargar_horario_demo_si_falta_sin_profesional_no_hace_nada(sesion: Session):
+    assert cargar_horario_demo_si_falta(sesion) is False
+    assert sesion.scalar(select(func.count()).select_from(FranjaHorariaModelo)) == 0

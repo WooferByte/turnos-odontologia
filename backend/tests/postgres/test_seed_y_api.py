@@ -2,15 +2,18 @@
 
 Sin mocks: sesiones, aplicación y base reales. El esquema sale de las migraciones (I9).
 """
+from datetime import time
+
 import pytest
 from fastapi.testclient import TestClient
-from sqlalchemy import Engine, func, select
+from sqlalchemy import Engine, delete, func, select
 from sqlalchemy.orm import Session
 
 from app.infrastructure.db import cargar_seed
 from app.domain.acceso.roles import Rol
 from app.infrastructure.db.modelos import (
     ConsultorioModelo,
+    FranjaHorariaModelo,
     PacienteModelo,
     ProfesionalModelo,
     UsuarioModelo,
@@ -180,3 +183,34 @@ def test_us091_ca4_volumen_sembrado_en_c06_recibe_roles_y_vinculo(engine: Engine
     sesion.add(otro)
     sesion.commit()
     assert otro.id == 3
+
+
+def test_us002_ca1_volver_a_cargar_la_demo_no_duplica_el_horario(engine: Engine, sesion: Session):
+    url = engine.url.render_as_string(hide_password=False)
+    entorno = {"DATABASE_URL": url, "SEED_USUARIO_PASSWORD": CONTRASENA_DEMO}
+
+    cargar_seed.main(entorno)
+    cargar_seed.main(entorno)  # repetir no duplica nada
+    sesion.expire_all()
+
+    franjas = sesion.execute(
+        select(FranjaHorariaModelo.dia_semana, FranjaHorariaModelo.hora_inicio, FranjaHorariaModelo.hora_fin)
+        .where(FranjaHorariaModelo.profesional_id == 1)
+        .order_by(FranjaHorariaModelo.dia_semana, FranjaHorariaModelo.hora_inicio)
+    ).all()
+    assert [tuple(f) for f in franjas] == [
+        (dia, time(desde), time(hasta)) for dia in range(5) for desde, hasta in ((9, 13), (15, 19))
+    ]
+
+
+def test_us002_ca1_volumen_sembrado_antes_de_c12_recibe_el_horario(engine: Engine, sesion: Session):
+    # Volumen del autor tras C-11: el profesional 1 existe y la tabla franja_horaria esta vacia.
+    cargar_demo_si_falta(sesion)
+    sesion.execute(delete(FranjaHorariaModelo))
+    sesion.commit()
+    url = engine.url.render_as_string(hide_password=False)
+
+    cargar_seed.main({"DATABASE_URL": url, "SEED_USUARIO_PASSWORD": CONTRASENA_DEMO})
+    sesion.expire_all()
+
+    assert sesion.scalar(select(func.count()).select_from(FranjaHorariaModelo)) == 10

@@ -12,7 +12,12 @@ from app.api.deps import get_reloj
 from app.infrastructure.configuracion import ConfiguracionDeSesion
 from app.main import crear_app
 from tests.conftest import RELOJ_FIJO, SECRETO_DE_PRUEBA, a_las, reloj_fijo, con_token_del_panel
+from sqlalchemy import select
+
+from app.infrastructure.db.modelos import EventoTurnoModelo, TurnoModelo
 from tests.factories import (
+    HORARIO_DE_PRUEBA,
+    franja,
     un_consultorio,
     un_paciente,
     un_profesional,
@@ -43,12 +48,12 @@ def cliente(engine) -> TestClient:
     return con_token_del_panel(TestClient(app), engine)
 
 
-def _escenario(sesion, duracion_minutos: int = 30) -> dict:
+def _escenario(sesion, duracion_minutos: int = 30, horario=HORARIO_DE_PRUEBA) -> dict:
     consultorio = un_consultorio(sesion)
     return {
         "consultorio": consultorio,
         "paciente": un_paciente(sesion, consultorio),
-        "profesional": un_profesional(sesion, consultorio),
+        "profesional": un_profesional(sesion, consultorio, horario=horario),
         "sillon": un_sillon(sesion, consultorio),
         "prestacion": una_prestacion(sesion, consultorio, duracion_minutos=duracion_minutos),
     }
@@ -375,3 +380,47 @@ def test_openapi_declara_409_y_422_con_el_esquema_problema_y_un_ejemplo(engine):
     assert openapi["components"]["schemas"]["CrearTurnoEntrada"]["examples"] == [
         {"paciente_id": 1, "prestacion_id": 1, "inicio": "2026-11-02T13:00:00Z"}
     ]
+
+
+# --- RN-AG-04 por HTTP (E10, US-002 CA-2) ------------------------------------------------------------
+MANANA_DE_LOS_LUNES = (franja(0, "09:00", "13:00"),)
+DETALLE_FUERA_DE_HORARIO = "El turno no cae completo dentro de una franja del horario del profesional."
+
+
+def _problema_de_fuera_de_horario(instancia: str = "/turnos") -> dict:
+    return {
+        "type": "/errores/fuera-de-horario",
+        "title": "Fuera de horario",
+        "status": 422,
+        "detail": DETALLE_FUERA_DE_HORARIO,
+        "instance": instancia,
+        "codigos": ["RN-AG-04"],
+    }
+
+
+def _sin_turnos_ni_eventos(sesion) -> None:
+    sesion.expire_all()
+    assert sesion.scalars(select(TurnoModelo)).all() == []
+    assert sesion.scalars(select(EventoTurnoModelo)).all() == []
+
+
+def test_us002_ca2_post_turnos_fuera_de_la_franja_responde_422_rn_ag_04(cliente, sesion):
+    datos = _escenario(sesion, horario=MANANA_DE_LOS_LUNES)
+
+    # 15:45 UTC = 12:45 local; con 30 minutos termina 13:15 y se pasa de la franja 09:00-13:00.
+    respuesta = cliente.post("/turnos", json=_peticion(datos, "2026-11-02T15:45:00Z"))
+
+    assert respuesta.status_code == 422
+    assert respuesta.headers["content-type"] == "application/problem+json"
+    assert respuesta.json() == _problema_de_fuera_de_horario()
+    _sin_turnos_ni_eventos(sesion)
+
+
+def test_e10_post_turnos_con_un_profesional_sin_franjas_responde_422_rn_ag_04(cliente, sesion):
+    datos = _escenario(sesion, horario=())
+
+    respuesta = cliente.post("/turnos", json=_peticion(datos, "2026-11-02T13:00:00Z"))
+
+    assert respuesta.status_code == 422
+    assert respuesta.json() == _problema_de_fuera_de_horario()
+    _sin_turnos_ni_eventos(sesion)

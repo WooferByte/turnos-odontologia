@@ -15,6 +15,7 @@ from app.domain.errors import (
     ErrorDeSolapamiento,
     FechaNoUTC,
     FranjaInvalida,
+    FueraDeHorario,
     IntervaloInvalido,
     NombreDePrestacionRepetido,
     PermisoInsuficiente,
@@ -31,6 +32,7 @@ MENSAJE_FECHA_NO_UTC = (
 _CLASES_DE_ERROR: dict[type[ErrorDeDominio], tuple[int, str, str]] = {
     ErrorDeSolapamiento: (409, "/errores/solapamiento-turno", "Turno solapado"),
     IntervaloInvalido: (422, "/errores/intervalo-invalido", "Intervalo inválido"),
+    FueraDeHorario: (422, "/errores/fuera-de-horario", "Fuera de horario"),
     EntradaInvalida: (422, "/errores/entrada-invalida", "Entrada inválida"),
     RecursoDeLaUrlNoEncontrado: (404, "/errores/recurso-no-encontrado", "Recurso no encontrado"),
     NombreDePrestacionRepetido: (409, "/errores/nombre-repetido", "Nombre repetido"),
@@ -49,6 +51,7 @@ _ERRORES_DE_TEXTO_FIJO = (
     PermisoInsuficiente,
     EmailRepetido,
     AdministracionSinOdontologo,
+    FueraDeHorario,
 )
 
 

@@ -145,3 +145,21 @@ def test_us091_ca3_la_recepcionista_de_la_demo_recibe_403_en_prestaciones():
     assert prestacion.status_code == 403
     assert prestacion.json()["codigos"] == ["RN-AU-05"]
     assert turno.status_code == 201
+
+
+def test_us002_ca1_la_demo_arranca_con_el_horario_de_ejemplo_y_el_turno_de_las_08_es_rechazado():
+    cliente = _cliente_con_sesion()
+
+    horario = cliente.get("/profesionales/1/horario")
+    dentro = cliente.post("/turnos", json=PETICION_DE_EJEMPLO)  # 13:00Z = lunes 10:00 del consultorio
+    fuera = cliente.post("/turnos", json={**PETICION_DE_EJEMPLO, "inicio": "2026-11-02T11:00:00Z"})  # 08:00 local
+
+    assert horario.status_code == 200
+    assert horario.json()["franjas"] == [
+        {"dia_semana": dia, "hora_inicio": desde, "hora_fin": hasta}
+        for dia in range(5)
+        for desde, hasta in (("09:00", "13:00"), ("15:00", "19:00"))
+    ]
+    assert dentro.status_code == 201
+    assert fuera.status_code == 422
+    assert fuera.json()["codigos"] == ["RN-AG-04"]

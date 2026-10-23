@@ -12,17 +12,20 @@ from app.domain.errors import (
     EntradaInvalida,
     ErrorDeSolapamiento,
     FechaNoUTC,
+    FueraDeHorario,
     IntervaloInvalido,
     RecursoNoEncontrado,
     ReferenciaInvalida,
 )
 from app.domain.tiempo import UTC
 from app.domain.turnos.estados import EstadoTurno
-from app.infrastructure.db.modelos import TurnoModelo
+from app.infrastructure.db.modelos import EventoTurnoModelo, TurnoModelo
 from tests.conftest import RELOJ_FIJO, a_las, reloj_fijo
 from tests.factories import (
     ACTOR_DE_PRUEBA,
+    HORARIO_DE_PRUEBA,
     ID_DE_USUARIO_DE_PRUEBA,
+    franja,
     un_consultorio,
     un_paciente,
     un_profesional,
@@ -33,12 +36,12 @@ from tests.factories import (
 
 
 
-def _escenario(sesion, duracion_minutos: int = 30) -> dict:
+def _escenario(sesion, duracion_minutos: int = 30, horario=HORARIO_DE_PRUEBA) -> dict:
     consultorio = un_consultorio(sesion)
     return {
         "consultorio": consultorio,
         "paciente": un_paciente(sesion, consultorio),
-        "profesional": un_profesional(sesion, consultorio),
+        "profesional": un_profesional(sesion, consultorio, horario=horario),
         "sillon": un_sillon(sesion, consultorio),
         "prestacion": una_prestacion(sesion, consultorio, duracion_minutos=duracion_minutos),
     }
@@ -871,3 +874,34 @@ def test_crear_turno_bloquea_el_profesional_y_el_sillon_antes_de_leer_los_ocupad
         event.remove(engine, "before_cursor_execute", registrar)
 
     assert tablas[-3:] == ["profesional", "sillon", "turno"]
+
+
+# --- RN-AG-04: el turno cae completo dentro de una franja (E10, US-002 CA-2) ------------------------
+# Lunes 2026-11-02, hora del consultorio = UTC-3: 12:45 local son las 15:45 UTC.
+MANANA_DE_LOS_LUNES = (franja(0, "09:00", "13:00"),)
+
+
+def _no_quedo_nada(fabrica_sesiones) -> None:
+    with fabrica_sesiones() as otra_sesion:
+        assert otra_sesion.scalars(select(TurnoModelo)).all() == []
+        assert otra_sesion.scalars(select(EventoTurnoModelo)).all() == []
+
+
+def test_us002_ca2_el_turno_excede_el_fin_de_la_franja(sesion, fabrica_sesiones, uow):
+    datos = _escenario(sesion, duracion_minutos=30, horario=MANANA_DE_LOS_LUNES)
+
+    with pytest.raises(FueraDeHorario) as excinfo:  # 12:45 a 13:15 local: se pasa 15 minutos
+        crear_turno(_comando(datos, a_las(15, 45)), uow, reloj_fijo, actor=ACTOR_DE_PRUEBA, creado_por=ID_DE_USUARIO_DE_PRUEBA)
+
+    assert excinfo.value.codigos == ["RN-AG-04"]
+    _no_quedo_nada(fabrica_sesiones)
+
+
+def test_e10_con_un_profesional_sin_franjas_no_se_crea_ningun_turno(sesion, fabrica_sesiones, uow):
+    datos = _escenario(sesion, duracion_minutos=30, horario=())
+
+    with pytest.raises(FueraDeHorario) as excinfo:
+        crear_turno(_comando(datos, a_las(13)), uow, reloj_fijo, actor=ACTOR_DE_PRUEBA, creado_por=ID_DE_USUARIO_DE_PRUEBA)
+
+    assert excinfo.value.codigos == ["RN-AG-04"]
+    _no_quedo_nada(fabrica_sesiones)
