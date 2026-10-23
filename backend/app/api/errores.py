@@ -14,6 +14,7 @@ from app.domain.errors import (
     ErrorDeDominio,
     ErrorDeSolapamiento,
     FechaNoUTC,
+    FranjaInvalida,
     IntervaloInvalido,
     NombreDePrestacionRepetido,
     PermisoInsuficiente,
@@ -51,7 +52,7 @@ _ERRORES_DE_TEXTO_FIJO = (
 )
 
 
-ErrorDeCampo = FechaNoUTC | DuracionInvalida | ContrasenaFueraDeRango
+ErrorDeCampo = FechaNoUTC | DuracionInvalida | ContrasenaFueraDeRango | FranjaInvalida
 
 
 def _problemas(cantidad: int) -> str:
@@ -86,11 +87,13 @@ def _texto_de_error_de_campo(error: ErrorDeCampo) -> str:
         return f"{error.campo} debe tener zona y estar en UTC"
     if isinstance(error, ContrasenaFueraDeRango):
         return f"{error.campo} debe tener de 10 caracteres a 72 bytes"
+    if isinstance(error, FranjaInvalida):
+        return error.mensaje
     return f"{error.campo} debe ser mayor que 0 y múltiplo de {error.granularidad} minutos"
 
 
 def _problema_de_entrada(problema: dict, error: EntradaInvalida) -> Problema:
-    de_campo = [e for e in error.errores if isinstance(e, (FechaNoUTC, DuracionInvalida, ContrasenaFueraDeRango))]
+    de_campo = [e for e in error.errores if isinstance(e, (FechaNoUTC, DuracionInvalida, ContrasenaFueraDeRango, FranjaInvalida))]
     errores = [_error_de_campo(e) for e in de_campo]
     referencias = [
         ReferenciaSalida(recurso=r.recurso, recurso_id=r.recurso_id, motivo=r.motivo)

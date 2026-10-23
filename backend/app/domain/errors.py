@@ -142,7 +142,8 @@ class EntradaInvalida(ErrorDeDominio):
 
     @property
     def codigos(self) -> list[str]:
-        return [e.codigo for e in self.errores]
+        """Cada código una sola vez, en el orden en que aparece (varias franjas con RN-AG-16 son un código)."""
+        return list(dict.fromkeys(e.codigo for e in self.errores))
 
     @property
     def referencias(self) -> tuple[ReferenciaInvalida, ...]:

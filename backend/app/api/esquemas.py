@@ -1,13 +1,16 @@
 """Esquemas HTTP de ``/turnos`` (D4), ``/prestaciones`` (C-04) y ``/sillones`` (C-05). Es la única capa que conoce Pydantic."""
-from datetime import datetime
+from datetime import datetime, time
 from typing import Annotated, Any
 
 from pydantic import AfterValidator, BaseModel, BeforeValidator, ConfigDict, Field, StringConstraints, field_validator
 
+from app.application.horario import HorarioDelProfesional
 from app.application.usuarios import UsuarioConRoles
 from app.domain.acceso.roles import Rol
+from app.domain.agenda.horario import Franja
 from app.domain.agenda.nombres import normalizar_espacios
 from app.domain.agenda.prestaciones import DatosPrestacion
+from app.domain.agenda.profesionales import DatosProfesional
 from app.domain.agenda.sillones import DatosSillon
 from app.domain.turnos.eventos import EventoTurno
 from app.domain.turnos.turno import Turno
@@ -346,3 +349,81 @@ class UsuarioSalida(BaseModel):
             roles=[rol for rol in Rol if rol in usuario.roles],  # en el orden del enum, no el de la base
             activo=usuario.datos.activo,
         )
+
+
+# --- Horario recurrente (C-12) ---
+# Horas como texto «HH:MM» de 00:00 a 23:59 (design H4): la salida es siempre 09:00 y nunca 09:00:00.
+HoraDelDia = Annotated[str, Field(pattern=r"^([01]\d|2[0-3]):[0-5]\d$")]
+MAXIMO_DE_FRANJAS = 70  # tope de tamaño del pedido, no por día (D268)
+
+
+class FranjaEntrada(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    dia_semana: Annotated[int, Field(ge=0, le=6)]
+    hora_inicio: HoraDelDia
+    hora_fin: HoraDelDia
+
+    def a_dominio(self) -> Franja:
+        return Franja(
+            dia_semana=self.dia_semana,
+            hora_inicio=time.fromisoformat(self.hora_inicio),
+            hora_fin=time.fromisoformat(self.hora_fin),
+        )
+
+
+class ReemplazarHorarioEntrada(BaseModel):
+    """Cuerpo de ``PUT /profesionales/{id}/horario``: la lista completa de franjas (puede estar vacía)."""
+
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "examples": [
+                {
+                    "franjas": [
+                        {"dia_semana": 0, "hora_inicio": "09:00", "hora_fin": "13:00"},
+                        {"dia_semana": 0, "hora_inicio": "15:00", "hora_fin": "19:00"},
+                    ]
+                }
+            ]
+        },
+    )
+
+    franjas: Annotated[list[FranjaEntrada], Field(max_length=MAXIMO_DE_FRANJAS)]
+
+
+class FranjaSalida(BaseModel):
+    dia_semana: int
+    hora_inicio: str
+    hora_fin: str
+
+
+class HorarioSalida(BaseModel):
+    profesional_id: int
+    zona_horaria: str
+    franjas: list[FranjaSalida]
+
+    @classmethod
+    def desde_horario(cls, horario: HorarioDelProfesional) -> "HorarioSalida":
+        return cls(
+            profesional_id=horario.profesional_id,
+            zona_horaria=horario.zona_horaria,
+            franjas=[
+                FranjaSalida(
+                    dia_semana=f.dia_semana,
+                    hora_inicio=f.hora_inicio.strftime("%H:%M"),
+                    hora_fin=f.hora_fin.strftime("%H:%M"),
+                )
+                for f in horario.franjas
+            ],
+        )
+
+
+class ProfesionalSalida(BaseModel):
+    id: int
+    nombre: str
+    activo: bool
+
+    @classmethod
+    def desde_datos(cls, datos: DatosProfesional) -> "ProfesionalSalida":
+        return cls(id=datos.id, nombre=datos.nombre, activo=datos.activo)
