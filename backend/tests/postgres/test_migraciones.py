@@ -1,4 +1,6 @@
 """Perfil opcional con PostgreSQL: migraciones y esquema (INF-1, INF-4)."""
+from datetime import time
+
 import pytest
 from alembic import command
 from alembic.autogenerate import compare_metadata
@@ -13,6 +15,7 @@ from app.infrastructure.db.modelos import Base
 from app.infrastructure.db.tipos import FechaHoraUTC
 from tests.conftest import a_las
 from tests.factories import (
+    franja,
     un_consultorio,
     un_evento,
     un_paciente,
@@ -25,6 +28,7 @@ from tests.factories import (
 
 TABLAS_DE_C01 = {"consultorio", "profesional", "sillon", "prestacion", "paciente", "turno"}
 TABLAS_DEL_MODELO = set(Base.metadata.tables)
+TABLAS_HASTA_LOS_ROLES = TABLAS_DEL_MODELO - {"franja_horaria"}  # el esquema de 0007, antes del horario
 # Funciones del esquema public que no son de una extensión (btree_gist deja las suyas, D145).
 FUNCIONES_DE_LA_APLICACION = text(
     "SELECT p.proname FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace "
@@ -43,6 +47,13 @@ def test_inf1_base_vacia_migrada_queda_con_el_esquema_del_modelo(engine: Engine)
     with engine.connect() as conexion:
         inspector = inspect(conexion)
         assert set(inspector.get_table_names()) == TABLAS_DEL_MODELO | {"alembic_version"}
+        assert "franja_horaria" in inspector.get_table_names()
+        assert "ix_franja_horaria_profesional_dia" in {i["name"] for i in inspector.get_indexes("franja_horaria")}
+        assert {c["name"] for c in inspector.get_check_constraints("franja_horaria")} == {
+            "ck_franja_horaria_dia_semana",
+            "ck_franja_horaria_inicio_antes_del_fin",
+            "ck_franja_horaria_vigencia",
+        }
 
         contexto = MigrationContext.configure(conexion, opts={"compare_type": True})
         assert compare_metadata(contexto, Base.metadata) == []
@@ -156,7 +167,7 @@ def test_inf1_deshacer_solo_la_migracion_de_usuarios_deja_el_esquema_anterior(
 
     with engine.connect() as conexion:
         assert set(inspect(conexion).get_table_names()) == (
-            TABLAS_DEL_MODELO - {"usuario", "usuario_rol"}
+            TABLAS_DEL_MODELO - {"usuario", "usuario_rol", "franja_horaria"}
         ) | {"alembic_version"}
         assert conexion.execute(text("SELECT count(*) FROM turno")).scalar_one() == 1
         assert conexion.execute(text("SELECT count(*) FROM evento_turno")).scalar_one() == 1
@@ -190,7 +201,7 @@ def test_inf1_deshacer_solo_la_migracion_de_roles_deja_el_esquema_de_la_sesion(
 
     with engine.connect() as conexion:
         inspector = inspect(conexion)
-        assert set(inspector.get_table_names()) == (TABLAS_DEL_MODELO - {"usuario_rol"}) | {"alembic_version"}
+        assert set(inspector.get_table_names()) == (TABLAS_DEL_MODELO - {"usuario_rol", "franja_horaria"}) | {"alembic_version"}
         assert "usuario_id" not in {c["name"] for c in inspector.get_columns("profesional")}
         assert "matricula" not in {c["name"] for c in inspector.get_columns("profesional")}
         assert "creado_por" not in {c["name"] for c in inspector.get_columns("turno")}
@@ -221,3 +232,69 @@ def test_us091_ca1_la_base_rechaza_un_rol_invalido(sesion: Session) -> None:
                 {"usuario_id": usuario.id},
             )
     sesion.rollback()
+
+
+def test_inf1_deshacer_solo_la_migracion_del_horario_deja_el_esquema_de_los_roles(
+    engine: Engine, config_alembic: Config, sesion: Session
+) -> None:
+    consultorio = un_consultorio(sesion)
+    un_profesional(sesion, consultorio, horario=(franja(0, "09:00", "13:00"),))
+    with engine.connect() as conexion:
+        assert conexion.execute(text("SELECT count(*) FROM franja_horaria")).scalar_one() == 1
+
+    command.downgrade(config_alembic, "0007")
+
+    with engine.connect() as conexion:
+        assert set(inspect(conexion).get_table_names()) == TABLAS_HASTA_LOS_ROLES | {"alembic_version"}
+        assert conexion.execute(text("SELECT count(*) FROM profesional")).scalar_one() == 1
+
+    command.upgrade(config_alembic, "head")
+
+    with engine.connect() as conexion:
+        assert set(inspect(conexion).get_table_names()) == TABLAS_DEL_MODELO | {"alembic_version"}
+        assert conexion.execute(text("SELECT count(*) FROM franja_horaria")).scalar_one() == 0
+
+
+def _insertar_franja(sesion: Session, profesional_id: int, **valores) -> None:
+    datos = {
+        "dia_semana": 0,
+        "hora_inicio": time(9, 0),
+        "hora_fin": time(13, 0),
+        "vigente_desde": None,
+        "vigente_hasta": None,
+        **valores,
+    }
+    sesion.execute(
+        text(
+            "INSERT INTO franja_horaria (profesional_id, dia_semana, hora_inicio, hora_fin, vigente_desde, vigente_hasta) "
+            "VALUES (:profesional_id, :dia_semana, :hora_inicio, :hora_fin, :vigente_desde, :vigente_hasta)"
+        ),
+        {"profesional_id": profesional_id, **datos},
+    )
+
+
+def test_inf1_la_base_rechaza_una_franja_invalida(sesion: Session) -> None:
+    from datetime import date
+
+    profesional = un_profesional(sesion, un_consultorio(sesion), horario=())
+
+    for valores, restriccion in (
+        ({"hora_inicio": time(13, 0), "hora_fin": time(9, 0)}, "ck_franja_horaria_inicio_antes_del_fin"),
+        ({"hora_inicio": time(9, 0), "hora_fin": time(9, 0)}, "ck_franja_horaria_inicio_antes_del_fin"),
+        ({"dia_semana": 7}, "ck_franja_horaria_dia_semana"),
+        ({"dia_semana": -1}, "ck_franja_horaria_dia_semana"),
+        (
+            {"vigente_desde": date(2026, 12, 1), "vigente_hasta": date(2026, 11, 1)},
+            "ck_franja_horaria_vigencia",
+        ),
+    ):
+        with pytest.raises(IntegrityError, match=restriccion):
+            _insertar_franja(sesion, profesional.id, **valores)
+        sesion.rollback()
+
+    # La vigencia de un solo día, o con una sola fecha, se guarda.
+    _insertar_franja(sesion, profesional.id, vigente_desde=date(2026, 11, 2), vigente_hasta=date(2026, 11, 2))
+    _insertar_franja(sesion, profesional.id, dia_semana=1, vigente_desde=date(2026, 11, 2))
+    _insertar_franja(sesion, profesional.id, dia_semana=2, vigente_hasta=date(2026, 11, 2))
+    sesion.commit()
+    assert sesion.execute(text("SELECT count(*) FROM franja_horaria")).scalar_one() == 3
