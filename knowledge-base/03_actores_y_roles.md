@@ -43,6 +43,8 @@ C = crear, R = leer, U = actualizar, D = eliminar/anular. "Propio" = solo sus tu
 | Usuarios del consultorio (alta con contraseña inicial, roles, desactivar, restablecer contraseña; RN-AU-06, RN-AU-07, RN-AU-08) | CRUD | — | R | — |
 | Cambiar la propia contraseña (pidiendo la actual, RN-AU-07) | U propio | U propio | U propio | — |
 
+> `GET /profesionales` (lista de profesionales para elegir su horario, solo lectura; D260) lo leen los tres roles (C-12).
+
 **Decisión del autor (2026-10-02, P-09 / SU-04):** la recepcionista ve los datos **administrativos** del paciente (identificación, contacto, turnos, pagos) pero **no** los datos **clínicos** (anamnesis, evolución, odontograma), por minimización de datos de salud (Ley 25.326). Ver RN-FC-02.
 
 ## Rutas públicas

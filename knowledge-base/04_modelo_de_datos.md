@@ -151,6 +151,8 @@ Los plazos de seña y de oferta son **valores de diseño del autor, no de mercad
 ### FranjaHoraria (horario recurrente)
 **Change que la crea:** horario recurrente (US-002).
 
+**Validación (C-12):** la no superposición de las franjas de un mismo día y que cada una empiece antes de terminar los valida el dominio con `RN-AG-16` (D257). La vigencia (`vigente_desde`, `vigente_hasta`) no viaja en la API: el dominio la respeta al evaluar `RN-AG-04` (D259).
+
 | Campo | Tipo | Null | Restricciones / FK / nota |
 |---|---|---|---|
 | `id` | entero | NN | PK |
