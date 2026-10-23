@@ -59,7 +59,39 @@ export const USUARIOS_DE_PARTIDA: readonly UsuarioFalso[] = [
 /** Un usuario solo `dueno` y activo, que el catálogo de partida no trae (H12). */
 export const USUARIO_DUENO: UsuarioFalso = { id: 4, email: EMAIL_DUENO, roles: ['dueno'], activo: true }
 
+export interface ProfesionalFalso {
+  id: number
+  nombre: string
+  activo: boolean
+}
+
+export interface FranjaFalsa {
+  dia_semana: number
+  hora_inicio: string
+  hora_fin: string
+}
+
+export const ZONA_DEL_CONSULTORIO = 'America/Argentina/Buenos_Aires'
+
+/** El profesional de la demo (id 1), activo. */
+export const PROFESIONALES_DE_PARTIDA: readonly ProfesionalFalso[] = [
+  { id: 1, nombre: 'Dra. Demo Ficticia', activo: true },
+]
+
+/** Un segundo profesional, inactivo y sin franjas, para los escenarios del selector. */
+export const PROFESIONAL_INACTIVO: ProfesionalFalso = { id: 2, nombre: 'Dr. Ejemplo Ficticio', activo: false }
+
+/** El horario de la demo: lunes a viernes 09:00-13:00 y 15:00-19:00 (diez franjas, D56). */
+export const HORARIO_DE_LA_DEMO: readonly FranjaFalsa[] = [0, 1, 2, 3, 4].flatMap((dia) => [
+  { dia_semana: dia, hora_inicio: '09:00', hora_fin: '13:00' },
+  { dia_semana: dia, hora_inicio: '15:00', hora_fin: '19:00' },
+])
+
 export interface OpcionesDelServidorFalso {
+  /** Profesionales del consultorio; por defecto `PROFESIONALES_DE_PARTIDA`. */
+  profesionales?: readonly ProfesionalFalso[]
+  /** Horario de cada profesional por id; el profesional 1 parte con `HORARIO_DE_LA_DEMO` y los demás sin franjas. */
+  horarios?: Readonly<Record<number, readonly FranjaFalsa[]>>
   /** Catálogo inicial de prestaciones; por defecto vacío. */
   prestaciones?: readonly PrestacionFalsa[]
   /** Usuarios del consultorio; por defecto `USUARIOS_DE_PARTIDA`. */
@@ -84,6 +116,12 @@ export interface ServidorFalso {
   quitarUsuario(id: number): void
   /** Saca una prestación del catálogo (la API no borra, RN-GL-03; sirve para simular una base recreada). */
   quitarPrestacion(id: number): void
+  /** Copia del horario del falso para ese profesional (para comprobar que algo no se guardó). */
+  horarioActual(profesionalId: number): FranjaFalsa[]
+  /** Saca un profesional (la API real no borra profesionales, D46; sirve para simular un `404`). */
+  quitarProfesional(id: number): void
+  /** Marca inactivo a un profesional (la demo no tiene cómo hacerlo). */
+  marcarInactivo(id: number): void
   /** A partir de ahora toda petición falla como una red caída (fetch rechaza). */
   caerse(): void
   /** Deshace `caerse` y `responderConError`: la API vuelve a responder. */
@@ -158,6 +196,82 @@ const COLOR_HEX = /^#[0-9A-Fa-f]{6}$/
 const CAMPOS_DEL_ALTA = new Set(['nombre', 'duracion_minutos', 'color', 'reservable_online'])
 const CAMPOS_DEL_PATCH = new Set(['nombre', 'duracion_minutos', 'color', 'reservable_online', 'activa'])
 const MENSAJE_RN_AG_01 = "El campo 'duracion_minutos' debe ser mayor que 0 y múltiplo de 5 minutos."
+
+const HORA_DEL_DIA = /^([01]\d|2[0-3]):[0-5]\d$/
+const CAMPOS_DE_FRANJA = new Set(['dia_semana', 'hora_inicio', 'hora_fin'])
+const MAXIMO_DE_FRANJAS = 70
+
+/** Errores de formato del `PUT` del horario (lo que valida Pydantic): campos de más, día, hora y el tope de 70. */
+function erroresDeFormatoDeHorario(cuerpo: Record<string, unknown> | null): ErrorDeCampoFalso[] {
+  if (cuerpo === null) return [errorDeFormato('cuerpo', 'El cuerpo debe ser un objeto JSON.')]
+  const errores: ErrorDeCampoFalso[] = []
+  for (const campo of Object.keys(cuerpo)) {
+    if (campo !== 'franjas') errores.push(errorDeFormato(campo, 'Campo no permitido.'))
+  }
+  const franjas = cuerpo.franjas
+  if (!Array.isArray(franjas)) return [...errores, errorDeFormato('franjas', 'Debe ser una lista.')]
+  if (franjas.length > MAXIMO_DE_FRANJAS) errores.push(errorDeFormato('franjas', 'Hay más de 70 franjas.'))
+  franjas.forEach((franja: unknown, i) => {
+    if (typeof franja !== 'object' || franja === null) {
+      errores.push(errorDeFormato(`franjas.${i}`, 'Debe ser un objeto.'))
+      return
+    }
+    const f = franja as Record<string, unknown>
+    for (const campo of Object.keys(f)) {
+      if (!CAMPOS_DE_FRANJA.has(campo)) errores.push(errorDeFormato(`franjas.${i}.${campo}`, 'Campo no permitido.'))
+    }
+    const dia = f.dia_semana
+    if (typeof dia !== 'number' || !Number.isInteger(dia) || dia < 0 || dia > 6) {
+      errores.push(errorDeFormato(`franjas.${i}.dia_semana`, 'Debe ser un entero de 0 a 6.'))
+    }
+    for (const campo of ['hora_inicio', 'hora_fin']) {
+      const hora = f[campo]
+      if (typeof hora !== 'string' || !HORA_DEL_DIA.test(hora)) {
+        errores.push(errorDeFormato(`franjas.${i}.${campo}`, 'Debe ser una hora HH:MM de 00:00 a 23:59.'))
+      }
+    }
+  })
+  return errores
+}
+
+/**
+ * RN-AG-16 como en la API (H6, D266): en el orden del cuerpo, una franja invertida se informa y no se compara;
+ * una no invertida que se superpone con alguna anterior no invertida del mismo día también (aunque esa
+ * anterior ya se haya informado).
+ */
+function erroresDeFranjas(franjas: readonly FranjaFalsa[]): ErrorDeCampoFalso[] {
+  const errores: ErrorDeCampoFalso[] = []
+  const validas: FranjaFalsa[] = []
+  franjas.forEach((franja, i) => {
+    if (franja.hora_inicio >= franja.hora_fin) {
+      errores.push({
+        campo: `franjas.${i}`,
+        codigo: 'RN-AG-16',
+        mensaje: `franjas.${i} debe terminar después de empezar`,
+      })
+      return
+    }
+    const seSuperpone = validas.some(
+      (otra) =>
+        otra.dia_semana === franja.dia_semana && franja.hora_inicio < otra.hora_fin && otra.hora_inicio < franja.hora_fin,
+    )
+    if (seSuperpone) {
+      errores.push({
+        campo: `franjas.${i}`,
+        codigo: 'RN-AG-16',
+        mensaje: `franjas.${i} se superpone con otra franja del mismo día`,
+      })
+    }
+    validas.push(franja)
+  })
+  return errores
+}
+
+function ordenarFranjas(franjas: readonly FranjaFalsa[]): FranjaFalsa[] {
+  return franjas
+    .map((f) => ({ dia_semana: f.dia_semana, hora_inicio: f.hora_inicio, hora_fin: f.hora_fin }))
+    .sort((a, b) => a.dia_semana - b.dia_semana || a.hora_inicio.localeCompare(b.hora_inicio))
+}
 
 function normalizarEspacios(texto: string): string {
   return texto.trim().replace(/\s+/g, ' ')
@@ -259,6 +373,10 @@ export function crearServidorFalso(opciones: OpcionesDelServidorFalso = {}): Ser
     ...u,
     roles: [...u.roles],
   }))
+  const profesionales: ProfesionalFalso[] = (opciones.profesionales ?? PROFESIONALES_DE_PARTIDA).map((p) => ({ ...p }))
+  const horarios = new Map<number, FranjaFalsa[]>(
+    profesionales.map((p) => [p.id, ordenarFranjas(opciones.horarios?.[p.id] ?? (p.id === 1 ? HORARIO_DE_LA_DEMO : []))]),
+  )
   // Versión del token de cada usuario: desactivar la sube y los tokens anteriores dejan de servir (RN-AU-03).
   const versiones = new Map<number, number>()
   const cuerposRecibidos = new Map<string, Record<string, unknown>[]>()
@@ -478,6 +596,41 @@ export function crearServidorFalso(opciones: OpcionesDelServidorFalso = {}): Ser
     return json(200, salidaDeUsuario(usuario))
   }
 
+  function profesionalInexistente(id: number): Response {
+    return problema(404, '/errores/recurso-no-encontrado', 'Recurso no encontrado', 'No existe.', ['RN-GL-04'], {
+      referencias: [{ recurso: 'profesional', recurso_id: id, motivo: 'inexistente' }],
+    })
+  }
+
+  function salidaDeHorario(id: number): Response {
+    return json(200, { profesional_id: id, zona_horaria: ZONA_DEL_CONSULTORIO, franjas: horarios.get(id) ?? [] })
+  }
+
+  function listarProfesionales(init: RequestInit | undefined): Response {
+    return autorizar(init, null).rechazo ?? json(200, [...profesionales].sort((a, b) => a.id - b.id))
+  }
+
+  function leerHorario(id: number, init: RequestInit | undefined): Response {
+    const { rechazo } = autorizar(init, null)
+    if (rechazo !== null) return rechazo
+    return profesionales.some((p) => p.id === id) ? salidaDeHorario(id) : profesionalInexistente(id)
+  }
+
+  /** Orden de H8: acceso, formato, `RN-AG-16` (todas juntas) y por último el profesional de la URL (404). */
+  function reemplazarHorario(id: number, init: RequestInit | undefined): Response {
+    const { rechazo } = autorizar(init, ['odontologo'])
+    if (rechazo !== null) return rechazo
+    const cuerpo = leerCuerpo(init)
+    const errores = erroresDeFormatoDeHorario(cuerpo)
+    if (cuerpo === null || errores.length > 0) return entradaInvalida(errores, [])
+    const franjas = cuerpo.franjas as FranjaFalsa[]
+    const invalidas = erroresDeFranjas(franjas)
+    if (invalidas.length > 0) return entradaInvalida(invalidas, ['RN-AG-16'])
+    if (!profesionales.some((p) => p.id === id)) return profesionalInexistente(id)
+    horarios.set(id, ordenarFranjas(franjas))
+    return salidaDeHorario(id)
+  }
+
   async function refrescar(init: RequestInit | undefined): Promise<Response> {
     // Una vuelta del bucle de eventos: da tiempo a que lleguen varios 401 antes de contestar.
     await new Promise<void>((resolver) => setTimeout(resolver, 0))
@@ -538,6 +691,12 @@ export function crearServidorFalso(opciones: OpcionesDelServidorFalso = {}): Ser
     if (delPatchDeUsuario !== null && metodo === 'PATCH') {
       return Promise.resolve(editarUsuario(Number(delPatchDeUsuario[1]), init))
     }
+    if (entrada === '/api/profesionales' && metodo === 'GET') return Promise.resolve(listarProfesionales(init))
+    const delHorario = /^\/api\/profesionales\/(\d+)\/horario$/.exec(entrada)
+    if (delHorario !== null && metodo === 'GET') return Promise.resolve(leerHorario(Number(delHorario[1]), init))
+    if (delHorario !== null && metodo === 'PUT') {
+      return Promise.resolve(reemplazarHorario(Number(delHorario[1]), init))
+    }
     const delPatch = /^\/api\/prestaciones\/(\d+)$/.exec(entrada)
     if (delPatch !== null && metodo === 'PATCH') {
       return Promise.resolve(editarPrestacion(Number(delPatch[1]), init))
@@ -560,6 +719,16 @@ export function crearServidorFalso(opciones: OpcionesDelServidorFalso = {}): Ser
     quitarPrestacion: (id) => {
       const indice = catalogo.findIndex((p) => p.id === id)
       if (indice >= 0) catalogo.splice(indice, 1)
+    },
+    horarioActual: (profesionalId) => (horarios.get(profesionalId) ?? []).map((f) => ({ ...f })),
+    quitarProfesional: (id) => {
+      const indice = profesionales.findIndex((p) => p.id === id)
+      if (indice >= 0) profesionales.splice(indice, 1)
+      horarios.delete(id)
+    },
+    marcarInactivo: (id) => {
+      const profesional = profesionales.find((p) => p.id === id)
+      if (profesional !== undefined) profesional.activo = false
     },
     caerse: () => {
       caido = true
