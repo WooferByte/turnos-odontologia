@@ -794,3 +794,244 @@ p.pantalla-de-ingreso {
     animation: none;
   }
 }
+
+/* Pantalla de horario (C-12, pantalla de Stitch, D234): selector y guardar en el encabezado, nota azul, tarjeta
+   «Semana» con una fila por día, franjas como cajas con «Desde» y «Hasta», y los errores de RN-AG-16 en rojo. */
+.controles-de-horario {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.selector-de-profesional {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.selector-de-profesional label {
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--texto-tenue);
+}
+
+.selector-de-profesional select {
+  min-width: 200px;
+  height: var(--alto-campo-grande);
+  padding: 0 12px;
+  border: 1px solid var(--borde-fuerte);
+  border-radius: var(--radio);
+  background: var(--superficie);
+  color: var(--texto);
+  font: inherit;
+  font-weight: 500;
+  box-shadow: var(--sombra-tarjeta);
+}
+
+.nota-de-horario {
+  margin-bottom: 24px;
+  border-color: var(--primario-borde);
+  background: var(--primario-suave);
+  color: var(--primario-oscuro);
+  font-size: 14px;
+}
+
+.nota-de-horario .icono {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  color: var(--primario);
+}
+
+.aviso-exito {
+  margin: 0 0 16px;
+  padding: 12px 14px;
+  border: 1px solid var(--borde-exito);
+  border-radius: var(--radio-medio);
+  background: var(--fondo-exito);
+  color: var(--exito);
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.dia-de-horario {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 20px;
+  border-bottom: 1px solid var(--borde-suave);
+  border-left: 4px solid transparent;
+}
+
+.dia-de-horario:last-child {
+  border-bottom: 0;
+}
+
+.dia-vacio {
+  background: var(--superficie-suave);
+}
+
+.dia-con-error {
+  border-left-color: var(--error);
+  background: var(--fondo-error);
+}
+
+.nombre-del-dia {
+  flex: none;
+  box-sizing: border-box;
+  width: 128px;
+  margin: 0;
+  padding-top: 8px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--texto);
+}
+
+.dia-vacio .nombre-del-dia {
+  color: var(--texto-suave);
+}
+
+.dia-con-error .nombre-del-dia {
+  color: var(--error-oscuro);
+}
+
+.contenido-del-dia {
+  display: flex;
+  flex: 1;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.franjas-del-dia {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  min-height: 40px;
+}
+
+.sin-atencion {
+  color: var(--texto-claro);
+  font-weight: 500;
+  font-style: italic;
+}
+
+.franja-de-horario {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 6px 10px;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  background: var(--superficie-suave);
+}
+
+.franja-de-horario label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--texto-tenue);
+}
+
+.franja-de-horario input[type='time'] {
+  box-sizing: border-box;
+  width: 104px;
+  height: 32px;
+  padding: 0 8px;
+  border: 1px solid var(--borde-fuerte);
+  border-radius: var(--radio);
+  background: var(--superficie);
+  color: var(--texto);
+  font: inherit;
+  font-weight: 500;
+  font-variant-numeric: tabular-nums;
+}
+
+.franja-de-horario input[aria-invalid='true'] {
+  border-color: var(--borde-error);
+  color: var(--error-oscuro);
+}
+
+.franja-con-error {
+  border: 2px solid var(--error);
+  background: var(--fondo-error);
+  box-shadow: var(--sombra-tarjeta);
+}
+
+.franja-con-error label {
+  color: var(--error-oscuro);
+  font-weight: 600;
+}
+
+.boton-quitar-franja,
+.boton-agregar-franja {
+  display: inline-flex;
+  align-items: center;
+  border: 0;
+  border-radius: var(--radio);
+  background: transparent;
+  font: inherit;
+  cursor: pointer;
+}
+
+.boton-quitar-franja {
+  padding: 4px;
+  color: var(--texto-claro);
+}
+
+.boton-quitar-franja:hover {
+  background: var(--fondo-error);
+  color: var(--error);
+}
+
+.boton-agregar-franja {
+  gap: 4px;
+  padding: 6px 10px;
+  color: var(--primario);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.boton-agregar-franja:hover {
+  background: var(--primario-suave);
+}
+
+.error-de-dia {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: fit-content;
+  margin: 0;
+  padding: 6px 10px;
+  border: 1px solid var(--borde-error);
+  border-radius: var(--radio);
+  background: var(--fondo-error);
+  color: var(--error);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+@media (max-width: 720px) {
+  .controles-de-horario,
+  .selector-de-profesional {
+    flex-wrap: wrap;
+  }
+
+  .dia-de-horario {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .nombre-del-dia {
+    padding-top: 0;
+  }
+}
+
+.controles-de-horario .boton-primario {
+  white-space: nowrap;
+}

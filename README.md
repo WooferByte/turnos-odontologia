@@ -610,7 +610,7 @@ npm test
 npm run typecheck
 ```
 
-`npm test` corre **140 tests en 9 archivos** («Tests 140 passed (140)»); no necesita el backend, Docker ni red. `npm run typecheck` (`tsc --noEmit`) termina sin salida. `npm run build` genera `frontend/dist/`.
+`npm test` corre **168 tests en 12 archivos** («Tests 168 passed (168)»); no necesita el backend, Docker ni red. `npm run typecheck` (`tsc --noEmit`) termina sin salida. `npm run build` genera `frontend/dist/`.
 
 ### Probar el panel (demo sin Docker, dos terminales)
 
@@ -746,6 +746,36 @@ El cliente de la API (`apiUsuarios.test.ts`, 10 tests) y los mensajes de U19 (`m
 
 Límites conocidos de la pantalla: el enlace «Usuarios» y todas las acciones se ven con cualquier rol, porque la interfaz no sabe quién inició sesión (U20, D249): la API decide con `403` o `409` y la pantalla lo muestra; «Desactivar» no pide confirmación (D250) y se deshace con «Reactivar».
 
+### Pantalla de horario
+
+Desde C-12 el panel tiene la pantalla «Horario». Cómo llegar: iniciar sesión y pulsar **Horario** en el encabezado (`/panel/horario`). La pantalla usa `GET /api/profesionales` y `GET` y `PUT /api/profesionales/{id}/horario` (el contrato es el de «Horario», en la API); no cambia la API ni valida reglas: no controla superposiciones ni el orden de las horas (solo exige que cada franja tenga sus dos horas), y las franjas que la API rechaza con `RN-AG-16` quedan marcadas con su mensaje.
+
+Recorrido con la demo sin Docker (las dos terminales de «Probar el panel», con la demo **recién arrancada**: el profesional «Dra. Demo Ficticia» tiene lunes a viernes de 09:00 a 13:00 y de 15:00 a 19:00):
+
+1. Ingresar con `odontologa@consultorio-demo.test` y pulsar «Horario»: el selector «Profesional» muestra «Dra. Demo Ficticia», el subtítulo dice «Franjas semanales en hora del consultorio (America/Argentina/Buenos_Aires).», la nota azul recuerda `RN-AG-04`, de lunes a viernes se ven las dos franjas y sábado y domingo dicen «Sin atención». En la pestaña de red, `GET /api/profesionales` y `GET /api/profesionales/1/horario` responden `200` (con `npm run dev` aparecen dos veces porque el modo estricto de React monta la pantalla dos veces en desarrollo; la suite verifica que la pantalla pide una sola vez).
+2. «Agregar franja» en el miércoles y pulsar «Guardar horario» sin escribir las horas: no se manda nada y la franja se marca con «Completá las dos horas de la franja.».
+3. Escribir en esa franja «Desde» 12:00 y «Hasta» 16:00 y «Guardar horario» → `PUT /api/profesionales/1/horario` con `422` y `["RN-AG-16"]`: las franjas 12:00-16:00 y 15:00-19:00 del miércoles quedan con borde rojo (la 09:00-13:00 no: la API informa solo la posterior de cada par), el día se marca con un borde izquierdo rojo y debajo se lee una vez «Hay franjas que se superponen o no terminan después de empezar (RN-AG-16).». Lo editado se conserva y no aparece «Horario guardado.».
+4. Con «Quitar franja» (la papelera) sacar la 12:00-16:00 del miércoles: desaparece la marca roja. «Agregar franja» en el sábado, 09:00 a 12:00 y «Guardar horario» → `PUT` con `200`: se ve «Horario guardado.» y el sábado muestra la franja.
+5. «Cerrar sesión» e ingresar con `recepcion@consultorio-demo.test`: «Horario» muestra la misma semana. Agregar una franja y «Guardar horario» → `PUT` con `403` y `["RN-AU-05"]` y «Tu usuario no tiene permiso para modificar el horario (RN-AU-05).» en un aviso, sin perder la sesión (no hay `POST /api/auth/refresh`) y sin cambiar el horario.
+
+Con la API detenida, la pantalla muestra «No se pudo conectar con el servidor. Probá de nuevo en unos minutos.» con «Reintentar»; si pasa al guardar, el mensaje aparece sin «Reintentar», lo editado se conserva y «Guardar horario» vuelve a habilitarse. Si la sesión termina mientras se usa la pantalla, la interfaz vuelve a `/ingresar` con «Tu sesión terminó. Iniciá sesión de nuevo.».
+
+Escenario → test (`src/features/horario/`, API reemplazada por el servidor falso). Los 16 escenarios de `openspec/changes/horario-recurrente/specs/pantalla-de-horario/spec.md` están en `PaginaHorario.test.tsx`, con 18 tests (16 escenarios, uno de ellos partido en dos, más uno de triangulación):
+
+| Escenario | Test titular |
+|---|---|
+| US-002 CA-1 (la semana, carga, sin conexión, roles) | «US-002 CA-1: la odontóloga ve la semana de la demo», «US-002 CA-1: mientras carga y sin conexión» y «US-002 CA-1: sin conexión muestra el mensaje y Reintentar recupera la semana», «US-002 CA-1: la recepcionista y el dueño ven la semana» |
+| US-002 CA-1 (elegir profesional, solo contra el servidor falso) | «US-002 CA-1: elegir otro profesional muestra su horario», «US-002 CA-1: cambiar de profesional descarta lo editado», «US-002 CA-1: sin profesionales activos se elige el primero de la lista» |
+| US-002 CA-1 (editar y guardar) | «US-002 CA-1: agregar la mañana del sábado y guardar», «US-002 CA-1: quitar la tarde del viernes y guardar», «US-002 CA-1: guardar sin cambios o con una franja incompleta no manda nada» |
+| US-002 CA-1 (guardar dos veces, sin conexión al guardar; solo contra el servidor falso) | «US-002 CA-1: guardar dos veces seguidas manda un solo pedido», «US-002 CA-1: sin conexión al guardar se conserva lo editado» |
+| HOR-1 (`RN-AG-16`) | «HOR-1: dos franjas superpuestas del miércoles», «HOR-1: una franja invertida se marca con el mensaje de RN-AG-16» |
+| US-002 CA-1 (rechazos: formato sin código, permiso, profesional inexistente) | «US-002 CA-1: un rechazo de formato sin código» (71 franjas, solo contra el servidor falso), «US-002 CA-1: la recepcionista intenta guardar», «US-002 CA-1: un profesional que ya no existe» (solo contra el servidor falso: la API real no borra profesionales) |
+| US-092 CA-1 (la sesión termina al guardar) | «US-092 CA-1: una sesión irrenovable al guardar el horario» |
+
+El cliente de la API (`apiHorario.test.ts`, 7 tests) y los mensajes (`mensajes.test.ts`, 3 tests) se prueban aparte. La disposición (encabezado con selector y botón, nota azul, tarjeta «Semana», cajas de franja, errores en rojo) sigue la pantalla generada en Stitch (`projects/14200813501064679723/screens/c3cccdb362364deba0d4eaac0d678b4d`; referencia visual: `docs/skills-mcp/evidencias/sesion-nueva/stitch-horario-pantalla/pantalla.png`; qué se tomó y qué no, en «Referencia visual (Stitch)» del design del change), traducida a `tokens.css` y `panel.css` sin Tailwind ni recursos de otro origen.
+
+Límites conocidos de la pantalla: el enlace «Horario» y las acciones «Agregar franja», «Quitar franja» y «Guardar horario» se ven con cualquier rol, porque la interfaz no sabe quién inició sesión (H16, D249): la API decide con `403`. Cambiar de profesional descarta lo editado sin preguntar. Las horas se escriben con el selector de hora del navegador (`<input type="time">`), que muestra el formato de cada navegador. La vigencia de las franjas no se ve ni se edita (D259).
+
 ### Versiones fijadas del frontend
 
 Las versiones exactas viven en `frontend/package.json`; `frontend/package-lock.json` se generó con `npm install --before=2026-10-12` (ningún paquete publicado desde esa fecha) y se instala siempre con `npm ci`.
@@ -778,7 +808,7 @@ La API se reemplaza en los tests por un servidor falso escrito a mano (`frontend
 
 Hay además tests de la renovación compartida, del `403`, del cierre de sesión y de que ninguna URL contenga un token, y cinco guards (`src/test/guards.test.ts`) que fallan si aparece `any`, `vi.mock`, `localStorage`, `dangerouslySetInnerHTML`, un archivo `index.ts` de reexportación o un recurso de otro origen (STI-1).
 
-Resultado actual de las dos suites: frontend «Tests 140 passed (140)»; backend «709 passed, 53 deselected, 1 warning».
+Resultado actual de las dos suites: frontend «Tests 168 passed (168)»; backend «709 passed, 53 deselected, 1 warning».
 
 ## Levantar la API con PostgreSQL
 

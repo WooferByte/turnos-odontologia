@@ -5,6 +5,7 @@ import { EntradaRechazada, RecursoInexistente, SesionTerminada } from '../../sha
 import { useSesionDelPanel } from '../../shared/api/ProveedorDeSesion'
 import { Aviso } from '../../shared/componentes/Aviso'
 import { IconoGuardar } from '../../shared/iconos/IconoGuardar'
+import { IconoInfo } from '../../shared/iconos/IconoInfo'
 import { crearApiHorario, type HorarioDelProfesional, type Profesional } from './apiHorario'
 import {
   aEditables,
@@ -233,7 +234,10 @@ export function PaginaHorario() {
           </button>
         </div>
       </div>
-      <p className="nota-informativa">{MENSAJE_NOTA_DE_HORARIO}</p>
+      <p className="nota-informativa nota-de-horario">
+        <IconoInfo />
+        {MENSAJE_NOTA_DE_HORARIO}
+      </p>
       {aviso?.tipo === 'guardado' ? (
         <p role="status" className="aviso-exito">
           {MENSAJE_GUARDADO}
@@ -250,13 +254,18 @@ export function PaginaHorario() {
         </Aviso>
       ) : null}
       {carga.tipo === 'lista' ? (
-        <SemanaDeHorario
-          editables={carga.editables}
-          marcas={carga.marcas}
-          onAgregar={agregar}
-          onQuitar={quitar}
-          onCambiar={cambiar}
-        />
+        <section className="tarjeta" aria-labelledby="titulo-semana">
+          <div className="tarjeta-encabezado">
+            <h2 id="titulo-semana">Semana</h2>
+          </div>
+          <SemanaDeHorario
+            editables={carga.editables}
+            marcas={carga.marcas}
+            onAgregar={agregar}
+            onQuitar={quitar}
+            onCambiar={cambiar}
+          />
+        </section>
       ) : null}
     </section>
   )
