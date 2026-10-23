@@ -25,6 +25,9 @@ class Permiso(StrEnum):
     SILLONES_EDITAR = "sillones.editar"
     USUARIOS_LEER = "usuarios.leer"
     USUARIOS_EDITAR = "usuarios.editar"
+    HORARIO_LEER = "horario.leer"
+    HORARIO_EDITAR = "horario.editar"
+    PROFESIONALES_LEER = "profesionales.leer"
 
 
 _TODOS = frozenset({Rol.ODONTOLOGO, Rol.RECEPCIONISTA, Rol.DUENO})
@@ -41,6 +44,9 @@ MATRIZ: Mapping[Permiso, frozenset[Rol]] = {
     Permiso.SILLONES_EDITAR: _SOLO_EL_ODONTOLOGO,
     Permiso.USUARIOS_LEER: _ODONTOLOGO_Y_DUENO,
     Permiso.USUARIOS_EDITAR: _SOLO_EL_ODONTOLOGO,
+    Permiso.HORARIO_LEER: _TODOS,
+    Permiso.HORARIO_EDITAR: _SOLO_EL_ODONTOLOGO,
+    Permiso.PROFESIONALES_LEER: _TODOS,
 }
 
 

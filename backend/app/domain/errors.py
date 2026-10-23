@@ -41,6 +41,24 @@ class DuracionInvalida(ErrorDeDominio):
         )
 
 
+class FranjaInvalida(ErrorDeDominio):
+    """Una franja del horario se superpone con otra del mismo día o no termina después de empezar (RN-AG-16, D257).
+
+    El mensaje es fijo según la causa (D266) y ``campo`` es la posición en el cuerpo: ``franjas.<i>``.
+    """
+
+    codigo = "RN-AG-16"
+
+    def __init__(self, posicion: int, causa: Literal["superpuesta", "invertida"]) -> None:
+        self.campo = f"franjas.{posicion}"
+        self.causa = causa
+        if causa == "superpuesta":
+            mensaje = f"{self.campo} se superpone con otra franja del mismo día"
+        else:
+            mensaje = f"{self.campo} debe terminar después de empezar"
+        super().__init__(mensaje)
+
+
 @dataclass(frozen=True)
 class ReferenciaInvalida:
     recurso: Literal["prestacion", "paciente", "profesional", "sillon", "turno", "usuario"]
@@ -68,7 +86,7 @@ class RecursoDeLaUrlNoEncontrado(ErrorDeDominio):
 
     def __init__(
         self,
-        recurso: Literal["prestacion", "sillon", "turno", "usuario"],
+        recurso: Literal["prestacion", "profesional", "sillon", "turno", "usuario"],
         recurso_id: int,
         mensaje: str,
     ) -> None:
@@ -94,6 +112,11 @@ class SillonNoEncontrado(RecursoDeLaUrlNoEncontrado):
 class UsuarioNoEncontrado(RecursoDeLaUrlNoEncontrado):
     def __init__(self, usuario_id: int) -> None:
         super().__init__("usuario", usuario_id, f"No existe el usuario {usuario_id}.")
+
+
+class ProfesionalNoEncontrado(RecursoDeLaUrlNoEncontrado):
+    def __init__(self, profesional_id: int) -> None:
+        super().__init__("profesional", profesional_id, f"No existe el profesional {profesional_id}.")
 
 
 class ContrasenaFueraDeRango(ErrorDeDominio):
@@ -157,6 +180,15 @@ class AdministracionSinOdontologo(ErrorDeDominio):
 
 class IntervaloInvalido(ErrorDeDominio):
     codigo = "RN-AG-10d"
+
+
+class FueraDeHorario(ErrorDeDominio):
+    """El turno no cae completo dentro de una franja vigente del profesional (RN-AG-04)."""
+
+    codigo = "RN-AG-04"
+
+    def __init__(self) -> None:
+        super().__init__("El turno no cae completo dentro de una franja del horario del profesional.")
 
 
 @dataclass(frozen=True)
