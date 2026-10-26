@@ -56,3 +56,55 @@ Versión resumida para el segundo intento (si el primero termina por tiempo de e
 ## 5. Cómo se usa en el change
 
 Es la **referencia visual** del `design.md` de `bloqueos-puntuales`. La KB y los specs mandan: los textos son los de `pantalla-de-bloqueos` y del design (B17), y nada de la pantalla agrega reglas de dominio. La traducción visual (tarea 8.1) y la comparación con la captura en el navegador (tarea 9.1) se hacen en el Apply y se anotan acá al cerrar el change.
+
+## 6. Prueba en el navegador (tarea 9.1, 2026-10-26)
+
+La hizo el agente en el navegador del panel (escritorio, 1440 × 900), con la demo (`crear_app_demo`, recién arrancada) y `npm run dev`, y después con Compose en `http://127.0.0.1:5173` (PostgreSQL, nginx). Todos los datos y contraseñas son ficticios. Ningún token ni contraseña apareció en una URL (solo `/ingresar`, `/panel` y `/panel/bloqueos`) ni en la consola. Las capturas están en [stitch-bloqueos-pantalla/](stitch-bloqueos-pantalla/) junto a `pantalla.png`.
+
+### API (demo)
+
+Ejecutado con los pedidos del README (con `curl`; `/docs` responde y es el mismo contrato):
+
+| Paso | Esperado | Observado | Ok |
+|---|---|---|---|
+| `GET /bloqueos` (recepcionista) | `200`, zona del consultorio, lista vacía | Igual | sí |
+| `POST /turnos` a las `13:00Z` | `201` | Igual | sí |
+| `POST /bloqueos` del profesional de `12:00Z` a `16:00Z` | `201`, el turno en `turnos_afectados` y sigue `reservado` | Igual | sí |
+| `POST /turnos` a las `14:00Z` | `422` `["RN-AG-04b"]`, `bloqueo_id` 1 | Igual | sí |
+| Bloqueo invertido | `422` `["RN-AG-17"]` en `fin` | Igual | sí |
+| `POST` y `DELETE` de la recepcionista | `403` `["RN-AU-05"]` | Igual | sí |
+| `DELETE /bloqueos/1` (odontóloga) y repetir `POST /turnos` a las `14:00Z` | `204`, después `201` | Igual | sí |
+| `DELETE /bloqueos/99` | `404` `["RN-GL-04"]` | Igual | sí |
+| Bloqueo de todo el consultorio el 23/11/2026 | `201`, `alcance` `consultorio`, sin afectados | Igual | sí |
+| `profesional_id` y `sillon_id` juntos | `422` de formato, `codigos` vacío | Igual | sí |
+
+### Pantalla (demo, y Compose con PostgreSQL)
+
+| Paso | Esperado | Observado | Ok |
+|---|---|---|---|
+| La odontóloga pulsa «Bloqueos» | Subtítulo con la zona, nota de `RN-AG-04b`, formulario a la izquierda y «No hay bloqueos cargados.» a la derecha | Igual (`implementacion-lista-vacia.jpg`) | sí |
+| «Todo el consultorio», 23/11/2026 00:00 a 24/11/2026 00:00, «Feriado» | «Bloqueo creado. No hay turnos activos en ese horario.» y la fila | Igual | sí |
+| Un profesional, 02/11/2026 09:00 a 13:00, «Ausencia» | Aviso con el turno afectado, etiqueta «reservado» | Igual (`implementacion-lista-con-afectados.jpg`); en Compose, con tres turnos de una corrida anterior del volumen, el plural «Hay 3 turnos activos» (`implementacion-compose-afectados.jpg`) | sí |
+| Hasta antes que desde | `RN-AG-17`, «Hasta» en rojo, lo cargado se conserva | Igual (`implementacion-error-rn-ag-17.jpg`) | sí |
+| «Eliminar» | `204`, «Bloqueo eliminado.», la fila desaparece sin confirmación | Igual | sí |
+| La recepcionista abre «Bloqueos» y pulsa «Eliminar» | Ve la lista; `403`, aviso «Acceso restringido» con `RN-AU-05`, sigue en el panel, sin `POST /api/auth/refresh` después del `403` | Igual (`implementacion-403-recepcionista.jpg`) | sí |
+
+En Compose (PostgreSQL, migración `0009` aplicada al arrancar) el recorrido breve de la odontóloga (alta con afectados, error `RN-AG-17`, «Eliminar») dio los mismos resultados; el bloqueo se borró al final y `docker compose down` dejó el volumen como estaba. La consola no mostró ninguna violación de la CSP: solo el «Failed to load resource» del navegador por el `422` esperado (y por el `403` en la demo).
+
+### Comparación con `pantalla.png`
+
+**Coincide**: la barra con las cuatro pastillas y «Bloqueos» activa, el título y el subtítulo con la zona, el aviso azul con ícono, las dos columnas (alta a la izquierda, lista a la derecha), el ícono de calendario del título «Nuevo bloqueo», las etiquetas chicas en mayúsculas, «Bloquear» con candado a todo el ancho, «Hasta» con borde rojo y la caja roja con ícono para `RN-AG-17`, el aviso de éxito verde con una fila por turno y su etiqueta de estado, y la tabla con «Eliminar» en rojo con papelera.
+
+**Difiere, con su motivo** (todo está en «Qué se rechaza» del `design.md`): sin los prefijos «Aviso operativo:» y «Error de validación:» (los textos los fijan B17 y el spec); sin la insignia «Alta de indisponibilidad», «3 registros activos» y «Orden cronológico» (sin respaldo en la KB); la etiqueta «Profesional» en lugar de «Profesional asignado» y sin asteriscos; campos `datetime-local` nativos en lugar de texto monoespaciado, y sin las ayudas «24 h…» y «Formato o valor incorrecto» (B15, D286); sin el encabezado «Último resultado operativo»; el motivo como texto y no como etiqueta de color, y sin el punto de color del alcance (D283); sin el pie «sincronizado en tiempo real», ni «Zona horaria: UTC-3», ni el pie institucional (D173, D285); la barra superior no es fija; y «Dr. Roberto Pérez» no existe (las opciones salen de la API). Además, en la implementación el error de `RN-AG-17` se muestra con el texto del spec y la caja roja debajo del botón, y en la captura de Stitch está entre «Hasta» y «Motivo»: el orden de los bloques de estado es el de B16 (debajo del formulario). Ninguna diferencia nueva respecto de lo decidido.
+
+### Hallazgo de la prueba
+
+Con la demo, justo después de iniciar sesión, un `GET /profesionales` respondió `500` una vez (`ValueError: '' is not a valid Rol` en `UsuarioRepositorio.roles_de`, `backend/app/infrastructure/repositories/usuarios.py`) mientras `GET /bloqueos` y `GET /sillones` iban en paralelo; el modo estricto de React repitió las tres peticiones y la segunda tanda dio `200`. Es el patrón de la conexión única de SQLite en memoria (`StaticPool`) compartida por varios hilos de la API de demostración; no ocurre en Compose (PostgreSQL) y no es de C-13 (es de C-07). Se deja como hallazgo para el archive; no se tocó código.
+
+### Paso a paso para repetirlo (opcional; gobernanza MEDIO)
+
+1. Terminal 1, en `backend/` con el entorno activado: `python -m uvicorn app.main:crear_app_demo --factory`. Terminal 2, en `frontend/`: `npm run dev`. Con la demo recién arrancada, crear el turno con `POST /turnos` (`paciente_id` 1, `prestacion_id` 1, `inicio` `2026-11-02T13:00:00Z`) desde `/docs` con el token de la odontóloga.
+2. Abrir <http://127.0.0.1:5173>, ingresar como `odontologa@consultorio-demo.test` y pulsar «Bloqueos». Seguir el recorrido de «Pantalla de bloqueos» del README (pasos 1 a 6) y mirar que cada resultado coincida con la tabla de arriba.
+3. Comparar con `stitch-bloqueos-pantalla/pantalla.png` y con las capturas `implementacion-*.jpg` de esa carpeta.
+4. Compose: `docker compose up --build -d`, abrir <http://127.0.0.1:5173>, repetir un alta con afectados, el error de `RN-AG-17` y «Eliminar», y mirar la consola del navegador (no tiene que haber violaciones de la CSP). Al final, `docker compose down`.
+5. Detener las dos terminales con Ctrl+C.
