@@ -258,7 +258,8 @@ describe('PaginaUsuarios: errores del alta', () => {
     expect(servidor.llamadas('POST', '/api/usuarios')).toBe(1)
     expect(screen.getByRole('complementary')).toBeDefined()
     expect(filasDeDatos()).toHaveLength(3)
-  })
+    // Escribe y recorre muchos campos en jsdom: tarda más que el límite de 5 s por defecto.
+  }, 30_000)
 
   it('US-093 CA-1: sin roles, campos vacíos y sin conexión', async () => {
     const servidor = crearServidorFalso()

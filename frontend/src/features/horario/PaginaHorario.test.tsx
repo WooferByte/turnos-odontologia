@@ -363,7 +363,8 @@ describe('PaginaHorario: bordes del guardado y rechazos', () => {
     expect(gruposDe('Sábado')).toHaveLength(24)
     expect(screen.queryByText('Horario guardado.')).toBeNull()
     expect(servidor.horarioActual(1)).toHaveLength(10)
-  })
+    // Escribe y recorre muchos campos en jsdom: tarda más que el límite de 5 s por defecto.
+  }, 30_000)
 
   it('US-002 CA-1: la recepcionista intenta guardar', async () => {
     const servidor = crearServidorFalso()
