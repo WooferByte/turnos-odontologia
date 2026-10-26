@@ -1035,3 +1035,175 @@ p.pantalla-de-ingreso {
 .controles-de-horario .boton-primario {
   white-space: nowrap;
 }
+
+/* Pantalla de bloqueos (C-13, pantalla de Stitch, D234, D288): el alta a la izquierda (5/12) y la lista a la derecha
+   (7/12), apiladas en pantallas angostas; etiquetas chicas en mayúsculas, «Bloquear» a todo el ancho, el error de
+   RN-AG-17 en rojo bajo «Hasta» y el aviso de creado en verde con una fila compacta por turno afectado. */
+.pantalla-de-bloqueos {
+  display: grid;
+  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.columna-del-alta {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.columna-del-alta .aviso,
+.columna-del-alta .aviso-exito {
+  margin: 0;
+}
+
+.tarjeta-encabezado h2 {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tarjeta-encabezado h2 .icono {
+  color: var(--primario);
+}
+
+.formulario-de-bloqueo {
+  padding: 20px;
+}
+
+.formulario-de-bloqueo .campo {
+  margin-bottom: 16px;
+}
+
+.formulario-de-bloqueo select,
+.formulario-de-bloqueo input[type='datetime-local'],
+.formulario-de-bloqueo input[type='text'] {
+  box-sizing: border-box;
+  flex: none;
+  width: 100%;
+  min-width: 0;
+  height: var(--alto-campo-grande);
+  padding: 0 12px;
+  border: 1px solid var(--borde-fuerte);
+  border-radius: var(--radio);
+  background: var(--superficie);
+  color: var(--texto);
+  font: inherit;
+}
+
+.formulario-de-bloqueo input[aria-invalid='true'] {
+  border-color: var(--error);
+  background: var(--fondo-error);
+}
+
+.fechas-del-bloqueo {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.fechas-del-bloqueo .campo {
+  position: relative;
+}
+
+.icono-en-fecha {
+  position: absolute;
+  right: 36px;
+  bottom: 12px;
+  color: var(--error);
+  pointer-events: none;
+}
+
+.boton-de-ancho-completo {
+  width: 100%;
+}
+
+.aviso-de-creado-mensaje {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin: 0;
+}
+
+.icono-exito {
+  margin-top: 1px;
+  color: var(--exito);
+}
+
+.turnos-afectados {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin: 10px 0 0 4px;
+  padding: 0 0 0 20px;
+  border-left: 2px solid var(--borde-exito);
+  list-style: none;
+}
+
+.turnos-afectados li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 4px 10px;
+  border: 1px solid var(--borde-exito);
+  border-radius: var(--radio);
+  background: var(--superficie);
+  color: var(--texto-medio);
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.etiqueta-de-estado {
+  padding: 1px 6px;
+  border: 1px solid var(--borde-ambar);
+  border-radius: var(--radio);
+  background: var(--fondo-ambar);
+  color: var(--texto-ambar);
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.etiqueta-de-estado-confirmado {
+  border-color: var(--borde-exito);
+  background: var(--fondo-exito);
+  color: var(--exito);
+}
+
+.tabla-de-bloqueos td:nth-child(2) {
+  font-weight: 400;
+}
+
+.tabla-de-bloqueos .cifras {
+  white-space: nowrap;
+}
+
+.boton-de-fila-peligro {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border-color: var(--borde-error);
+  color: var(--error);
+}
+
+.boton-de-fila-peligro:hover:not(:disabled) {
+  background: var(--fondo-error);
+}
+
+.boton-de-fila-peligro .icono {
+  width: 14px;
+  height: 14px;
+}
+
+.sin-bloqueos {
+  margin: 0;
+  padding: 24px 20px;
+  color: var(--texto-tenue);
+}
+
+@media (max-width: 960px) {
+  .pantalla-de-bloqueos {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

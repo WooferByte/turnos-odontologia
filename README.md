@@ -106,7 +106,7 @@ python -m pytest
 
 Los tests corren con **SQLite en memoria**: no necesitan Docker, PostgreSQL ni Redis, ni ningún archivo de base de datos.
 
-La corrida termina con **«709 passed, 53 deselected, 1 warning»**. Los 53 «deselected» son los del perfil opcional con PostgreSQL (más abajo), que la corrida por defecto excluye a propósito. El warning es un aviso de deprecación interno de Starlette (`starlette/testclient.py`, sobre `anyio.abc.BlockingPortal`): viene de una dependencia con versión fijada, no del código del proyecto, y no indica ningún problema.
+La corrida termina con **«796 passed, 56 deselected, 1 warning»**. Los 56 «deselected» son los del perfil opcional con PostgreSQL (más abajo), que la corrida por defecto excluye a propósito. El warning es un aviso de deprecación interno de Starlette (`starlette/testclient.py`, sobre `anyio.abc.BlockingPortal`): viene de una dependencia con versión fijada, no del código del proyecto, y no indica ningún problema.
 
 ### Escenario → test
 
@@ -255,7 +255,7 @@ Una parte de los tests (la que prueba lo que solo PostgreSQL garantiza) está fu
 
    Se usa `127.0.0.1` y no `localhost`: en Windows `localhost` resuelve primero a IPv6 y la conexión espera varios segundos antes de caer a IPv4.
 
-Con la base levantada, la corrida termina con **«53 passed, 709 deselected, 1 warning»**. **Si PostgreSQL no está disponible** (Docker apagado, `TEST_DATABASE_URL` sin definir o base que no responde), los 53 tests del perfil **se omiten con el motivo en el resumen** (**«53 skipped, 709 deselected»**) y la corrida termina con código de salida 0. Si la base de `TEST_DATABASE_URL` no termina en `_test`, el perfil falla a propósito para no borrar otra base.
+Con la base levantada, la corrida termina con **«56 passed, 796 deselected, 1 warning»**. **Si PostgreSQL no está disponible** (Docker apagado, `TEST_DATABASE_URL` sin definir o base que no responde), los 56 tests del perfil **se omiten con el motivo en el resumen** (**«56 skipped, 796 deselected»**) y la corrida termina con código de salida 0. Si la base de `TEST_DATABASE_URL` no termina en `_test`, el perfil falla a propósito para no borrar otra base.
 
 El esquema de estos tests sale siempre de las migraciones, nunca de `create_all`. Por eso el perfil también comprueba que las migraciones y los modelos coinciden (INF-1): si alguien cambia un modelo sin escribir su migración, ese test se pone en rojo. **La suite por defecto no avisa de esto**: hay que correr el perfil cada vez que se toque el esquema.
 
@@ -267,7 +267,7 @@ Los escenarios están en `openspec/changes/infraestructura-postgresql/specs/pers
 
 | Escenario | Qué verifica | Test titular |
 |---|---|---|
-| INF-1 | Una base vacía migrada queda con el esquema de los modelos (siete tablas desde C-03; con `color` y `reservable_online` desde C-04; ocho con `usuario` desde C-06; nueve con `usuario_rol` desde C-07; diez con `franja_horaria` desde C-12), sin diferencias | `test_inf1_base_vacia_migrada_queda_con_el_esquema_del_modelo` (`test_migraciones.py`) |
+| INF-1 | Una base vacía migrada queda con el esquema de los modelos (siete tablas desde C-03; con `color` y `reservable_online` desde C-04; ocho con `usuario` desde C-06; nueve con `usuario_rol` desde C-07; diez con `franja_horaria` desde C-12; once con `bloqueo` desde C-13), sin diferencias | `test_inf1_base_vacia_migrada_queda_con_el_esquema_del_modelo` (`test_migraciones.py`) |
 | INF-1 | Deshacer las migraciones deja la base vacía | `test_inf1_deshacer_las_migraciones_deja_la_base_vacia` (`test_migraciones.py`) |
 | INF-1 | Deshacer solo las migraciones del historial deja el esquema de C-01 | `test_inf1_deshacer_las_migraciones_del_historial_deja_el_esquema_de_c01` (`test_migraciones.py`) |
 | INF-1 | La migración `0005` completa las prestaciones existentes con gris (`#9E9E9E`) y `reservable_online` en `false` (D174) | `test_inf1_la_migracion_0005_completa_las_prestaciones_existentes` (`test_migraciones.py`) |
@@ -275,6 +275,8 @@ Los escenarios están en `openspec/changes/infraestructura-postgresql/specs/pers
 | INF-1 | La migración `0007` crea `usuario_rol` y las columnas `profesional.usuario_id`, `profesional.matricula` y `turno.creado_por`; deshacer solo esa migración deja el esquema de C-06 con los datos que ya había | `test_inf1_deshacer_solo_la_migracion_de_roles_deja_el_esquema_de_la_sesion` (`test_migraciones.py`) |
 | INF-1 | La migración `0008` crea `franja_horaria`; deshacer solo esa migración deja el esquema de los roles con los profesionales intactos | `test_inf1_deshacer_solo_la_migracion_del_horario_deja_el_esquema_de_los_roles` (`test_migraciones.py`) |
 | INF-1 | La base rechaza una franja con las horas invertidas, un día fuera de 0 a 6 o una vigencia invertida (`CHECK`); acepta una vigencia de un día o con una sola fecha | `test_inf1_la_base_rechaza_una_franja_invalida` (`test_migraciones.py`) |
+| INF-1 | La migración `0009` crea `bloqueo` (once tablas desde C-13); deshacer solo esa migración deja el esquema del horario con los profesionales y los turnos intactos | `test_inf1_deshacer_solo_la_migracion_de_los_bloqueos_deja_el_esquema_del_horario` (`test_migraciones.py`) |
+| INF-1 | La base rechaza un bloqueo con `fin` igual o anterior a `inicio` y un bloqueo con profesional y sillón a la vez (`CHECK`, D272) | `test_inf1_la_base_rechaza_un_bloqueo_invertido`, `test_inf1_la_base_rechaza_un_bloqueo_con_profesional_y_sillon` (`test_migraciones.py`) |
 | US-002 CA-1 | Volver a cargar el seed no duplica el horario de la demo; un volumen anterior a C-12 lo recibe | `test_us002_ca1_volver_a_cargar_la_demo_no_duplica_el_horario`, `test_us002_ca1_volumen_sembrado_antes_de_c12_recibe_el_horario` (`test_seed_y_api.py`) |
 | US-091 CA-1 | La base rechaza un rol fuera de la lista (`CHECK`) | `test_us091_ca1_la_base_rechaza_un_rol_invalido` (`test_migraciones.py`) |
 | US-091 CA-4 | Un volumen sembrado en C-06 (usuario sin roles) recibe los roles, el vínculo y la recepcionista, sin duplicar nada y con la secuencia de `usuario` avanzada | `test_us091_ca4_volumen_sembrado_en_c06_recibe_roles_y_vinculo` (`test_seed_y_api.py`) |
@@ -497,6 +499,49 @@ Los escenarios están en `openspec/changes/horario-recurrente/specs/` (`horario-
 | E10 | Orden de las reglas: entrada inválida, `RN-AG-10d`, `RN-AG-04`, solapamiento | `test_e10_con_la_entrada_invalida_no_se_evalua_el_horario`, `test_e10_cruzar_la_medianoche_se_informa_antes_que_el_horario`, `test_e10_el_horario_se_informa_antes_que_el_solapamiento` |
 | INF-1 y US-002 CA-1 (PostgreSQL) | La migración `0008`, los `CHECK` de la tabla y la carga repetible del horario de la demo | Ver «Escenario → test (perfil con PostgreSQL)» |
 
+### Bloqueos
+
+Desde C-13 el consultorio puede cerrar horas puntuales con un **bloqueo**: de un profesional, de un sillón o de todo el consultorio (vacaciones, un feriado, un curso). Mientras dura, **no se pueden crear turnos** que lo toquen (`RN-AG-04b`); los turnos que ya estaban **no se cancelan**: se avisan para reprogramarlos o cancelarlos a mano (D83). Las rutas piden el access token: `GET /bloqueos` lo leen los tres roles; `POST /bloqueos` y `DELETE /bloqueos/{id}` solo `odontologo`. Las fechas van en UTC con `Z` (RN-GL-01); el bloqueo es el intervalo semiabierto `[inicio, fin)`. Con la demo **recién arrancada** (los pasos dependen unos de otros; la demo no trae bloqueos), en Swagger o con `curl`:
+
+1. `GET /bloqueos` (con el token de la recepcionista) → `200`, con `{"zona_horaria": "America/Argentina/Buenos_Aires", "bloqueos": []}`.
+2. `POST /turnos` con `{"paciente_id": 1, "prestacion_id": 1, "inicio": "2026-11-02T13:00:00Z"}` (lunes 10:00 del consultorio) → `201`, `reservado`.
+3. `POST /bloqueos` con `{"profesional_id": 1, "inicio": "2026-11-02T12:00:00Z", "fin": "2026-11-02T16:00:00Z", "motivo": "Ausencia"}` (token de la odontóloga) → `201`, con `alcance` `profesional`, `creado_por` 1 y en `turnos_afectados` el turno del paso 2 (`estado` `reservado`, con su `paciente_id` y ningún otro dato del paciente). El turno **sigue `reservado`** y su historial no cambia.
+4. `POST /turnos` con `{"paciente_id": 2, "prestacion_id": 1, "inicio": "2026-11-02T14:00:00Z"}` → `422`, con `codigos` igual a `["RN-AG-04b"]`, `type` `/errores/sobre-bloqueo` y `bloqueo_id` igual a 1. No se crea ningún turno.
+5. `POST /bloqueos` con `{"inicio": "2026-11-02T15:00:00Z", "fin": "2026-11-02T13:00:00Z", "motivo": "Ausencia"}` → `422`, con `codigos` igual a `["RN-AG-17"]` y el error en el campo `fin`. Un `fin` igual al `inicio` da lo mismo. No se guarda nada.
+6. El mismo `POST /bloqueos` y `DELETE /bloqueos/1` con el token de la recepcionista → `403`, con `codigos` igual a `["RN-AU-05"]`; el bloqueo sigue ahí.
+7. `DELETE /bloqueos/1` con el token de la odontóloga → `204`, sin cuerpo (borrado físico, D278). Repetir `POST /turnos` del paso 4 → `201`. `DELETE /bloqueos/99` → `404`, con `codigos` igual a `["RN-GL-04"]` y en `referencias` `{"recurso": "bloqueo", "recurso_id": 99, "motivo": "inexistente"}`.
+8. `POST /bloqueos` de todo el consultorio, con `{"inicio": "2026-11-23T03:00:00Z", "fin": "2026-11-24T03:00:00Z", "motivo": "Feriado"}` (el 23/11/2026 de 00:00 a 00:00 del consultorio) → `201`, con `alcance` `consultorio`, `profesional_id` y `sillon_id` nulos y `turnos_afectados` vacía. `GET /bloqueos` lo lista.
+9. `POST /bloqueos` con `profesional_id` **y** `sillon_id` → `422` de formato, con `codigos` igual a `[]`. Un `profesional_id` inexistente, inactivo o de otro consultorio → `422`, con `["RN-GL-04"]` (referencia inválida en el cuerpo, no `404`). Un `motivo` vacío o de más de 200 caracteres → `422` con `codigos` igual a `[]`; el motivo se guarda sin espacios de más.
+
+Con `curl` (listar, bloquear al profesional y eliminar):
+
+```
+curl -i http://127.0.0.1:8000/bloqueos -H "Authorization: Bearer PEGAR_EL_ACCESS_TOKEN"
+curl -i -X POST http://127.0.0.1:8000/bloqueos -H "Authorization: Bearer PEGAR_EL_ACCESS_TOKEN" -H "Content-Type: application/json" -d "{\"profesional_id\": 1, \"inicio\": \"2026-11-02T12:00:00Z\", \"fin\": \"2026-11-02T16:00:00Z\", \"motivo\": \"Ausencia\"}"
+curl -i -X DELETE http://127.0.0.1:8000/bloqueos/1 -H "Authorization: Bearer PEGAR_EL_ACCESS_TOKEN"
+```
+
+`GET /bloqueos` devuelve todos los del consultorio por `inicio` e `id`, sin filtros (D279). Un bloqueo del **sillón** también frena los turnos de otros profesionales en ese sillón; uno del **profesional** frena todos sus sillones. Los turnos se comparan por intersección: uno contiguo (que termina justo cuando empieza el bloqueo) se acepta y uno con un minuto de intersección se rechaza. Las reglas de `POST /turnos` se evalúan de a una en este orden: entrada inválida, medianoche (`RN-AG-10d`), horario (`RN-AG-04`), **bloqueos (`RN-AG-04b`)** y solapamiento (`RN-AG-05`, `RN-AG-08`); con dos bloqueos que intersecan se informa el que empieza primero (el de menor `id` si empiezan a la vez, D280).
+
+#### Escenario → test (bloqueos, API)
+
+Los escenarios están en `openspec/changes/bloqueos-puntuales/specs/` (`bloqueos-puntuales`, `creacion-de-turnos` y `persistencia-postgresql`). Las reglas puras (`backend/tests/unit/test_bloqueos.py`, 33 tests, sin base de datos), el repositorio (`backend/tests/integration/test_repositorio_bloqueos.py`, 5) y la fábrica (`test_fabricas.py`, 1), la API (`backend/tests/api/test_bloqueos.py`, 27) y `POST /turnos` con los bloqueos (`test_crear_turno.py`, 2, y `test_post_turnos.py`, 10 tests de E10):
+
+| Escenario | Qué verifica | Test titular |
+|---|---|---|
+| US-003 CA-1 | La odontóloga bloquea al profesional, de todo el consultorio y del sillón (con minutos que no son múltiplo de 5); la recepcionista lista; la odontóloga elimina; dos bloqueos superpuestos y uno en el pasado se aceptan | `test_us003_ca1_la_odontologa_bloquea_al_profesional_por_vacaciones`, `test_us003_ca1_un_bloqueo_de_todo_el_consultorio_por_un_feriado`, `test_us003_ca1_un_bloqueo_del_sillon_acepta_minutos_que_no_son_multiplo_de_5`, `test_us003_ca1_la_recepcionista_lista_los_bloqueos`, `test_us003_ca1_la_odontologa_elimina_un_bloqueo`, `test_us003_ca1_un_bloqueo_que_se_superpone_con_otro_se_acepta`, `test_us003_ca1_un_bloqueo_en_el_pasado_se_acepta_lista_sus_turnos_activos_y_se_elimina` (`tests/api/test_bloqueos.py`) |
+| US-003 CA-2 | Los turnos activos que intersecan se listan en el `201` sin cancelarlos; los no activos y los contiguos no; cada alcance lista los suyos; los de otro consultorio no | `test_us003_ca2_el_bloqueo_del_profesional_lista_sus_dos_turnos_activos`, `test_us003_ca2_los_turnos_no_activos_y_los_contiguos_no_se_listan`, `test_us003_ca2_cada_alcance_lista_sus_propios_turnos`, `test_us003_ca2_un_turno_de_otro_consultorio_no_se_lista` (`tests/api/test_bloqueos.py`) y las reglas puras en `tests/unit/test_bloqueos.py` |
+| US-003 CA-1 (`RN-AG-17`) | `fin` igual o anterior a `inicio`: `422` con el error en `fin`; no se guarda | `test_us003_ca1_un_bloqueo_que_no_termina_despues_de_empezar_se_rechaza`, `test_us003_ca1_la_referencia_invalida_y_la_fecha_invertida_se_informan_juntas` |
+| US-003 CA-1 (formato y referencias) | Profesional y sillón a la vez, motivo vacío o de más de 200 caracteres y campo de más: `422` sin código; fecha sin zona y referencia inválida (`RN-GL-01`, `RN-GL-04`) juntas; de otro consultorio cuenta como inexistente | `test_us003_ca1_el_profesional_y_el_sillon_a_la_vez_son_un_error_de_formato`, `test_us003_ca1_el_motivo_admite_hasta_200_caracteres_y_se_guarda_sin_espacios_de_mas`, `test_us003_ca1_motivo_vacio_y_campo_de_mas_se_informan_juntos_antes_que_la_fecha_invertida`, `test_us003_ca1_fecha_sin_zona_y_referencias_invalidas_se_informan_juntas`, `test_us003_ca1_un_profesional_de_otro_consultorio_cuenta_como_inexistente` |
+| US-003 CA-1 (permisos y `404`) | Recepcionista y dueño `403` al crear y eliminar; `401` antes que la entrada; el permiso antes que la entrada y que el `404`; un bloqueo inexistente o de otro consultorio es `404`; los de otro consultorio no se listan | `test_us003_ca1_la_recepcionista_y_el_dueno_no_pueden_crear_ni_eliminar_bloqueos`, `test_us003_ca1_sin_sesion_se_responde_401_antes_que_la_entrada`, `test_us003_ca1_el_permiso_se_evalua_antes_que_la_entrada_y_que_el_bloqueo_de_la_url`, `test_us003_ca1_un_bloqueo_inexistente_o_de_otro_consultorio_responde_404`, `test_us003_ca1_un_bloqueo_de_otro_consultorio_no_se_lista` |
+| US-003 CA-1 (permisos del rol) | `bloqueos.leer` para los tres roles y `bloqueos.editar` solo para la odontóloga | `test_us003_ca1_bloqueos_leer_para_los_tres_roles_y_bloqueos_editar_solo_para_odontologo` (`tests/unit/test_roles.py`) |
+| E10 (`RN-AG-04b`) | Un turno sobre un bloqueo del profesional o de todo el consultorio es `422` con `bloqueo_id`; sin turno ni evento | `test_e10_un_turno_sobre_un_bloqueo_del_profesional_se_rechaza`, `test_e10_un_bloqueo_de_todo_el_consultorio_rechaza_cualquier_turno` (`test_crear_turno.py`), `test_e10_post_turnos_sobre_un_bloqueo_del_profesional_responde_422_rn_ag_04b` y `test_e10_post_turnos_con_un_bloqueo_de_todo_el_consultorio_responde_422_rn_ag_04b` (`test_post_turnos.py`) |
+| E10 | El bloqueo del sillón rechaza al otro profesional y no al otro sillón; contiguo se acepta y un minuto adentro se rechaza; otro profesional no se ve afectado y eliminado el bloqueo el turno se crea | `test_e10_post_turnos_un_bloqueo_del_sillon_rechaza_al_otro_profesional_y_el_otro_sillon_no`, `test_e10_post_turnos_un_turno_contiguo_al_bloqueo_se_acepta_y_un_minuto_adentro_se_rechaza`, `test_e10_post_turnos_un_bloqueo_de_otro_profesional_no_afecta_y_eliminado_el_bloqueo_el_turno_se_crea` |
+| E10 (orden) | Dos bloqueos que intersecan: el que empieza primero, y con el mismo inicio el de menor `id`; el horario antes que el bloqueo, el bloqueo antes que el solapamiento y la entrada inválida antes que el bloqueo | `test_e10_post_turnos_con_dos_bloqueos_que_intersecan_se_informa_el_que_empieza_primero`, `test_e10_post_turnos_con_dos_bloqueos_que_empiezan_a_la_misma_hora_se_informa_el_de_menor_id`, `test_e10_post_turnos_el_horario_se_informa_antes_que_el_bloqueo`, `test_e10_post_turnos_el_bloqueo_se_informa_antes_que_el_solapamiento`, `test_e10_post_turnos_con_la_entrada_invalida_no_se_evalua_el_bloqueo` |
+| INF-1 y US-003 CA-1 (PostgreSQL) | La migración `0009`, los `CHECK` de la tabla `bloqueo` | Ver «Escenario → test (perfil con PostgreSQL)» |
+
+Ningún test anterior cambió de resultado ni de horas: ninguna fábrica, test ni seed tenía bloqueos.
+
 ## Sesión del panel
 
 `POST /auth/login` y `POST /auth/refresh` están en la demo y en la API sobre PostgreSQL. Son las dos únicas rutas del panel que se llaman sin token; todas las demás lo exigen (ver «Protección del panel», abajo).
@@ -610,7 +655,7 @@ npm test
 npm run typecheck
 ```
 
-`npm test` corre **168 tests en 12 archivos** («Tests 168 passed (168)»); no necesita el backend, Docker ni red. `npm run typecheck` (`tsc --noEmit`) termina sin salida. `npm run build` genera `frontend/dist/`.
+`npm test` corre **204 tests en 16 archivos** («Tests 204 passed (204)»); no necesita el backend, Docker ni red. `npm run typecheck` (`tsc --noEmit`) termina sin salida. `npm run build` genera `frontend/dist/`.
 
 ### Probar el panel (demo sin Docker, dos terminales)
 
@@ -776,6 +821,38 @@ El cliente de la API (`apiHorario.test.ts`, 7 tests) y los mensajes (`mensajes.t
 
 Límites conocidos de la pantalla: el enlace «Horario» y las acciones «Agregar franja», «Quitar franja» y «Guardar horario» se ven con cualquier rol, porque la interfaz no sabe quién inició sesión (H16, D249): la API decide con `403`. Cambiar de profesional descarta lo editado sin preguntar. Las horas se escriben con el selector de hora del navegador (`<input type="time">`), que muestra el formato de cada navegador. La vigencia de las franjas no se ve ni se edita (D259).
 
+### Pantalla de bloqueos
+
+Desde C-13 el panel tiene la pantalla «Bloqueos». Cómo llegar: iniciar sesión y pulsar **Bloqueos** en el encabezado (`/panel/bloqueos`). La pantalla usa `GET`, `POST` y `DELETE /api/bloqueos`, `GET /api/profesionales` y `GET /api/sillones` (el contrato es el de «Bloqueos», en la API); no cambia la API ni valida reglas: no controla el orden de las fechas ni el largo del motivo (solo exige que estén los campos obligatorios). **Las fechas se escriben y se muestran en hora del consultorio** (la `zona_horaria` que devuelve `GET /bloqueos`, hoy `America/Argentina/Buenos_Aires`), con el selector de fecha y hora del navegador, y se mandan en UTC.
+
+Recorrido con la demo sin Docker (las dos terminales de «Probar el panel», con la demo **recién arrancada**, sin bloqueos; para el paso 3 hay que haber creado antes un turno del profesional 1 con `POST /turnos` y `"inicio": "2026-11-02T13:00:00Z"`):
+
+1. Ingresar con `odontologa@consultorio-demo.test` y pulsar «Bloqueos»: el subtítulo dice «Fechas y horas del consultorio (America/Argentina/Buenos_Aires).», la nota azul recuerda `RN-AG-04b`, el formulario «Nuevo bloqueo» queda a la izquierda y «Bloqueos cargados» a la derecha con «No hay bloqueos cargados.». En la pestaña de red, `GET /api/bloqueos`, `GET /api/profesionales` y `GET /api/sillones` responden `200` (con `npm run dev` aparecen dos veces por el modo estricto de React; la suite verifica que la pantalla pide una sola vez).
+2. Elegir «Todo el consultorio», desde `23/11/2026 00:00`, hasta `24/11/2026 00:00`, motivo «Feriado» y «Bloquear» → `POST /api/bloqueos` con `inicio` `2026-11-23T03:00:00Z` y `fin` `2026-11-24T03:00:00Z`: se ve «Bloqueo creado. No hay turnos activos en ese horario.» y la fila «Todo el consultorio» en la lista.
+3. Elegir «Un profesional», «Dra. Demo Ficticia», desde `02/11/2026 09:00`, hasta `02/11/2026 13:00`, motivo «Ausencia» y «Bloquear» → se ve «Bloqueo creado. Hay 1 turno activo en ese horario: no se canceló, hay que reprogramarlo o cancelarlo.» y debajo «Turno 1 · 02/11/2026 10:00 a 10:30» con la etiqueta «reservado». El turno sigue reservado.
+4. Probar hasta antes que desde (desde `02/11/2026 15:00`, hasta `02/11/2026 13:00`) y «Bloquear» → `POST` con `422` y `["RN-AG-17"]`: «Hasta» se marca en rojo, se lee «El bloqueo tiene que terminar después de empezar (RN-AG-17).» y lo cargado se conserva. Dejar un campo vacío no manda nada y muestra «Completá alcance, desde, hasta y motivo.».
+5. «Eliminar» en una fila → `DELETE /api/bloqueos/<id>` con `204`, se ve «Bloqueo eliminado.» y la fila desaparece (sin pedir confirmación).
+6. «Cerrar sesión» e ingresar con `recepcion@consultorio-demo.test`: «Bloqueos» muestra la misma lista. «Bloquear» o «Eliminar» → `403` y `["RN-AU-05"]`: «Tu usuario no tiene permiso para modificar los bloqueos (RN-AU-05).» en un aviso, sin perder la sesión (no hay `POST /api/auth/refresh`) y sin cambiar nada.
+
+Con la API detenida, la pantalla muestra «No se pudo conectar con el servidor. Probá de nuevo en unos minutos.» con «Reintentar»; si pasa al crear o al eliminar, el mensaje aparece sin «Reintentar», lo cargado se conserva (o el bloqueo sigue en la lista) y los botones vuelven a habilitarse. Si la sesión termina mientras se usa la pantalla, la interfaz vuelve a `/ingresar` con «Tu sesión terminó. Iniciá sesión de nuevo.».
+
+Escenario → test (`src/features/bloqueos/`, API reemplazada por el servidor falso). Los 17 escenarios de `openspec/changes/bloqueos-puntuales/specs/pantalla-de-bloqueos/spec.md` están en `PaginaBloqueos.test.tsx`, con 19 tests (los 17 escenarios, más uno del alta de un sillón y uno del motivo de 200 caracteres):
+
+| Escenario | Test titular |
+|---|---|
+| US-003 CA-1 (la lista, carga, sin conexión, roles) | «US-003 CA-1: la odontóloga ve los bloqueos», «US-003 CA-1: sin bloqueos, y la recepcionista y el dueño ven la lista», «US-003 CA-1: mientras carga y sin conexión» |
+| US-003 CA-1 y CA-2 (crear, turnos afectados) | «US-003 CA-1: bloquear todo el consultorio por un feriado», «US-003 CA-2: bloquear al profesional sobre dos turnos activos los muestra sin cancelarlos», «US-003 CA-1: bloquear un sillón manda sillon_id y no profesional_id» |
+| US-003 CA-1 (campos vacíos, sin conexión y doble clic al crear; los dos últimos solo contra el servidor falso) | «US-003 CA-1: con un campo obligatorio vacío no se manda nada», «US-003 CA-1: sin conexión al crear se conserva lo cargado», «US-003 CA-1: pulsar «Bloquear» dos veces manda un solo pedido» |
+| US-003 CA-1 (recursos activos; solo contra el servidor falso) | «US-003 CA-1: el selector de recurso ofrece solo los activos» |
+| US-003 CA-1 (eliminar, doble clic y sin conexión; los dos últimos solo contra el servidor falso) | «US-003 CA-1: la odontóloga elimina un bloqueo», «US-003 CA-1: pulsar «Eliminar» dos veces manda un solo pedido», «US-003 CA-1: sin conexión al eliminar el bloqueo sigue en la lista» |
+| `RN-AG-17`, formato y motivo | «US-003 CA-1: hasta antes que desde se manda y vuelve con RN-AG-17», «US-003 CA-1: un motivo demasiado largo vuelve con «Revisá los datos del bloqueo.»» y «US-003 CA-1: un motivo de 200 caracteres se acepta» |
+| US-003 CA-1 (rechazos: permiso, bloqueo o profesional que ya no está) | «US-003 CA-1: la recepcionista intenta crear y eliminar», «US-003 CA-1: un bloqueo que ya no existe y un profesional que ya no está» (solo contra el servidor falso: la API real no borra profesionales) |
+| US-092 CA-1 (la sesión termina al crear) | «US-092 CA-1: una sesión irrenovable al crear un bloqueo» |
+
+El cliente de la API (`apiBloqueos.test.ts`, 7 tests), la conversión de hora (`horaDelConsultorio.test.ts`, 4) y los mensajes (`mensajes.test.ts`, 6) se prueban aparte. La disposición (dos columnas con el alta a la izquierda y la lista a la derecha, etiquetas en mayúsculas, «Bloquear» a todo el ancho, error rojo bajo «Hasta», aviso verde con una fila por turno afectado) sigue la pantalla generada en Stitch (`projects/14200813501064679723/screens/05d78d7e7d144f92bb9f77d0e4a220db`; referencia visual: `docs/skills-mcp/evidencias/sesion-nueva/stitch-bloqueos-pantalla/pantalla.png`; qué se tomó y qué no, en «Referencia visual (Stitch)» del design del change), traducida a `tokens.css` y `panel.css` sin Tailwind ni recursos de otro origen.
+
+Límites conocidos de la pantalla: el enlace «Bloqueos» y las acciones «Bloquear» y «Eliminar» se ven con cualquier rol, porque la interfaz no sabe quién inició sesión (D249): la API decide con `403`. «Eliminar» no pide confirmación (D286; el bloqueo se puede volver a crear). No hay opción «Todo el día»: un día completo es de las 00:00 a las 00:00 del día siguiente (D285). Las fechas se escriben con el selector del navegador (`<input type="datetime-local">`), que muestra el formato de cada navegador. Los turnos afectados se ven solo en el aviso del alta; la lista no los muestra después.
+
 ### Versiones fijadas del frontend
 
 Las versiones exactas viven en `frontend/package.json`; `frontend/package-lock.json` se generó con `npm install --before=2026-10-12` (ningún paquete publicado desde esa fecha) y se instala siempre con `npm ci`.
@@ -808,7 +885,7 @@ La API se reemplaza en los tests por un servidor falso escrito a mano (`frontend
 
 Hay además tests de la renovación compartida, del `403`, del cierre de sesión y de que ninguna URL contenga un token, y cinco guards (`src/test/guards.test.ts`) que fallan si aparece `any`, `vi.mock`, `localStorage`, `dangerouslySetInnerHTML`, un archivo `index.ts` de reexportación o un recurso de otro origen (STI-1).
 
-Resultado actual de las dos suites: frontend «Tests 168 passed (168)»; backend «709 passed, 53 deselected, 1 warning».
+Resultado actual de las dos suites: frontend «Tests 204 passed (204)»; backend «796 passed, 56 deselected, 1 warning».
 
 ## Levantar la API con PostgreSQL
 
@@ -906,12 +983,18 @@ La migración autogenerada **se revisa a mano** antes de usarla, y cada change q
 - En Windows, si el repositorio está en una ruta muy larga (más de unos 200 caracteres), el perfil opcional falla al importar `psycopg` con «El nombre del archivo o la extensión es demasiado largo». Cloná en una ruta corta.
 - Las credenciales, la contraseña del usuario del seed y el `JWT_SECRET` de los ejemplos y de `.env.example` son de prueba. No hay configuración de producción: TLS, copias de respaldo, roles con privilegios mínimos ni ajuste del pool.
 - La API migra al arrancar el contenedor: sirve para una sola réplica.
-- **El horario de atención se valida solo para el profesional** (RN-AG-04, desde C-12): no hay horario del consultorio ni bloqueos (C-13), y un turno que termina exactamente a las 00:00 del consultorio nunca cabe, porque una franja llega como mucho a las 23:59 (D265).
+- **El horario de atención se valida solo para el profesional** (RN-AG-04, desde C-12): no hay horario del consultorio, y un turno que termina exactamente a las 00:00 del consultorio nunca cabe, porque una franja llega como mucho a las 23:59 (D265).
 - **Un profesional sin franjas no admite turnos** (D256): vaciar el horario con un `PUT` abre la puerta a `422` `RN-AG-04` en todos sus turnos. El `PUT` no modifica ni avisa de los turnos ya creados que queden fuera del horario nuevo (D261).
 - **La vigencia de las franjas (`vigente_desde`, `vigente_hasta`) existe en la base pero no en la API** (D259): el dominio la respeta, pero solo se carga guardando la franja directo en la base; las franjas de la API siempre están vigentes.
 - **Cambiar el horario y crear un turno al mismo tiempo**: el `PUT` no toma el bloqueo del profesional, así que un turno creado mientras se reemplaza el horario se evalúa con el horario anterior o el nuevo según qué transacción lea primero (H11).
 - **Reiniciar el contenedor repone el horario de ejemplo** si el profesional 1 quedó sin franjas (H12): el seed carga el horario solo cuando no tiene ninguna.
 - **Las franjas superpuestas no las impide la base**: no hay restricción de exclusión para franjas; solo el `PUT` escribe franjas y valida antes (H3).
+- **Un bloqueo no cancela ni mueve turnos** (D83, D275): crear un bloqueo sobre turnos ya dados solo los **avisa** en `turnos_afectados` (id, fechas, estado y `paciente_id`, sin otros datos del paciente) y la pantalla los muestra una vez, tras el alta. Reprogramarlos o cancelarlos es manual (la reprogramación asistida llega en C-16).
+- **Bloqueos pasados, superpuestos y de cualquier duración**: se aceptan los bloqueos en el pasado (D277) y los que se superponen con otro (D276); no hay tope de duración (uno de años es válido) ni de cantidad de bloqueos, y `inicio` y `fin` admiten cualquier minuto, no solo múltiplos de 5 (D289). `GET /bloqueos` devuelve todos, sin filtros ni paginación (D279).
+- **Eliminar un bloqueo es un borrado físico** (D278): no queda constancia de quién lo creó ni de que existió; solo `creado_por` mientras el bloqueo existe. No hay edición: se elimina y se vuelve a crear.
+- **Crear un bloqueo y un turno al mismo tiempo** (D281): `POST /bloqueos` no toma el bloqueo de fila del profesional ni del sillón, así que un turno creado mientras se guarda un bloqueo que lo toca puede quedar adentro; aparecería como turno afectado en un alta posterior.
+- **Un bloqueo de un profesional o un sillón no se desactiva solo**: si el recurso se desactiva después, el bloqueo sigue guardado y vigente; el selector de la pantalla ofrece solo recursos activos (hallazgo H9).
+- **Las fechas de la pantalla de bloqueos van en hora del consultorio** (D285, RN-GL-01): la zona sale de `GET /bloqueos`, no del navegador. Si el navegador está en otra zona, el selector de fecha igual se interpreta en la del consultorio.
 - No hay Redis ni pantallas de turnos ni de sillones en la interfaz (la de prestaciones sí existe, desde C-11): llegan en changes posteriores.
 - En `/docs`, las respuestas `409` y `422` figuran bajo `application/problem+json` y también bajo `application/json`. La respuesta real sale siempre como `application/problem+json`.
 - Los mensajes de validación de formato que genera Pydantic salen en inglés.

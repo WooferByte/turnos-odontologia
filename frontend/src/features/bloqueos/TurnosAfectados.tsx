@@ -21,7 +21,7 @@ export function TurnosAfectados({ turnos, zonaHoraria }: Propiedades) {
           {turnos.map((turno) => (
             <li key={turno.id}>
               <span>{filaDeTurnoAfectado(turno, zonaHoraria)}</span>
-              <span className="etiqueta-de-estado">{turno.estado}</span>
+              <span className={`etiqueta-de-estado etiqueta-de-estado-${turno.estado}`}>{turno.estado}</span>
             </li>
           ))}
         </ul>
