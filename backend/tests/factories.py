@@ -12,6 +12,7 @@ from app.domain.acceso.roles import Rol
 from app.domain.agenda.horario import Franja
 from app.domain.turnos.eventos import Actor, ActorTipo
 from app.infrastructure.db.modelos import (
+    BloqueoModelo,
     ConsultorioModelo,
     EventoTurnoModelo,
     FranjaHorariaModelo,
@@ -184,3 +185,34 @@ def un_usuario(
         sesion.add(UsuarioRolModelo(usuario_id=usuario.id, rol=rol.value))
     sesion.commit()
     return usuario
+
+
+def un_bloqueo(
+    sesion: Session,
+    consultorio: ConsultorioModelo,
+    *,
+    inicio: datetime,
+    fin: datetime,
+    profesional: ProfesionalModelo | None = None,
+    sillon: SillonModelo | None = None,
+    motivo: str = "Ausencia",
+    creado_por: int | None = None,
+) -> BloqueoModelo:
+    """Bloqueo guardado directo: del profesional, del sillón o, sin ninguno, de todo el consultorio.
+
+    ``creado_por`` es NN (D282): si no se da, crea un usuario ficticio del consultorio.
+    """
+    if creado_por is None:
+        creado_por = un_usuario(sesion, consultorio).id
+    return _guardar(
+        sesion,
+        BloqueoModelo(
+            consultorio_id=consultorio.id,
+            profesional_id=None if profesional is None else profesional.id,
+            sillon_id=None if sillon is None else sillon.id,
+            inicio=inicio,
+            fin=fin,
+            motivo=motivo,
+            creado_por=creado_por,
+        ),
+    )

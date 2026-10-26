@@ -16,6 +16,7 @@ from app.infrastructure.db.tipos import FechaHoraUTC
 from tests.conftest import a_las
 from tests.factories import (
     franja,
+    un_bloqueo,
     un_consultorio,
     un_evento,
     un_paciente,
@@ -28,7 +29,8 @@ from tests.factories import (
 
 TABLAS_DE_C01 = {"consultorio", "profesional", "sillon", "prestacion", "paciente", "turno"}
 TABLAS_DEL_MODELO = set(Base.metadata.tables)
-TABLAS_HASTA_LOS_ROLES = TABLAS_DEL_MODELO - {"franja_horaria"}  # el esquema de 0007, antes del horario
+TABLAS_HASTA_EL_HORARIO = TABLAS_DEL_MODELO - {"bloqueo"}  # el esquema de 0008, antes de los bloqueos
+TABLAS_HASTA_LOS_ROLES = TABLAS_HASTA_EL_HORARIO - {"franja_horaria"}  # el esquema de 0007, antes del horario
 # Funciones del esquema public que no son de una extensión (btree_gist deja las suyas, D145).
 FUNCIONES_DE_LA_APLICACION = text(
     "SELECT p.proname FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace "
@@ -48,6 +50,16 @@ def test_inf1_base_vacia_migrada_queda_con_el_esquema_del_modelo(engine: Engine)
         inspector = inspect(conexion)
         assert set(inspector.get_table_names()) == TABLAS_DEL_MODELO | {"alembic_version"}
         assert "franja_horaria" in inspector.get_table_names()
+        assert "bloqueo" in inspector.get_table_names()
+        assert {i["name"] for i in inspector.get_indexes("bloqueo")} == {
+            "ix_bloqueo_profesional",
+            "ix_bloqueo_sillon",
+            "ix_bloqueo_consultorio",
+        }
+        assert {c["name"] for c in inspector.get_check_constraints("bloqueo")} == {
+            "ck_bloqueo_inicio_antes_de_fin",
+            "ck_bloqueo_un_solo_recurso",
+        }
         assert "ix_franja_horaria_profesional_dia" in {i["name"] for i in inspector.get_indexes("franja_horaria")}
         assert {c["name"] for c in inspector.get_check_constraints("franja_horaria")} == {
             "ck_franja_horaria_dia_semana",
@@ -167,7 +179,7 @@ def test_inf1_deshacer_solo_la_migracion_de_usuarios_deja_el_esquema_anterior(
 
     with engine.connect() as conexion:
         assert set(inspect(conexion).get_table_names()) == (
-            TABLAS_DEL_MODELO - {"usuario", "usuario_rol", "franja_horaria"}
+            TABLAS_DEL_MODELO - {"usuario", "usuario_rol", "franja_horaria", "bloqueo"}
         ) | {"alembic_version"}
         assert conexion.execute(text("SELECT count(*) FROM turno")).scalar_one() == 1
         assert conexion.execute(text("SELECT count(*) FROM evento_turno")).scalar_one() == 1
@@ -201,7 +213,7 @@ def test_inf1_deshacer_solo_la_migracion_de_roles_deja_el_esquema_de_la_sesion(
 
     with engine.connect() as conexion:
         inspector = inspect(conexion)
-        assert set(inspector.get_table_names()) == (TABLAS_DEL_MODELO - {"usuario_rol", "franja_horaria"}) | {"alembic_version"}
+        assert set(inspector.get_table_names()) == (TABLAS_DEL_MODELO - {"usuario_rol", "franja_horaria", "bloqueo"}) | {"alembic_version"}
         assert "usuario_id" not in {c["name"] for c in inspector.get_columns("profesional")}
         assert "matricula" not in {c["name"] for c in inspector.get_columns("profesional")}
         assert "creado_por" not in {c["name"] for c in inspector.get_columns("turno")}
@@ -298,3 +310,87 @@ def test_inf1_la_base_rechaza_una_franja_invalida(sesion: Session) -> None:
     _insertar_franja(sesion, profesional.id, dia_semana=2, vigente_hasta=date(2026, 11, 2))
     sesion.commit()
     assert sesion.execute(text("SELECT count(*) FROM franja_horaria")).scalar_one() == 3
+
+
+def test_inf1_deshacer_solo_la_migracion_de_los_bloqueos_deja_el_esquema_del_horario(
+    engine: Engine, config_alembic: Config, sesion: Session
+) -> None:
+    consultorio = un_consultorio(sesion)
+    profesional = un_profesional(sesion, consultorio, horario=(franja(0, "09:00", "13:00"),))
+    un_turno(
+        sesion,
+        paciente=un_paciente(sesion, consultorio),
+        profesional=profesional,
+        sillon=un_sillon(sesion, consultorio),
+        prestacion=una_prestacion(sesion, consultorio),
+        inicio=a_las(10),
+    )
+    un_bloqueo(sesion, consultorio, inicio=a_las(12), fin=a_las(16), profesional=profesional)
+    with engine.connect() as conexion:
+        assert conexion.execute(text("SELECT count(*) FROM bloqueo")).scalar_one() == 1
+
+    command.downgrade(config_alembic, "0008")
+
+    with engine.connect() as conexion:
+        assert set(inspect(conexion).get_table_names()) == TABLAS_HASTA_EL_HORARIO | {"alembic_version"}
+        assert conexion.execute(text("SELECT count(*) FROM franja_horaria")).scalar_one() == 1
+        assert conexion.execute(text("SELECT count(*) FROM turno")).scalar_one() == 1
+
+    command.upgrade(config_alembic, "head")
+
+    with engine.connect() as conexion:
+        assert set(inspect(conexion).get_table_names()) == TABLAS_DEL_MODELO | {"alembic_version"}
+        assert conexion.execute(text("SELECT count(*) FROM bloqueo")).scalar_one() == 0
+
+
+def _insertar_bloqueo(sesion: Session, consultorio_id: int, creado_por: int, **valores) -> None:
+    datos = {
+        "profesional_id": None,
+        "sillon_id": None,
+        "inicio": a_las(13),
+        "fin": a_las(15),
+        **valores,
+    }
+    sesion.execute(
+        text(
+            "INSERT INTO bloqueo (consultorio_id, profesional_id, sillon_id, inicio, fin, motivo, creado_por) "
+            "VALUES (:consultorio_id, :profesional_id, :sillon_id, :inicio, :fin, 'Ausencia', :creado_por)"
+        ),
+        {"consultorio_id": consultorio_id, "creado_por": creado_por, **datos},
+    )
+
+
+def test_inf1_la_base_rechaza_un_bloqueo_invertido(sesion: Session) -> None:
+    consultorio = un_consultorio(sesion)
+    usuario = un_usuario(sesion, consultorio)
+    profesional = un_profesional(sesion, consultorio)
+
+    for valores in (
+        {"inicio": a_las(15), "fin": a_las(13)},
+        {"inicio": a_las(13), "fin": a_las(13)},
+    ):
+        with pytest.raises(IntegrityError, match="ck_bloqueo_inicio_antes_de_fin"):
+            _insertar_bloqueo(sesion, consultorio.id, usuario.id, profesional_id=profesional.id, **valores)
+        sesion.rollback()
+    assert sesion.execute(text("SELECT count(*) FROM bloqueo")).scalar_one() == 0
+
+    _insertar_bloqueo(sesion, consultorio.id, usuario.id)  # todo el consultorio, inicio anterior a fin
+    sesion.commit()
+    assert sesion.execute(text("SELECT count(*) FROM bloqueo")).scalar_one() == 1
+
+
+def test_inf1_la_base_rechaza_un_bloqueo_con_profesional_y_sillon(sesion: Session) -> None:
+    consultorio = un_consultorio(sesion)
+    usuario = un_usuario(sesion, consultorio)
+    profesional = un_profesional(sesion, consultorio)
+    sillon = un_sillon(sesion, consultorio)
+
+    with pytest.raises(IntegrityError, match="ck_bloqueo_un_solo_recurso"):
+        _insertar_bloqueo(sesion, consultorio.id, usuario.id, profesional_id=profesional.id, sillon_id=sillon.id)
+    sesion.rollback()
+    assert sesion.execute(text("SELECT count(*) FROM bloqueo")).scalar_one() == 0
+
+    _insertar_bloqueo(sesion, consultorio.id, usuario.id, profesional_id=profesional.id)
+    _insertar_bloqueo(sesion, consultorio.id, usuario.id, sillon_id=sillon.id)
+    sesion.commit()
+    assert sesion.execute(text("SELECT count(*) FROM bloqueo")).scalar_one() == 2

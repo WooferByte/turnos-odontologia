@@ -6,6 +6,7 @@ from typing import Literal, Protocol
 from app.domain.acceso.roles import Rol
 from app.domain.acceso.sesion import ClaimsDeSesion
 from app.domain.acceso.usuarios import DatosUsuario
+from app.domain.agenda.bloqueos import DatosBloqueo
 from app.domain.agenda.horario import Franja
 from app.domain.agenda.intervalo import Intervalo
 from app.domain.agenda.prestaciones import DatosPrestacion
@@ -64,6 +65,37 @@ class RepositorioAgenda(Protocol):
         ...
 
     def existe_turno(self, turno_id: int) -> bool: ...
+
+    def turnos_activos_que_intersecan(self, bloqueo: DatosBloqueo) -> Sequence[Turno]:
+        """Los turnos activos del alcance del bloqueo (profesional, sillón o consultorio) que lo intersecan.
+
+        Es un recorte por rango, estado y alcance; la regla la confirma el dominio con ``turnos_afectados``.
+        """
+        ...
+
+
+class RepositorioBloqueos(Protocol):
+    """Bloqueos puntuales del consultorio (US-003; design B2)."""
+
+    def agregar(self, datos: DatosBloqueo) -> DatosBloqueo:
+        """Guarda el bloqueo y lo devuelve con su id, sin confirmar."""
+        ...
+
+    def del_consultorio(self, consultorio_id: int) -> Sequence[DatosBloqueo]:
+        """Todos los del consultorio, pasados y futuros, por ``(inicio, id)`` (D279)."""
+        ...
+
+    def obtener(self, bloqueo_id: int) -> DatosBloqueo | None: ...
+
+    def eliminar(self, bloqueo_id: int) -> None:
+        """Borrado físico (D278); no toca turnos."""
+        ...
+
+    def que_intersecan(
+        self, consultorio_id: int, profesional_id: int, sillon_id: int, intervalo: Intervalo
+    ) -> Sequence[DatosBloqueo]:
+        """Los bloqueos del profesional, del sillón o de todo el consultorio que intersecan el intervalo."""
+        ...
 
 
 class RepositorioHistorial(Protocol):
@@ -197,6 +229,7 @@ class RepositorioUsuarios(Protocol):
 
 class UnidadDeTrabajo(Protocol):
     agenda: RepositorioAgenda
+    bloqueos: RepositorioBloqueos
     historial: RepositorioHistorial
     horario: RepositorioHorario
     prestaciones: RepositorioPrestaciones

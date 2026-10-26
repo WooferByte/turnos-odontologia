@@ -72,6 +72,34 @@ class FranjaHorariaModelo(Base):
     vigente_hasta: Mapped[date | None]
 
 
+class BloqueoModelo(Base):
+    """Bloqueo puntual de un profesional, de un sillón o de todo el consultorio (US-003; design B3).
+
+    Con ``sillon_id`` y ``profesional_id`` nulos bloquea todo el consultorio; con los dos presentes no es
+    válido (D272). El alcance no se guarda: sale de qué id está presente.
+    """
+
+    __tablename__ = "bloqueo"
+    __table_args__ = (
+        CheckConstraint("inicio < fin", name="ck_bloqueo_inicio_antes_de_fin"),
+        CheckConstraint(
+            "NOT (profesional_id IS NOT NULL AND sillon_id IS NOT NULL)", name="ck_bloqueo_un_solo_recurso"
+        ),
+        Index("ix_bloqueo_profesional", "profesional_id", "inicio", "fin"),
+        Index("ix_bloqueo_sillon", "sillon_id", "inicio", "fin"),
+        Index("ix_bloqueo_consultorio", "consultorio_id", "inicio"),
+    )
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    consultorio_id: Mapped[int] = mapped_column(_fk("consultorio"))
+    profesional_id: Mapped[int | None] = mapped_column(_fk("profesional"))
+    sillon_id: Mapped[int | None] = mapped_column(_fk("sillon"))
+    inicio: Mapped[datetime] = mapped_column(FechaHoraUTC)
+    fin: Mapped[datetime] = mapped_column(FechaHoraUTC)
+    motivo: Mapped[str] = mapped_column(String(200))
+    creado_por: Mapped[int] = mapped_column(_fk("usuario"))
+
+
 class SillonModelo(Base):
     __tablename__ = "sillon"
 

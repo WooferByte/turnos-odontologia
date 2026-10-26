@@ -2,6 +2,7 @@
 from sqlalchemy.orm import Session, sessionmaker
 
 from app.infrastructure.repositories.agenda import RepositorioAgendaSqlAlchemy
+from app.infrastructure.repositories.bloqueos import RepositorioBloqueosSqlAlchemy
 from app.infrastructure.repositories.historial import RepositorioHistorialSqlAlchemy
 from app.infrastructure.repositories.horario import RepositorioHorarioSqlAlchemy
 from app.infrastructure.repositories.prestaciones import RepositorioPrestacionesSqlAlchemy
@@ -14,6 +15,7 @@ class UnidadDeTrabajoSqlAlchemy:
         self._fabrica_sesiones = fabrica_sesiones
         self._sesion: Session | None = None
         self.agenda: RepositorioAgendaSqlAlchemy
+        self.bloqueos: RepositorioBloqueosSqlAlchemy
         self.historial: RepositorioHistorialSqlAlchemy
         self.horario: RepositorioHorarioSqlAlchemy
         self.prestaciones: RepositorioPrestacionesSqlAlchemy
@@ -23,6 +25,7 @@ class UnidadDeTrabajoSqlAlchemy:
     def __enter__(self) -> "UnidadDeTrabajoSqlAlchemy":
         self._sesion = self._fabrica_sesiones()
         self.agenda = RepositorioAgendaSqlAlchemy(self._sesion)
+        self.bloqueos = RepositorioBloqueosSqlAlchemy(self._sesion)
         self.historial = RepositorioHistorialSqlAlchemy(self._sesion)
         self.horario = RepositorioHorarioSqlAlchemy(self._sesion)
         self.prestaciones = RepositorioPrestacionesSqlAlchemy(self._sesion)

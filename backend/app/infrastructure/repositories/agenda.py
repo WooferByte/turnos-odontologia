@@ -8,10 +8,11 @@ from sqlalchemy.exc import DBAPIError
 from sqlalchemy.orm import Session
 
 from app.application.puertos import OcupadosEnElIntervalo, SolapamientoEnLaBase
+from app.domain.agenda.bloqueos import Alcance, DatosBloqueo
 from app.domain.agenda.intervalo import Intervalo
 from app.domain.agenda.recursos import Paciente, Prestacion, Profesional, Sillon
 from app.domain.agenda.solapamiento import TurnoOcupado
-from app.domain.turnos.estados import EstadoTurno
+from app.domain.turnos.estados import ESTADOS_ACTIVOS, EstadoTurno
 from app.domain.turnos.turno import Turno
 from app.infrastructure.db.modelos import (
     ConsultorioModelo,
@@ -28,6 +29,23 @@ RECURSO_POR_RESTRICCION: dict[str, Literal["profesional", "sillon"]] = {
     "ex_turno_profesional_sin_solapamiento": "profesional",
     "ex_turno_sillon_sin_solapamiento": "sillon",
 }
+
+
+def _turno_a_dominio(modelo: TurnoModelo) -> Turno:
+    return Turno(
+        id=modelo.id,
+        consultorio_id=modelo.consultorio_id,
+        paciente_id=modelo.paciente_id,
+        profesional_id=modelo.profesional_id,
+        sillon_id=modelo.sillon_id,
+        prestacion_id=modelo.prestacion_id,
+        inicio=modelo.inicio,
+        fin=modelo.fin,
+        duracion_minutos=modelo.duracion_minutos,
+        estado=EstadoTurno(modelo.estado),
+        creado_en=modelo.creado_en,
+        creado_por=modelo.creado_por,
+    )
 
 
 class RepositorioAgendaSqlAlchemy:
@@ -144,3 +162,17 @@ class RepositorioAgendaSqlAlchemy:
 
     def existe_turno(self, turno_id: int) -> bool:
         return self._sesion.get(TurnoModelo, turno_id) is not None
+
+    def turnos_activos_que_intersecan(self, bloqueo: DatosBloqueo) -> Sequence[Turno]:
+        consulta = select(TurnoModelo).where(
+            TurnoModelo.consultorio_id == bloqueo.consultorio_id,
+            TurnoModelo.estado.in_([estado.value for estado in ESTADOS_ACTIVOS]),
+            TurnoModelo.inicio < bloqueo.fin,
+            TurnoModelo.fin > bloqueo.inicio,
+        )
+        if bloqueo.alcance is Alcance.PROFESIONAL:
+            consulta = consulta.where(TurnoModelo.profesional_id == bloqueo.profesional_id)
+        elif bloqueo.alcance is Alcance.SILLON:
+            consulta = consulta.where(TurnoModelo.sillon_id == bloqueo.sillon_id)
+        consulta = consulta.order_by(TurnoModelo.inicio, TurnoModelo.id)
+        return [_turno_a_dominio(m) for m in self._sesion.scalars(consulta)]
