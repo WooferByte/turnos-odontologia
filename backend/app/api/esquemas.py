@@ -234,6 +234,20 @@ class LoginEntrada(BaseModel):
     contrasena: Annotated[str, Field(min_length=1)]
 
 
+class CambiarContrasenaEntrada(BaseModel):
+    """Cuerpo de ``POST /auth/cambiar-contrasena``. La actual es una credencial a comparar, no se valida su largo (K7)."""
+
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "examples": [{"contrasena_actual": "demo-consultorio-2026", "contrasena_nueva": "clave-nueva-2026"}]
+        },
+    )
+
+    contrasena_actual: Annotated[str, Field(min_length=1)]
+    contrasena_nueva: str
+
+
 class TokensSalida(BaseModel):
     """Respuesta de ``POST /auth/login``; los nombres siguen RFC 6749 §5.1 (design J12)."""
 
