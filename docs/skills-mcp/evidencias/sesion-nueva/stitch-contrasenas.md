@@ -87,3 +87,48 @@ La barra con las cinco pastillas, cada una con un ícono, «Usuarios» activa; e
 ## 5. Cómo se usa en el change
 
 Son la **referencia visual** del `design.md` de `contrasenas-de-usuarios`. La KB y los specs mandan: los textos son los de `pantalla-de-contrasenas` y del design (K14), y nada de las pantallas agrega reglas de dominio. La traducción visual (tarea 11.1) y la comparación con las capturas en el navegador (tarea 12.1) se hacen en el Apply y se anotan acá al cerrar el change.
+
+## 6. Prueba en el navegador (tarea 12.1, 2026-10-26)
+
+**Cómo se hizo**: demo sin Docker (`python -m uvicorn app.main:crear_app_demo --factory` desde `backend/` y `npm run dev` desde `frontend/`) en el navegador integrado, con una pestaña por usuario (el `sessionStorage` es por pestaña, así que cada una tiene su propia sesión): la odontóloga, la recepcionista (dos pestañas a la vez para el cambio propio), el dueño y la colega, creados por la pantalla de usuarios como pide la guía de 12.2. Todos son los usuarios ficticios de la demo (`*@consultorio-demo.test`) y contraseñas de prueba; ningún token ni contraseña apareció en la URL ni en la consola. Después, Compose sobre PostgreSQL en <http://127.0.0.1:5173> con el recorrido breve y **V5**.
+
+**Resultado**: todo coincide con lo esperado.
+
+| Escenario | Resultado |
+|---|---|
+| Recepcionista con sesión; la odontóloga le restablece la contraseña con `corta-123` | `422` `RN-AU-07`: «La contraseña debe tener de 10 caracteres a 72 bytes (RN-AU-07).» debajo del campo; el panel sigue abierto con lo escrito |
+| Con `clave-nueva-2026` | `204`; el panel se cierra y arriba de la tabla se ve «Contraseña restablecida. Se cerraron las sesiones de recepcion@consultorio-demo.test.»; al reabrir, el campo está vacío |
+| Siguiente acción de la recepcionista | vuelve a `/ingresar` con «Tu sesión terminó. Iniciá sesión de nuevo.» (sin mensaje de conexión) |
+| Entrar con la vieja / con la nueva | la vieja da «El email o la contraseña no son correctos.»; la nueva entra |
+| La odontóloga restablece la propia | `409` `RN-AU-10`: «Tu propia contraseña se cambia desde «Mi contraseña» (RN-AU-10).» en el aviso del panel; su sesión sigue |
+| El dueño (creado por la pantalla) restablece | `403` `RN-AU-05` en el aviso del panel, que sigue abierto; el dueño sigue en el panel |
+| Campo vacío, «Cancelar» y «Cerrar» | no se manda ningún `POST`; al reabrir el campo está vacío |
+| «Guardar» dos veces | con el primer clic el botón queda deshabilitado y sale un solo `POST` (dos `click()` seguidos dentro del mismo ciclo de un script, sin dejar que el navegador redibuje, mandan dos; no es algo que una persona pueda hacer) |
+| Sin conexión (con `fetch` simulado) | aviso de conexión, lo escrito se conserva y «Guardar» vuelve a estar habilitado |
+| «Mi contraseña» con la actual incorrecta | `422` `RN-AU-09` debajo de «Contraseña actual»; la sesión sigue, sin `POST /auth/refresh` |
+| Repetición distinta | «Las contraseñas nuevas no coinciden.» y ninguna petición |
+| Nueva corta | `422` `RN-AU-07` debajo de «Contraseña nueva» |
+| Cambio correcto | «Contraseña cambiada. Tus otras sesiones se cerraron.», los tres campos vacíos y la sesión sigue |
+| Después del cambio: «Prestaciones» | carga sin `POST /auth/refresh`; al recargar la página la sesión se renueva con el refresh nuevo y sigue |
+| La otra pestaña de la recepcionista | su siguiente acción vuelve a `/ingresar` con el aviso de sesión terminada |
+| Sesión irrenovable al restablecer y al cambiar la propia (la colega, cuya contraseña restablece la odontóloga a mitad de la operación) | vuelve a `/ingresar` con el aviso de sesión terminada, sin mensaje de conexión, y la contraseña no cambia |
+| Salir de «Mi contraseña» y volver; los tres roles ven el enlace | campos vacíos; la odontóloga, la recepcionista y el dueño ven «Mi contraseña» |
+| Usuario que ya no existe | no se repite: es solo contra el servidor falso (la API real no borra usuarios) |
+
+**V5 (Compose, nginx con `Content-Security-Policy: default-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'self'`)**: se recorrieron «Usuarios» con el panel «Restablecer contraseña» (`422`, `204` y `409`) y «Mi contraseña» (`422` `RN-AU-09`, `200`, y el cambio de vuelta) con sus íconos en SVG en línea. Un oyente de `securitypolicyviolation` no registró ninguna violación y la consola no tuvo ningún mensaje de la CSP (solo los estados `401`, `403`, `409` y `422` de las respuestas de la API que el recorrido provoca a propósito). **V5: sin violaciones.** Las contraseñas de la odontóloga y de la recepcionista en PostgreSQL quedaron como estaban (`demo-consultorio-2026`).
+
+**Capturas** (en [stitch-contrasenas-pantalla/](stitch-contrasenas-pantalla/), junto a las de Stitch, a 1280 × 1024 reducidas a 800 de ancho):
+- `implementacion-mi-contrasena-error.jpg` («Mi contraseña» con el error de `RN-AU-09`) y `implementacion-mi-contrasena-exito.jpg` (con el aviso de éxito), a comparar con `mi-contrasena.png`.
+- `implementacion-usuarios-restablecer-error.jpg` («Usuarios» con el panel «Restablecer contraseña» y el error de `RN-AU-07`) e `implementacion-usuarios-aviso-exito.jpg` (la tabla con el aviso verde), a comparar con `usuarios-restablecer.png`.
+
+### Diferencias con Stitch y su motivo
+
+1. **Sin asteriscos de obligatorio** en las etiquetas de estas dos pantallas: rechazado en el design (las etiquetas son las del spec, como en C-13).
+2. **Sin pie de página institucional** («Módulo de Seguridad y Credenciales · Sede Central»): no hay sedes (D173) ni existe en las otras pantallas.
+3. **El ícono del error de campo está en distinto lugar en cada pantalla**: en «Mi contraseña» el ícono de alerta va con el texto del error y no dentro del campo (como pidió el design); en el panel de «Restablecer contraseña» se ve el patrón de error de campo de C-09 (ícono rojo dentro del campo y el texto sin ícono). Stitch muestra el ícono en las dos posiciones a la vez. Es la reutilización de los estilos ya existentes de cada pantalla; no hay escenario que pida la posición.
+4. **Sin la insignia «Modificando» ni la fila resaltada** mientras el panel restablece: D303 (Q13), sin resaltar la fila.
+5. **Los botones de acciones de la fila se parten en dos renglones cuando el panel lateral está abierto a 1280 px** («Editar» y «Restablecer contraseña» arriba, «Desactivar» o «Reactivar» abajo): con el panel cerrado entran en un solo renglón. Ninguna acción se quita ni se corta, que era lo que el design pedía resolver (en la captura de Stitch la columna ACCIONES queda cortada).
+6. **Rótulo «EMAIL»** en lugar de «USUARIO / EMAIL» con el email como texto sin candado: el spec dice el email como texto, como el panel de edición de C-09.
+7. **Íconos en todas las pastillas de la barra y el ícono de diente del encabezado**: son los de la barra compartida de C-08 a C-13; «Mi contraseña» suma su ícono de llave. Stitch dibuja la barra de «Mi contraseña» sin íconos salvo el de la pastilla activa y un pin en el logo.
+8. **Aviso de éxito** sin la negrita de «Contraseña restablecida.»: ya rechazada (el texto de K14 va entero, como los avisos de C-09).
+9. **Los campos arrancan vacíos** (Stitch precarga puntos de ejemplo): nunca se precarga un campo de contraseña.
