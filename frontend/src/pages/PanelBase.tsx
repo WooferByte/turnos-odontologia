@@ -2,6 +2,7 @@
 // cierre de sesión, ningún dato del usuario, y debajo la pantalla elegida por la ruta.
 import { NavLink, Outlet, useNavigate } from 'react-router'
 import { useSesionDelPanel } from '../shared/api/ProveedorDeSesion'
+import { IconoCalendario } from '../shared/iconos/IconoCalendario'
 import { IconoDiente } from '../shared/iconos/IconoDiente'
 import { IconoMaletin } from '../shared/iconos/IconoMaletin'
 import { IconoReloj } from '../shared/iconos/IconoReloj'
@@ -37,6 +38,10 @@ export function PanelBase() {
             <NavLink to="/panel/horario" className="enlace-del-panel">
               <IconoReloj />
               Horario
+            </NavLink>
+            <NavLink to="/panel/bloqueos" className="enlace-del-panel">
+              <IconoCalendario />
+              Bloqueos
             </NavLink>
           </nav>
           <button type="button" className="boton-secundario" onClick={cerrar}>
