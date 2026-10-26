@@ -144,6 +144,24 @@ class ContrasenaFueraDeRango(ErrorDeDominio):
         super().__init__("La contraseña debe tener de 10 caracteres a 72 bytes.")
 
 
+class ContrasenaActualIncorrecta(ErrorDeDominio):
+    """El cambio de la propia contraseña no trae la actual correcta (RN-AU-09, D292); el mensaje es fijo."""
+
+    codigo = "RN-AU-09"
+
+    def __init__(self) -> None:
+        super().__init__("La contraseña actual no es correcta.")
+
+
+class RestablecerLaPropia(ErrorDeDominio):
+    """Restablecer la propia contraseña no se permite: se cambia con la actual (RN-AU-10, D293)."""
+
+    codigo = "RN-AU-10"
+
+    def __init__(self) -> None:
+        super().__init__("La propia contraseña se cambia con POST /auth/cambiar-contrasena, pidiendo la actual.")
+
+
 class EntradaInvalida(ErrorDeDominio):
     """Toda la validación de entrada junta: ``FechaNoUTC``, ``DuracionInvalida`` y/o ``RecursoNoEncontrado`` (D6)."""
 
