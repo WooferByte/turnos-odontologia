@@ -48,11 +48,11 @@ Los criterios de US-010 usan IDs estables `E1..E12` (compartidos con `07_flujos_
 
 ### US-003 — Bloqueos puntuales
 **Como** odontólogo **quiero** bloquear días u horas (vacaciones, feriados, ausencias) **para** que no se reserven turnos en esos momentos.
-- [ ] CA-1: el bloqueo puede ser del profesional, del sillón o de todo el consultorio.
+- [ ] CA-1: el bloqueo puede ser del profesional, del sillón o de todo el consultorio; si no termina después de empezar, se rechaza con `422` y el error de dominio `RN-AG-17` (decisión del autor 2026-10-26, D273).
 - [ ] CA-2: al crear un bloqueo sobre turnos activos, el sistema lista los afectados.
 **Orden**: 3
 **Depende de**: US-092
-**Reglas**: RN-AG-04b
+**Reglas**: RN-AG-04b, RN-AG-17
 
 ### US-004 — Sillón como recurso
 **Como** odontólogo **quiero** que el consultorio tenga un sillón por defecto **para** que la agenda controle su ocupación sin configuración extra.
