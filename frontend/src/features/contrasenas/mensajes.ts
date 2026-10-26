@@ -37,3 +37,43 @@ export function erroresDeRestablecimiento(error: unknown): ErroresDelPanel {
   }
   return { ...SIN_ERRORES, aviso: MENSAJE_SIN_CONEXION }
 }
+
+export const MENSAJE_ACTUAL_INCORRECTA = 'La contraseña actual no es correcta (RN-AU-09).'
+export const MENSAJE_REPETICION_DISTINTA = 'Las contraseñas nuevas no coinciden.'
+export const MENSAJE_SIN_PERMISO_PARA_CAMBIAR = 'Tu usuario no tiene permiso para cambiar la contraseña (RN-AU-05).'
+export const AVISO_DE_CAMBIADA = 'Contraseña cambiada. Tus otras sesiones se cerraron.'
+
+/** Lo que «Mi contraseña» muestra: debajo de cada campo y en el aviso de la pantalla. */
+export interface ErroresDeMiContrasena {
+  actual: string | null
+  nueva: string | null
+  repeticion: string | null
+  aviso: string | null
+}
+
+export const SIN_ERRORES_DE_MI_CONTRASENA: ErroresDeMiContrasena = {
+  actual: null,
+  nueva: null,
+  repeticion: null,
+  aviso: null,
+}
+
+/** Un `422` `RN-AU-09` (actual incorrecta), un `RN-AU-07` de la nueva, un `403` o una caída de red (K14). */
+export function erroresDeCambioPropio(error: unknown): ErroresDeMiContrasena {
+  if (error instanceof PermisoInsuficiente) {
+    return { ...SIN_ERRORES_DE_MI_CONTRASENA, aviso: MENSAJE_SIN_PERMISO_PARA_CAMBIAR }
+  }
+  if (error instanceof EntradaRechazada) {
+    if (error.codigo === 'RN-AU-09') return { ...SIN_ERRORES_DE_MI_CONTRASENA, actual: MENSAJE_ACTUAL_INCORRECTA }
+    const esLargo = (e: { campo: string | null; codigo: string | null }) =>
+      e.campo === 'contrasena_nueva' && e.codigo === 'RN-AU-07'
+    const largo = error.errores.some(esLargo)
+    const soloElLargo = error.errores.length > 0 && error.errores.every(esLargo)
+    return {
+      ...SIN_ERRORES_DE_MI_CONTRASENA,
+      nueva: largo ? MENSAJE_CONTRASENA_FUERA_DE_RANGO : null,
+      aviso: soloElLargo ? null : MENSAJE_REVISAR_DATOS,
+    }
+  }
+  return { ...SIN_ERRORES_DE_MI_CONTRASENA, aviso: MENSAJE_SIN_CONEXION }
+}
