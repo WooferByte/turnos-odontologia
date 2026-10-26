@@ -18,6 +18,7 @@ from app.infrastructure.db.modelos import EventoTurnoModelo, TurnoModelo
 from tests.factories import (
     HORARIO_DE_PRUEBA,
     franja,
+    un_bloqueo,
     un_consultorio,
     un_paciente,
     un_profesional,
@@ -487,3 +488,160 @@ def test_e10_post_turnos_con_la_entrada_invalida_no_se_evalua_el_horario(cliente
 
     assert respuesta.status_code == 422
     assert respuesta.json()["codigos"] == ["RN-GL-04"]
+
+
+# --- RN-AG-04b por HTTP (E10, C-13) ---------------------------------------------------------------------
+DETALLE_SOBRE_BLOQUEO = "El turno cae dentro de un bloqueo del profesional, del sillón o del consultorio."
+
+
+def _problema_de_sobre_bloqueo(bloqueo_id: int) -> dict:
+    return {
+        "type": "/errores/sobre-bloqueo",
+        "title": "Sobre un bloqueo",
+        "status": 422,
+        "detail": DETALLE_SOBRE_BLOQUEO,
+        "instance": "/turnos",
+        "codigos": ["RN-AG-04b"],
+        "bloqueo_id": bloqueo_id,
+    }
+
+
+def test_e10_post_turnos_sobre_un_bloqueo_del_profesional_responde_422_rn_ag_04b(cliente, sesion):
+    datos = _escenario(sesion)
+    bloqueo = un_bloqueo(sesion, datos["consultorio"], inicio=a_las(10), fin=a_las(12), profesional=datos["profesional"])
+
+    respuesta = cliente.post("/turnos", json=_peticion(datos, "2026-11-02T10:30:00Z"))
+
+    assert respuesta.status_code == 422
+    assert respuesta.headers["content-type"] == "application/problem+json"
+    assert respuesta.json() == _problema_de_sobre_bloqueo(bloqueo.id)
+    _sin_turnos_ni_eventos(sesion)
+
+
+def test_e10_post_turnos_con_un_bloqueo_de_todo_el_consultorio_responde_422_rn_ag_04b(cliente, sesion):
+    datos = _escenario(sesion)
+    bloqueo = un_bloqueo(sesion, datos["consultorio"], inicio=a_las(10), fin=a_las(12))
+
+    respuesta = cliente.post("/turnos", json=_peticion(datos, "2026-11-02T11:30:00Z"))
+
+    assert respuesta.status_code == 422
+    assert respuesta.json() == _problema_de_sobre_bloqueo(bloqueo.id)
+    _sin_turnos_ni_eventos(sesion)
+
+
+def test_e10_post_turnos_un_bloqueo_del_sillon_rechaza_al_otro_profesional_y_el_otro_sillon_no(cliente, sesion):
+    datos = _escenario(sesion)
+    otro_profesional = un_profesional(sesion, datos["consultorio"], nombre="Profesional 2")
+    otro_sillon = un_sillon(sesion, datos["consultorio"], nombre="Sillón 2")
+    bloqueo = un_bloqueo(sesion, datos["consultorio"], inicio=a_las(10), fin=a_las(12), sillon=datos["sillon"])
+
+    en_el_sillon_bloqueado = cliente.post(
+        "/turnos", json=_peticion(datos, "2026-11-02T11:00:00Z", profesional_id=otro_profesional.id)
+    )
+    en_el_otro_sillon = cliente.post(
+        "/turnos",
+        json=_peticion(datos, "2026-11-02T11:00:00Z", profesional_id=otro_profesional.id, sillon_id=otro_sillon.id),
+    )
+
+    assert en_el_sillon_bloqueado.status_code == 422
+    assert en_el_sillon_bloqueado.json()["codigos"] == ["RN-AG-04b"]
+    assert en_el_sillon_bloqueado.json()["bloqueo_id"] == bloqueo.id
+    assert en_el_otro_sillon.status_code == 201
+
+
+def test_e10_post_turnos_un_turno_contiguo_al_bloqueo_se_acepta_y_un_minuto_adentro_se_rechaza(cliente, sesion):
+    datos = _escenario(sesion)
+    un_bloqueo(sesion, datos["consultorio"], inicio=a_las(10), fin=a_las(12), profesional=datos["profesional"])
+
+    termina_justo = cliente.post("/turnos", json=_peticion(datos, "2026-11-02T09:30:00Z"))
+    empieza_justo = cliente.post("/turnos", json=_peticion(datos, "2026-11-02T12:00:00Z"))
+    un_minuto_adentro = cliente.post("/turnos", json=_peticion(datos, "2026-11-02T09:31:00Z"))
+
+    assert (termina_justo.status_code, empieza_justo.status_code) == (201, 201)
+    assert un_minuto_adentro.status_code == 422
+    assert un_minuto_adentro.json()["codigos"] == ["RN-AG-04b"]
+
+
+def test_e10_post_turnos_un_bloqueo_de_otro_profesional_no_afecta_y_eliminado_el_bloqueo_el_turno_se_crea(
+    cliente, sesion
+):
+    datos = _escenario(sesion)
+    otro_profesional = un_profesional(sesion, datos["consultorio"], nombre="Profesional 2")
+    otro_sillon = un_sillon(sesion, datos["consultorio"], nombre="Sillón 2")
+    bloqueo = un_bloqueo(sesion, datos["consultorio"], inicio=a_las(10), fin=a_las(12), profesional=otro_profesional)
+
+    del_primero = cliente.post("/turnos", json=_peticion(datos, "2026-11-02T10:30:00Z"))
+    del_segundo = _peticion(
+        datos, "2026-11-02T10:30:00Z", profesional_id=otro_profesional.id, sillon_id=otro_sillon.id
+    )
+    antes = cliente.post("/turnos", json=del_segundo)
+    eliminado = cliente.delete("/bloqueos/" + str(bloqueo.id))
+    despues = cliente.post("/turnos", json=del_segundo)
+
+    assert del_primero.status_code == 201
+    assert (antes.status_code, antes.json()["codigos"]) == (422, ["RN-AG-04b"])
+    assert eliminado.status_code == 204
+    assert despues.status_code == 201
+
+
+def test_e10_post_turnos_con_dos_bloqueos_que_intersecan_se_informa_el_que_empieza_primero(cliente, sesion):
+    datos = _escenario(sesion)
+    un_bloqueo(sesion, datos["consultorio"], inicio=a_las(11), fin=a_las(12))  # id menor, empieza después
+    primero = un_bloqueo(sesion, datos["consultorio"], inicio=a_las(10), fin=a_las(12), profesional=datos["profesional"])
+
+    respuesta = cliente.post("/turnos", json=_peticion(datos, "2026-11-02T11:00:00Z"))
+
+    assert respuesta.status_code == 422
+    assert respuesta.json()["bloqueo_id"] == primero.id
+
+
+def test_e10_post_turnos_con_dos_bloqueos_que_empiezan_a_la_misma_hora_se_informa_el_de_menor_id(cliente, sesion):
+    datos = _escenario(sesion)
+    menor = un_bloqueo(sesion, datos["consultorio"], inicio=a_las(10), fin=a_las(12), profesional=datos["profesional"])
+    un_bloqueo(sesion, datos["consultorio"], inicio=a_las(10), fin=a_las(13), profesional=datos["profesional"])
+
+    respuesta = cliente.post("/turnos", json=_peticion(datos, "2026-11-02T11:00:00Z"))
+
+    assert respuesta.json()["bloqueo_id"] == menor.id
+
+
+def test_e10_post_turnos_el_horario_se_informa_antes_que_el_bloqueo(cliente, sesion):
+    datos = _escenario(sesion, horario=MANANA_DE_LOS_LUNES)
+    un_bloqueo(sesion, datos["consultorio"], inicio=a_las(10), fin=a_las(12), profesional=datos["profesional"])
+
+    # 10:30 UTC = 07:30 local: fuera de la franja 09:00-13:00 y dentro del bloqueo.
+    respuesta = cliente.post("/turnos", json=_peticion(datos, "2026-11-02T10:30:00Z"))
+
+    assert respuesta.status_code == 422
+    assert respuesta.json()["codigos"] == ["RN-AG-04"]
+
+
+def test_e10_post_turnos_el_bloqueo_se_informa_antes_que_el_solapamiento(cliente, sesion):
+    datos = _escenario(sesion)
+    un_turno(
+        sesion,
+        paciente=datos["paciente"],
+        profesional=datos["profesional"],
+        sillon=datos["sillon"],
+        prestacion=datos["prestacion"],
+        inicio=a_las(10),
+    )
+    bloqueo = un_bloqueo(sesion, datos["consultorio"], inicio=a_las(10), fin=a_las(12), profesional=datos["profesional"])
+
+    respuesta = cliente.post("/turnos", json=_peticion(datos, "2026-11-02T10:00:00Z"))
+
+    assert respuesta.status_code == 422
+    assert respuesta.json()["codigos"] == ["RN-AG-04b"]
+    assert respuesta.json()["bloqueo_id"] == bloqueo.id
+    assert "conflictos" not in respuesta.json()
+
+
+def test_e10_post_turnos_con_la_entrada_invalida_no_se_evalua_el_bloqueo(cliente, sesion):
+    datos = _escenario(sesion)
+    un_bloqueo(sesion, datos["consultorio"], inicio=a_las(10), fin=a_las(12))
+
+    respuesta = cliente.post("/turnos", json=_peticion(datos, "2026-11-02T10:30:00Z", sillon_id=999))
+
+    assert respuesta.status_code == 422
+    assert respuesta.json()["codigos"] == ["RN-GL-04"]
+    assert "bloqueo_id" not in respuesta.json()

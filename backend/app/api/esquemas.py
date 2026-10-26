@@ -288,6 +288,7 @@ class Problema(BaseModel):
     conflictos: list[ConflictoSalida] | None = None
     referencias: list[ReferenciaSalida] | None = None
     errores: list[ErrorDeCampoSalida] | None = None
+    bloqueo_id: int | None = None  # solo en el 422 de RN-AG-04b (D280)
 
 
 def _recortado(valor: Any) -> Any:

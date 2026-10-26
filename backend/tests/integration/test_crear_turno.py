@@ -16,6 +16,7 @@ from app.domain.errors import (
     IntervaloInvalido,
     RecursoNoEncontrado,
     ReferenciaInvalida,
+    SobreBloqueo,
 )
 from app.domain.tiempo import UTC
 from app.domain.turnos.estados import EstadoTurno
@@ -26,6 +27,7 @@ from tests.factories import (
     HORARIO_DE_PRUEBA,
     ID_DE_USUARIO_DE_PRUEBA,
     franja,
+    un_bloqueo,
     un_consultorio,
     un_paciente,
     un_profesional,
@@ -1042,3 +1044,27 @@ def test_e10_con_la_entrada_invalida_no_se_evalua_el_horario(sesion, uow):
         _crear(datos, uow, a_las(10), prestacion_id=999)
 
     assert excinfo.value.codigos == ["RN-GL-04"]
+
+
+# --- RN-AG-04b: el turno no puede intersecar un bloqueo (E10, C-13) ------------------------------------
+def test_e10_un_turno_sobre_un_bloqueo_del_profesional_se_rechaza(sesion, fabrica_sesiones, uow):
+    datos = _escenario(sesion, duracion_minutos=30)
+    bloqueo = un_bloqueo(sesion, datos["consultorio"], inicio=a_las(10), fin=a_las(12), profesional=datos["profesional"])
+
+    with pytest.raises(SobreBloqueo) as excinfo:
+        _crear(datos, uow, a_las(10, 30))
+
+    assert excinfo.value.codigos == ["RN-AG-04b"]
+    assert excinfo.value.bloqueo_id == bloqueo.id
+    _no_quedo_nada(fabrica_sesiones)
+
+
+def test_e10_un_bloqueo_de_todo_el_consultorio_rechaza_cualquier_turno(sesion, fabrica_sesiones, uow):
+    datos = _escenario(sesion, duracion_minutos=30)
+    bloqueo = un_bloqueo(sesion, datos["consultorio"], inicio=a_las(10), fin=a_las(12))
+
+    with pytest.raises(SobreBloqueo) as excinfo:
+        _crear(datos, uow, a_las(11, 30))  # termina justo cuando termina el bloqueo
+
+    assert excinfo.value.bloqueo_id == bloqueo.id
+    _no_quedo_nada(fabrica_sesiones)

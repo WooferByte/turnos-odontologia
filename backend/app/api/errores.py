@@ -22,6 +22,7 @@ from app.domain.errors import (
     PermisoInsuficiente,
     RecursoDeLaUrlNoEncontrado,
     SesionInvalida,
+    SobreBloqueo,
 )
 
 MEDIA_TYPE_PROBLEMA = "application/problem+json"
@@ -34,6 +35,7 @@ _CLASES_DE_ERROR: dict[type[ErrorDeDominio], tuple[int, str, str]] = {
     ErrorDeSolapamiento: (409, "/errores/solapamiento-turno", "Turno solapado"),
     IntervaloInvalido: (422, "/errores/intervalo-invalido", "Intervalo inválido"),
     FueraDeHorario: (422, "/errores/fuera-de-horario", "Fuera de horario"),
+    SobreBloqueo: (422, "/errores/sobre-bloqueo", "Sobre un bloqueo"),
     EntradaInvalida: (422, "/errores/entrada-invalida", "Entrada inválida"),
     RecursoDeLaUrlNoEncontrado: (404, "/errores/recurso-no-encontrado", "Recurso no encontrado"),
     NombreDePrestacionRepetido: (409, "/errores/nombre-repetido", "Nombre repetido"),
@@ -136,6 +138,8 @@ def _problema_de(error: ErrorDeDominio, estado: int, tipo: str, titulo: str, rut
             for r in error.referencias
         ]
         return Problema(**base, detail=error.mensaje, referencias=referencias)
+    if isinstance(error, SobreBloqueo):
+        return Problema(**base, detail=error.mensaje, bloqueo_id=error.bloqueo_id)
     if isinstance(error, _ERRORES_DE_TEXTO_FIJO):
         return Problema(**base, detail=error.mensaje)
     return Problema(**base, detail="El turno no puede cruzar la medianoche del consultorio.")
