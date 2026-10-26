@@ -99,7 +99,7 @@ En Compose (PostgreSQL, migración `0009` aplicada al arrancar) el recorrido bre
 
 ### Hallazgo de la prueba
 
-Con la demo, justo después de iniciar sesión, un `GET /profesionales` respondió `500` una vez (`ValueError: '' is not a valid Rol` en `UsuarioRepositorio.roles_de`, `backend/app/infrastructure/repositories/usuarios.py`) mientras `GET /bloqueos` y `GET /sillones` iban en paralelo; el modo estricto de React repitió las tres peticiones y la segunda tanda dio `200`. Es el patrón de la conexión única de SQLite en memoria (`StaticPool`) compartida por varios hilos de la API de demostración; no ocurre en Compose (PostgreSQL) y no es de C-13 (es de C-07). Se deja como hallazgo para el archive; no se tocó código.
+Con la demo (SQLite en memoria con una única conexión compartida, `StaticPool`), en los primeros pedidos paralelos después de iniciar sesión (`GET /bloqueos`, `GET /profesionales` y `GET /sillones` a la vez) algún pedido responde `500`: en la corrida de la prueba `ValueError: '' is not a valid Rol` en `UsuarioRepositorio.roles_de` (`backend/app/infrastructure/repositories/usuarios.py`), y en el clon limpio (10.2) dos `500` con `sqlite3.InterfaceError: bad parameter or other API misuse`. Es la misma causa: varios hilos de la API usan la misma conexión de SQLite a la vez. El modo estricto de React repite las tres peticiones y la segunda tanda da `200`, así que la pantalla termina cargando; no ocurre en Compose (PostgreSQL) y el código es de C-07 y de la demo, no de C-13. Se deja como hallazgo para el archive; no se tocó código.
 
 ### Paso a paso para repetirlo (opcional; gobernanza MEDIO)
 
