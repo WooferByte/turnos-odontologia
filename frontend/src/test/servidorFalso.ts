@@ -12,6 +12,11 @@ export const EMAIL_INACTIVA = 'recepcion@consultorio-demo.test'
  */
 export const EMAIL_RECEPCIONISTA = EMAIL_INACTIVA
 export const CONTRASENA_FICTICIA = 'clave-ficticia-de-prueba'
+/**
+ * La contraseña vigente de partida de los usuarios del catálogo, salvo la odontóloga, que conserva
+ * `CONTRASENA_FICTICIA` para no cambiar lo que verifican los tests de C-08 (V3 de C-10). Ficticia (RN-PR-01).
+ */
+export const CONTRASENA_DEMO = 'demo-consultorio-2026'
 
 const TEXTO_CREDENCIALES = 'El email o la contraseña no son correctos.'
 const TEXTO_SESION = 'La sesión no es válida o venció. Iniciá sesión de nuevo.'
@@ -179,6 +184,8 @@ export interface ServidorFalso {
   catalogoActual(): PrestacionFalsa[]
   /** Copia de los usuarios del falso en este momento. */
   usuariosActuales(): UsuarioFalso[]
+  /** La contraseña vigente de ese usuario (para comprobar que un pedido no la cambió); undefined si no existe. */
+  contrasenaDe(email: string): string | undefined
   /** Saca un usuario del catálogo (la API real no borra usuarios; sirve para simular un `404`). */
   quitarUsuario(id: number): void
   /** Saca una prestación del catálogo (la API no borra, RN-GL-03; sirve para simular una base recreada). */
@@ -261,6 +268,11 @@ const CAMPOS_DEL_ALTA_DE_USUARIO = new Set(['email', 'contrasena', 'roles'])
 const CAMPOS_DEL_PATCH_DE_USUARIO = new Set(['roles', 'activo'])
 const FORMATO_DE_EMAIL = /^[^@\s]+@[^@\s]+$/
 const MENSAJE_RN_AU_07 = 'La contraseña debe tener de 10 caracteres a 72 bytes.'
+const DETALLE_ACTUAL_INCORRECTA = 'La contraseña actual no es correcta.'
+const DETALLE_RESTABLECER_LA_PROPIA =
+  'La propia contraseña se cambia con POST /auth/cambiar-contrasena, pidiendo la actual.'
+const CAMPOS_DEL_RESTABLECIMIENTO = new Set(['contrasena'])
+const CAMPOS_DEL_CAMBIO_PROPIO = new Set(['contrasena_actual', 'contrasena_nueva'])
 const DETALLE_DESACTIVARSE = 'Nadie puede desactivarse a sí mismo.'
 const DETALLE_SIN_ODONTOLOGO = 'El consultorio no puede quedar sin un odontólogo activo.'
 const COLOR_HEX = /^#[0-9A-Fa-f]{6}$/
@@ -470,6 +482,26 @@ function contrasenaFueraDeRango(contrasena: string): boolean {
   return contrasena.length < 10 || new TextEncoder().encode(contrasena).length > 72
 }
 
+/** Errores de formato de los dos cuerpos de contraseñas: objeto, campos de más y campos de texto (sin código, H9). */
+function erroresDeFormatoDeContrasenas(
+  cuerpo: Record<string, unknown> | null,
+  permitidos: Set<string>,
+  textosObligatorios: readonly string[],
+  noVacios: readonly string[],
+): ErrorDeCampoFalso[] {
+  if (cuerpo === null) return [errorDeFormato('cuerpo', 'El cuerpo debe ser un objeto JSON.')]
+  const errores: ErrorDeCampoFalso[] = []
+  for (const campo of Object.keys(cuerpo)) {
+    if (!permitidos.has(campo)) errores.push(errorDeFormato(campo, 'Campo no permitido.'))
+  }
+  for (const campo of textosObligatorios) {
+    const valor = cuerpo[campo]
+    if (typeof valor !== 'string') errores.push(errorDeFormato(campo, 'Debe ser un texto.'))
+    else if (valor === '' && noVacios.includes(campo)) errores.push(errorDeFormato(campo, 'No puede estar vacío.'))
+  }
+  return errores
+}
+
 export function crearServidorFalso(opciones: OpcionesDelServidorFalso = {}): ServidorFalso {
   const catalogo: PrestacionFalsa[] = (opciones.prestaciones ?? []).map((prestacion) => ({ ...prestacion }))
   const usuarios: UsuarioFalso[] = (opciones.usuarios ?? USUARIOS_DE_PARTIDA).map((u) => ({
@@ -485,6 +517,10 @@ export function crearServidorFalso(opciones: OpcionesDelServidorFalso = {}): Ser
   const turnos: TurnoFalso[] = (opciones.turnos ?? []).map((t) => ({ ...t }))
   // Versión del token de cada usuario: desactivar la sube y los tokens anteriores dejan de servir (RN-AU-03).
   const versiones = new Map<number, number>()
+  // Contraseña vigente por usuario, en claro: es un falso de tests, nunca sale de ellos (K13).
+  const contrasenas = new Map<number, string>(
+    usuarios.map((u) => [u.id, u.email === EMAIL_ACTIVA ? CONTRASENA_FICTICIA : CONTRASENA_DEMO]),
+  )
   const cuerposRecibidos = new Map<string, Record<string, unknown>[]>()
   const llamadasPorMetodo = new Map<string, number>()
   const contadores = new Map<string, number>()
@@ -665,6 +701,7 @@ export function crearServidorFalso(opciones: OpcionesDelServidorFalso = {}): Ser
       activo: true,
     }
     usuarios.push(nuevo)
+    contrasenas.set(nuevo.id, String(cuerpo.contrasena))
     return json(201, salidaDeUsuario(nuevo))
   }
 
@@ -829,6 +866,74 @@ export function crearServidorFalso(opciones: OpcionesDelServidorFalso = {}): Ser
     return new Response(null, { status: 204 })
   }
 
+  function subirVersion(id: number): void {
+    versiones.set(id, (versiones.get(id) ?? 0) + 1)
+  }
+
+  function emitirRefresh(email: string): string {
+    secuencia += 1
+    const token = `refresco-${secuencia}`
+    refrescos.set(token, { email, version: versionDe(email) })
+    return token
+  }
+
+  /** Orden de K9: acceso, formato (sin código), largo (RN-AU-07), usuario de la URL (404) y la propia (RN-AU-10). */
+  function restablecerContrasena(id: number, init: RequestInit | undefined): Response {
+    const { rechazo, actor } = autorizar(init, ['odontologo'])
+    if (rechazo !== null || actor === null) return rechazo ?? sesionInvalida()
+    const cuerpo = leerCuerpo(init)
+    const formato = erroresDeFormatoDeContrasenas(cuerpo, CAMPOS_DEL_RESTABLECIMIENTO, ['contrasena'], [])
+    if (cuerpo === null || formato.length > 0) return entradaInvalida(formato, [])
+    const contrasena = String(cuerpo.contrasena)
+    if (contrasenaFueraDeRango(contrasena)) {
+      return entradaInvalida([{ campo: 'contrasena', codigo: 'RN-AU-07', mensaje: MENSAJE_RN_AU_07 }], ['RN-AU-07'])
+    }
+    const usuario = usuarios.find((u) => u.id === id)
+    if (usuario === undefined) return recursoInexistente('usuario', id)
+    if (actor.id === usuario.id) {
+      return problema(409, '/errores/restablecer-la-propia', 'Operación no permitida', DETALLE_RESTABLECER_LA_PROPIA, [
+        'RN-AU-10',
+      ])
+    }
+    contrasenas.set(usuario.id, contrasena)
+    subirVersion(usuario.id)
+    return new Response(null, { status: 204 })
+  }
+
+  /** Orden de K9: acceso (los tres roles), formato, largo de la nueva (RN-AU-07) y la actual (RN-AU-09: `422`, no `401`). */
+  function cambiarContrasena(init: RequestInit | undefined): Response {
+    const { rechazo, actor } = autorizar(init, ORDEN_DE_ROLES)
+    if (rechazo !== null || actor === null) return rechazo ?? sesionInvalida()
+    const cuerpo = leerCuerpo(init)
+    const textos = ['contrasena_actual', 'contrasena_nueva']
+    const formato = erroresDeFormatoDeContrasenas(cuerpo, CAMPOS_DEL_CAMBIO_PROPIO, textos, ['contrasena_actual'])
+    if (cuerpo === null || formato.length > 0) return entradaInvalida(formato, [])
+    const nueva = String(cuerpo.contrasena_nueva)
+    if (contrasenaFueraDeRango(nueva)) {
+      return entradaInvalida(
+        [{ campo: 'contrasena_nueva', codigo: 'RN-AU-07', mensaje: MENSAJE_RN_AU_07 }],
+        ['RN-AU-07'],
+      )
+    }
+    if (cuerpo.contrasena_actual !== contrasenas.get(actor.id)) {
+      return problema(
+        422,
+        '/errores/contrasena-actual-incorrecta',
+        'Contraseña actual incorrecta',
+        DETALLE_ACTUAL_INCORRECTA,
+        ['RN-AU-09'],
+      )
+    }
+    contrasenas.set(actor.id, nueva)
+    subirVersion(actor.id)
+    return json(200, {
+      access_token: emitirAccess(actor.email),
+      refresh_token: emitirRefresh(actor.email),
+      token_type: 'bearer',
+      expires_in: 900,
+    })
+  }
+
   async function refrescar(init: RequestInit | undefined): Promise<Response> {
     // Una vuelta del bucle de eventos: da tiempo a que lleguen varios 401 antes de contestar.
     await new Promise<void>((resolver) => setTimeout(resolver, 0))
@@ -845,18 +950,15 @@ export function crearServidorFalso(opciones: OpcionesDelServidorFalso = {}): Ser
     if (typeof email !== 'string' || !email.includes('@') || typeof contrasena !== 'string' || contrasena === '') {
       return problema(422, '/errores/entrada-invalida', 'Entrada inválida', 'La entrada no es válida.', [])
     }
-    const activa = email.trim().toLowerCase() === EMAIL_ACTIVA && contrasena === CONTRASENA_FICTICIA
-    if (!activa) {
+    const usuario = usuarioPorEmail(email.trim().toLowerCase())
+    if (usuario === undefined || !usuario.activo || contrasenas.get(usuario.id) !== contrasena) {
       return problema(401, '/errores/credenciales-invalidas', 'Credenciales inválidas', TEXTO_CREDENCIALES, [
         'RN-AU-04',
       ])
     }
-    const accessToken = emitirAccess(EMAIL_ACTIVA)
-    const refreshToken = `refresco-${secuencia}`
-    refrescos.set(refreshToken, { email: EMAIL_ACTIVA, version: versionDe(EMAIL_ACTIVA) })
     return json(200, {
-      access_token: accessToken,
-      refresh_token: refreshToken,
+      access_token: emitirAccess(usuario.email),
+      refresh_token: emitirRefresh(usuario.email),
       token_type: 'bearer',
       expires_in: 900,
     })
@@ -885,6 +987,13 @@ export function crearServidorFalso(opciones: OpcionesDelServidorFalso = {}): Ser
     if (entrada === '/api/prestaciones' && metodo === 'POST') return Promise.resolve(crearPrestacion(init))
     if (entrada === '/api/usuarios' && metodo === 'GET') return Promise.resolve(listarUsuarios(init))
     if (entrada === '/api/usuarios' && metodo === 'POST') return Promise.resolve(crearUsuario(init))
+    const delRestablecimiento = /^\/api\/usuarios\/(\d+)\/restablecer-contrasena$/.exec(entrada)
+    if (delRestablecimiento !== null && metodo === 'POST') {
+      return Promise.resolve(restablecerContrasena(Number(delRestablecimiento[1]), init))
+    }
+    if (entrada === '/api/auth/cambiar-contrasena' && metodo === 'POST') {
+      return Promise.resolve(cambiarContrasena(init))
+    }
     const delPatchDeUsuario = /^\/api\/usuarios\/(\d+)$/.exec(entrada)
     if (delPatchDeUsuario !== null && metodo === 'PATCH') {
       return Promise.resolve(editarUsuario(Number(delPatchDeUsuario[1]), init))
@@ -917,6 +1026,10 @@ export function crearServidorFalso(opciones: OpcionesDelServidorFalso = {}): Ser
     cuerpos: (metodo, ruta) => cuerposRecibidos.get(`${metodo} ${ruta}`) ?? [],
     catalogoActual: () => catalogo.map((p) => ({ ...p })),
     usuariosActuales: () => usuarios.map((u) => ({ ...u, roles: [...u.roles] })),
+    contrasenaDe: (email) => {
+      const usuario = usuarioPorEmail(email)
+      return usuario === undefined ? undefined : contrasenas.get(usuario.id)
+    },
     quitarUsuario: (id) => {
       const indice = usuarios.findIndex((u) => u.id === id)
       if (indice >= 0) usuarios.splice(indice, 1)
@@ -973,10 +1086,7 @@ export function crearServidorFalso(opciones: OpcionesDelServidorFalso = {}): Ser
       return liberar
     },
     emitirSesion: (email = EMAIL_ACTIVA) => {
-      const access = emitirAccess(email)
-      const refresh = `refresco-${secuencia}`
-      refrescos.set(refresh, { email, version: versionDe(email) })
-      return { access, refresh }
+      return { access: emitirAccess(email), refresh: emitirRefresh(email) }
     },
   }
 }

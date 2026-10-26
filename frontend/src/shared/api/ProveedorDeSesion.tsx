@@ -12,6 +12,8 @@ export interface ContextoDeSesion {
   aviso: AvisoDeSesion
   iniciarSesion(email: string, contrasena: string): Promise<void>
   cerrarSesion(): void
+  /** Reemplaza el access y el refresh de la sesión (cambio de contraseña, D291) sin cambiar el estado ni el aviso. */
+  reemplazarTokens(access: string, refresh: string): void
   /** Pedido a una ruta del panel: si la sesión termina, pasa a `sin-sesion` con el aviso y relanza el error (design T4). */
   pedidoDelPanel: PedidoDelPanel
 }
@@ -71,6 +73,11 @@ export function ProveedorDeSesion({ fetch, children }: Propiedades) {
     setAviso(null)
   }
 
+  const reemplazarTokens = useCallback(
+    (access: string, refresh: string): void => infraestructura.sesion.guardar(access, refresh),
+    [infraestructura],
+  )
+
   const pedidoDelPanel = useCallback<PedidoDelPanel>(
     async (ruta, opciones) => {
       try {
@@ -86,5 +93,9 @@ export function ProveedorDeSesion({ fetch, children }: Propiedades) {
     [infraestructura],
   )
 
-  return <Contexto value={{ estado, aviso, iniciarSesion, cerrarSesion, pedidoDelPanel }}>{children}</Contexto>
+  return (
+    <Contexto value={{ estado, aviso, iniciarSesion, cerrarSesion, reemplazarTokens, pedidoDelPanel }}>
+      {children}
+    </Contexto>
+  )
 }
