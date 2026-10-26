@@ -87,6 +87,67 @@ export const HORARIO_DE_LA_DEMO: readonly FranjaFalsa[] = [0, 1, 2, 3, 4].flatMa
   { dia_semana: dia, hora_inicio: '15:00', hora_fin: '19:00' },
 ])
 
+export interface SillonFalso {
+  id: number
+  nombre: string
+  activo: boolean
+}
+
+/** El sillón de la demo (id 1), activo. */
+export const SILLONES_DE_PARTIDA: readonly SillonFalso[] = [{ id: 1, nombre: 'Sillón 1', activo: true }]
+
+/** Un segundo sillón, inactivo, para los escenarios del selector de recurso de los bloqueos. */
+export const SILLON_INACTIVO: SillonFalso = { id: 2, nombre: 'Sillón 2', activo: false }
+
+export interface BloqueoFalso {
+  id: number
+  profesional_id: number | null
+  sillon_id: number | null
+  inicio: string
+  fin: string
+  motivo: string
+  creado_por: number
+}
+
+/** Un turno de partida del falso, para calcular los turnos afectados al crear un bloqueo (US-003 CA-2). */
+export interface TurnoFalso {
+  id: number
+  inicio: string
+  fin: string
+  estado: string
+  profesional_id: number
+  sillon_id: number
+  paciente_id: number
+}
+
+/** Vacaciones del profesional 1 (9 al 14 de noviembre de 2026, hora del consultorio). */
+export const BLOQUEO_DE_VACACIONES: BloqueoFalso = {
+  id: 1,
+  profesional_id: 1,
+  sillon_id: null,
+  inicio: '2026-11-09T03:00:00Z',
+  fin: '2026-11-14T03:00:00Z',
+  motivo: 'Vacaciones',
+  creado_por: 1,
+}
+
+/** Feriado de todo el consultorio (23 de noviembre de 2026, hora del consultorio). */
+export const BLOQUEO_FERIADO: BloqueoFalso = {
+  id: 2,
+  profesional_id: null,
+  sillon_id: null,
+  inicio: '2026-11-23T03:00:00Z',
+  fin: '2026-11-24T03:00:00Z',
+  motivo: 'Feriado',
+  creado_por: 1,
+}
+
+/** Dos turnos activos del profesional 1 el 2 de noviembre de 2026 (10:00 y 11:00 hora del consultorio). */
+export const TURNOS_DEL_2_DE_NOVIEMBRE: readonly TurnoFalso[] = [
+  { id: 7, inicio: '2026-11-02T13:00:00Z', fin: '2026-11-02T13:30:00Z', estado: 'reservado', profesional_id: 1, sillon_id: 1, paciente_id: 1 },
+  { id: 8, inicio: '2026-11-02T14:00:00Z', fin: '2026-11-02T14:30:00Z', estado: 'confirmado', profesional_id: 1, sillon_id: 1, paciente_id: 2 },
+]
+
 export interface OpcionesDelServidorFalso {
   /** Profesionales del consultorio; por defecto `PROFESIONALES_DE_PARTIDA`. */
   profesionales?: readonly ProfesionalFalso[]
@@ -96,6 +157,12 @@ export interface OpcionesDelServidorFalso {
   prestaciones?: readonly PrestacionFalsa[]
   /** Usuarios del consultorio; por defecto `USUARIOS_DE_PARTIDA`. */
   usuarios?: readonly UsuarioFalso[]
+  /** Sillones del consultorio; por defecto `SILLONES_DE_PARTIDA`. */
+  sillones?: readonly SillonFalso[]
+  /** Bloqueos de partida; por defecto ninguno. */
+  bloqueos?: readonly BloqueoFalso[]
+  /** Turnos de partida (solo para calcular los turnos afectados); por defecto ninguno. */
+  turnos?: readonly TurnoFalso[]
 }
 
 export interface ServidorFalso {
@@ -120,6 +187,10 @@ export interface ServidorFalso {
   horarioActual(profesionalId: number): FranjaFalsa[]
   /** Saca un profesional (la API real no borra profesionales, D46; sirve para simular un `404`). */
   quitarProfesional(id: number): void
+  /** Copia de los bloqueos del falso en este momento (para comprobar que algo no se guardó). */
+  bloqueosActuales(): BloqueoFalso[]
+  /** Saca un bloqueo (la pantalla lo pide después de que otro usuario lo eliminó; sirve para simular un `404`). */
+  quitarBloqueo(id: number): void
   /** Marca inactivo a un profesional (la demo no tiene cómo hacerlo). */
   marcarInactivo(id: number): void
   /** A partir de ahora toda petición falla como una red caída (fetch rechaza). */
@@ -363,6 +434,38 @@ function erroresDeFormatoDeUsuario(cuerpo: Record<string, unknown> | null, esAlt
   return errores
 }
 
+const CAMPOS_DEL_ALTA_DE_BLOQUEO = new Set(['inicio', 'fin', 'motivo', 'profesional_id', 'sillon_id'])
+const MAXIMO_DEL_MOTIVO = 200
+const ESTADOS_ACTIVOS = new Set(['pendiente_aprobacion', 'pendiente_sena', 'reservado', 'confirmado'])
+const FECHA_CON_ZONA = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2})$/
+
+/** Errores de formato del `POST /bloqueos` (Pydantic): campos de más o ausentes, motivo de 1 a 200, un solo recurso. */
+function erroresDeFormatoDeBloqueo(cuerpo: Record<string, unknown> | null): ErrorDeCampoFalso[] {
+  if (cuerpo === null) return [errorDeFormato('cuerpo', 'El cuerpo debe ser un objeto JSON.')]
+  const errores: ErrorDeCampoFalso[] = []
+  for (const campo of Object.keys(cuerpo)) {
+    if (!CAMPOS_DEL_ALTA_DE_BLOQUEO.has(campo)) errores.push(errorDeFormato(campo, 'Campo no permitido.'))
+  }
+  for (const campo of ['inicio', 'fin']) {
+    if (typeof cuerpo[campo] !== 'string') errores.push(errorDeFormato(campo, 'Debe ser una fecha y hora.'))
+  }
+  const motivo = cuerpo.motivo
+  const normalizado = typeof motivo === 'string' ? normalizarEspacios(motivo) : ''
+  if (normalizado === '' || normalizado.length > MAXIMO_DEL_MOTIVO) {
+    errores.push(errorDeFormato('motivo', 'Debe tener de 1 a 200 caracteres.'))
+  }
+  for (const campo of ['profesional_id', 'sillon_id']) {
+    const id = cuerpo[campo]
+    if (id !== undefined && id !== null && (typeof id !== 'number' || !Number.isInteger(id))) {
+      errores.push(errorDeFormato(campo, 'Debe ser un entero.'))
+    }
+  }
+  if (typeof cuerpo.profesional_id === 'number' && typeof cuerpo.sillon_id === 'number') {
+    errores.push(errorDeFormato('cuerpo', 'Un bloqueo es del profesional, del sillón o de todo el consultorio.'))
+  }
+  return errores
+}
+
 function contrasenaFueraDeRango(contrasena: string): boolean {
   return contrasena.length < 10 || new TextEncoder().encode(contrasena).length > 72
 }
@@ -377,6 +480,9 @@ export function crearServidorFalso(opciones: OpcionesDelServidorFalso = {}): Ser
   const horarios = new Map<number, FranjaFalsa[]>(
     profesionales.map((p) => [p.id, ordenarFranjas(opciones.horarios?.[p.id] ?? (p.id === 1 ? HORARIO_DE_LA_DEMO : []))]),
   )
+  const sillones: SillonFalso[] = (opciones.sillones ?? SILLONES_DE_PARTIDA).map((x) => ({ ...x }))
+  const bloqueos: BloqueoFalso[] = (opciones.bloqueos ?? []).map((b) => ({ ...b }))
+  const turnos: TurnoFalso[] = (opciones.turnos ?? []).map((t) => ({ ...t }))
   // Versión del token de cada usuario: desactivar la sube y los tokens anteriores dejan de servir (RN-AU-03).
   const versiones = new Map<number, number>()
   const cuerposRecibidos = new Map<string, Record<string, unknown>[]>()
@@ -631,6 +737,98 @@ export function crearServidorFalso(opciones: OpcionesDelServidorFalso = {}): Ser
     return salidaDeHorario(id)
   }
 
+  function recursoInexistente(recurso: string, id: number): Response {
+    return problema(404, '/errores/recurso-no-encontrado', 'Recurso no encontrado', 'No existe.', ['RN-GL-04'], {
+      referencias: [{ recurso, recurso_id: id, motivo: 'inexistente' }],
+    })
+  }
+
+  function salidaDeBloqueo(bloqueo: BloqueoFalso) {
+    const alcance = bloqueo.profesional_id !== null ? 'profesional' : bloqueo.sillon_id !== null ? 'sillon' : 'consultorio'
+    return { ...bloqueo, alcance }
+  }
+
+  function listarSillones(init: RequestInit | undefined): Response {
+    return autorizar(init, null).rechazo ?? json(200, [...sillones].sort((a, b) => a.id - b.id))
+  }
+
+  function listarBloqueos(init: RequestInit | undefined): Response {
+    const { rechazo } = autorizar(init, null)
+    if (rechazo !== null) return rechazo
+    const ordenados = [...bloqueos].sort((a, b) => Date.parse(a.inicio) - Date.parse(b.inicio) || a.id - b.id)
+    return json(200, { zona_horaria: ZONA_DEL_CONSULTORIO, bloqueos: ordenados.map(salidaDeBloqueo) })
+  }
+
+  /** Turnos activos que intersecan `[inicio, fin)` y son del alcance del bloqueo, por inicio y id (RN-AG-09). */
+  function turnosAfectados(bloqueo: BloqueoFalso): TurnoFalso[] {
+    const desde = Date.parse(bloqueo.inicio)
+    const hasta = Date.parse(bloqueo.fin)
+    return turnos
+      .filter(
+        (t) =>
+          ESTADOS_ACTIVOS.has(t.estado) &&
+          Date.parse(t.inicio) < hasta &&
+          desde < Date.parse(t.fin) &&
+          (bloqueo.profesional_id === null || t.profesional_id === bloqueo.profesional_id) &&
+          (bloqueo.sillon_id === null || t.sillon_id === bloqueo.sillon_id),
+      )
+      .sort((a, b) => Date.parse(a.inicio) - Date.parse(b.inicio) || a.id - b.id)
+  }
+
+  /** Validación de entrada del dominio (B5): RN-GL-01, RN-GL-04 y RN-AG-17, todas juntas. */
+  function erroresDeEntradaDelBloqueo(cuerpo: Record<string, unknown>): { errores: ErrorDeCampoFalso[]; codigos: string[] } {
+    const errores: ErrorDeCampoFalso[] = []
+    const fechas = ['inicio', 'fin'].map((campo) => String(cuerpo[campo]))
+    for (const [i, campo] of ['inicio', 'fin'].entries()) {
+      if (!FECHA_CON_ZONA.test(fechas[i] ?? '')) {
+        errores.push({ campo, codigo: 'RN-GL-01', mensaje: 'La fecha y hora deben llevar zona horaria.' })
+      }
+    }
+    const profesional = cuerpo.profesional_id
+    if (typeof profesional === 'number' && !profesionales.some((p) => p.id === profesional && p.activo)) {
+      errores.push({ campo: 'profesional_id', codigo: 'RN-GL-04', mensaje: 'El profesional no existe o está inactivo.' })
+    }
+    const sillon = cuerpo.sillon_id
+    if (typeof sillon === 'number' && !sillones.some((x) => x.id === sillon && x.activo)) {
+      errores.push({ campo: 'sillon_id', codigo: 'RN-GL-04', mensaje: 'El sillón no existe o está inactivo.' })
+    }
+    if (errores.length === 0 && Date.parse(fechas[1] ?? '') <= Date.parse(fechas[0] ?? '')) {
+      errores.push({ campo: 'fin', codigo: 'RN-AG-17', mensaje: 'El bloqueo tiene que terminar después de empezar.' })
+    }
+    return { errores, codigos: [...new Set(errores.flatMap((e) => (e.codigo === null ? [] : [e.codigo])))] }
+  }
+
+  /** Orden de B8: acceso, formato (sin código), entrada del dominio (todas juntas) y recién ahí se guarda. */
+  function crearBloqueo(init: RequestInit | undefined): Response {
+    const { rechazo, actor } = autorizar(init, ['odontologo'])
+    if (rechazo !== null || actor === null) return rechazo ?? sesionInvalida()
+    const cuerpo = leerCuerpo(init)
+    const formato = erroresDeFormatoDeBloqueo(cuerpo)
+    if (cuerpo === null || formato.length > 0) return entradaInvalida(formato, [])
+    const { errores, codigos } = erroresDeEntradaDelBloqueo(cuerpo)
+    if (errores.length > 0) return entradaInvalida(errores, codigos)
+    const nuevo: BloqueoFalso = {
+      id: Math.max(0, ...bloqueos.map((b) => b.id)) + 1,
+      profesional_id: typeof cuerpo.profesional_id === 'number' ? cuerpo.profesional_id : null,
+      sillon_id: typeof cuerpo.sillon_id === 'number' ? cuerpo.sillon_id : null,
+      inicio: String(cuerpo.inicio),
+      fin: String(cuerpo.fin),
+      motivo: normalizarEspacios(String(cuerpo.motivo)),
+      creado_por: actor.id,
+    }
+    bloqueos.push(nuevo)
+    return json(201, { ...salidaDeBloqueo(nuevo), turnos_afectados: turnosAfectados(nuevo) })
+  }
+
+  function eliminarBloqueo(id: number, init: RequestInit | undefined): Response {
+    const { rechazo } = autorizar(init, ['odontologo'])
+    if (rechazo !== null) return rechazo
+    const indice = bloqueos.findIndex((b) => b.id === id)
+    if (indice < 0) return recursoInexistente('bloqueo', id)
+    bloqueos.splice(indice, 1)
+    return new Response(null, { status: 204 })
+  }
+
   async function refrescar(init: RequestInit | undefined): Promise<Response> {
     // Una vuelta del bucle de eventos: da tiempo a que lleguen varios 401 antes de contestar.
     await new Promise<void>((resolver) => setTimeout(resolver, 0))
@@ -697,6 +895,13 @@ export function crearServidorFalso(opciones: OpcionesDelServidorFalso = {}): Ser
     if (delHorario !== null && metodo === 'PUT') {
       return Promise.resolve(reemplazarHorario(Number(delHorario[1]), init))
     }
+    if (entrada === '/api/sillones' && metodo === 'GET') return Promise.resolve(listarSillones(init))
+    if (entrada === '/api/bloqueos' && metodo === 'GET') return Promise.resolve(listarBloqueos(init))
+    if (entrada === '/api/bloqueos' && metodo === 'POST') return Promise.resolve(crearBloqueo(init))
+    const delBloqueo = /^\/api\/bloqueos\/(\d+)$/.exec(entrada)
+    if (delBloqueo !== null && metodo === 'DELETE') {
+      return Promise.resolve(eliminarBloqueo(Number(delBloqueo[1]), init))
+    }
     const delPatch = /^\/api\/prestaciones\/(\d+)$/.exec(entrada)
     if (delPatch !== null && metodo === 'PATCH') {
       return Promise.resolve(editarPrestacion(Number(delPatch[1]), init))
@@ -721,6 +926,11 @@ export function crearServidorFalso(opciones: OpcionesDelServidorFalso = {}): Ser
       if (indice >= 0) catalogo.splice(indice, 1)
     },
     horarioActual: (profesionalId) => (horarios.get(profesionalId) ?? []).map((f) => ({ ...f })),
+    bloqueosActuales: () => bloqueos.map((b) => ({ ...b })),
+    quitarBloqueo: (id) => {
+      const indice = bloqueos.findIndex((b) => b.id === id)
+      if (indice >= 0) bloqueos.splice(indice, 1)
+    },
     quitarProfesional: (id) => {
       const indice = profesionales.findIndex((p) => p.id === id)
       if (indice >= 0) profesionales.splice(indice, 1)
