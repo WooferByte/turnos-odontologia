@@ -700,7 +700,7 @@ npm test
 npm run typecheck
 ```
 
-`npm test` corre **204 tests en 16 archivos** («Tests 204 passed (204)»); no necesita el backend, Docker ni red. `npm run typecheck` (`tsc --noEmit`) termina sin salida. `npm run build` genera `frontend/dist/`.
+`npm test` corre **235 tests en 21 archivos** («Tests 235 passed (235)»); no necesita el backend, Docker ni red. `npm run typecheck` (`tsc --noEmit`) termina sin salida. `npm run build` genera `frontend/dist/`.
 
 ### Probar el panel (demo sin Docker, dos terminales)
 
@@ -898,6 +898,43 @@ El cliente de la API (`apiBloqueos.test.ts`, 7 tests), la conversión de hora (`
 
 Límites conocidos de la pantalla: el enlace «Bloqueos» y las acciones «Bloquear» y «Eliminar» se ven con cualquier rol, porque la interfaz no sabe quién inició sesión (D249): la API decide con `403`. «Eliminar» no pide confirmación (D286; el bloqueo se puede volver a crear). No hay opción «Todo el día»: un día completo es de las 00:00 a las 00:00 del día siguiente (D285). Las fechas se escriben con el selector del navegador (`<input type="datetime-local">`), que muestra el formato de cada navegador. Los turnos afectados se ven solo en el aviso del alta; la lista no los muestra después.
 
+### Pantalla de contraseñas
+
+Desde C-10 el panel tiene dos pantallas para las contraseñas, sobre la API de «Contraseñas». Cómo llegar: **«Restablecer contraseña»** es una acción de cada fila de «Usuarios» (`/panel/usuarios`) y **«Mi contraseña»** es un enlace de la barra del panel (`/panel/contrasena`), visible para los tres roles. Las pantallas no validan el largo de las contraseñas (lo decide la API con `RN-AU-07`): solo exigen que los campos estén completos y, en «Mi contraseña», que la nueva y su repetición coincidan; cada rechazo se muestra con su código.
+
+Recorrido con la demo sin Docker (las dos terminales de «Probar el panel», con la demo **recién arrancada**; hace falta una ventana más, con su propio `sessionStorage`, como una pestaña nueva o una ventana privada):
+
+1. Ingresar con `odontologa@consultorio-demo.test` y pulsar «Usuarios»: las dos filas, también la de la propia odontóloga, tienen «Restablecer contraseña».
+2. «Restablecer contraseña» en la recepcionista: el panel muestra su email como texto, «Contraseña nueva» con la ayuda «De 10 caracteres a 72 bytes.» y la nota «Al guardar se cierran todas las sesiones de este usuario.». Escribir `corta-123` y «Guardar» → `POST /api/usuarios/2/restablecer-contrasena` con `422` y `["RN-AU-07"]`; debajo del campo se ve «La contraseña debe tener de 10 caracteres a 72 bytes (RN-AU-07).» y el panel sigue abierto con lo escrito.
+3. Cambiar el texto por `clave-nueva-2026` y «Guardar» → `204`: el panel se cierra y arriba de la tabla se ve, en verde, «Contraseña restablecida. Se cerraron las sesiones de recepcion@consultorio-demo.test.». Al volver a abrir «Restablecer contraseña», el campo está vacío; «Cancelar» y el botón «Cerrar» no mandan nada.
+4. «Restablecer contraseña» en la fila de la odontóloga con `clave-nueva-2026` → `409` con `["RN-AU-10"]` y, en el aviso del panel, «Tu propia contraseña se cambia desde «Mi contraseña» (RN-AU-10).»; la sesión sigue.
+5. En una ventana nueva, ingresar con `recepcion@consultorio-demo.test`: con la contraseña vieja `demo-consultorio-2026` se ve el mensaje genérico «El email o la contraseña no son correctos.»; con `clave-nueva-2026` entra al panel. En otra ventana más, ingresar con la misma recepcionista y dejarla en el panel.
+6. En la primera ventana de la recepcionista, pulsar «Mi contraseña». En «Contraseña actual» escribir `no-es-la-actual-2026`, en «Contraseña nueva» `otra-clave-2026` y en «Repetir contraseña nueva» `otra-clave-2027` → no se manda nada y debajo de la repetición se ve «Las contraseñas nuevas no coinciden.». Corregir la repetición a `otra-clave-2026` → `POST /api/auth/cambiar-contrasena` con `422` y `["RN-AU-09"]` (no `401`) y, debajo de la actual, «La contraseña actual no es correcta (RN-AU-09).»; la sesión sigue.
+7. Escribir la actual correcta `clave-nueva-2026` y `corta-123` como nueva y como repetición → `422` con `["RN-AU-07"]` y el mensaje debajo de «Contraseña nueva». Cambiar la nueva y la repetición a `otra-clave-2026` → `200` con los tokens nuevos: los tres campos quedan vacíos y debajo de la tarjeta se ve, en verde, «Contraseña cambiada. Tus otras sesiones se cerraron.».
+8. En esa misma ventana, pulsar «Prestaciones»: carga sin volver al inicio de sesión y sin `POST /api/auth/refresh` (la sesión ya tiene los tokens nuevos). Recargar la página: se ve un `POST /api/auth/refresh` con `200` y el panel sigue.
+9. En la otra ventana de la recepcionista, pulsar «Prestaciones»: la interfaz vuelve a `/ingresar` con «Tu sesión terminó. Iniciá sesión de nuevo.» (sin el mensaje de conexión).
+
+Con la API detenida, las dos pantallas muestran «No se pudo conectar con el servidor. Probá de nuevo en unos minutos.» y conservan lo escrito. Si la sesión no se puede renovar mientras se restablece o se cambia una contraseña, la interfaz vuelve a `/ingresar` con el aviso de sesión terminada y la contraseña no cambia.
+
+Escenario → test (`src/features/usuarios/` y `src/features/contrasenas/`, API reemplazada por el servidor falso). Los 17 escenarios de `openspec/changes/contrasenas-de-usuarios/specs/pantalla-de-contrasenas/spec.md` están en `RestablecerContrasena.test.tsx` (9 tests) y `PaginaMiContrasena.test.tsx` (12 tests), con 21 tests (17 escenarios más 4 de partición, porque tres escenarios agrupan varios comportamientos y cada comportamiento tiene su test):
+
+| Escenario | Test titular |
+|---|---|
+| US-093 CA-6 (la odontóloga restablece la contraseña de la recepcionista) | «US-093 CA-6: la odontóloga restablece la contraseña de la recepcionista» |
+| US-093 CA-9 (la contraseña corta, debajo del campo) | «US-093 CA-9: la contraseña corta se muestra debajo del campo» (restablecer), «US-093 CA-9: la contraseña nueva corta se muestra debajo de la nueva» (cambiar) |
+| US-093 CA-6 (la propia, `RN-AU-10`; el dueño, `RN-AU-05`) | «US-093 CA-6: la odontóloga no restablece la propia», «US-093 CA-6: el dueño ve el rechazo sin perder la sesión» |
+| US-093 CA-6 (Cancelar, Cerrar, campo vacío, doble pulsación) | «US-093 CA-6: Cancelar, Cerrar y el campo vacío no piden nada», «US-093 CA-6: pulsar «Guardar» dos veces manda un solo pedido» |
+| US-093 CA-6 (sin conexión; usuario que ya no existe, solo contra el servidor falso) | «US-093 CA-6: sin conexión, el aviso de conexión conserva lo escrito», «US-093 CA-6: un usuario que ya no existe cierra el panel y recarga la lista» |
+| US-093 CA-7 (cambiar la propia, `RN-AU-09`, repetición distinta) | «US-093 CA-7: la recepcionista cambia la suya», «US-093 CA-7: la contraseña actual incorrecta se muestra debajo de la actual», «US-093 CA-7: la repetición distinta no manda nada», «US-093 CA-7: un campo vacío no manda nada» |
+| US-093 CA-7 (doble pulsación, sin conexión, salir y volver) | «US-093 CA-7: pulsar dos veces manda un solo pedido», «US-093 CA-7: sin conexión, el aviso de conexión conserva lo escrito», «US-093 CA-7: al salir y volver, los campos están vacíos» |
+| US-093 CA-7 (los tres roles ven el enlace) | «US-093 CA-7: todos los roles ven «Mi contraseña»» |
+| US-093 CA-7 (tokens nuevos: la siguiente petición y recargar) | «US-093 CA-7: la siguiente petición usa el token nuevo sin renovar», «US-093 CA-7: recargar después de cambiarla conserva la sesión» |
+| US-092 CA-1 (la sesión termina al restablecer o al cambiar) | «US-092 CA-1: una sesión irrenovable al restablecer», «US-092 CA-1: una sesión irrenovable al cambiar la propia» |
+
+El cliente de la API (`apiContrasenas.test.ts`, 7 tests), los mensajes de K14 como funciones puras (`mensajes.test.ts`, 2) y `reemplazarTokens` (`src/shared/api/ProveedorDeSesion.test.tsx`, 1) se prueban aparte. El servidor falso autentica con la contraseña vigente de cada usuario (la odontóloga conserva la de C-08; los demás parten de `demo-consultorio-2026`). La disposición sigue las pantallas generadas en Stitch: «Mi contraseña» (`projects/14200813501064679723/screens/fa6faa69cae34252a7c79e2cb82210c5`) y «Usuarios» con el panel «Restablecer contraseña» (`projects/14200813501064679723/screens/925f1e4028294cb2bb9bdeeea81ffd09`); la referencia visual está en `docs/skills-mcp/evidencias/sesion-nueva/stitch-contrasenas-pantalla/`.
+
+Límites conocidos de las pantallas: «Restablecer contraseña» se ve en todas las filas, también en la propia y en las inactivas, porque la interfaz no sabe quién inició sesión (D249): la API decide, y sobre la propia fila responde `409` con `RN-AU-10`. La pantalla no muestra la contraseña, no tiene medidor de fortaleza ni pide confirmación antes de cerrar las sesiones del usuario. No hay límite de peticiones en el cambio de contraseña (como en el inicio de sesión, D195).
+
 ### Versiones fijadas del frontend
 
 Las versiones exactas viven en `frontend/package.json`; `frontend/package-lock.json` se generó con `npm install --before=2026-10-12` (ningún paquete publicado desde esa fecha) y se instala siempre con `npm ci`.
@@ -930,7 +967,7 @@ La API se reemplaza en los tests por un servidor falso escrito a mano (`frontend
 
 Hay además tests de la renovación compartida, del `403`, del cierre de sesión y de que ninguna URL contenga un token, y cinco guards (`src/test/guards.test.ts`) que fallan si aparece `any`, `vi.mock`, `localStorage`, `dangerouslySetInnerHTML`, un archivo `index.ts` de reexportación o un recurso de otro origen (STI-1).
 
-Resultado actual de las dos suites: frontend «Tests 204 passed (204)»; backend «856 passed, 58 deselected, 1 warning».
+Resultado actual de las dos suites: frontend «Tests 235 passed (235)»; backend «856 passed, 58 deselected, 1 warning».
 
 ## Levantar la API con PostgreSQL
 

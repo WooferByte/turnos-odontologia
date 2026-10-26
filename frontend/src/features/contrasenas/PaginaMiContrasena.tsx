@@ -63,7 +63,6 @@ function CampoDeContrasena({
           aria-invalid={error === null ? undefined : true}
           aria-describedby={descripcion.length === 0 ? undefined : descripcion.join(' ')}
         />
-        {error === null ? null : <IconoAlerta clase="icono icono-en-campo" />}
       </div>
       {ayuda === undefined ? null : (
         <p id={idAyuda} className="ayuda">

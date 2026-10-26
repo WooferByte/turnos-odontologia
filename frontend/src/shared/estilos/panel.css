@@ -1207,3 +1207,98 @@ p.pantalla-de-ingreso {
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Contraseñas (C-10, pantallas de Stitch, D234): «Mi contraseña» con una tarjeta angosta a la izquierda, el aviso de
+   éxito debajo y el error de campo con el ícono junto al texto; en «Usuarios», la acción «Restablecer contraseña»
+   con su llave y el aviso de éxito arriba de la tabla. Todo con los tokens existentes. */
+.pantalla-de-contrasena {
+  max-width: 448px;
+}
+
+.pantalla-de-contrasena h1 {
+  margin: 0 0 24px;
+  font-size: 24px;
+  letter-spacing: -0.01em;
+}
+
+.tarjeta-de-contrasena {
+  padding: 24px;
+}
+
+.tarjeta-de-contrasena .campo {
+  margin-bottom: 20px;
+}
+
+.tarjeta-de-contrasena .campo input[type='password'] {
+  height: var(--alto-campo-grande);
+  border-radius: var(--radio);
+}
+
+.tarjeta-de-contrasena .campo input[aria-invalid='true'] {
+  padding-right: 12px;
+}
+
+.tarjeta-de-contrasena .boton-de-ancho-completo {
+  justify-content: center;
+  height: var(--alto-campo-grande);
+}
+
+.tarjeta-de-contrasena .aviso {
+  margin-bottom: 20px;
+}
+
+.error-de-campo-con-icono {
+  display: flex;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.icono-de-error {
+  width: 14px;
+  height: 14px;
+  margin-top: 1px;
+  color: var(--error);
+}
+
+.aviso-de-exito {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin: 16px 0 0;
+  padding: 14px 16px;
+}
+
+.aviso-de-exito p {
+  margin: 0;
+}
+
+.aviso-de-exito .icono-exito {
+  width: 20px;
+  height: 20px;
+}
+
+.zona-de-tabla > .aviso-de-exito {
+  margin: 0 0 16px;
+}
+
+.boton-de-fila-con-icono {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  white-space: nowrap;
+}
+
+.boton-de-fila-con-icono .icono {
+  width: 14px;
+  height: 14px;
+  color: var(--texto-tenue);
+}
+
+.tabla-de-usuarios .acciones-de-fila {
+  white-space: normal;
+}
+
+.tabla-de-usuarios .acciones-de-fila .boton-de-fila {
+  margin-top: 2px;
+  margin-bottom: 2px;
+}
