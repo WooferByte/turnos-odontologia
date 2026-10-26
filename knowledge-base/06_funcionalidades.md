@@ -417,13 +417,13 @@ Decisión del autor 2026-10-03 (fila «Usuarios y acceso» de la tabla del 2026-
 - [ ] CA-3: desactivar un usuario **corta su acceso de inmediato** (sus tokens dejan de valer, no solo su próximo inicio de sesión; `token_version` se incrementa); no se borra (RN-AU-03, RN-AU-04; decisión del autor 2026-10-05, D43).
 - [ ] CA-4 (error): no se puede desactivar ni quitar el rol `odontologo` al **último odontólogo activo**; se rechaza con el error de dominio `RN-AU-06` (D44).
 - [ ] CA-5 (error): un usuario **no puede desactivarse a sí mismo** (`RN-AU-06`, D44).
-- [ ] CA-6: el odontólogo **define la contraseña inicial** al crear el usuario y **puede restablecerla**; el restablecimiento incrementa `token_version` (RN-AU-07, D45).
-- [ ] CA-7: **cada usuario puede cambiar su propia contraseña**, pidiendo la actual; el cambio incrementa `token_version`, por lo que las demás sesiones del usuario dejan de valer (RN-AU-07, D45). Ruta propuesta: `POST /auth/cambiar-contrasena`.
+- [ ] CA-6: el odontólogo **define la contraseña inicial** al crear el usuario y **puede restablecerla**; el restablecimiento incrementa `token_version` (RN-AU-07, D45); la propia no se restablece por esa vía: se rechaza con `409` y el error de dominio `RN-AU-10` (decisión del autor 2026-10-26, D293).
+- [ ] CA-7: **cada usuario puede cambiar su propia contraseña**, pidiendo la actual; el cambio incrementa `token_version`, por lo que las demás sesiones del usuario dejan de valer (RN-AU-07, D45). Ruta propuesta: `POST /auth/cambiar-contrasena`. Si la actual no coincide, se rechaza con `422` y el error de dominio `RN-AU-09`, sin cambiar nada (decisión del autor 2026-10-26, D292).
 - [ ] CA-8: en la v1, asignar el rol `odontologo` a otro usuario **no crea un `Profesional`**: el único profesional queda vinculado al usuario del seed; un segundo profesional es **Fase 2** (D46).
 - [ ] CA-9 (error): la contraseña (inicial, restablecida o cambiada por el propio usuario) tiene **mínimo 10 caracteres y máximo 72 bytes** (el tope de bcrypt); fuera de ese rango se rechaza y no se modifica el usuario (RN-AU-07, decisión del autor 2026-10-05, D74).
 **Orden**: 3
 **Depende de**: US-090, US-091
-**Reglas**: RN-AU-02, RN-AU-03, RN-AU-04, RN-AU-05, RN-AU-06, RN-AU-07, RN-AU-08
+**Reglas**: RN-AU-02, RN-AU-03, RN-AU-04, RN-AU-05, RN-AU-06, RN-AU-07, RN-AU-08, RN-AU-09, RN-AU-10
 
 > Nota de implementación (C-09, archivado 2026-10-22): cubre CA-1 a CA-5, CA-8 y la parte inicial de CA-9 (contraseña inicial de 10 a 72 bytes, D242); lo restante de CA-6, CA-7 y CA-9 queda para C-10.
 
