@@ -60,6 +60,17 @@ class RepositorioUsuariosSqlAlchemy:
         modelo = self._sesion.get(UsuarioModelo, usuario_id)
         return None if modelo is None else _a_dominio(modelo)
 
+    def obtener_para_cambiar(self, usuario_id: int) -> DatosUsuario | None:
+        # FOR UPDATE sobre la fila del usuario (D299); SQLite omite la cláusula. populate_existing evita
+        # devolver una copia vieja del identity map: tras esperar, hay que leer lo que el otro confirmó.
+        modelo = self._sesion.scalar(
+            select(UsuarioModelo)
+            .where(UsuarioModelo.id == usuario_id)
+            .with_for_update()
+            .execution_options(populate_existing=True)
+        )
+        return None if modelo is None else _a_dominio(modelo)
+
     def agregar(self, datos: DatosUsuario) -> DatosUsuario:
         modelo = UsuarioModelo(
             consultorio_id=datos.consultorio_id,
@@ -106,6 +117,7 @@ class RepositorioUsuariosSqlAlchemy:
 
     def guardar(self, datos: DatosUsuario) -> DatosUsuario:
         modelo = self._sesion.get_one(UsuarioModelo, datos.id)
+        modelo.hash_password = datos.hash_password
         modelo.activo = datos.activo
         modelo.token_version = datos.token_version
         self._sesion.flush()

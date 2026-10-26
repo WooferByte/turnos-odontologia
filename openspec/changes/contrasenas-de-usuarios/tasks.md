@@ -28,8 +28,8 @@ Reglas de trabajo para todos los grupos (no son tareas):
 
 ## 3. Persistencia del repositorio de usuarios
 
-- [ ] 3.1 RED (US-093 CA-6, CA-7). En `tests/integration/test_repositorio_usuarios.py`: `guardar escribe hash_password junto con activo y token_version` y `obtener_para_cambiar devuelve el usuario y no falla en SQLite` (y `None` para un id inexistente). Verificación: fallan porque `guardar` no escribe el hash y `obtener_para_cambiar` no existe en el puerto ni en `RepositorioUsuariosSqlAlchemy`.
-- [ ] 3.2 GREEN y REFACTOR (design K10, K11). Ampliar `RepositorioUsuarios` en `application/puertos.py` y su implementación SQLAlchemy (estilo 2.x síncrono; `obtener_para_cambiar` con `with_for_update()` sobre `UsuarioModelo`); `guardar` escribe también `hash_password`. Verificación: los tests de 3.1 pasan; los de C-06, C-07 y C-09 sobre usuarios siguen en verde con la misma cantidad; `python -m pytest` en verde.
+- [x] 3.1 RED (US-093 CA-6, CA-7). En `tests/integration/test_repositorio_usuarios.py`: `guardar escribe hash_password junto con activo y token_version` y `obtener_para_cambiar devuelve el usuario y no falla en SQLite` (y `None` para un id inexistente). Verificación: fallan porque `guardar` no escribe el hash y `obtener_para_cambiar` no existe en el puerto ni en `RepositorioUsuariosSqlAlchemy`.
+- [x] 3.2 GREEN y REFACTOR (design K10, K11). Ampliar `RepositorioUsuarios` en `application/puertos.py` y su implementación SQLAlchemy (estilo 2.x síncrono; `obtener_para_cambiar` con `with_for_update()` sobre `UsuarioModelo`); `guardar` escribe también `hash_password`. Verificación: los tests de 3.1 pasan; los de C-06, C-07 y C-09 sobre usuarios siguen en verde con la misma cantidad; `python -m pytest` en verde.
 
 ## 4. Restablecer la contraseña por la API (US-093 CA-6, CA-9)
 

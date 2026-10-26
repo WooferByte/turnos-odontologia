@@ -187,6 +187,13 @@ class RepositorioUsuarios(Protocol):
 
     def obtener(self, usuario_id: int) -> DatosUsuario | None: ...
 
+    def obtener_para_cambiar(self, usuario_id: int) -> DatosUsuario | None:
+        """Como ``obtener``, pero bloquea la fila hasta el fin de la transacción (FOR UPDATE; DD-04, D299).
+
+        Serializa los cambios de contraseña de un mismo usuario: el segundo espera y lee la versión del primero.
+        """
+        ...
+
     def agregar(self, datos: DatosUsuario) -> DatosUsuario:
         """Guarda al usuario con el email normalizado y lo devuelve con su id; levanta ``EmailRepetidoEnLaBase``."""
         ...
@@ -211,7 +218,7 @@ class RepositorioUsuarios(Protocol):
         ...
 
     def guardar(self, datos: DatosUsuario) -> DatosUsuario:
-        """Actualiza ``activo`` y ``token_version`` del usuario existente; el resto no se edita."""
+        """Actualiza ``hash_password``, ``activo`` y ``token_version`` del usuario existente; el resto no se edita."""
         ...
 
     def reemplazar_roles(self, usuario_id: int, roles: frozenset[Rol]) -> None:

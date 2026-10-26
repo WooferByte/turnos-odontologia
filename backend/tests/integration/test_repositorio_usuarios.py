@@ -306,3 +306,48 @@ def test_us093_ca1_consultorio_unico_devuelve_el_id_del_unico_consultorio(sesion
     consultorio = un_consultorio(sesion)
 
     assert RepositorioUsuariosSqlAlchemy(sesion).consultorio_unico() == consultorio.id
+
+
+def test_us093_ca6_guardar_escribe_hash_password_junto_con_activo_y_token_version(
+    sesion: Session, fabrica_sesiones
+) -> None:
+    usuario = un_usuario(sesion, un_consultorio(sesion))
+    with fabrica_sesiones() as escritura:
+        repositorio = RepositorioUsuariosSqlAlchemy(escritura)
+        actual = repositorio.obtener(usuario.id)
+        devuelto = repositorio.guardar(
+            replace(actual, hash_password="$2b$04$hash-nuevo", activo=False, token_version=actual.token_version + 1)
+        )
+        escritura.commit()
+
+    with fabrica_sesiones() as lectura:
+        leido = RepositorioUsuariosSqlAlchemy(lectura).obtener(usuario.id)
+    assert devuelto.hash_password == "$2b$04$hash-nuevo"
+    assert (leido.hash_password, leido.activo, leido.token_version) == ("$2b$04$hash-nuevo", False, 1)
+
+
+def test_us093_ca6_guardar_con_el_mismo_hash_deja_la_contrasena_como_estaba(sesion: Session) -> None:
+    usuario = un_usuario(sesion, un_consultorio(sesion))
+    repositorio = RepositorioUsuariosSqlAlchemy(sesion)
+    antes = repositorio.obtener(usuario.id)
+
+    repositorio.guardar(replace(antes, token_version=7))
+
+    despues = repositorio.obtener(usuario.id)
+    assert despues.hash_password == antes.hash_password and despues.token_version == 7
+
+
+def test_us093_ca7_obtener_para_cambiar_devuelve_el_usuario_y_no_falla_en_sqlite(sesion: Session) -> None:
+    usuario = un_usuario(sesion, un_consultorio(sesion))
+    repositorio = RepositorioUsuariosSqlAlchemy(sesion)
+
+    bloqueado = repositorio.obtener_para_cambiar(usuario.id)
+
+    assert bloqueado == repositorio.obtener(usuario.id)
+    assert bloqueado.id == usuario.id
+
+
+def test_us093_ca6_obtener_para_cambiar_de_un_id_inexistente_devuelve_none(sesion: Session) -> None:
+    un_usuario(sesion, un_consultorio(sesion))
+
+    assert RepositorioUsuariosSqlAlchemy(sesion).obtener_para_cambiar(999) is None
