@@ -1,12 +1,23 @@
-"""Esquemas HTTP de ``/turnos`` (D4), ``/prestaciones`` (C-04) y ``/sillones`` (C-05). Es la única capa que conoce Pydantic."""
+"""Esquemas HTTP de ``/turnos`` (D4), ``/prestaciones`` (C-04), ``/sillones`` (C-05) y ``/bloqueos`` (C-13). Es la única capa que conoce Pydantic."""
 from datetime import datetime, time
 from typing import Annotated, Any
 
-from pydantic import AfterValidator, BaseModel, BeforeValidator, ConfigDict, Field, StringConstraints, field_validator
+from pydantic import (
+    AfterValidator,
+    BaseModel,
+    BeforeValidator,
+    ConfigDict,
+    Field,
+    StringConstraints,
+    field_validator,
+    model_validator,
+)
 
+from app.application.bloqueos import BloqueoCreado, BloqueosDelConsultorio
 from app.application.horario import HorarioDelProfesional
 from app.application.usuarios import UsuarioConRoles
 from app.domain.acceso.roles import Rol
+from app.domain.agenda.bloqueos import DatosBloqueo
 from app.domain.agenda.horario import Franja
 from app.domain.agenda.nombres import normalizar_espacios
 from app.domain.agenda.prestaciones import DatosPrestacion
@@ -427,3 +438,131 @@ class ProfesionalSalida(BaseModel):
     @classmethod
     def desde_datos(cls, datos: DatosProfesional) -> "ProfesionalSalida":
         return cls(id=datos.id, nombre=datos.nombre, activo=datos.activo)
+
+
+# --- Bloqueos puntuales (C-13) ---
+MAXIMO_DEL_MOTIVO = 200  # tope de tamaño del cuerpo, como el de las franjas (D283)
+
+
+def _motivo_normalizado(motivo: str) -> str:
+    """Guarda el motivo sin espacios de más; de 1 a 200 caracteres después de normalizar (D283)."""
+    normalizado = _nombre_normalizado(motivo)
+    if len(normalizado) > MAXIMO_DEL_MOTIVO:
+        raise ValueError(f"El motivo no puede tener más de {MAXIMO_DEL_MOTIVO} caracteres.")
+    return normalizado
+
+
+MotivoDelBloqueo = Annotated[str, AfterValidator(_motivo_normalizado)]
+
+
+class CrearBloqueoEntrada(BaseModel):
+    """Cuerpo de ``POST /bloqueos``. La zona de las fechas y las referencias las valida el dominio (RN-GL-01, RN-GL-04).
+
+    ``profesional_id`` y ``sillon_id`` a la vez son de formato (D272); sin ninguno, bloquea todo el consultorio.
+    """
+
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={
+            "examples": [
+                {
+                    "profesional_id": 1,
+                    "inicio": "2026-11-09T03:00:00Z",
+                    "fin": "2026-11-14T03:00:00Z",
+                    "motivo": "Vacaciones",
+                }
+            ]
+        },
+    )
+
+    inicio: datetime
+    fin: datetime
+    motivo: MotivoDelBloqueo
+    profesional_id: int | None = None
+    sillon_id: int | None = None
+
+    @model_validator(mode="after")
+    def _un_solo_recurso(self) -> "CrearBloqueoEntrada":
+        if self.profesional_id is not None and self.sillon_id is not None:
+            raise ValueError("Un bloqueo es del profesional, del sillón o de todo el consultorio, no de dos a la vez.")
+        return self
+
+
+class BloqueoSalida(BaseModel):
+    """Un bloqueo: el ``alcance`` sale de qué id está presente y no se guarda."""
+
+    id: int
+    alcance: str
+    profesional_id: int | None
+    sillon_id: int | None
+    inicio: datetime
+    fin: datetime
+    motivo: str
+    creado_por: int
+
+    @classmethod
+    def desde_datos(cls, datos: DatosBloqueo) -> "BloqueoSalida":
+        assert datos.id is not None
+        return cls(
+            id=datos.id,
+            alcance=datos.alcance.value,
+            profesional_id=datos.profesional_id,
+            sillon_id=datos.sillon_id,
+            inicio=datos.inicio,
+            fin=datos.fin,
+            motivo=datos.motivo,
+            creado_por=datos.creado_por,
+        )
+
+
+class TurnoAfectadoSalida(BaseModel):
+    """Un turno activo dentro del bloqueo: sin otros datos del paciente que su id (D275, RN-PR-01)."""
+
+    id: int
+    inicio: datetime
+    fin: datetime
+    estado: str
+    profesional_id: int
+    sillon_id: int
+    paciente_id: int
+
+    @classmethod
+    def desde_turno(cls, turno: Turno) -> "TurnoAfectadoSalida":
+        assert turno.id is not None
+        return cls(
+            id=turno.id,
+            inicio=turno.inicio,
+            fin=turno.fin,
+            estado=turno.estado.value,
+            profesional_id=turno.profesional_id,
+            sillon_id=turno.sillon_id,
+            paciente_id=turno.paciente_id,
+        )
+
+
+class BloqueoCreadoSalida(BloqueoSalida):
+    """Respuesta ``201``: el bloqueo y los turnos activos que quedaron adentro (no se cancelaron, D83)."""
+
+    turnos_afectados: list[TurnoAfectadoSalida]
+
+    @classmethod
+    def desde_creado(cls, creado: BloqueoCreado) -> "BloqueoCreadoSalida":
+        base = BloqueoSalida.desde_datos(creado.bloqueo)
+        return cls(
+            **base.model_dump(),
+            turnos_afectados=[TurnoAfectadoSalida.desde_turno(t) for t in creado.turnos_afectados],
+        )
+
+
+class BloqueosSalida(BaseModel):
+    """Respuesta de ``GET /bloqueos``: la zona del consultorio y todos sus bloqueos, sin filtros (D279)."""
+
+    zona_horaria: str
+    bloqueos: list[BloqueoSalida]
+
+    @classmethod
+    def desde_bloqueos(cls, lista: BloqueosDelConsultorio) -> "BloqueosSalida":
+        return cls(
+            zona_horaria=lista.zona_horaria,
+            bloqueos=[BloqueoSalida.desde_datos(b) for b in lista.bloqueos],
+        )

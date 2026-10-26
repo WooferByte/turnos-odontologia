@@ -5,6 +5,7 @@ from fastapi.responses import JSONResponse
 
 from app.api.esquemas import ConflictoSalida, ErrorDeCampoSalida, Problema, ReferenciaSalida
 from app.domain.errors import (
+    BloqueoInvertido,
     AdministracionSinOdontologo,
     ContrasenaFueraDeRango,
     CredencialesInvalidas,
@@ -55,7 +56,7 @@ _ERRORES_DE_TEXTO_FIJO = (
 )
 
 
-ErrorDeCampo = FechaNoUTC | DuracionInvalida | ContrasenaFueraDeRango | FranjaInvalida
+ErrorDeCampo = FechaNoUTC | DuracionInvalida | ContrasenaFueraDeRango | FranjaInvalida | BloqueoInvertido
 
 
 def _problemas(cantidad: int) -> str:
@@ -90,13 +91,13 @@ def _texto_de_error_de_campo(error: ErrorDeCampo) -> str:
         return f"{error.campo} debe tener zona y estar en UTC"
     if isinstance(error, ContrasenaFueraDeRango):
         return f"{error.campo} debe tener de 10 caracteres a 72 bytes"
-    if isinstance(error, FranjaInvalida):
+    if isinstance(error, (FranjaInvalida, BloqueoInvertido)):
         return error.mensaje
     return f"{error.campo} debe ser mayor que 0 y múltiplo de {error.granularidad} minutos"
 
 
 def _problema_de_entrada(problema: dict, error: EntradaInvalida) -> Problema:
-    de_campo = [e for e in error.errores if isinstance(e, (FechaNoUTC, DuracionInvalida, ContrasenaFueraDeRango, FranjaInvalida))]
+    de_campo = [e for e in error.errores if isinstance(e, (FechaNoUTC, DuracionInvalida, ContrasenaFueraDeRango, FranjaInvalida, BloqueoInvertido))]
     errores = [_error_de_campo(e) for e in de_campo]
     referencias = [
         ReferenciaSalida(recurso=r.recurso, recurso_id=r.recurso_id, motivo=r.motivo)
