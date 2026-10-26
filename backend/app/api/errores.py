@@ -7,6 +7,7 @@ from app.api.esquemas import ConflictoSalida, ErrorDeCampoSalida, Problema, Refe
 from app.domain.errors import (
     BloqueoInvertido,
     AdministracionSinOdontologo,
+    ContrasenaActualIncorrecta,
     ContrasenaFueraDeRango,
     CredencialesInvalidas,
     DuracionInvalida,
@@ -21,6 +22,7 @@ from app.domain.errors import (
     NombreDePrestacionRepetido,
     PermisoInsuficiente,
     RecursoDeLaUrlNoEncontrado,
+    RestablecerLaPropia,
     SesionInvalida,
     SobreBloqueo,
 )
@@ -44,6 +46,8 @@ _CLASES_DE_ERROR: dict[type[ErrorDeDominio], tuple[int, str, str]] = {
     PermisoInsuficiente: (403, "/errores/permiso-insuficiente", "Permiso insuficiente"),
     EmailRepetido: (409, "/errores/email-repetido", "Email repetido"),
     AdministracionSinOdontologo: (409, "/errores/administracion-sin-odontologo", "Operación no permitida"),
+    ContrasenaActualIncorrecta: (422, "/errores/contrasena-actual-incorrecta", "Contraseña actual incorrecta"),
+    RestablecerLaPropia: (409, "/errores/restablecer-la-propia", "Operación no permitida"),
 }
 # Los dos 401 llevan RFC 6750 §3 y un texto fijo que no depende de la causa (design J13).
 _CABECERAS_DE_NO_AUTENTICADO = {"WWW-Authenticate": "Bearer"}
@@ -54,6 +58,8 @@ _ERRORES_DE_TEXTO_FIJO = (
     PermisoInsuficiente,
     EmailRepetido,
     AdministracionSinOdontologo,
+    ContrasenaActualIncorrecta,
+    RestablecerLaPropia,
     FueraDeHorario,
 )
 

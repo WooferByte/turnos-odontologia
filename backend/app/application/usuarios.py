@@ -8,9 +8,11 @@ from app.domain.acceso.roles import Rol, UsuarioDelPanel
 from app.domain.acceso.usuarios import (
     DatosUsuario,
     exigir_no_desactivarse,
+    exigir_no_restablecer_la_propia,
     exigir_que_quede_un_odontologo,
     normalizar_email,
     validar_contrasena_inicial,
+    validar_largo_de_contrasena,
 )
 from app.domain.errors import EmailRepetido, UsuarioNoEncontrado
 
@@ -109,3 +111,21 @@ def editar_usuario(
             version = actual.token_version + 1 if actual.activo else actual.token_version
             actual = uow.usuarios.guardar(replace(actual, activo=comando.activo, token_version=version))
         return UsuarioConRoles(actual, uow.usuarios.roles_de(usuario_id))
+
+
+def restablecer_contrasena(
+    usuario_id: int, contrasena: str, actor: UsuarioDelPanel, uow: UnidadDeTrabajo, hasher: HasherDeContrasenas
+) -> None:
+    """Guarda el hash de la contraseña nueva de otro usuario y corta sus sesiones (RN-AU-03, RN-AU-07, RN-AU-10).
+
+    El usuario inactivo se restablece y sigue inactivo (D294). Lo lee con bloqueo de fila (D299).
+    """
+    validar_largo_de_contrasena(contrasena, "contrasena")
+    # bcrypt no depende de la base: se hashea antes de abrir la transacción para no retener la fila (V2, K10).
+    hash_nuevo = hasher.hashear(contrasena)
+    with uow:
+        actual = uow.usuarios.obtener_para_cambiar(usuario_id)
+        if actual is None:
+            raise UsuarioNoEncontrado(usuario_id)
+        exigir_no_restablecer_la_propia(actor.id, usuario_id)
+        uow.usuarios.guardar(replace(actual, hash_password=hash_nuevo, token_version=actual.token_version + 1))

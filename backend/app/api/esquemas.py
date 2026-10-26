@@ -335,6 +335,14 @@ class CrearUsuarioEntrada(BaseModel):
     roles: RolesDeUsuario
 
 
+class RestablecerContrasenaEntrada(BaseModel):
+    """Cuerpo de ``POST /usuarios/{id}/restablecer-contrasena``. El largo lo valida el dominio (RN-AU-07)."""
+
+    model_config = ConfigDict(extra="forbid", json_schema_extra={"examples": [{"contrasena": "clave-nueva-2026"}]})
+
+    contrasena: str
+
+
 class EditarUsuarioEntrada(EntradaDeEdicion):
     """Cuerpo de ``PATCH /usuarios/{id}``: ``roles`` y/o ``activo``; el email y la contraseña no se editan."""
 

@@ -4,7 +4,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends
 
 from app.api.deps import get_hasher, get_reloj, get_uow
-from app.api.esquemas import CrearUsuarioEntrada, EditarUsuarioEntrada, UsuarioSalida
+from app.api.esquemas import CrearUsuarioEntrada, EditarUsuarioEntrada, RestablecerContrasenaEntrada, UsuarioSalida
 from app.api.respuestas import RESPUESTAS_DE_ACCESO, _respuesta_de_error
 from app.api.seguridad import requiere
 from app.application.puertos import HasherDeContrasenas, UnidadDeTrabajo
@@ -14,6 +14,7 @@ from app.application.usuarios import (
     crear_usuario,
     editar_usuario,
     listar_usuarios,
+    restablecer_contrasena,
 )
 from app.domain.acceso.roles import Permiso, UsuarioDelPanel
 from app.domain.tiempo import Reloj
@@ -31,6 +32,13 @@ RESPUESTAS_DE_LA_EDICION = {
     404: _respuesta_de_error("No existe el usuario (RN-GL-04)"),
     409: _respuesta_de_error("Nadie puede desactivarse a sí mismo ni dejar al consultorio sin odontólogo (RN-AU-06)"),
     422: _respuesta_de_error("Formato del cuerpo inválido"),
+}
+
+RESPUESTAS_DEL_RESTABLECIMIENTO = {
+    **RESPUESTAS_DE_ACCESO,
+    404: _respuesta_de_error("No existe el usuario (RN-GL-04)"),
+    409: _respuesta_de_error("La propia contraseña no se restablece: se cambia con la actual (RN-AU-10)"),
+    422: _respuesta_de_error("Entrada inválida: contraseña de 10 caracteres a 72 bytes (RN-AU-07) o formato del cuerpo"),
 }
 
 
@@ -75,3 +83,18 @@ def patch_usuario(
     if pedidos.get("roles") is not None:
         pedidos["roles"] = frozenset(pedidos["roles"])
     return UsuarioSalida.desde_usuario(editar_usuario(usuario_id, EditarUsuarioComando(**pedidos), actor, uow))
+
+
+@router.post(
+    "/{usuario_id}/restablecer-contrasena",
+    status_code=204,
+    responses=RESPUESTAS_DEL_RESTABLECIMIENTO,
+)
+def post_restablecer_contrasena(
+    usuario_id: int,
+    entrada: RestablecerContrasenaEntrada,
+    actor: Annotated[UsuarioDelPanel, Depends(requiere(Permiso.USUARIOS_EDITAR))],
+    uow: Annotated[UnidadDeTrabajo, Depends(get_uow)],
+    hasher: Annotated[HasherDeContrasenas, Depends(get_hasher)],
+) -> None:
+    restablecer_contrasena(usuario_id, entrada.contrasena, actor, uow, hasher)
