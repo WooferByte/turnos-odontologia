@@ -709,7 +709,7 @@ Primer change: `/opsx:propose crear-turno-sin-solapamientos`.
 ### [C-31] `tarea-periodica-con-redis`
 - **Estado**: `[ ]` pendiente · **Orden**: 6 · **Gobernanza**: MEDIO
 - **Objetivo** (change técnico, sin historia): tener el worker y Redis que ejecutan la tarea periódica, la única que dispara notificaciones y efectos en cadena (RN-GL-05).
-- **Alcance — dentro**: servicios `redis` y `worker` en Docker Compose; `app/worker.py` y la función de la tarea, que se puede llamar sin Redis; variables `QUEUE_ENABLED` y `REDIS_URL`; mecanismo para detectar los vencimientos ya persistidos cuyos efectos no se dispararon (se fija en este design); corridas repetidas sin duplicar efectos.
+- **Alcance — dentro**: servicios `redis` y `worker` en Docker Compose; `app/worker.py` y la función de la tarea, que se puede llamar sin Redis; variables `QUEUE_ENABLED` y `REDIS_URL`; mecanismo para detectar los vencimientos ya persistidos cuyos efectos no se dispararon (se fija en este design); corridas repetidas sin duplicar efectos. Nota (hallazgo del Apply de C-13, commit c3a97b8): el `asyncio.Lock` de `crear_app_demo` cubre solo las peticiones HTTP, así que cualquier trabajo en segundo plano sobre la base de la demo (esta tarea) debe pasar por ese mismo lock u otro almacenamiento de la demo (límite conocido).
 - **Alcance — fuera**: recordatorios (C-32), ofertas (C-36) y vencimiento de señas (C-40), que agregan cada uno su paso a la tarea; Redis en los tests.
 - **Depende de**: C-02
 - **Escenarios mínimos**: TP-1 (la función de la tarea corre en un test sin Redis); TP-2 (la API levanta con la cola deshabilitada); TP-3 (dos corridas seguidas no repiten efectos)

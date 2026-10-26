@@ -528,6 +528,36 @@ Continúan la numeración de la tabla anterior. Salen del propose del change `bl
 | Pantalla de Stitch de C-13 (D288; Q18; aplica D234) | **Decisión del autor** (aceptada por el autor tal como la recomendó el propose): la pantalla se consigue **antes de aprobar el plan**, como en C-12: la tarea 1.2 (del autor, o del agente en una sesión con el MCP `stitch` conectado) envía el pedido de `docs/skills-mcp/evidencias/sesion-nueva/stitch-bloqueos.md` (proyecto `projects/14200813501064679723`, design system «Clinical Ops», como mucho dos intentos), copia el `node-id` de la URL del canvas si el MCP no devuelve el id, guarda `pantalla.png` y `pantalla.html`, y un `/opsx:update` completa la «Referencia visual (Stitch)» del design. **No se inventa un id**; sin la pantalla no arrancan el ajuste visual (8.1) ni el archive (D234). Al 2026-10-26 sigue pendiente: el MCP no estaba conectado en la sesión del update |
 | Granularidad y rango de los bloqueos (D289; hallazgo H11; precisa D99 y RN-AG-01) | **Decisión del autor** (aceptada por el autor con la respuesta al informe): `inicio` y `fin` de un bloqueo **admiten cualquier minuto**; no se exige múltiplo de 5. La granularidad de 5 minutos de D99 es la de la **duración de la prestación** (RN-AG-01) y de los cambios de duración (US-012), no la de los bloqueos. Tampoco hay tope de duración del bloqueo ni de cantidad de bloqueos (un bloqueo de años es válido): **límite conocido** del design, sin regla. **Motivo:** ninguna fuente pide granularidad ni tope a los bloqueos, y exigir múltiplos de 5 dejaría inválidos bloqueos ya guardados cuando C-22 haga configurable la granularidad. **Alternativa descartada:** exigir múltiplos de 5 minutos en `inicio` y `fin` (regla inventada) |
 
+**Hallazgos del Apply de C-13 `bloqueos-puntuales` (2026-10-26).** Las referencias V# son las del design archivado (`openspec/changes/archive/2026-10-26-bloqueos-puntuales/design.md`).
+
+- **V1:** `ESTADOS_ACTIVOS` tiene los cuatro estados activos y se reusa sin romper el guard de imports del dominio.
+- **V2:** el guard de fechas cubre `bloqueo.inicio` y `bloqueo.fin` sin cambios.
+- **V3:** `DELETE` con `status_code=204` responde sin cuerpo, y el guard de rutas protegidas lo acepta.
+- **V4:** `Intl` con `America/Argentina/Buenos_Aires` da el desfase esperado en Node 24; también se comprobó `America/New_York` con cambio de horario.
+- **V5:** `compare_metadata`, los `CHECK` y el downgrade a `0008` están OK sobre PostgreSQL 17.10.
+
+API:
+
+- **(1)** `turnos_activos_que_intersecan` recibe un `DatosBloqueo` en lugar de `(alcance, intervalo)`.
+- **(2)** La migración `0009` se escribió a mano y es equivalente según `compare_metadata`.
+- **(3)** Los tests de downgrade de PostgreSQL existentes ahora restan `bloqueo` de sus constantes de tablas; no cambió ninguna aserción.
+- **(4)** Los contadores esperados cambiaron como preveía B7: permisos de 11 a 13 y rutas protegidas de 14 a 17.
+- **(5)** El filtro de dominio de los turnos afectados en `crear_bloqueo` es redundante con el SQL; se mantiene como defensa en profundidad (B9).
+- **(6)** Con el reloj fijado en los tests, el token se emite en ese mismo instante; si no, responde `401`.
+
+Frontend:
+
+- **(1)** Con un solo turno afectado, el aviso dice «no se canceló, hay que reprogramarlo o cancelarlo» (singular). B17 solo corrigió «Hay 1 turno activo».
+- **(2)** El estado de cada turno afectado es un chip aparte, como en Stitch, sin «·».
+- **(3)** El código del grupo 7 se escribió antes que sus tests. El RED se reprodujo después, quitando la ruta y el enlace (19 tests fallaron), más mutaciones. No es un RED estricto.
+- **(4)** El formulario arranca con el alcance «Un profesional» y el selector de recurso con «Elegí una opción». Dos mutaciones sobrevivientes (los guards `useRef` del doble clic) son redundantes con el botón deshabilitado, como en C-12.
+
+Red de seguridad (safety net): dos tests pesados de jsdom ya existentes (`PaginaHorario` «US-002 CA-1: un rechazo de formato sin código», de C-12, y `PaginaUsuarios` «US-093 CA-1: un email que la API rechaza…», de C-09) tardaban de 14 a 16 s y superaban los 5 s por defecto de Vitest. Se les puso un timeout explícito de 30 s en el commit 42359a1, aprobado por el autor, sin cambiar lo que verifican.
+
+Concurrencia de la demo (encontrado en la prueba en el navegador de la tarea 9.1 y en el clon limpio; corregido en el commit c3a97b8, aprobado por el autor, fuera del alcance de C-13): la base en memoria de `crear_app_demo` es una sola conexión de `sqlite3` (`StaticPool`, `check_same_thread=False`) compartida por los hilos del threadpool de FastAPI. Con peticiones en paralelo aparecían `sqlite3.InterfaceError`, lecturas corruptas (`'' is not a valid Rol` en `roles_de`) o una demo colgada. La corrección es un middleware HTTP con `asyncio.Lock` solo en `crear_app_demo`, que serializa sus peticiones; `crear_app` (tests y Compose) no cambia. Se probó con 15 peticiones en paralelo.
+
+**Límite conocido, pendiente:** el lock cubre solo las peticiones HTTP. Cualquier trabajo en segundo plano contra la base de la demo (por ejemplo, la tarea periódica de C-31 `tarea-periodica-con-redis`) debe pasar por el mismo lock o usar otro almacenamiento de la demo. Queda anotado en `CHANGES.md`, en «Leer antes» de C-31.
+
 ## Skills recomendadas por `find-skill` (2026-10-06, D121)
 
 `find-skill` solo recomienda; la instalación la decidió el autor. Una línea por recomendación:
