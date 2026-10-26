@@ -16,9 +16,9 @@ El sistema SHALL crear y modificar el esquema de PostgreSQL únicamente con migr
 
 - **GIVEN** una base PostgreSQL vacía
 - **WHEN** se aplican todas las migraciones
-- **THEN** existen exactamente las tablas del modelo de datos de la aplicación (desde C-12: `consultorio`, `profesional`, `sillon`, `prestacion`, `paciente`, `turno`, `evento_turno`, `usuario`, `usuario_rol` y `franja_horaria`), y ninguna otra tabla de la aplicación
+- **THEN** existen exactamente las tablas del modelo de datos de la aplicación (desde C-13: `consultorio`, `profesional`, `sillon`, `prestacion`, `paciente`, `turno`, `evento_turno`, `usuario`, `usuario_rol`, `franja_horaria` y `bloqueo`), y ninguna otra tabla de la aplicación
 - **AND** comparar el esquema de la base con el modelo de datos de la aplicación no encuentra ninguna diferencia de tablas, columnas, tipos, nulabilidad, claves ni índices
-- **AND** toda columna de fecha-hora es una fecha con zona (desde C-06: `inicio`, `fin` y `creado_en` de `turno`, `ocurrido_en` de `evento_turno` y `creado_en` de `usuario`); las horas de `franja_horaria` son horas del día sin fecha ni zona, porque son horas del consultorio (RN-AG-04)
+- **AND** toda columna de fecha-hora es una fecha con zona (desde C-13: `inicio`, `fin` y `creado_en` de `turno`, `ocurrido_en` de `evento_turno`, `creado_en` de `usuario` e `inicio` y `fin` de `bloqueo`); las horas de `franja_horaria` son horas del día sin fecha ni zona, porque son horas del consultorio (RN-AG-04)
 
 #### Scenario: INF-1 Borde - deshacer las migraciones deja la base vacía
 
@@ -64,6 +64,28 @@ El sistema SHALL crear y modificar el esquema de PostgreSQL únicamente con migr
 - **WHEN** se guarda directamente una franja con `hora_inicio` 13:00 y `hora_fin` 09:00, otra con `dia_semana` 7 y otra con `vigente_desde` 2026-11-10 y `vigente_hasta` 2026-11-09
 - **THEN** la base rechaza cada una por su restricción `CHECK` y no se guarda ninguna
 - **AND** una franja con `vigente_desde` y `vigente_hasta` iguales, o con una sola de las dos, se guarda (D259)
+
+#### Scenario: INF-1 Borde - deshacer solo la migración de los bloqueos deja el esquema del change de horario
+
+- **GIVEN** una base PostgreSQL migrada hasta la última versión, con un profesional con franjas, un turno y un bloqueo del profesional
+- **WHEN** se deshace solo la migración de los bloqueos, hasta la versión que dejó el change de horario
+- **THEN** no existe `bloqueo` y el resto del esquema es el del change de horario
+- **AND** el profesional, sus franjas y el turno siguen en la base
+- **AND** volver a aplicar la migración de los bloqueos termina sin errores
+
+#### Scenario: INF-1 Borde - la base rechaza un bloqueo que no termina después de empezar
+
+- **GIVEN** una base PostgreSQL migrada hasta la última versión, un consultorio, un profesional y un usuario
+- **WHEN** se guarda directamente un bloqueo con `inicio` `2026-11-02T15:00:00Z` y `fin` `2026-11-02T13:00:00Z`, y otro con `inicio` y `fin` iguales
+- **THEN** la base rechaza cada uno por su restricción `CHECK` y no se guarda ninguno
+- **AND** un bloqueo de todo el consultorio (sin profesional ni sillón) con `inicio` anterior a `fin` se guarda
+
+#### Scenario: INF-1 Borde - la base rechaza un bloqueo con profesional y sillón a la vez
+
+- **GIVEN** una base PostgreSQL migrada hasta la última versión, un consultorio, un profesional, un sillón y un usuario
+- **WHEN** se guarda directamente un bloqueo con `profesional_id` y `sillon_id` a la vez, con `inicio` anterior a `fin`
+- **THEN** la base lo rechaza por su restricción `CHECK` y no se guarda (D272)
+- **AND** un bloqueo solo con `profesional_id` y otro solo con `sillon_id` se guardan
 
 ### Requirement: La base rechaza turnos activos solapados
 

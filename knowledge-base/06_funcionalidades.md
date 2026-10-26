@@ -54,6 +54,8 @@ Los criterios de US-010 usan IDs estables `E1..E12` (compartidos con `07_flujos_
 **Depende de**: US-092
 **Reglas**: RN-AG-04b, RN-AG-17
 
+> Nota de implementación (C-13, archivado 2026-10-26): cubre CA-1 y CA-2 (bloqueos, `RN-AG-17` y turnos afectados); E10 queda completo, con el horario en C-12 y los bloqueos en C-13.
+
 ### US-004 — Sillón como recurso
 **Como** odontólogo **quiero** que el consultorio tenga un sillón por defecto **para** que la agenda controle su ocupación sin configuración extra.
 - [ ] CA-1: el seed crea "Sillón 1"; todo turno sin sillón explícito se asigna a él mientras sea el único sillón activo (RN-AG-14, D125; con más de uno activo hay que indicarlo).
@@ -89,7 +91,7 @@ Los criterios de US-010 usan IDs estables `E1..E12` (compartidos con `07_flujos_
 | E7 | **Borde de un minuto**: un solapamiento de un minuto se rechaza | **Sí** |
 | E8 | Intervalo inválido (`inicio >= fin`, naive, fuera de UTC o que cruza la medianoche del consultorio) se rechaza (RN-AG-10d, RN-GL-01). Naive o fuera de UTC es **validación de entrada**; `inicio >= fin` y el cruce de la medianoche son **regla de negocio** (RN-GL-02, D135) | **No como escenario del spec**: lo cubre un test unitario del value object `Intervalo` (decisión del autor 2026-10-03) |
 | E9 | La creación queda registrada en el historial (antes CA-7; RN-AG-11) | **No: fuera del primer change** (decisión del autor 2026-10-03). **Se especifica y se prueba en C-03**, en la capability `historial-de-turnos` (D158) |
-| E10 | Un turno fuera del horario o sobre un bloqueo se rechaza (RN-AG-04/04b; antes CA-8) | **No** (decisión del autor 2026-10-02, P-10). Parte de horario en C-12; bloqueos en C-13 |
+| E10 | Un turno fuera del horario o sobre un bloqueo se rechaza (RN-AG-04/04b; antes CA-8) | **No** (decisión del autor 2026-10-02, P-10). Completo: horario en C-12 y bloqueos en C-13 (archivado 2026-10-26) |
 | E11 | Dos reservas concurrentes del mismo hueco: solo una gana (RN-AG-10c) | **No** (no verificable con SQLite; corre solo en un perfil opcional con PostgreSQL, con un marcador de pytest, fuera de la suite por defecto; decisión del autor 2026-10-03 y 2026-10-05, D75). **Se especifica y se prueba en C-02**, en la capability `persistencia-postgresql` (D142), con el bloqueo de fila por recurso y la restricción de exclusión (D157) |
 | E12 | **Recurso no encontrado**: prestación, profesional o sillón inexistente o inactivo, o paciente inexistente (el paciente no tiene estado de actividad en la v1, D136), referenciado en el cuerpo, se rechaza con `RN-GL-04` (RN-AG-07, RN-AG-14), listando **todas** las referencias inválidas (D127); en HTTP, `422` (`404` queda para un recurso inexistente identificado en la URL). Es validación de entrada: si además la fecha no tiene zona o no está en UTC, el mismo `422` lleva también `RN-GL-01` (RN-GL-02, D135) | **Sí** (decisión del autor 2026-10-03; `422` confirmado el 2026-10-05, D73) |
 

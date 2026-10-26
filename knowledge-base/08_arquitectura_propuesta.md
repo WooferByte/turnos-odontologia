@@ -22,7 +22,7 @@ proyecto/
 ├── backend/
 │   ├── app/
 │   │   ├── domain/
-│   │   │   ├── agenda/          # Intervalo, solapamiento, horario.py (C-12), bloqueos
+│   │   │   ├── agenda/          # Intervalo, solapamiento, horario.py (C-12), bloqueos.py (C-13)
 │   │   │   ├── turnos/          # Turno, estados, transiciones, EventoTurno
 │   │   │   ├── lista_espera/
 │   │   │   ├── pagos/           # Sena, RegistroPago
@@ -63,6 +63,7 @@ proyecto/
 │       ├── features/ingreso/    # pantalla de inicio de sesión
 │       ├── features/usuarios/    # pantalla de usuarios (C-09)
 │       ├── features/horario/     # pantalla de horario (C-12)
+│       ├── features/bloqueos/    # pantalla de bloqueos (C-13)
 │       ├── pages/               # panel base y rutas protegidas
 │       └── test/                # servidor falso de la API para las pruebas
 ├── docker-compose.yml           # api, worker, postgres, redis, frontend (C-02 crea api y postgres, D151)
@@ -193,7 +194,9 @@ class EntradaInvalida(ErrorDeDominio):       # validación de entrada: se inform
 | `ErrorDeSolapamiento` (E2, E3, E4, E7) | Regla de negocio | `409` | Cuerpo abajo. Una regla que mira dos recursos: uno o dos códigos |
 | El turno cruza la medianoche del consultorio | Regla de negocio (**Propuesta**, D135) | `422` | Error de dominio `RN-AG-10d`. Se evalúa antes del solapamiento y, si falla, es el único código |
 | El turno no cae en una sola franja vigente del horario del profesional (E10) | Regla de negocio | `422` | Error de dominio `RN-AG-04`, `type` `/errores/fuera-de-horario` (C-12, D256, D258). Se evalúa después de `RN-AG-10d` y antes del solapamiento |
+| El turno interseca un bloqueo del profesional, del sillón o de todo el consultorio (E10) | Regla de negocio | `422` | Error de dominio `RN-AG-04b`, `type` `/errores/sobre-bloqueo`, con `bloqueo_id` (C-13, D280). Se evalúa después de `RN-AG-04` y antes del solapamiento |
 | Franjas del horario superpuestas o invertidas (`PUT /profesionales/{id}/horario`) | Validación de entrada | `422` | Error de dominio `RN-AG-16` dentro de `EntradaInvalida`, con el error del campo `franjas.<i>` (C-12, D257) |
+| Bloqueo que no termina después de empezar (`POST /bloqueos`) | Validación de entrada | `422` | Error de dominio `RN-AG-17` dentro de `EntradaInvalida`, con el error del campo `fin` (C-13, D273) |
 | `EntradaInvalida`: referencias inválidas (E12), `inicio` sin zona o con un desfase distinto de UTC, o las dos cosas | Validación de entrada | `422` | **Un único `422` con todos los problemas** (D135): `codigos` lleva `RN-GL-04` (D73, D127; un único status para inexistente e inactivo), `RN-GL-01` (D128) o los dos. La referencia viaja en el cuerpo, no en la URL |
 | Cuerpo inválido de formato (campo ausente, tipo erróneo, campo de más) | Validación de entrada | `422` | Validación de Pydantic, adaptada al **mismo cuerpo** del `422` de entrada, sin código RN. Si el cuerpo no se puede leer como petición no se evalúan referencias ni fecha (D135). La forma exacta se fija en el design |
 | Recurso identificado en la URL que no existe (por ejemplo, `GET /turnos/{id}` con un id inexistente) | Validación de entrada | `404` | Distinción confirmada por el autor 2026-10-05 (D73): `404` es para un recurso inexistente **identificado en la URL**; `422` es para una referencia inválida **dentro del cuerpo** (por ejemplo, `prestacion_id` inexistente en `POST /turnos`). No aplica al primer change, que solo expone `POST /turnos`; lo usan después `GET /turnos/{id}/historial` (C-03), `PATCH /prestaciones/{id}` (C-04) y `PATCH /sillones/{id}` (C-05), con la clase base `RecursoDeLaUrlNoEncontrado` (D188). Los nombres de los campos del cuerpo y del error se fijan en el design |

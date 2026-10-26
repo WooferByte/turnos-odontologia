@@ -168,18 +168,20 @@ Los plazos de seña y de oferta son **valores de diseño del autor, no de mercad
 ### Bloqueo
 **Change que la crea:** bloqueos puntuales (US-003).
 
+**Validación (C-13):** el alcance lo da qué id está presente (profesional, sillón o consultorio); `profesional_id` y `sillon_id` a la vez se rechazan con `422` de formato y el `CHECK` queda como red (D272). `inicio < fin` lo valida el dominio con `RN-AG-17` (D273). El `DELETE` borra la fila y la tabla no tiene estado (D278).
+
 | Campo | Tipo | Null | Restricciones / FK / nota |
 |---|---|---|---|
 | `id` | entero | NN | PK |
 | `consultorio_id` | entero | NN | FK → Consultorio |
-| `profesional_id` | entero | null | FK → Profesional; con `sillon_id` nulo bloquea al profesional |
+| `profesional_id` | entero | null | FK → Profesional; con `sillon_id` nulo bloquea al profesional; `CHECK` que no haya profesional y sillón a la vez (D272) |
 | `sillon_id` | entero | null | FK → Sillon; ambos nulos = bloquea todo el consultorio |
-| `inicio` | fecha-hora | NN | `CHECK inicio < fin` |
+| `inicio` | fecha-hora | NN | `CHECK inicio < fin` (red de `RN-AG-17`); admite cualquier minuto (D289) |
 | `fin` | fecha-hora | NN | — |
-| `motivo` | texto | NN | Vacaciones, feriado, ausencia, mantenimiento |
-| `creado_por` | entero | null | FK → Usuario (columna agregada cuando existe `Usuario` †) |
+| `motivo` | texto | NN | Vacaciones, feriado, ausencia, mantenimiento; de 1 a 200 caracteres, sin espacios de más (D283) |
+| `creado_por` | entero | NN | FK → Usuario: el usuario del token que lo creó (D282) |
 
-Índices: `(profesional_id, inicio, fin)` y `(sillon_id, inicio, fin)` (†).
+Índices: `(profesional_id, inicio, fin)`, `(sillon_id, inicio, fin)` y `(consultorio_id, inicio)` (D282).
 
 ### Paciente
 **Change que la crea:** primer change con `nombre`, `apellido` y `telefono_whatsapp`. **`es_nuevo` la agrega el change de marcado atendido / ausente (US-014)**, el primero que la cambia (D99). **`dni`, `email`, `fecha_nacimiento`, `creado_en` y `acepta_contacto` las agrega el change de pacientes desde el panel (US-016)** (decisión del autor 2026-10-05, D95); el primer change que **aplica** `acepta_contacto` es el de recordatorios (US-030), el primero que prepara mensajes. **Sin estado de actividad** (decisión del autor 2026-10-07, D136): `Paciente` no tiene columna `activo`; en una petición solo puede ser `inexistente` (RN-GL-04), y el «paciente inactivo» queda para la Fase 2 (`acepta_contacto` es «no contactar», no inactividad). **Datos siempre ficticios en seeds, tests y ejemplos** (RN-PR-01).

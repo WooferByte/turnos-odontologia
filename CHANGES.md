@@ -455,7 +455,7 @@ Primer change: `/opsx:propose crear-turno-sin-solapamientos`.
   - `knowledge-base/02_descripcion_general.md` §«API REST (resumen)», fila Horario
 
 ### [C-13] `bloqueos-puntuales`
-- **Estado**: `[~]` en curso · **Orden**: 3 · **Gobernanza**: MEDIO
+- **Estado**: `[x]` archivado · **Orden**: 3 · **Gobernanza**: MEDIO
 - **Objetivo** (US-003): bloquear días u horas del profesional, del sillón o de todo el consultorio para que no se reserven turnos.
 - **Alcance — dentro**: tabla `Bloqueo` con `creado_por`; `GET/POST/DELETE /bloqueos`; crear un bloqueo lista los turnos activos afectados sin cancelarlos; `crear_turno` rechaza con RN-AG-04b el turno que interseca un bloqueo (parte de bloqueos de E10, US-010); pantalla de bloqueos.
 - **Alcance — fuera**: cancelar o reprogramar automáticamente los turnos afectados (D83); horario recurrente (C-12).
