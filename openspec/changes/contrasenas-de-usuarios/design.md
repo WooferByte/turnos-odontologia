@@ -252,10 +252,10 @@ El agente repite los escenarios de `pantalla-de-contrasenas` con la demo (salvo 
 
 ## A verificar en el change
 
-- **V1** (antes de la tarea 2.1): que `validar_contrasena_inicial` se pueda expresar con la regla general sin cambiar ningún test de C-09 (`tests/unit/test_usuarios.py`, `tests/api/test_usuarios.py`, `tests/unit/test_configuracion.py`).
-- **V2** (antes de la tarea 4.2; la decisión vale también para 5.2, hallazgo H10): hashear dentro o fuera de la transacción con el bloqueo de fila (K10), en restablecer y en el cambio propio.
+- **V1** (antes de la tarea 2.1): que `validar_contrasena_inicial` se pueda expresar con la regla general sin cambiar ningún test de C-09 (`tests/unit/test_usuarios.py`, `tests/api/test_usuarios.py`, `tests/unit/test_configuracion.py`). **Resultado (Apply, 2026-10-26): sí; `validar_contrasena_inicial` quedó como envoltorio de `validar_largo_de_contrasena(texto, "contrasena")` y ningún test de C-09 cambió.**
+- **V2** (antes de la tarea 4.2; la decisión vale también para 5.2, hallazgo H10): hashear dentro o fuera de la transacción con el bloqueo de fila (K10), en restablecer y en el cambio propio. **Resultado (Apply, 2026-10-26): bcrypt con 12 rondas tarda unos 343 ms al hashear y 348 ms al verificar. Se hashea la contraseña nueva **antes** de abrir la transacción (restablecer y cambiar la propia); solo la verificación de la actual queda adentro, con la fila bloqueada, porque debe compararse con el hash ya confirmado (H8).**
 - **V3** (antes de la tarea 8.1): el login del servidor falso con la contraseña vigente de cada usuario, con los tests de C-08 a C-13 en verde (K17).
-- **V4** (antes de la tarea 6.1, con Docker): que `with_for_update()` sobre `UsuarioModelo` emite `FOR UPDATE` en PostgreSQL y nada en SQLite, y que el arnés de carrera admite dos restablecimientos del mismo usuario y un restablecimiento con un cambio propio a la vez.
+- **V4** (antes de la tarea 6.1, con Docker): que `with_for_update()` sobre `UsuarioModelo` emite `FOR UPDATE` en PostgreSQL y nada en SQLite, y que el arnés de carrera admite dos restablecimientos del mismo usuario y un restablecimiento con un cambio propio a la vez. **Resultado (Apply, 2026-10-26): sí; el SQL de `with_for_update()` sobre `UsuarioModelo` termina en `FOR UPDATE` en PostgreSQL y no lleva nada en SQLite, y el arnés admitió los dos casos; sin el bloqueo los dos tests del perfil `postgres` fallan (versión 1 en vez de 2, y el cambio propio no responde `RN-AU-09`). Hallazgo: `obtener_para_cambiar` usa `populate_existing` para no leer una copia vieja del mapa de identidad después de esperar.**
 - **V5** (antes de la tarea 12.1, en Compose): consola sin violaciones de la CSP con las pantallas nuevas y sus íconos.
 
 ## Migration Plan

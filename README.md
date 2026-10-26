@@ -25,6 +25,8 @@ Sistema de gestión de turnos y agenda para odontólogos independientes y consul
 
 - `horario-recurrente` (C-12, la API): `GET /profesionales`, `GET /profesionales/{id}/horario` y `PUT /profesionales/{id}/horario`. La odontóloga carga el horario semanal de un profesional (franjas por día, en hora del consultorio); la recepcionista y el dueño lo leen. Franjas superpuestas o invertidas son `422` con `RN-AG-16`. Y `POST /turnos` ahora exige que el turno caiga completo dentro de una franja: si no, `422` con `RN-AG-04`. La migración `0008` crea la tabla `franja_horaria` y la demo trae el horario de ejemplo (lunes a viernes, 09:00-13:00 y 15:00-19:00). La pantalla del horario llega en los grupos siguientes del change.
 
+- `contrasenas-de-usuarios` (C-10, la API): `POST /usuarios/{id}/restablecer-contrasena` (solo la odontóloga, sobre **otro** usuario: `204`; la propia es `409` con `RN-AU-10`) y `POST /auth/cambiar-contrasena` (los tres roles, con la contraseña actual: `200` con tokens nuevos; la actual incorrecta es `422` con `RN-AU-09`, no `401`). La contraseña nueva tiene de 10 caracteres a 72 bytes (`RN-AU-07`). Las dos incrementan la `token_version` del usuario: sus tokens anteriores dejan de servir (`RN-AU-03`). Sin migración ni dependencias nuevas.
+
 La API se puede probar sin instalar nada más que Python (base SQLite en memoria) o sobre PostgreSQL con Docker; el panel necesita además Node 24 (ver «Panel (interfaz)»).
 
 > Todos los datos del proyecto, de los tests y de la demo son **ficticios**. No hay datos reales de pacientes ni secretos.
@@ -106,7 +108,7 @@ python -m pytest
 
 Los tests corren con **SQLite en memoria**: no necesitan Docker, PostgreSQL ni Redis, ni ningún archivo de base de datos.
 
-La corrida termina con **«796 passed, 56 deselected, 1 warning»**. Los 56 «deselected» son los del perfil opcional con PostgreSQL (más abajo), que la corrida por defecto excluye a propósito. El warning es un aviso de deprecación interno de Starlette (`starlette/testclient.py`, sobre `anyio.abc.BlockingPortal`): viene de una dependencia con versión fijada, no del código del proyecto, y no indica ningún problema.
+La corrida termina con **«856 passed, 58 deselected, 1 warning»**. Los 58 «deselected» son los del perfil opcional con PostgreSQL (más abajo), que la corrida por defecto excluye a propósito. El warning es un aviso de deprecación interno de Starlette (`starlette/testclient.py`, sobre `anyio.abc.BlockingPortal`): viene de una dependencia con versión fijada, no del código del proyecto, y no indica ningún problema.
 
 ### Escenario → test
 
@@ -255,7 +257,7 @@ Una parte de los tests (la que prueba lo que solo PostgreSQL garantiza) está fu
 
    Se usa `127.0.0.1` y no `localhost`: en Windows `localhost` resuelve primero a IPv6 y la conexión espera varios segundos antes de caer a IPv4.
 
-Con la base levantada, la corrida termina con **«56 passed, 796 deselected, 1 warning»**. **Si PostgreSQL no está disponible** (Docker apagado, `TEST_DATABASE_URL` sin definir o base que no responde), los 56 tests del perfil **se omiten con el motivo en el resumen** (**«56 skipped, 796 deselected»**) y la corrida termina con código de salida 0. Si la base de `TEST_DATABASE_URL` no termina en `_test`, el perfil falla a propósito para no borrar otra base.
+Con la base levantada, la corrida termina con **«58 passed, 856 deselected, 1 warning»**. **Si PostgreSQL no está disponible** (Docker apagado, `TEST_DATABASE_URL` sin definir o base que no responde), los 56 tests del perfil **se omiten con el motivo en el resumen** (**«56 skipped, 796 deselected»**) y la corrida termina con código de salida 0. Si la base de `TEST_DATABASE_URL` no termina en `_test`, el perfil falla a propósito para no borrar otra base.
 
 El esquema de estos tests sale siempre de las migraciones, nunca de `create_all`. Por eso el perfil también comprueba que las migraciones y los modelos coinciden (INF-1): si alguien cambia un modelo sin escribir su migración, ese test se pone en rojo. **La suite por defecto no avisa de esto**: hay que correr el perfil cada vez que se toque el esquema.
 
@@ -294,6 +296,7 @@ Los escenarios están en `openspec/changes/infraestructura-postgresql/specs/pers
 | US-015 CA-1 | La base rechaza `UPDATE`, `DELETE` y `TRUNCATE` sobre un evento | `test_ca1_la_base_rechaza_modificar_o_borrar_un_evento` (parametrizado: `update_del_tipo`, `delete`, `truncate`; `test_historial_inmutable.py`) |
 | US-015 CA-1 | La base acepta un evento nuevo del mismo turno | `test_ca1_la_base_acepta_un_evento_nuevo_del_mismo_turno` (`test_historial_inmutable.py`) |
 | US-004 CA-2 | El alta de un sillón tras el seed no choca con el id fijo: la secuencia de `sillon` queda ajustada y el primer `POST /sillones` recibe un `id` distinto de 1 | `test_ca2_el_alta_de_un_sillon_tras_el_seed_no_choca_con_el_id_fijo` (`test_seed_y_api.py`) |
+| US-093 CA-6 | Dos restablecimientos simultáneos del mismo usuario suben `token_version` dos veces; un restablecimiento y un cambio propio a la vez dejan solo la contraseña restablecida y el cambio propio responde `RN-AU-09` (D299) | `test_us093_ca6_dos_cambios_simultaneos_sobre_el_mismo_usuario_suben_la_version_dos_veces`, `test_us093_ca6_restablecer_y_cambiar_la_propia_a_la_vez_no_deja_vigente_el_cambio_propio` (`test_contrasenas_concurrentes.py`) |
 | INF-4 | La suite por defecto corre sin PostgreSQL y el perfil se omite | Ningún test: se comprueba con los dos comandos de esta sección y de «Tests» (arriba) en una máquina sin Docker ni variables de entorno |
 
 `crear_turno` toma un bloqueo de fila sobre el profesional y el sillón antes de leer los turnos ocupados (`SELECT ... FOR NO KEY UPDATE`): la segunda reserva del mismo recurso espera, ve el turno ya confirmado y responde su `409` sin reintentar. La restricción de exclusión de la base sigue siendo la última defensa.
@@ -456,6 +459,48 @@ Los escenarios están en `openspec/changes/gestion-de-usuarios/specs/gestion-de-
 | US-093 CA-9 (contraseña inicial) | De 10 caracteres a 72 bytes; el formato se informa antes que el largo | `test_us093_ca9_contrasena_inicial_de_9_caracteres_responde_422_rn_au_07`, `test_us093_ca9_10_caracteres_y_72_bytes_se_aceptan_73_bytes_no`, `test_us093_ca9_el_formato_se_informa_antes_que_el_largo_de_la_contrasena` |
 
 Dos escenarios solo se prueban sobre PostgreSQL, en el perfil opcional (`backend/tests/postgres/test_administracion_concurrente.py`): dos odontólogos que se desactivan a la vez y dos altas simultáneas con el mismo email. La suite por defecto no los ejerce (SQLite, un solo hilo).
+
+### Contraseñas
+
+Dos rutas nuevas, las dos con el access token. **Restablecer** la contraseña de **otro** usuario es solo del `odontologo`; **cambiar la propia** lo pueden usar los tres roles y pide la contraseña actual. Las dos suben la `token_version` del usuario: todos sus tokens anteriores dejan de servir (RN-AU-03). Con la demo **recién arrancada** (los pasos dependen unos de otros): `POST /auth/login` con la odontóloga y con la recepcionista, y guardar el `access_token` de cada una y el `refresh_token` de la recepcionista.
+
+1. `POST /usuarios/2/restablecer-contrasena` con el token de la odontóloga y `{"contrasena": "clave-nueva-2026"}` → `204`, sin cuerpo. Ahora, con los tokens que la recepcionista ya tenía: cualquier ruta con su access → `401` con `codigos` igual a `["RN-AU-03"]`, y `POST /auth/refresh` con su refresh → el mismo `401`. `POST /auth/login` de la recepcionista con `clave-nueva-2026` → `200`, y con `demo-consultorio-2026` → `401` con `["RN-AU-04"]`. El token de la odontóloga sigue sirviendo.
+2. `POST /usuarios/1/restablecer-contrasena` (la odontóloga sobre sí misma) con el mismo cuerpo → `409`, con `codigos` igual a `["RN-AU-10"]`: la propia contraseña se cambia con `POST /auth/cambiar-contrasena`, pidiendo la actual. Nada cambia.
+3. `POST /usuarios/2/restablecer-contrasena` con `{"contrasena": "corta-123"}` → `422`, con `codigos` igual a `["RN-AU-07"]` y el error en `errores` (campo `contrasena`). Sobre `/usuarios/999` con un cuerpo válido → `404` con `["RN-GL-04"]`. Con el token de la recepcionista → `403` con `["RN-AU-05"]`.
+4. Iniciar sesión de nuevo con la recepcionista (ahora con `clave-nueva-2026`) y, con su access, `POST /auth/cambiar-contrasena` con `{"contrasena_actual": "no-es-la-actual-2026", "contrasena_nueva": "otra-clave-2026"}` → `422`, con `codigos` igual a `["RN-AU-09"]` y no `401`: el token con que lo pidió sigue sirviendo (`GET /prestaciones` → `200`) y nada cambia.
+5. El mismo `POST /auth/cambiar-contrasena` con `{"contrasena_actual": "clave-nueva-2026", "contrasena_nueva": "corta-123"}` → `422`, con `["RN-AU-07"]` y el error en el campo `contrasena_nueva`.
+6. El mismo con `{"contrasena_actual": "clave-nueva-2026", "contrasena_nueva": "otra-clave-2026"}` → `200`, con `access_token`, `refresh_token`, `token_type` `bearer` y `expires_in`, y la cabecera `Cache-Control: no-store`. Los tokens nuevos sirven; el access que se usó para pedirlo ya no (`401`, `["RN-AU-03"]`), igual que cualquier otra sesión de la recepcionista. `POST /auth/login` con `otra-clave-2026` → `200`, y con `clave-nueva-2026` → `401` con `["RN-AU-04"]`.
+
+La contraseña nueva tiene de 10 caracteres a 72 bytes, sin recortarla (RN-AU-07). El largo se informa después del formato del cuerpo y antes de cualquier regla de negocio: con una contraseña corta y la propia (o una actual incorrecta) se informa el `RN-AU-07`. La nueva puede ser igual a la actual (D295). Un usuario inactivo se restablece y sigue inactivo (D294).
+
+Con `curl`:
+
+```
+curl -i -X POST http://127.0.0.1:8000/usuarios/2/restablecer-contrasena -H "Authorization: Bearer PEGAR_EL_ACCESS_TOKEN" -H "Content-Type: application/json" -d "{\"contrasena\": \"clave-nueva-2026\"}"
+curl -i -X POST http://127.0.0.1:8000/auth/cambiar-contrasena -H "Authorization: Bearer PEGAR_EL_ACCESS_TOKEN" -H "Content-Type: application/json" -d "{\"contrasena_actual\": \"clave-nueva-2026\", \"contrasena_nueva\": \"otra-clave-2026\"}"
+```
+
+#### Escenario → test (contraseñas, API)
+
+Los escenarios están en `openspec/changes/contrasenas-de-usuarios/specs/contrasenas-de-usuarios/spec.md`. Los 35 tests de la API están en `backend/tests/api/test_contrasenas.py`; las reglas puras, en `backend/tests/unit/test_usuarios.py` y `test_roles.py`, y el repositorio, en `backend/tests/integration/test_repositorio_usuarios.py`:
+
+| Escenario | Qué verifica | Test titular (`test_contrasenas.py` de la API, salvo que se indique) |
+|---|---|---|
+| US-093 CA-6 | La odontóloga restablece la contraseña de la recepcionista: `204`, hash nuevo, versión 1, las sesiones anteriores caen y la suya sigue | `test_us093_ca6_la_odontologa_restablece_la_contrasena_de_la_recepcionista` |
+| US-093 CA-6 | La recepcionista y el dueño no pueden restablecer (`403`, `RN-AU-05`) | `test_us093_ca6_la_recepcionista_y_el_dueno_no_pueden_restablecer` |
+| US-093 CA-6 | Un inactivo se restablece y sigue inactivo; la propia no se restablece (`409`, `RN-AU-10`) | `test_us093_ca6_restablecer_a_un_usuario_inactivo_no_lo_reactiva`, `test_us093_ca6_la_propia_contrasena_no_se_restablece` |
+| US-093 CA-6 | El orden: permiso, entrada y recién después el usuario de la URL (`403` y `422` antes que `404`); `401` antes que la entrada; cuerpo mal formado todo junto | `test_us093_ca6_el_usuario_de_la_url_se_evalua_despues_del_permiso_y_de_la_entrada`, `test_us093_ca6_sin_sesion_se_responde_401_antes_que_la_entrada`, `test_us093_ca6_un_cuerpo_mal_formado_se_rechaza_todo_junto` (parametrizado) |
+| US-093 CA-7 | La recepcionista cambia la suya: `200` con tokens nuevos y sin caché, las demás sesiones caen | `test_us093_ca7_la_recepcionista_cambia_la_suya_y_sus_otras_sesiones_caen` |
+| US-093 CA-7 | Con la actual incorrecta: `422` `RN-AU-09` (no `401`) y nada cambia; una actual de más de 72 bytes cuenta como incorrecta | `test_us093_ca7_con_la_contrasena_actual_incorrecta_no_cambia_nada`, `test_us093_ca7_una_contrasena_actual_de_mas_de_72_bytes_cuenta_como_incorrecta` |
+| US-093 CA-7 | Los tres roles la cambian y un usuario sin roles no (`403`); la nueva igual a la actual se acepta | `test_us093_ca7_el_odontologo_y_el_dueno_tambien_cambian_la_suya_y_un_usuario_sin_roles_no`, `test_us093_ca7_la_nueva_igual_a_la_actual_se_acepta` |
+| US-093 CA-7 | Sin sesión o con una sesión que ya no vale: `401` antes que la entrada; cuerpo mal formado todo junto | `test_us093_ca7_sin_sesion_o_con_una_sesion_que_ya_no_vale_se_responde_401`, `test_us093_ca7_un_cuerpo_mal_formado_se_rechaza_todo_junto` (parametrizado), `test_us093_ca7_sin_ninguno_de_los_dos_campos_se_informan_los_dos_errores_juntos` |
+| US-093 CA-9 | De 10 caracteres a 72 bytes en las dos rutas, sin recortar; 73 bytes no | `test_us093_ca9_10_caracteres_y_72_bytes_se_aceptan_al_restablecer`, `test_us093_ca9_73_bytes_no_se_aceptan_al_restablecer`, `test_us093_ca9_10_caracteres_y_72_bytes_se_aceptan_al_cambiar`, `test_us093_ca9_73_bytes_no_se_aceptan_al_cambiar` |
+| US-093 CA-9 | Una contraseña de 9 caracteres se rechaza con `RN-AU-07` en `contrasena` o en `contrasena_nueva` | `test_us093_ca9_una_contrasena_restablecida_de_9_caracteres_se_rechaza`, `test_us093_ca9_una_contrasena_nueva_de_9_caracteres_se_rechaza` |
+| US-093 CA-9 | El largo se informa antes que las reglas de negocio y el formato antes que el largo | `test_us093_ca9_el_largo_se_informa_antes_que_la_propia_al_restablecer`, `test_us093_ca9_el_largo_se_informa_antes_que_la_actual_incorrecta`, `test_us093_ca9_el_formato_se_informa_antes_que_el_largo_al_restablecer`, `test_us093_ca9_el_formato_se_informa_antes_que_el_largo_al_cambiar` |
+| US-093 CA-6, CA-7, CA-9 | Reglas puras: una sola regla de largo, la propia y el mensaje fijo de `RN-AU-09`; el permiso `contrasena.propia` | `test_us093_ca9_10_caracteres_y_72_bytes_se_aceptan_en_los_dos_campos`, `test_us093_ca6_restablecer_la_propia_levanta_restablecer_la_propia_con_rn_au_10` (`unit/test_usuarios.py`), `test_us093_ca7_contrasena_propia_para_los_tres_roles_y_no_para_un_usuario_sin_roles` (`unit/test_roles.py`) |
+| US-093 CA-6 | El repositorio guarda el hash y lee la fila con bloqueo | `test_us093_ca6_guardar_escribe_hash_password_junto_con_activo_y_token_version`, `test_us093_ca7_obtener_para_cambiar_devuelve_el_usuario_y_no_falla_en_sqlite` (`integration/test_repositorio_usuarios.py`) |
+
+Dos escenarios solo se prueban sobre PostgreSQL, en el perfil opcional (`backend/tests/postgres/test_contrasenas_concurrentes.py`): dos restablecimientos simultáneos del mismo usuario suben la versión dos veces, y un restablecimiento con un cambio propio a la vez no deja vigente el cambio propio. La suite por defecto no los ejerce (SQLite, un solo hilo).
 
 ### Horario
 
@@ -885,7 +930,7 @@ La API se reemplaza en los tests por un servidor falso escrito a mano (`frontend
 
 Hay además tests de la renovación compartida, del `403`, del cierre de sesión y de que ninguna URL contenga un token, y cinco guards (`src/test/guards.test.ts`) que fallan si aparece `any`, `vi.mock`, `localStorage`, `dangerouslySetInnerHTML`, un archivo `index.ts` de reexportación o un recurso de otro origen (STI-1).
 
-Resultado actual de las dos suites: frontend «Tests 204 passed (204)»; backend «796 passed, 56 deselected, 1 warning».
+Resultado actual de las dos suites: frontend «Tests 204 passed (204)»; backend «856 passed, 58 deselected, 1 warning».
 
 ## Levantar la API con PostgreSQL
 
@@ -965,6 +1010,9 @@ La migración autogenerada **se revisa a mano** antes de usarla, y cada change q
 - **La pantalla de usuarios no se vio renderizada bajo la CSP de Compose** (C-09, V5 parcial): en Compose se comprobaron la cabecera, el paquete servido y la consola sin violaciones en el ingreso, pero no se recorrió la pantalla con sesión iniciada. La prueba manual del autor cubrió la demo (corte de sesión al desactivar, ingreso rechazado mientras está inactiva y reactivación); los dos `409` `RN-AU-06` los verificaron el agente y las suites.
 - **Desactivar a un usuario no pide confirmación** (D250) y la API no borra usuarios: un usuario desactivado se reactiva con `PATCH`.
 - Los turnos guardados antes de la migración `0003` (por ejemplo, los de la prueba manual de C-02 en el volumen de PostgreSQL) **no tienen historial**: la consulta devuelve `200` con `[]` (D160). La migración no inventa eventos del pasado.
+- **Las rutas de contraseñas no tienen límite de peticiones** (como D195): `POST /auth/cambiar-contrasena` permite probar contraseñas actuales con un token válido. Se acepta por la misma razón que el login (API solo en `127.0.0.1`, bcrypt con 12 rondas).
+- **Restablecer o cambiar la contraseña y desactivar al mismo usuario a la vez** (K10): la desactivación de C-09 no toma el bloqueo de fila del usuario. Si las dos escriben la misma `token_version`, el usuario igual queda inactivo, y `activo` se verifica en cada petición (RN-AU-04).
+- **Cambiar o restablecer una contraseña no deja registro** (sin auditoría) ni avisa al usuario por ningún medio; no hay recuperación por email, contraseñas temporales ni historial de contraseñas (fuera de la v1).
 - **`/auth/login` no tiene límite de peticiones** (D195): cualquiera que llegue a la API puede probar contraseñas. Se acepta porque la API se publica solo en `127.0.0.1` y bcrypt con 12 rondas ya frena cada intento; el límite se decide en el change de la reserva pública. Tampoco hay registro de eventos de seguridad.
 - **No hay cierre de sesión en el servidor** ni revocación de un token puntual (RN-AU-03): un refresh vale hasta su vencimiento o hasta que cambie la `token_version` del usuario.
 - **Cerrar sesión en el panel no revoca el refresh en el servidor**: la interfaz solo borra los tokens del navegador (no hay ruta de cierre); el refresh sigue valiendo en la API hasta su vencimiento o hasta que cambie la `token_version`.
@@ -977,7 +1025,7 @@ La migración autogenerada **se revisa a mano** antes de usarla, y cada change q
 - **La demo arranca con las cinco prestaciones activas** (el catálogo de partida de los tests tiene «Urgencia» inactiva): para ver una fila inactiva en la demo se la desactiva primero desde la pantalla.
 - **La fuente Inter se usa solo si está instalada** en el equipo; si no, el navegador usa la fuente del sistema (la política de contenido de nginx no permite cargarla desde fuera).
 - **Dos pestañas editando la misma prestación**: la última gana (la API no versiona); cada pantalla muestra lo que devolvió la API.
-- Un volumen de PostgreSQL sembrado antes de C-06 recibe el usuario del seed al próximo arranque, pero **un usuario ya sembrado no cambia su contraseña** aunque cambie `SEED_USUARIO_PASSWORD`. Con `docker compose down -v` la base arranca vacía.
+- Un volumen de PostgreSQL sembrado antes de C-06 recibe el usuario del seed al próximo arranque, pero **un usuario ya sembrado no cambia su contraseña** aunque cambie `SEED_USUARIO_PASSWORD`. Con `docker compose down -v` la base arranca vacía. Desde C-10 la contraseña de un usuario sembrado se cambia por la API (`POST /auth/cambiar-contrasena` o `POST /usuarios/{id}/restablecer-contrasena`), sin tocar `SEED_USUARIO_PASSWORD`.
 - El puerto 5434 (PostgreSQL), el 8000 (API) y el 5173 (interfaz) del host tienen que estar libres.
 - El proyecto de Compose tiene nombre fijo (`turnos-odontologia`): **dos copias del repositorio en la misma máquina comparten contenedores y volumen**, y un `docker compose down -v` en una borra los datos de la otra. Para levantar una segunda copia aparte, usá otro nombre de proyecto en todos los comandos: `docker compose -p otro-nombre up -d`.
 - En Windows, si el repositorio está en una ruta muy larga (más de unos 200 caracteres), el perfil opcional falla al importar `psycopg` con «El nombre del archivo o la extensión es demasiado largo». Cloná en una ruta corta.

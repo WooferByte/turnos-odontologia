@@ -49,7 +49,7 @@ Reglas de trabajo para todos los grupos (no son tareas):
 
 ## 7. API en el README
 
-- [ ] 7.1 Completar el `README.md` de la raíz (design K19): sección «Contraseñas» en «Probar desde Swagger» (restablecer la de la recepcionista y ver el `401` con su token anterior, la propia rechazada con `409` `RN-AU-10`, cambiar la propia con la actual y usar los tokens nuevos, la actual incorrecta con `RN-AU-09`, la corta con `RN-AU-07`), la tabla escenario → test de la API (US-093 CA-6, CA-7, CA-9) con la cantidad real de tests, los límites conocidos (sin límite de peticiones en el cambio, como D195; la carrera con la desactivación, K10) y la nota de D197 actualizada (la contraseña de un usuario sembrado ya se cambia por la API). Verificación: cada paso nuevo se ejecutó tal cual con la demo (`crear_app_demo`) en `/docs` y dio lo que dice.
+- [x] 7.1 Completar el `README.md` de la raíz (design K19): sección «Contraseñas» en «Probar desde Swagger» (restablecer la de la recepcionista y ver el `401` con su token anterior, la propia rechazada con `409` `RN-AU-10`, cambiar la propia con la actual y usar los tokens nuevos, la actual incorrecta con `RN-AU-09`, la corta con `RN-AU-07`), la tabla escenario → test de la API (US-093 CA-6, CA-7, CA-9) con la cantidad real de tests, los límites conocidos (sin límite de peticiones en el cambio, como D195; la carrera con la desactivación, K10) y la nota de D197 actualizada (la contraseña de un usuario sembrado ya se cambia por la API). Verificación: cada paso nuevo se ejecutó tal cual con la demo (`crear_app_demo`) en `/docs` y dio lo que dice.
 
 ## 8. Servidor falso, sesión del navegador y cliente
 
