@@ -1,0 +1,211 @@
+<!DOCTYPE html>
+
+<html class="h-full bg-[#F8FAFC]" lang="es"><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Gestión de Usuarios - Turnos Odontológicos AR</title>
+<!-- Material Symbols Outlined -->
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Inter Font -->
+<link href="https://fonts.googleapis.com" rel="preconnect"/>
+<link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<!-- Tailwind CSS with Forms and Container Queries -->
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<!-- Tailwind Configuration verbatim as requested -->
+<script id="tailwind-config">
+    tailwind.config = {
+      darkMode: "class",
+      theme: {
+        extend: {
+          "colors": {
+            "on-tertiary-container": "#fcfcff",
+            "on-primary-fixed-variant": "#004b73",
+            "surface-container-low": "#f2f3ff",
+            "secondary-container": "#316bf3",
+            "error": "#ba1a1a",
+            "secondary": "#0051d5",
+            "on-error": "#ffffff",
+            "primary-fixed-dim": "#93ccff",
+            "on-primary": "#ffffff",
+            "background": "#faf8ff",
+            "on-primary-fixed": "#001d31",
+            "on-secondary": "#ffffff",
+            "error-container": "#ffdad6",
+            "on-tertiary-fixed-variant": "#004c6e",
+            "on-secondary-fixed-variant": "#003ea8",
+            "on-background": "#131b2e",
+            "surface-tint": "#006398",
+            "surface-container-lowest": "#ffffff",
+            "surface-container-high": "#e2e7ff",
+            "on-tertiary-fixed": "#001e2f",
+            "tertiary-container": "#007cb1",
+            "surface-dim": "#d2d9f4",
+            "on-primary-container": "#fdfcff",
+            "surface-variant": "#dae2fd",
+            "outline-variant": "#bfc7d2",
+            "surface": "#faf8ff",
+            "secondary-fixed-dim": "#b4c5ff",
+            "tertiary-fixed-dim": "#89ceff",
+            "inverse-surface": "#283044",
+            "surface-container-highest": "#dae2fd",
+            "on-surface-variant": "#3f4850",
+            "surface-bright": "#faf8ff",
+            "on-secondary-container": "#fefcff",
+            "on-error-container": "#93000a",
+            "on-tertiary": "#ffffff",
+            "surface-container": "#eaedff",
+            "tertiary-fixed": "#c9e6ff",
+            "tertiary": "#00628d",
+            "primary-fixed": "#cce5ff",
+            "outline": "#707881",
+            "inverse-primary": "#93ccff",
+            "inverse-on-surface": "#eef0ff",
+            "on-surface": "#131b2e",
+            "on-secondary-fixed": "#00174b",
+            "primary-container": "#007bb9",
+            "primary": "#006194",
+            "secondary-fixed": "#dbe1ff"
+          },
+          "borderRadius": {
+            "DEFAULT": "0.125rem",
+            "lg": "0.25rem",
+            "xl": "0.5rem",
+            "full": "0.75rem"
+          },
+          "spacing": {
+            "space-lg": "1rem",
+            "space-xl": "1.5rem",
+            "margin-desktop": "2rem",
+            "space-sm": "0.5rem",
+            "gutter-desktop": "1.5rem",
+            "space-2xl": "2rem",
+            "gutter": "1rem",
+            "margin": "1rem",
+            "space-md": "0.75rem",
+            "space-xs": "0.25rem",
+            "space-xxs": "0.125rem"
+          },
+          "fontFamily": {
+            "body-md": ["Inter"],
+            "label-sm": ["Inter"],
+            "label-md": ["Inter"],
+            "headline-sm": ["Inter"],
+            "headline-md": ["Inter"],
+            "code-tabular": ["Inter"],
+            "title-md": ["Inter"],
+            "headline-lg": ["Inter"],
+            "body-sm": ["Inter"]
+          },
+          "fontSize": {
+            "body-md": ["0.875rem", { "lineHeight": "1.375rem", "fontWeight": "400" }],
+            "label-sm": ["0.6875rem", { "lineHeight": "0.875rem", "letterSpacing": "0.03em", "fontWeight": "500" }],
+            "label-md": ["0.75rem", { "lineHeight": "1rem", "letterSpacing": "0.02em", "fontWeight": "600" }],
+            "headline-sm": ["1.125rem", { "lineHeight": "1.625rem", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+            "headline-md": ["1.375rem", { "lineHeight": "1.875rem", "letterSpacing": "-0.015em", "fontWeight": "600" }],
+            "code-tabular": ["0.875rem", { "lineHeight": "1.25rem", "letterSpacing": "-0.01em", "fontWeight": "500" }],
+            "title-md": ["1rem", { "lineHeight": "1.5rem", "letterSpacing": "-0.005em", "fontWeight": "600" }],
+            "headline-lg": ["1.75rem", { "lineHeight": "2.25rem", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+            "body-sm": ["0.8125rem", { "lineHeight": "1.25rem", "fontWeight": "400" }]
+          }
+        }
+      }
+    }
+  </script>
+<style>
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+      display: inline-block;
+      vertical-align: middle;
+      line-height: 1;
+    }
+    .material-symbols-outlined.fill-icon {
+      font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+    }
+  </style>
+</head>
+<body class="h-full bg-[#F8FAFC] text-[#0F172A] font-body-md antialiased flex flex-col">
+<!-- 1. Barra superior (TopNav) -->
+<header class="bg-surface-container-lowest border-b border-[#E2E8F0] h-14 w-full flex items-center justify-between px-6 z-20 shrink-0">
+<div class="flex items-center gap-6">
+<!-- Marca con logo clínico SVG -->
+<div class="flex items-center gap-2.5">
+<div class="w-8 h-8 rounded bg-[#F0F9FF] border border-[#BAE6FD] flex items-center justify-center text-[#0284C7]">
+<svg class="w-5 h-5" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" viewbox="0 0 24 24">
+<path d="M12 2C8.5 2 6 4.5 6 7.5C6 10.5 7 13 8 16C9 19 9.5 22 12 22C14.5 22 15 19 16 16C17 13 18 10.5 18 7.5C18 4.5 15.5 2 12 2Z"></path>
+<path d="M9 7C9.5 8.5 10.5 9 12 9C13.5 9 14.5 8.5 15 7"></path>
+</svg>
+</div>
+<span class="font-headline-sm text-headline-sm font-bold text-[#0F172A] tracking-tight">Turnos Odontológicos AR</span>
+</div>
+<!-- Pastillas de navegación del encabezado -->
+<nav aria-label="Navegación principal" class="flex items-center gap-1.5 ml-2"><a class="flex items-center gap-2 px-3 py-1.5 rounded-full text-body-sm font-body-sm text-[#475569] hover:bg-[#F1F5F9] hover:text-[#0F172A] transition-colors" href="#"><span class="material-symbols-outlined text-[18px]">medical_services</span><span>Prestaciones</span></a><a class="flex items-center gap-2 px-3 py-1.5 rounded-full text-body-sm font-body-sm bg-[#F0F9FF] border border-[#BAE6FD] text-[#0284C7] font-semibold transition-colors" href="#"><span class="material-symbols-outlined text-[18px]">group</span><span>Usuarios</span></a><a class="flex items-center gap-2 px-3 py-1.5 rounded-full text-body-sm font-body-sm text-[#475569] hover:bg-[#F1F5F9] hover:text-[#0F172A] transition-colors" href="#"><span class="material-symbols-outlined text-[18px]">schedule</span><span>Horario</span></a><a class="flex items-center gap-2 px-3 py-1.5 rounded-full text-body-sm font-body-sm text-[#475569] hover:bg-[#F1F5F9] hover:text-[#0F172A] transition-colors" href="#"><span class="material-symbols-outlined text-[18px]">block</span><span>Bloqueos</span></a><a class="flex items-center gap-2 px-3 py-1.5 rounded-full text-body-sm font-body-sm text-[#475569] hover:bg-[#F1F5F9] hover:text-[#0F172A] transition-colors" href="#"><span class="material-symbols-outlined text-[18px]">key</span><span>Mi contraseña</span></a></nav>
+</div>
+<!-- Acción de salida sin avatar -->
+<div class="flex items-center">
+<button class="flex items-center gap-2 h-9 px-3 rounded border border-[#CBD5E1] bg-surface-container-lowest text-body-sm font-body-sm text-[#334155] hover:bg-[#F8FAFC] hover:border-[#94A3B8] transition-colors focus:outline-none focus:ring-2 focus:ring-[#0284C7] focus:ring-offset-2" type="button">
+<span class="material-symbols-outlined text-[18px]">logout</span>
+<span>Cerrar sesión</span>
+</button>
+</div>
+</header>
+<!-- Contenedor Principal de Gestión -->
+<main class="flex-1 overflow-y-auto px-6 py-6 max-w-[1600px] w-full mx-auto space-y-5">
+<!-- 2. Encabezado de página -->
+<div class="flex flex-col gap-4">
+<div class="flex items-center justify-between">
+<div>
+<h1 class="font-headline-lg text-headline-lg text-[#0F172A] font-bold tracking-tight">Usuarios</h1>
+<p class="font-body-sm text-body-sm text-[#64748B] mt-0.5">Usuarios del consultorio: acceso al panel y roles.</p>
+</div>
+<div>
+<button class="inline-flex items-center gap-1.5 h-9 px-4 rounded bg-[#0284C7] hover:bg-[#0369A1] active:bg-[#075985] text-white font-label-md text-label-md tracking-normal font-semibold transition-colors shadow-none focus:outline-none focus:ring-2 focus:ring-[#0284C7] focus:ring-offset-2" type="button">
+<span class="material-symbols-outlined text-[18px]">add</span>
+<span>Nuevo usuario</span>
+</button>
+</div>
+</div>
+<div class="h-px bg-[#E2E8F0] w-full"></div>
+</div>
+<!-- 3. Alerta de error superior: RN-AU-06 -->
+<section aria-label="Aviso de éxito" class="rounded bg-[#F0FDF4] border border-[#86EFAC] p-3.5 flex items-start gap-3"><span class="material-symbols-outlined text-[#16A34A] text-[20px] shrink-0 mt-0.5">check_circle</span><div class="text-body-sm font-body-sm text-[#15803D]"><span class="font-semibold">Contraseña restablecida.</span> <span>Se cerraron las sesiones de recepcion@consultorio-demo.test.</span></div></section>
+<!-- 4. Contenido principal en dos columnas (7fr / 5fr) -->
+<div class="grid grid-cols-1 xl:grid-cols-12 gap-6 items-start">
+<!-- Columna izquierda: Listado general (7 cols) -->
+<section aria-labelledby="listado-titulo" class="xl:col-span-7 bg-surface-container-lowest border border-[#CBD5E1] rounded-[8px] overflow-hidden">
+<!-- Cabecera de la tarjeta -->
+<div class="px-4 py-3 bg-[#FFFFFF] border-b border-[#E2E8F0] flex items-center justify-between">
+<div class="flex items-center gap-2">
+<span class="material-symbols-outlined text-[#64748B] text-[20px]">badge</span>
+<h2 class="font-title-md text-title-md text-[#0F172A] font-semibold" id="listado-titulo">Listado general</h2>
+</div>
+<span class="inline-flex items-center px-2.5 py-0.5 rounded text-label-sm font-label-sm font-medium bg-[#F1F5F9] text-[#475569] border border-[#E2E8F0]">
+            3 usuarios registrados
+          </span>
+</div>
+<!-- Tabla densa clínica -->
+<div class="overflow-x-auto">
+<table class="w-full text-left border-collapse">
+<thead>
+<tr class="bg-[#F8FAFC] border-b border-[#CBD5E1] h-9">
+<th class="px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-[#475569]" scope="col">Email</th>
+<th class="px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-[#475569]" scope="col">Roles</th>
+<th class="px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-[#475569]" scope="col">Estado</th>
+<th class="px-4 py-2 text-[11px] font-semibold uppercase tracking-wider text-[#475569] text-right" scope="col">Acciones</th>
+</tr>
+</thead>
+<tbody class="divide-y divide-[#E2E8F0] text-body-sm font-body-sm"><tr class="h-10 hover:bg-[#F8FAFC] transition-colors"><td class="px-4 py-2 text-[#0F172A] font-medium whitespace-nowrap">odontologa@consultorio-demo.test</td><td class="px-4 py-2 whitespace-nowrap"><div class="flex items-center gap-1.5"><span class="inline-flex items-center px-2 py-0.5 rounded text-label-sm font-label-sm bg-[#F0F9FF] border border-[#BAE6FD] text-[#0369A1] font-medium">Odontólogo</span><span class="inline-flex items-center px-2 py-0.5 rounded text-label-sm font-label-sm bg-[#F1F5F9] border border-[#CBD5E1] text-[#334155] font-medium">Dueño</span></div></td><td class="px-4 py-2 whitespace-nowrap"><span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-label-sm font-label-sm bg-[#F0FDF4] border border-[#86EFAC] text-[#15803D] font-semibold"><span class="w-1.5 h-1.5 rounded-full bg-[#16A34A]"></span> Activo</span></td><td class="px-4 py-2 text-right whitespace-nowrap"><div class="inline-flex items-center gap-1.5"><button class="px-2.5 py-1 text-label-sm font-label-sm text-[#0F172A] bg-white border border-[#CBD5E1] rounded hover:bg-[#F1F5F9] hover:border-[#94A3B8] transition-colors focus:ring-1 focus:ring-[#0284C7]" type="button">Editar</button><button class="inline-flex items-center gap-1 px-2.5 py-1 text-label-sm font-label-sm text-[#0284C7] bg-white border border-[#BAE6FD] hover:bg-[#F0F9FF] rounded transition-colors focus:ring-1 focus:ring-[#0284C7]" type="button"><span class="material-symbols-outlined text-[14px]">vpn_key</span><span>Restablecer</span></button><button class="px-2.5 py-1 text-label-sm font-label-sm text-[#DC2626] bg-transparent hover:bg-[#FEF2F2] rounded border border-transparent hover:border-[#FECACA] transition-colors focus:ring-1 focus:ring-[#DC2626]" type="button">Desactivar</button></div></td></tr><tr class="h-10 bg-[#F0F9FF] border-l-[3px] border-l-[#0284C7] transition-colors"><td class="px-4 py-2 text-[#0F172A] font-semibold whitespace-nowrap"><div class="flex items-center gap-2"><span>recepcion@consultorio-demo.test</span><span class="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-semibold bg-[#0284C7] text-white">Modificando</span></div></td><td class="px-4 py-2 whitespace-nowrap"><span class="inline-flex items-center px-2 py-0.5 rounded text-label-sm font-label-sm bg-[#F1F5F9] border border-[#CBD5E1] text-[#334155] font-medium">Recepcionista</span></td><td class="px-4 py-2 whitespace-nowrap"><span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-label-sm font-label-sm bg-[#F0FDF4] border border-[#86EFAC] text-[#15803D] font-semibold"><span class="w-1.5 h-1.5 rounded-full bg-[#16A34A]"></span> Activo</span></td><td class="px-4 py-2 text-right whitespace-nowrap"><div class="inline-flex items-center gap-1.5"><button class="px-2.5 py-1 text-label-sm font-label-sm text-[#0F172A] bg-white border border-[#CBD5E1] rounded hover:bg-[#F1F5F9] hover:border-[#94A3B8] transition-colors focus:ring-1 focus:ring-[#0284C7]" type="button">Editar</button><button class="inline-flex items-center gap-1 px-2.5 py-1 text-label-sm font-label-sm text-white bg-[#0284C7] hover:bg-[#0369A1] rounded font-semibold transition-colors focus:ring-1 focus:ring-[#0284C7]" type="button"><span class="material-symbols-outlined text-[14px]">vpn_key</span><span>Restablecer</span></button><button class="px-2.5 py-1 text-label-sm font-label-sm text-[#DC2626] bg-transparent hover:bg-[#FEF2F2] rounded border border-transparent hover:border-[#FECACA] transition-colors focus:ring-1 focus:ring-[#DC2626]" type="button">Desactivar</button></div></td></tr><tr class="h-10 hover:bg-[#F8FAFC] transition-colors bg-white"><td class="px-4 py-2 text-[#64748B] opacity-75 font-normal whitespace-nowrap">administracion@consultorio-demo.test</td><td class="px-4 py-2 whitespace-nowrap opacity-75"><span class="inline-flex items-center px-2 py-0.5 rounded text-label-sm font-label-sm bg-[#F1F5F9] border border-[#CBD5E1] text-[#64748B] font-medium">Dueño</span></td><td class="px-4 py-2 whitespace-nowrap"><span class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-label-sm font-label-sm bg-[#F1F5F9] border border-[#CBD5E1] text-[#64748B] font-medium"><span class="w-1.5 h-1.5 rounded-full bg-[#94A3B8]"></span> Inactivo</span></td><td class="px-4 py-2 text-right whitespace-nowrap"><div class="inline-flex items-center gap-1.5"><button class="px-2.5 py-1 text-label-sm font-label-sm text-[#0F172A] bg-white border border-[#CBD5E1] rounded hover:bg-[#F1F5F9] hover:border-[#94A3B8] transition-colors focus:ring-1 focus:ring-[#0284C7]" type="button">Editar</button><button class="inline-flex items-center gap-1 px-2.5 py-1 text-label-sm font-label-sm text-[#475569] bg-white border border-[#CBD5E1] hover:bg-[#F1F5F9] rounded transition-colors focus:ring-1 focus:ring-[#0284C7]" type="button"><span class="material-symbols-outlined text-[14px]">vpn_key</span><span>Restablecer</span></button><button class="px-2.5 py-1 text-label-sm font-label-sm text-[#15803D] bg-white border border-[#86EFAC] hover:bg-[#F0FDF4] rounded font-semibold transition-colors focus:ring-1 focus:ring-[#0284C7]" type="button">Reactivar</button></div></td></tr></tbody>
+</table>
+</div>
+<!-- Pie descriptivo de estado del sistema -->
+<div class="px-4 py-2.5 bg-[#F8FAFC] border-t border-[#E2E8F0] flex items-center justify-between text-label-sm font-label-sm text-[#64748B]">
+<span>Módulo administrativo con control de integridad clínica</span>
+<span class="font-code-tabular text-code-tabular">Filtrado: 3 de 3 registros</span>
+</div>
+</section>
+<!-- Columna derecha: Edición y Alta / Referencia (5 cols) -->
+<div class="xl:col-span-5 space-y-5"><div aria-labelledby="restablecer-password-titulo" class="bg-surface-container-lowest border border-[#CBD5E1] rounded-[8px] overflow-hidden" role="region"><div class="px-4 py-3 bg-[#FFFFFF] border-b border-[#E2E8F0] flex items-center justify-between"><div class="flex items-center gap-2"><span class="material-symbols-outlined text-[#0284C7] text-[20px]">vpn_key</span><h2 class="font-title-md text-title-md text-[#0F172A] font-semibold" id="restablecer-password-titulo">Restablecer contraseña</h2></div><button aria-label="Cerrar panel" class="w-7 h-7 flex items-center justify-center rounded text-[#64748B] hover:bg-[#F1F5F9] hover:text-[#0F172A] transition-colors" type="button"><span class="material-symbols-outlined text-[18px]">close</span></button></div><div class="p-4 space-y-4"><div class="space-y-1.5"><label class="block text-label-sm font-label-sm font-bold text-[#475569] uppercase tracking-wider" for="reset-email">USUARIO / EMAIL</label><div class="h-9 px-3 rounded border border-[#CBD5E1] bg-[#F1F5F9] text-[#475569] font-body-sm text-body-sm flex items-center justify-between select-none cursor-not-allowed"><input class="bg-transparent border-0 p-0 text-body-sm font-body-sm text-[#475569] w-full focus:ring-0 cursor-not-allowed" id="reset-email" readonly="" type="text" value="recepcion@consultorio-demo.test"/><span class="material-symbols-outlined text-[#94A3B8] text-[18px]">lock</span></div></div><div class="space-y-1.5"><label class="block text-label-sm font-label-sm font-bold text-[#475569] uppercase tracking-wider" for="reset-new-password">CONTRASEÑA NUEVA *</label><input class="w-full h-9 px-3 rounded border border-[#CBD5E1] bg-white text-body-sm font-body-sm text-[#0F172A] placeholder-[#94A3B8] focus:border-[#0284C7] focus:ring-1 focus:ring-[#0284C7]" id="reset-new-password" placeholder="••••••••••••" type="password"/><p class="text-label-sm font-label-sm text-[#64748B]">De 10 caracteres a 72 bytes.</p></div><div class="rounded bg-[#F0F9FF] border border-[#BAE6FD] p-3 flex items-start gap-2.5 text-body-sm font-body-sm text-[#0369A1]"><span class="material-symbols-outlined text-[18px] text-[#0284C7] shrink-0 mt-0.5">info</span><p class="leading-snug">Al guardar se cierran todas las sesiones de este usuario.</p></div></div><div class="px-4 py-3 bg-[#F8FAFC] border-t border-[#E2E8F0] flex items-center justify-end gap-2.5"><button class="h-9 px-3.5 rounded border border-[#CBD5E1] bg-white text-body-sm font-body-sm font-medium text-[#334155] hover:bg-[#F1F5F9] hover:border-[#94A3B8] transition-colors focus:ring-2 focus:ring-[#0284C7]" type="button">Cancelar</button><button class="h-9 px-4 rounded bg-[#0284C7] hover:bg-[#0369A1] active:bg-[#075985] text-white text-body-sm font-body-sm font-semibold transition-colors focus:ring-2 focus:ring-[#0284C7] focus:ring-offset-1" type="button">Guardar</button></div></div><div aria-labelledby="referencia-titulo" class="bg-surface-container-lowest border border-[#CBD5E1] rounded-[8px] overflow-hidden" role="region"><div class="px-4 py-2.5 bg-[#FFFFFF] border-b border-[#E2E8F0] flex items-center justify-between"><div class="flex items-center gap-2"><span class="material-symbols-outlined text-[#64748B] text-[20px]">rule</span><h2 class="font-title-md text-title-md text-[#0F172A] font-semibold" id="referencia-titulo">Estado alternativo / Validación</h2></div><span class="text-label-sm font-label-sm text-[#475569] bg-[#F1F5F9] px-2 py-0.5 rounded border border-[#E2E8F0]">Referencia: Error de validación (RN-AU-07)</span></div><div class="p-4 space-y-2.5"><div class="space-y-1"><label class="block text-label-sm font-label-sm font-bold text-[#475569] uppercase tracking-wider" for="ref-new-password">CONTRASEÑA NUEVA *</label><div class="relative"><input class="w-full h-9 px-3 rounded border border-[#DC2626] bg-[#FEF2F2]/30 text-body-sm font-body-sm text-[#0F172A] focus:outline-none focus:ring-1 focus:ring-[#DC2626] focus:border-[#DC2626]" id="ref-new-password" type="password" value="corta"/><span class="material-symbols-outlined absolute right-2.5 top-2 text-[#DC2626] text-[18px]">error</span></div></div><div class="flex items-center gap-1.5 p-2 rounded bg-[#FEF2F2] border border-[#FECACA] text-label-sm font-label-sm text-[#991B1B]"><span class="material-symbols-outlined text-[16px] text-[#DC2626] shrink-0">error</span><span>La contraseña debe tener de 10 caracteres a 72 bytes (RN-AU-07).</span></div></div></div></div>
+</div>
+</main>
+</body></html>

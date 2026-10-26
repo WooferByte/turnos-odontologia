@@ -416,7 +416,7 @@ Primer change: `/opsx:propose crear-turno-sin-solapamientos`.
   - `knowledge-base/02_descripcion_general.md` §«API REST (resumen)», fila Usuarios
 
 ### [C-10] `contrasenas-de-usuarios`
-- **Estado**: `[ ]` pendiente · **Orden**: 3 · **Gobernanza**: CRITICO
+- **Estado**: `[~]` en curso · **Orden**: 3 · **Gobernanza**: CRITICO
 - **Objetivo** (US-093): restablecer la contraseña de un usuario y que cada usuario cambie la propia (parte de contraseñas).
 - **Alcance — dentro**: `POST /usuarios/{id}/restablecer-contrasena` (solo odontólogo) y `POST /auth/cambiar-contrasena` (pide la actual); ambos incrementan `token_version`; largo de 10 caracteres como mínimo y 72 bytes como máximo para la contraseña restablecida y la cambiada (la inicial la valida C-09, D242); formularios en el panel.
 - **Alcance — fuera**: recuperación de contraseña por email (ninguna historia la pide); revocación de tokens de a uno.

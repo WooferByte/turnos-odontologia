@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="es-AR" class="h-full bg-slate-50">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Mi contraseña - Turnos Odontológicos AR</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            brand: {
+              DEFAULT: '#0284C7',
+              hover: '#0369A1',
+              active: '#075985',
+              light: '#E0F2FE',
+            }
+          },
+          borderRadius: {
+            DEFAULT: '4px',
+            'sm': '2px',
+            'md': '4px',
+            'lg': '8px',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      color: #0f172a;
+    }
+  </style>
+</head>
+<body class="min-h-full flex flex-col bg-[#F8FAFC] text-slate-800 antialiased">
+
+  <!-- Barra Superior de Navegación -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-30">
+    <div class="max-w-[1440px] mx-auto px-6 h-16 flex items-center justify-between">
+      
+      <!-- Marca y Navegación Principal -->
+      <div class="flex items-center gap-8">
+        <!-- Logo / Marca -->
+        <a href="#" class="flex items-center gap-2.5 text-slate-900 font-semibold text-lg tracking-tight hover:opacity-90">
+          <div class="w-8 h-8 rounded border border-sky-200 bg-sky-50 flex items-center justify-center text-[#0284C7]">
+            <!-- Ícono simple de diente -->
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2C7.5 2 6 5.5 6 9.5C6 13 7 15 8 18C8.8 20.4 10 22 12 22C14 22 15.2 20.4 16 18C17 15 18 13 18 9.5C18 5.5 16.5 2 12 2Z"/>
+              <path d="M10 9C10.5 8 11.2 7.5 12 7.5C12.8 7.5 13.5 8 14 9"/>
+            </svg>
+          </div>
+          <span>Turnos Odontológicos AR</span>
+        </a>
+
+        <!-- Pastillas de Navegación -->
+        <nav class="flex items-center gap-1.5" aria-label="Secciones del panel">
+          <a href="#" class="px-3.5 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded transition-colors">
+            Prestaciones
+          </a>
+          <a href="#" class="px-3.5 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded transition-colors">
+            Usuarios
+          </a>
+          <a href="#" class="px-3.5 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded transition-colors">
+            Horario
+          </a>
+          <a href="#" class="px-3.5 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded transition-colors">
+            Bloqueos
+          </a>
+          <!-- Pastilla Activa: Mi contraseña con ícono de llave -->
+          <a href="#" class="px-3.5 py-1.5 text-sm font-semibold text-[#0284C7] bg-sky-50 border border-sky-200 rounded flex items-center gap-1.5">
+            <svg class="w-4 h-4 text-[#0284C7]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="m21 2-2 2m-1.5 1.5L16 7l-1.5-1.5"/>
+              <path d="m15.5 8.5-3 3"/>
+              <circle cx="7.5" cy="16.5" r="5.5"/>
+              <path d="m11.5 12.5 6-6"/>
+            </svg>
+            <span>Mi contraseña</span>
+          </a>
+        </nav>
+      </div>
+
+      <!-- Acción Secundaria: Cerrar sesión -->
+      <div>
+        <button type="button" class="inline-flex items-center gap-2 px-3.5 py-1.5 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded hover:bg-slate-50 hover:text-slate-900 transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-1">
+          <svg class="w-4 h-4 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+            <polyline points="16 17 21 12 16 7"/>
+            <line x1="21" y1="12" x2="9" y2="12"/>
+          </svg>
+          <span>Cerrar sesión</span>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- Contenedor Principal de la Página -->
+  <main class="flex-1 max-w-[1440px] w-full mx-auto px-6 py-8">
+    
+    <!-- Encabezado de la Sección -->
+    <div class="mb-6">
+      <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Mi contraseña</h1>
+    </div>
+
+    <!-- Contenedor con alineación sobria a la izquierda -->
+    <div class="w-full max-w-md">
+      
+      <!-- Tarjeta Formulario (8px radio, borde estándar, sin sombras fuertes) -->
+      <section class="bg-white border border-slate-200 rounded-lg p-6">
+        
+        <form class="space-y-5" onsubmit="event.preventDefault();">
+          
+          <!-- Campo 1: Contraseña actual con estado de error -->
+          <div>
+            <div class="flex items-center justify-between mb-1.5">
+              <label for="current_password" class="block text-xs font-semibold uppercase tracking-wider text-slate-700">
+                Contraseña actual <span class="text-[#DC2626]">*</span>
+              </label>
+            </div>
+            
+            <div class="relative">
+              <input 
+                type="password" 
+                id="current_password" 
+                name="current_password" 
+                value="secretpassword123"
+                autocomplete="current-password"
+                class="w-full h-10 px-3 text-sm rounded bg-white text-slate-900 border border-[#DC2626] focus:outline-none focus:ring-2 focus:ring-red-400 focus:border-[#DC2626] transition-colors"
+                placeholder="••••••••••••"
+              >
+              <!-- Ícono indicador de alerta interno -->
+              <div class="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none text-[#DC2626]">
+                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="12" cy="12" r="10"/>
+                  <line x1="12" y1="8" x2="12" y2="12"/>
+                  <line x1="12" y1="16" x2="12.01" y2="16"/>
+                </svg>
+              </div>
+            </div>
+
+            <!-- Mensaje de error solicitado con código regulatorio / validación -->
+            <div class="mt-1.5 flex items-start gap-1.5 text-xs text-[#DC2626]">
+              <svg class="w-3.5 h-3.5 mt-0.5 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <line x1="12" y1="8" x2="12" y2="12"/>
+                <line x1="12" y1="16" x2="12.01" y2="16"/>
+              </svg>
+              <span>La contraseña actual no es correcta (RN-AU-09).</span>
+            </div>
+          </div>
+
+          <!-- Campo 2: Contraseña nueva -->
+          <div>
+            <label for="new_password" class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
+              Contraseña nueva <span class="text-[#DC2626]">*</span>
+            </label>
+            <input 
+              type="password" 
+              id="new_password" 
+              name="new_password" 
+              autocomplete="new-password"
+              class="w-full h-10 px-3 text-sm rounded bg-white text-slate-900 border border-slate-300 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0284C7] focus:border-[#0284C7] transition-colors"
+              placeholder="••••••••••••"
+            >
+            <p class="mt-1.5 text-xs text-slate-500">
+              De 10 caracteres a 72 bytes.
+            </p>
+          </div>
+
+          <!-- Campo 3: Repetir contraseña nueva -->
+          <div>
+            <label for="confirm_password" class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
+              Repetir contraseña nueva <span class="text-[#DC2626]">*</span>
+            </label>
+            <input 
+              type="password" 
+              id="confirm_password" 
+              name="confirm_password" 
+              autocomplete="new-password"
+              class="w-full h-10 px-3 text-sm rounded bg-white text-slate-900 border border-slate-300 hover:border-slate-400 focus:outline-none focus:ring-2 focus:ring-[#0284C7] focus:border-[#0284C7] transition-colors"
+              placeholder="••••••••••••"
+            >
+          </div>
+
+          <!-- Botón de acción primario -->
+          <div class="pt-2">
+            <button 
+              type="submit" 
+              class="w-full h-10 px-4 inline-flex items-center justify-center gap-2 text-sm font-medium text-white bg-[#0284C7] hover:bg-[#0369A1] active:bg-[#075985] rounded transition-colors focus:outline-none focus:ring-2 focus:ring-sky-500 focus:ring-offset-2 cursor-pointer shadow-none"
+            >
+              <!-- Ícono de llave o candado -->
+              <svg class="w-4 h-4 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              </svg>
+              <span>Cambiar contraseña</span>
+            </button>
+          </div>
+
+        </form>
+
+      </section>
+
+      <!-- Estado de ejemplo de éxito (debajo del formulario) -->
+      <div class="mt-4 p-4 rounded-lg bg-[#F0FDF4] border border-[#BBF7D0] flex items-start gap-3 text-sm text-[#16A34A]">
+        <svg class="w-5 h-5 text-[#16A34A] shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="m9 12 2 2 4-4"/>
+        </svg>
+        <div class="flex-1 font-medium text-[#15803D]">
+          Contraseña cambiada. Tus otras sesiones se cerraron.
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- Pie de página sobrio y clínico -->
+  <footer class="mt-auto border-t border-slate-200 bg-white py-4 text-center text-xs text-slate-500">
+    Turnos Odontológicos AR · Módulo de Seguridad y Credenciales · Sede Central
+  </footer>
+
+</body>
+</html>
