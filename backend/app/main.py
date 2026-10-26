@@ -1,9 +1,10 @@
 """Punto de entrada de la API (D3). Sin variable ``app`` a nivel de módulo."""
+import asyncio
 import os
-from collections.abc import Mapping
+from collections.abc import Awaitable, Callable, Mapping
 from datetime import timedelta
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, Response
 from sqlalchemy import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
@@ -66,7 +67,24 @@ def crear_app_demo() -> FastAPI:
         cargar_usuario_demo(sesion, hash_password)
         cargar_roles_demo_si_faltan(sesion)
         cargar_recepcionista_demo_si_falta(sesion, hash_password)
-    return crear_app(engine)
+    app = crear_app(engine)
+    _atender_de_a_una(app)
+    return app
+
+
+def _atender_de_a_una(app: FastAPI) -> None:
+    """Atiende las peticiones de a una: la base en memoria es una sola conexión de SQLite.
+
+    Con ``StaticPool`` todos los hilos del threadpool comparten esa conexión, y ``sqlite3`` no
+    admite usarla a la vez (``InterfaceError`` o la demo trabada). Solo la demo: los tests usan
+    ``crear_app`` y Compose tiene PostgreSQL con su pool.
+    """
+    candado = asyncio.Lock()
+
+    @app.middleware("http")
+    async def de_a_una(request: Request, call_next: Callable[[Request], Awaitable[Response]]) -> Response:
+        async with candado:
+            return await call_next(request)
 
 
 def crear_app_desde_entorno(entorno: Mapping[str, str] = os.environ) -> FastAPI:

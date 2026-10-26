@@ -3,6 +3,7 @@
 Sin dobles: la aplicación, la base en memoria y el seed son los reales. Estos tests no usan el
 ``engine`` ni las factories de ``conftest.py``: la demo arma su propia base.
 """
+import threading
 from datetime import datetime
 
 import pytest
@@ -163,3 +164,28 @@ def test_us002_ca1_la_demo_arranca_con_el_horario_de_ejemplo_y_el_turno_de_las_0
     assert dentro.status_code == 201
     assert fuera.status_code == 422
     assert fuera.json()["codigos"] == ["RN-AG-04"]
+
+
+@pytest.mark.parametrize("rondas", [1, 5])
+def test_la_demo_responde_peticiones_en_paralelo_sin_romper_la_base_compartida(rondas):
+    # La base en memoria de la demo es una sola conexión de SQLite (StaticPool): sin el candado,
+    # los hilos del threadpool la usan a la vez y fallan con InterfaceError o se traban.
+    rutas = ["/prestaciones", "/profesionales", "/bloqueos", "/usuarios", "/sillones"] * 3
+    with _cliente_con_sesion() as cliente:
+        estados: list[int | str] = []
+
+        def pedir(ruta: str) -> None:
+            try:
+                estados.append(cliente.get(ruta).status_code)
+            except Exception as error:  # el error de la base es el resultado a comparar
+                estados.append(type(error).__name__)
+
+        for _ in range(rondas):
+            # Hilos daemon: si la base se traba, el test falla por tiempo sin colgar la suite.
+            hilos = [threading.Thread(target=pedir, args=(ruta,), daemon=True) for ruta in rutas]
+            for hilo in hilos:
+                hilo.start()
+            for hilo in hilos:
+                hilo.join(timeout=10)
+
+        assert estados == [200] * len(rutas) * rondas
