@@ -19,6 +19,8 @@ TABLA_R4 = [
     ("horario.leer", True, True, True),
     ("horario.editar", True, False, False),
     ("profesionales.leer", True, True, True),
+    ("bloqueos.leer", True, True, True),
+    ("bloqueos.editar", True, False, False),
 ]
 CASOS_MATRIZ = [
     (permiso, rol, esperado)
@@ -32,9 +34,9 @@ def test_us091_ca3_matriz_de_las_rutas_existentes(permiso, rol, esperado):
     assert puede(frozenset({rol}), Permiso(permiso)) is esperado
 
 
-def test_us091_ca3_la_tabla_cubre_los_11_permisos_y_los_3_roles():
+def test_us091_ca3_la_tabla_cubre_los_13_permisos_y_los_3_roles():
     assert {Permiso(p) for p, *_ in TABLA_R4} == set(Permiso)
-    assert len(CASOS_MATRIZ) == 11 * 3
+    assert len(CASOS_MATRIZ) == 13 * 3
 
 
 def test_us091_ca1_los_permisos_son_la_union_de_los_roles():
@@ -91,3 +93,11 @@ def test_us002_ca1_horario_leer_y_profesionales_leer_para_los_tres_roles_y_horar
     assert puede(frozenset({ODONTOLOGO}), Permiso.HORARIO_EDITAR)
     assert not puede(frozenset({RECEPCIONISTA}), Permiso.HORARIO_EDITAR)
     assert not puede(frozenset({DUENO}), Permiso.HORARIO_EDITAR)
+
+
+def test_us003_ca1_bloqueos_leer_para_los_tres_roles_y_bloqueos_editar_solo_para_odontologo():
+    for rol in (ODONTOLOGO, RECEPCIONISTA, DUENO):
+        assert puede(frozenset({rol}), Permiso.BLOQUEOS_LEER)
+    assert MATRIZ[Permiso.BLOQUEOS_EDITAR] == {ODONTOLOGO}
+    assert not puede(frozenset({RECEPCIONISTA}), Permiso.BLOQUEOS_EDITAR)
+    assert not puede(frozenset({DUENO}), Permiso.BLOQUEOS_EDITAR)

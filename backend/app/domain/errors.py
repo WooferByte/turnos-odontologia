@@ -59,9 +59,19 @@ class FranjaInvalida(ErrorDeDominio):
         super().__init__(mensaje)
 
 
+class BloqueoInvertido(ErrorDeDominio):
+    """Un bloqueo que no termina después de empezar (RN-AG-17, D273); error de campo en ``fin``."""
+
+    codigo = "RN-AG-17"
+
+    def __init__(self) -> None:
+        self.campo = "fin"
+        super().__init__("fin debe ser posterior a inicio")
+
+
 @dataclass(frozen=True)
 class ReferenciaInvalida:
-    recurso: Literal["prestacion", "paciente", "profesional", "sillon", "turno", "usuario"]
+    recurso: Literal["prestacion", "paciente", "profesional", "sillon", "turno", "usuario", "bloqueo"]
     recurso_id: int | None
     motivo: Literal["inexistente", "inactivo", "ninguno_activo", "varios_activos"]
 
@@ -86,7 +96,7 @@ class RecursoDeLaUrlNoEncontrado(ErrorDeDominio):
 
     def __init__(
         self,
-        recurso: Literal["prestacion", "profesional", "sillon", "turno", "usuario"],
+        recurso: Literal["prestacion", "profesional", "sillon", "turno", "usuario", "bloqueo"],
         recurso_id: int,
         mensaje: str,
     ) -> None:
@@ -117,6 +127,11 @@ class UsuarioNoEncontrado(RecursoDeLaUrlNoEncontrado):
 class ProfesionalNoEncontrado(RecursoDeLaUrlNoEncontrado):
     def __init__(self, profesional_id: int) -> None:
         super().__init__("profesional", profesional_id, f"No existe el profesional {profesional_id}.")
+
+
+class BloqueoNoEncontrado(RecursoDeLaUrlNoEncontrado):
+    def __init__(self, bloqueo_id: int) -> None:
+        super().__init__("bloqueo", bloqueo_id, f"No existe el bloqueo {bloqueo_id}.")
 
 
 class ContrasenaFueraDeRango(ErrorDeDominio):
@@ -190,6 +205,16 @@ class FueraDeHorario(ErrorDeDominio):
 
     def __init__(self) -> None:
         super().__init__("El turno no cae completo dentro de una franja del horario del profesional.")
+
+
+class SobreBloqueo(ErrorDeDominio):
+    """El turno interseca un bloqueo del profesional, del sillón o del consultorio (RN-AG-04b, D280)."""
+
+    codigo = "RN-AG-04b"
+
+    def __init__(self, bloqueo_id: int) -> None:
+        self.bloqueo_id = bloqueo_id
+        super().__init__("El turno cae dentro de un bloqueo del profesional, del sillón o del consultorio.")
 
 
 @dataclass(frozen=True)
