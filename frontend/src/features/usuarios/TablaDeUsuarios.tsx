@@ -1,5 +1,6 @@
 // Tabla de usuarios (design U17): activos e inactivos en el orden de la API. Lo inactivo se atenúa y lleva la
 // insignia «Inactivo», así el estado no depende solo del color. No hay acción de borrar (RN-GL-03).
+import { IconoLlave } from '../../shared/iconos/IconoLlave'
 import type { Usuario } from './apiUsuarios'
 import { nombreDelRol } from './mensajes'
 
@@ -10,6 +11,7 @@ interface Propiedades {
   /** Id del usuario que el panel lateral está editando, si hay uno. */
   editandoId: number | null
   onEditar(usuario: Usuario): void
+  onRestablecer(usuario: Usuario): void
   onCambiarActivo(usuario: Usuario): void
 }
 
@@ -19,7 +21,7 @@ function claseDeFila(usuario: Usuario, editando: boolean): string {
     .join(' ')
 }
 
-export function TablaDeUsuarios({ usuarios, ocupadas, editandoId, onEditar, onCambiarActivo }: Propiedades) {
+export function TablaDeUsuarios({ usuarios, ocupadas, editandoId, onEditar, onRestablecer, onCambiarActivo }: Propiedades) {
   return (
     <table className="tabla tabla-de-usuarios">
       <thead>
@@ -68,6 +70,16 @@ export function TablaDeUsuarios({ usuarios, ocupadas, editandoId, onEditar, onCa
                   onClick={() => onEditar(usuario)}
                 >
                   Editar
+                </button>
+                <button
+                  type="button"
+                  className="boton-de-fila boton-de-fila-con-icono"
+                  disabled={ocupada}
+                  aria-label={`Restablecer contraseña ${usuario.email}`}
+                  onClick={() => onRestablecer(usuario)}
+                >
+                  <IconoLlave />
+                  Restablecer contraseña
                 </button>
                 <button
                   type="button"

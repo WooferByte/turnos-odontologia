@@ -6,8 +6,10 @@ import { Aviso } from '../../shared/componentes/Aviso'
 import { IconoAlerta } from '../../shared/iconos/IconoAlerta'
 import { IconoCerrar } from '../../shared/iconos/IconoCerrar'
 import { IconoInfo } from '../../shared/iconos/IconoInfo'
+import { IconoLlave } from '../../shared/iconos/IconoLlave'
 import { IconoLapiz } from '../../shared/iconos/IconoLapiz'
 import { IconoPersonaMas } from '../../shared/iconos/IconoPersonaMas'
+import { AYUDA_DE_LARGO, NOTA_DE_RESTABLECER } from '../contrasenas/mensajes'
 import { ROLES, type DatosDeAltaDeUsuario, type Rol, type Usuario } from './apiUsuarios'
 import { NOTA_DE_ROLES, nombreDelRol, subtituloDelPanel, tituloDelAviso, type ErroresDelPanel } from './mensajes'
 
@@ -97,7 +99,7 @@ export function PanelDeUsuario({ usuario, guardando, errores, onGuardar, onCance
                   Contraseña inicial
                 </label>
                 <p id={idAyuda} className="ayuda">
-                  De 10 caracteres a 72 bytes.
+                  {AYUDA_DE_LARGO}
                 </p>
               </div>
               <div className="entrada-con-icono">
@@ -149,6 +151,101 @@ export function PanelDeUsuario({ usuario, guardando, errores, onGuardar, onCance
               {NOTA_DE_ROLES}
             </p>
           )}
+          <div className="panel-pie">
+            <button type="button" className="boton-secundario" onClick={onCancelar}>
+              Cancelar
+            </button>
+            <button type="submit" className="boton-primario" disabled={guardando}>
+              {guardando ? 'Guardando…' : 'Guardar'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </aside>
+  )
+}
+
+interface PropiedadesDeRestablecimiento {
+  usuario: Usuario
+  guardando: boolean
+  errores: ErroresDelPanel
+  onGuardar(contrasena: string): void
+  onCancelar(): void
+}
+
+/**
+ * Tercer modo del panel lateral (design K16): restablecer la contraseña de otro usuario. Un solo campo, sin
+ * repetición (D296); la contraseña vive solo en el estado de este formulario y se descarta al desmontarse.
+ */
+export function PanelDeRestablecimiento({
+  usuario,
+  guardando,
+  errores,
+  onGuardar,
+  onCancelar,
+}: PropiedadesDeRestablecimiento) {
+  const idTitulo = useId()
+  const idContrasena = useId()
+  const idAyuda = useId()
+  const idError = useId()
+  const [contrasena, setContrasena] = useState('')
+
+  function guardar(evento: SyntheticEvent<HTMLFormElement>): void {
+    evento.preventDefault()
+    onGuardar(contrasena)
+  }
+
+  return (
+    <aside aria-labelledby={idTitulo} className="panel-lateral panel-de-usuario">
+      <header className="panel-encabezado">
+        <div>
+          <h2 id={idTitulo}>
+            <IconoLlave />
+            Restablecer contraseña
+          </h2>
+        </div>
+        <button type="button" className="boton-cerrar" aria-label="Cerrar" onClick={onCancelar}>
+          <IconoCerrar />
+        </button>
+      </header>
+      <div className="panel-cuerpo">
+        {errores.aviso === null ? null : <Aviso mensaje={errores.aviso} titulo={tituloDelAviso(errores.aviso)} />}
+        <form onSubmit={guardar}>
+          <div className="campo">
+            <span className="etiqueta-de-dato">Email</span>
+            <p className="dato-de-solo-lectura">{usuario.email}</p>
+          </div>
+          <div className={errores.contrasena === null ? 'campo' : 'campo campo-con-error'}>
+            <div className="campo-etiqueta">
+              <label htmlFor={idContrasena}>Contraseña nueva</label>
+            </div>
+            <div className="entrada-con-icono">
+              <input
+                id={idContrasena}
+                type="password"
+                required
+                autoFocus
+                autoComplete="new-password"
+                value={contrasena}
+                onChange={(e) => setContrasena(e.target.value)}
+                aria-invalid={errores.contrasena === null ? undefined : true}
+                aria-describedby={errores.contrasena === null ? idAyuda : `${idAyuda} ${idError}`}
+              />
+              {errores.contrasena === null ? null : <IconoAlerta clase="icono icono-en-campo" />}
+            </div>
+            <p id={idAyuda} className="ayuda">
+              {AYUDA_DE_LARGO}
+            </p>
+            {errores.contrasena === null ? null : (
+              <p id={idError} className="error-de-campo">
+                {errores.contrasena}
+              </p>
+            )}
+          </div>
+          <p className="nota-informativa nota-de-roles">
+            <IconoInfo />
+            {NOTA_DE_RESTABLECER}
+          </p>
           <div className="panel-pie">
             <button type="button" className="boton-secundario" onClick={onCancelar}>
               Cancelar

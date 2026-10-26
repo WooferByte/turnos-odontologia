@@ -4,7 +4,10 @@ import { useEffect, useMemo, useState } from 'react'
 import { PermisoInsuficiente, RecursoInexistente, SesionTerminada } from '../../shared/api/errores'
 import { useSesionDelPanel } from '../../shared/api/ProveedorDeSesion'
 import { Aviso } from '../../shared/componentes/Aviso'
+import { AvisoDeExito } from '../../shared/componentes/AvisoDeExito'
 import { IconoMas } from '../../shared/iconos/IconoMas'
+import { crearApiContrasenas } from '../contrasenas/apiContrasenas'
+import { avisoDeRestablecida, erroresDeRestablecimiento } from '../contrasenas/mensajes'
 import { crearApiUsuarios, rolesCambiados, type DatosDeAltaDeUsuario, type Usuario } from './apiUsuarios'
 import {
   avisoDeAccionDeFila,
@@ -19,7 +22,7 @@ import {
   erroresDelPanel,
   type ErroresDelPanel,
 } from './mensajes'
-import { PanelDeUsuario } from './PanelDeUsuario'
+import { PanelDeRestablecimiento, PanelDeUsuario } from './PanelDeUsuario'
 import { TablaDeUsuarios } from './TablaDeUsuarios'
 
 type Listado =
@@ -28,7 +31,11 @@ type Listado =
   | { tipo: 'sin-conexion' }
   | { tipo: 'sin-permiso' }
 
-type Panel = { modo: 'cerrado' } | { modo: 'alta' } | { modo: 'edicion'; usuario: Usuario }
+type Panel =
+  | { modo: 'cerrado' }
+  | { modo: 'alta' }
+  | { modo: 'edicion'; usuario: Usuario }
+  | { modo: 'restablecer'; usuario: Usuario }
 
 const SIN_OCUPADOS: ReadonlySet<number> = new Set()
 
@@ -45,12 +52,14 @@ function conUsuarioReemplazado(listado: Listado, nuevo: Usuario): Listado {
 export function PaginaUsuarios() {
   const { pedidoDelPanel } = useSesionDelPanel()
   const api = useMemo(() => crearApiUsuarios(pedidoDelPanel), [pedidoDelPanel])
+  const apiContrasenas = useMemo(() => crearApiContrasenas(pedidoDelPanel), [pedidoDelPanel])
   const [listado, setListado] = useState<Listado>({ tipo: 'cargando' })
   const [recarga, setRecarga] = useState(0)
   const [panel, setPanel] = useState<Panel>({ modo: 'cerrado' })
   const [guardando, setGuardando] = useState(false)
   const [errores, setErrores] = useState<ErroresDelPanel>(SIN_ERRORES)
   const [avisoDeTabla, setAvisoDeTabla] = useState<string | null>(null)
+  const [exitoDeTabla, setExitoDeTabla] = useState<string | null>(null)
   const [ocupados, setOcupados] = useState<ReadonlySet<number>>(SIN_OCUPADOS)
 
   useEffect(() => {
@@ -78,6 +87,7 @@ export function PaginaUsuarios() {
   function abrirPanel(nuevo: Panel): void {
     setErrores(SIN_ERRORES)
     setAvisoDeTabla(null)
+    setExitoDeTabla(null)
     setPanel(nuevo)
   }
 
@@ -86,6 +96,21 @@ export function PaginaUsuarios() {
     setPanel({ modo: 'cerrado' })
     setAvisoDeTabla(MENSAJE_USUARIO_INEXISTENTE)
     setRecarga((n) => n + 1)
+  }
+
+  async function restablecer(usuario: Usuario, contrasena: string): Promise<void> {
+    setGuardando(true)
+    setErrores(SIN_ERRORES)
+    try {
+      await apiContrasenas.restablecerContrasena(usuario.id, contrasena)
+      setPanel({ modo: 'cerrado' })
+      setExitoDeTabla(avisoDeRestablecida(usuario.email))
+    } catch (error: unknown) {
+      if (error instanceof RecursoInexistente) usuarioInexistente()
+      else if (!(error instanceof SesionTerminada)) setErrores(erroresDeRestablecimiento(error))
+    } finally {
+      setGuardando(false)
+    }
   }
 
   async function guardar(datos: DatosDeAltaDeUsuario): Promise<void> {
@@ -115,6 +140,7 @@ export function PaginaUsuarios() {
 
   async function cambiarActivo(usuario: Usuario): Promise<void> {
     setAvisoDeTabla(null)
+    setExitoDeTabla(null)
     setOcupados((anteriores) => new Set(anteriores).add(usuario.id))
     try {
       const editado = await api.editarUsuario(usuario.id, { activo: !usuario.activo })
@@ -147,6 +173,7 @@ export function PaginaUsuarios() {
       </div>
       <div className="pantalla-con-panel">
         <div className="zona-de-tabla">
+          {exitoDeTabla === null ? null : <AvisoDeExito mensaje={exitoDeTabla} />}
           {avisoDeTabla === null ? null : <Aviso mensaje={avisoDeTabla} titulo={tituloDelAviso(avisoDeTabla)} />}
           {listado.tipo === 'cargando' ? <p>{MENSAJE_CARGANDO}</p> : null}
           {listado.tipo === 'sin-permiso' ? (
@@ -173,12 +200,23 @@ export function PaginaUsuarios() {
                 ocupadas={ocupados}
                 editandoId={panel.modo === 'edicion' ? panel.usuario.id : null}
                 onEditar={(usuario) => abrirPanel({ modo: 'edicion', usuario })}
+                onRestablecer={(usuario) => abrirPanel({ modo: 'restablecer', usuario })}
                 onCambiarActivo={(usuario) => void cambiarActivo(usuario)}
               />
             </section>
           ) : null}
         </div>
-        {panel.modo === 'cerrado' ? null : (
+        {panel.modo === 'restablecer' ? (
+          <PanelDeRestablecimiento
+            key={`restablecer-${panel.usuario.id}`}
+            usuario={panel.usuario}
+            guardando={guardando}
+            errores={errores}
+            onGuardar={(contrasena) => void restablecer(panel.usuario, contrasena)}
+            onCancelar={() => abrirPanel({ modo: 'cerrado' })}
+          />
+        ) : null}
+        {panel.modo === 'cerrado' || panel.modo === 'restablecer' ? null : (
           <PanelDeUsuario
             key={panel.modo === 'edicion' ? panel.usuario.id : 'alta'}
             usuario={panel.modo === 'edicion' ? panel.usuario : null}
