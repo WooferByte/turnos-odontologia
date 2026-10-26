@@ -1,0 +1,58 @@
+# Evidencia: pantalla de bloqueos con Stitch (C-13, `bloqueos-puntuales`)
+
+Fecha: 2026-10-26. Regla que lo pide: D234 (toda pantalla del frontend parte de una pantalla generada en Stitch). Procedimiento: el de [stitch-horario.md](stitch-horario.md).
+
+**Estado: hecha (2026-10-26, tarea 1.2 del change; D288).** La pantalla se generó con el MCP `stitch` al primer intento y el MCP devolvió su id directamente (ver la sección 3b). Esta evidencia conserva el pedido enviado (sección 2).
+
+## 1. Proyecto y design system
+
+- Proyecto existente `projects/14200813501064679723` (el de C-11, C-49, C-09 y C-12).
+- Design system «Clinical Ops», `assets/b683d44391ab410db2dd48aa71ed0b47`.
+
+## 2. Pantalla a pedir
+
+`generate_screen_from_text`, de escritorio (`DESKTOP`), con el design system de arriba. Como mucho **dos intentos**. Texto del pedido (solo textos de los specs `bloqueos-puntuales` y `pantalla-de-bloqueos` y datos ficticios del seed; sin pacientes, sin contraseñas, sin secretos; «Dra. Demo Ficticia» y «Sillón 1» son el profesional y el sillón ficticios del seed):
+
+> Pantalla de escritorio en español (Argentina): «Bloqueos» del panel de un consultorio odontológico chico. Herramienta administrativa sobria, coherente con las pantallas «Prestaciones», «Usuarios» y «Horario» de este proyecto (misma barra superior, marca y estilo «Clinical Ops»). Sin imágenes decorativas, sin fotos, sin textos de marketing.
+>
+> - Barra superior: marca con ícono simple de diente y «Turnos Odontológicos AR»; pastillas «Prestaciones», «Usuarios», «Horario» y «Bloqueos» (esta última activa); a la derecha, botón con borde «Cerrar sesión». Ningún dato del usuario.
+> - Encabezado: título «Bloqueos», subtítulo «Fechas y horas del consultorio (America/Argentina/Buenos_Aires).»
+> - Aviso informativo azul suave con ícono: «Un bloqueo impide dar turnos en ese horario (RN-AG-04b). Los turnos que ya estaban no se cancelan.»
+> - Tarjeta «Nuevo bloqueo»: selector «Alcance» con «Todo el consultorio», «Un profesional» y «Un sillón»; un segundo selector con «Dra. Demo Ficticia» (visible cuando el alcance es un profesional); campos de fecha y hora «Desde» y «Hasta» (formato 24 h, dd/mm/aaaa hh:mm); campo de texto «Motivo»; botón primario «Bloquear» con ícono de candado o calendario.
+> - Debajo del formulario, un aviso de éxito verde suave: «Bloqueo creado. Hay 2 turnos activos en ese horario: no se cancelaron, hay que reprogramarlos o cancelarlos.» y dos filas compactas: «Turno 7 · 02/11/2026 10:00 a 10:30 · reservado» y «Turno 8 · 02/11/2026 11:00 a 11:30 · confirmado».
+> - Tarjeta «Bloqueos cargados» con una tabla de columnas «Alcance», «Desde», «Hasta», «Motivo» y una acción «Eliminar» con ícono de papelera por fila. Filas: «Profesional: Dra. Demo Ficticia» · 02/11/2026 09:00 · 02/11/2026 13:00 · Ausencia; «Profesional: Dra. Demo Ficticia» · 09/11/2026 00:00 · 14/11/2026 00:00 · Vacaciones; «Todo el consultorio» · 23/11/2026 00:00 · 24/11/2026 00:00 · Feriado.
+> - Un error de ejemplo en rojo bajo el formulario (estado alternativo): «El bloqueo tiene que terminar después de empezar (RN-AG-17).» con el campo «Hasta» con borde rojo.
+>
+> Estilo: Inter, primario #0284C7, éxito verde suave, error #DC2626 sobre #FEF2F2, radio 4 px en campos y botones, 8 px en tarjetas, filas compactas, sin sombras fuertes.
+
+Versión resumida para el segundo intento (si el primero termina por tiempo de espera): el mismo contenido en un párrafo, con los textos entre comillas exactamente iguales.
+
+## 3. Resultado de la generación
+
+| Intento | Modelo | Texto | Resultado |
+|---|---|---|---|
+| 1 de 2 | `GEMINI_3_8_FLASH` | El de la sección 2, exacto (`DESKTOP`, design system «Clinical Ops») | Generó la pantalla y **devolvió el id** (`sessionId` `3752066668136894253`); `get_screen` la devuelve por ese id. No hizo falta el segundo intento ni copiar el `node-id` del canvas |
+
+## 3b. Pantalla obtenida (2026-10-26)
+
+- **Pantalla**: `projects/14200813501064679723/screens/05d78d7e7d144f92bb9f77d0e4a220db`, «Bloqueos - Turnos Odontológicos AR», `DESKTOP`, 2560 × 2130 en Stitch.
+- **Cómo se obtuvo el id**: a diferencia de C-09 y C-12, `generate_screen_from_text` devolvió el id de la pantalla. (Si otra vez no lo devolviera, `get_project` lista las `screenInstances` con sus ids y sirve de respaldo antes de `list_screens` o del `node-id` de la web.)
+- **Archivos guardados** en [stitch-bloqueos-pantalla/](stitch-bloqueos-pantalla/):
+  - `pantalla.png`: la captura (`projects/14200813501064679723/files/bd6b89f14ae64a6482a29da36c30f917`), a 1280 × 1065 (el ancho de las anteriores; el alto sigue la proporción);
+  - `pantalla.html`: el HTML generado (`projects/14200813501064679723/files/38ffabcf2e4a4ee194d28e264970e785`). Usa Tailwind y Google Fonts por CDN, así que **no se copia**: la implementación lo traduce a los tokens CSS del proyecto, sin dependencias nuevas.
+- **Revisión del HTML** (datos y secretos): solo el profesional ficticio del seed («Dra. Demo Ficticia»), «Sillón 1» y los datos ficticios del pedido; el HTML suma una segunda opción de profesional inventada por Stitch, «Dr. Roberto Pérez», que no está en el seed y **no se usa en ninguna parte**. Sin pacientes, teléfonos, documentos, emails, claves ni tokens.
+- **Qué muestra**: la barra del panel con las cuatro pastillas y «Bloqueos» activa, y «Cerrar sesión» con borde; el título, el subtítulo con la zona y el aviso informativo azul con ícono (con el prefijo «Aviso operativo:»); dos columnas en escritorio: la tarjeta «Nuevo bloqueo» (a la izquierda, con la insignia «Alta de indisponibilidad», «Alcance», «Profesional asignado», «Desde» y «Hasta» como campos de texto monoespaciados con ayuda «24 h (dd/mm/aaaa hh:mm)», «Hasta» con borde rojo y «Formato o valor incorrecto», el error de `RN-AG-17` en rojo con el prefijo «Error de validación:», «Motivo» y «Bloquear» con candado) y, debajo, «Último resultado operativo» con el aviso verde y las dos filas de turnos afectados con su estado; y la tarjeta «Bloqueos cargados» (a la derecha, con «3 registros activos» y «Orden cronológico») con la tabla Alcance, Desde, Hasta, Motivo y «Eliminar» con papelera, una etiqueta de color por motivo y un pie con «Zona horaria: UTC-3»; más un pie de página institucional.
+- **Sugerencias de Stitch no aceptadas**: «Agregar modal de confirmación para eliminar un bloqueo con turnos afectados» (contradice D286: «Eliminar» no pide confirmación y el bloqueo se puede volver a crear), «Ver el estado del formulario sin errores» (no hace falta: es el estado base) y «Diseñar la vista de reprogramación asistida para los turnos 7 y 8 afectados» (fuera del alcance: la reprogramación es de C-16, D83).
+- **Qué se toma y qué se rechaza**: en el `design.md` de `bloqueos-puntuales`, sección «Referencia visual (Stitch)».
+
+## 4. Cómo se completó (tarea 1.2 del change, hecha el 2026-10-26)
+
+1. [hecho] En una sesión con el MCP `stitch` conectado (`STITCH_API_KEY` en el entorno, `.mcp.json` del repo), enviar el pedido de la sección 2.
+2. [no hizo falta: el MCP devolvió el id] Si `generate_screen_from_text` no devuelve el id y `list_screens` vuelve vacío (problema conocido de C-09 y C-12), abrir el proyecto en la web de Stitch y copiar el `node-id` de la URL de la pantalla.
+3. [hecho] Con el id, traer la captura y el HTML (`get_screen`, `download_file`) a `stitch-bloqueos-pantalla/pantalla.png` (1280 de ancho, como las anteriores) y `pantalla.html`. El HTML usa Tailwind, Google Fonts y Material Symbols por CDN: **no se copia**, se traduce a los tokens del proyecto.
+4. [hecho] Revisar el HTML: solo datos ficticios, sin pacientes, teléfonos, documentos, emails, claves ni tokens.
+5. [hecho] Anotar acá el id, los intentos y qué muestra la pantalla, y completar con un `/opsx:update` la sección «Referencia visual (Stitch)» del `design.md` (qué se toma y qué se rechaza).
+
+## 5. Cómo se usa en el change
+
+Es la **referencia visual** del `design.md` de `bloqueos-puntuales`. La KB y los specs mandan: los textos son los de `pantalla-de-bloqueos` y del design (B17), y nada de la pantalla agrega reglas de dominio. La traducción visual (tarea 8.1) y la comparación con la captura en el navegador (tarea 9.1) se hacen en el Apply y se anotan acá al cerrar el change.

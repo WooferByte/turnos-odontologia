@@ -455,7 +455,7 @@ Primer change: `/opsx:propose crear-turno-sin-solapamientos`.
   - `knowledge-base/02_descripcion_general.md` §«API REST (resumen)», fila Horario
 
 ### [C-13] `bloqueos-puntuales`
-- **Estado**: `[ ]` pendiente · **Orden**: 3 · **Gobernanza**: MEDIO
+- **Estado**: `[~]` en curso · **Orden**: 3 · **Gobernanza**: MEDIO
 - **Objetivo** (US-003): bloquear días u horas del profesional, del sillón o de todo el consultorio para que no se reserven turnos.
 - **Alcance — dentro**: tabla `Bloqueo` con `creado_por`; `GET/POST/DELETE /bloqueos`; crear un bloqueo lista los turnos activos afectados sin cancelarlos; `crear_turno` rechaza con RN-AG-04b el turno que interseca un bloqueo (parte de bloqueos de E10, US-010); pantalla de bloqueos.
 - **Alcance — fuera**: cancelar o reprogramar automáticamente los turnos afectados (D83); horario recurrente (C-12).
@@ -502,13 +502,13 @@ Primer change: `/opsx:propose crear-turno-sin-solapamientos`.
 ### [C-16] `reprogramar-turno`
 - **Estado**: `[ ]` pendiente · **Orden**: 4 · **Gobernanza**: MEDIO
 - **Objetivo** (US-012): mover un turno a otro horario o cambiar su duración desde el panel sin perder el historial.
-- **Alcance — dentro**: `PATCH /turnos/{id}`; el turno se valida como uno nuevo excluyéndose a sí mismo (RN-AG-10b), con horario y bloqueos; duración nueva mayor que 0 y múltiplo de la constante de 5 minutos, con `fin` recalculado; evento `reprogramado` con el antes y el después (DD-05); acción en la agenda.
+- **Alcance — dentro**: `PATCH /turnos/{id}`; el turno se valida como uno nuevo excluyéndose a sí mismo (RN-AG-10b), con horario y bloqueos (RN-TD-04: RN-AG-04 y RN-AG-04b, con `exigir_dentro_del_horario` de C-12 y `exigir_sin_bloqueos` de C-13); duración nueva mayor que 0 y múltiplo de la constante de 5 minutos, con `fin` recalculado; evento `reprogramado` con el antes y el después (DD-05); acción en la agenda.
 - **Alcance — fuera**: conservar la seña (US-012 CA-3, se completa en C-40); reprogramación por el paciente (C-30); granularidad configurable (C-22).
 - **Depende de**: C-03, C-14
 - **Escenarios mínimos**: US-012: CA-1, CA-2, CA-4; REP-1 (reprogramar sobre otro turno activo se rechaza con RN-AG-05 y RN-AG-08 y el turno no cambia)
 - **Leer antes**:
   - `knowledge-base/06_funcionalidades.md` §US-012
-  - `knowledge-base/05_reglas_de_negocio.md` RN-AG-01, RN-AG-02, RN-AG-10b, RN-AG-11, RN-TD-03, RN-TD-04
+  - `knowledge-base/05_reglas_de_negocio.md` RN-AG-01, RN-AG-02, RN-AG-04, RN-AG-04b, RN-AG-10b, RN-AG-11, RN-TD-03, RN-TD-04
   - `knowledge-base/09_decisiones_y_supuestos.md` DD-05 · `knowledge-base/04_modelo_de_datos.md` §Turno y «Máquina de estados del turno»
   - `knowledge-base/02_descripcion_general.md` §«API REST (resumen)», fila Turnos
 

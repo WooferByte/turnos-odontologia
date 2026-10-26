@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Bloqueos - Turnos Odontológicos AR</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            primary: {
+              DEFAULT: '#0284c7',
+              hover: '#0369a1',
+              light: '#e0f2fe',
+            },
+          },
+          borderRadius: {
+            DEFAULT: '4px',
+            'sm': '2px',
+            'md': '4px',
+            'lg': '8px',
+            'xl': '8px',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f8fafc;
+      color: #0f172a;
+    }
+    input, select, button {
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col text-slate-800 antialiased bg-slate-50">
+
+  <!-- BARRA SUPERIOR -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-30">
+    <div class="max-w-[1400px] mx-auto px-6 h-16 flex items-center justify-between">
+      <!-- Marca y Navegación -->
+      <div class="flex items-center gap-8">
+        <!-- Logo / Marca -->
+        <div class="flex items-center gap-2.5 text-slate-900 font-semibold tracking-tight">
+          <div class="w-8 h-8 rounded bg-sky-50 border border-sky-100 flex items-center justify-center text-primary">
+            <!-- Icono simple de diente -->
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2C8.5 2 6 4.5 6 8c0 3.2 1.3 5.4 2 8 .6 2.3.8 4.5 2 5 1.1.5 2-1 2-2.5 0-1.5.5-2.5 1-2.5s1 1 1 2.5c0 1.5.9 3 2 2.5 1.2-.5 1.4-2.7 2-5 .7-2.6 2-4.8 2-8 0-3.5-2.5-6-6-6z"/>
+            </svg>
+          </div>
+          <span class="text-base font-semibold text-slate-900">Turnos Odontológicos AR</span>
+        </div>
+
+        <!-- Pastillas de Navegación -->
+        <nav class="flex items-center gap-1.5" aria-label="Navegación principal">
+          <a href="#" class="px-3.5 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded transition-colors">
+            Prestaciones
+          </a>
+          <a href="#" class="px-3.5 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded transition-colors">
+            Usuarios
+          </a>
+          <a href="#" class="px-3.5 py-1.5 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded transition-colors">
+            Horario
+          </a>
+          <a href="#" class="px-3.5 py-1.5 text-sm font-medium text-primary bg-sky-50 border border-sky-200 rounded">
+            Bloqueos
+          </a>
+        </nav>
+      </div>
+
+      <!-- Acción secundaria a la derecha -->
+      <div class="flex items-center">
+        <button type="button" class="inline-flex items-center gap-2 px-3.5 py-1.5 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded hover:bg-slate-50 hover:text-slate-900 transition-colors shadow-none">
+          <svg class="w-4 h-4 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
+          </svg>
+          Cerrar sesión
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- CONTENIDO PRINCIPAL -->
+  <main class="max-w-[1400px] w-full mx-auto px-6 py-8 flex-1">
+
+    <!-- ENCABEZADO DE PÁGINA -->
+    <div class="mb-6">
+      <h1 class="text-2xl font-bold tracking-tight text-slate-900">Bloqueos</h1>
+      <p class="text-sm text-slate-500 mt-1">Fechas y horas del consultorio (America/Argentina/Buenos_Aires).</p>
+    </div>
+
+    <!-- AVISO REGULATORIO / INFORMATIVO AZUL SUAVE -->
+    <div class="mb-6 bg-sky-50 border border-sky-200 rounded-lg p-3.5 flex items-start gap-3">
+      <svg class="w-5 h-5 text-sky-600 mt-0.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="12" y1="16" x2="12" y2="12"></line>
+        <line x1="12" y1="8" x2="12.01" y2="8"></line>
+      </svg>
+      <div class="text-sm text-sky-900 font-normal">
+        <span class="font-medium text-sky-950">Aviso operativo:</span> Un bloqueo impide dar turnos en ese horario (RN-AG-04b). Los turnos que ya estaban no se cancelan.
+      </div>
+    </div>
+
+    <!-- GRILLA PRINCIPAL DE CONTENIDO: FORMULARIO Y TABLA -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+
+      <!-- COLUMNA IZQUIERDA: FORMULARIO NUEVO BLOQUEO (5 COLUMNAS) -->
+      <section class="lg:col-span-5 bg-white border border-slate-200 rounded-lg p-5 shadow-none" aria-labelledby="form-title">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+          <h2 id="form-title" class="text-base font-semibold text-slate-900 flex items-center gap-2">
+            <svg class="w-4 h-4 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+              <line x1="16" y1="2" x2="16" y2="6"></line>
+              <line x1="8" y1="2" x2="8" y2="6"></line>
+              <line x1="3" y1="10" x2="21" y2="10"></line>
+            </svg>
+            Nuevo bloqueo
+          </h2>
+          <span class="text-xs font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded">Alta de indisponibilidad</span>
+        </div>
+
+        <form class="space-y-4">
+          <!-- Alcance -->
+          <div>
+            <label for="alcance" class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
+              Alcance <span class="text-rose-500">*</span>
+            </label>
+            <select id="alcance" class="w-full bg-white border border-slate-300 rounded px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary">
+              <option value="profesional" selected>Un profesional</option>
+              <option value="consultorio">Todo el consultorio</option>
+              <option value="sillon">Un sillón</option>
+            </select>
+          </div>
+
+          <!-- Selector Condicional: Profesional (visible cuando alcance = Un profesional) -->
+          <div id="profesional-wrapper">
+            <label for="profesional" class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
+              Profesional asignado <span class="text-rose-500">*</span>
+            </label>
+            <select id="profesional" class="w-full bg-white border border-slate-300 rounded px-3 py-2 text-sm text-slate-800 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary">
+              <option value="dra_demo" selected>Dra. Demo Ficticia</option>
+              <option value="dr_perez">Dr. Roberto Pérez</option>
+            </select>
+          </div>
+
+          <!-- Rango Horario: Desde y Hasta -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label for="fecha-desde" class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
+                Desde <span class="text-rose-500">*</span>
+              </label>
+              <div class="relative">
+                <input
+                  type="text"
+                  id="fecha-desde"
+                  value="02/11/2026 09:00"
+                  placeholder="dd/mm/aaaa hh:mm"
+                  class="w-full bg-white border border-slate-300 rounded px-3 py-2 text-sm font-mono text-slate-800 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+                >
+              </div>
+              <p class="text-[11px] text-slate-500 mt-1">24 h (dd/mm/aaaa hh:mm)</p>
+            </div>
+
+            <div>
+              <label for="fecha-hasta" class="block text-xs font-semibold uppercase tracking-wider text-rose-700 mb-1.5">
+                Hasta <span class="text-rose-500">*</span>
+              </label>
+              <div class="relative">
+                <!-- Mostrando borde rojo según especificación del estado alternativo de error -->
+                <input
+                  type="text"
+                  id="fecha-hasta"
+                  value="02/11/2026 08:30"
+                  placeholder="dd/mm/aaaa hh:mm"
+                  class="w-full bg-rose-50/30 border border-red-500 rounded px-3 py-2 text-sm font-mono text-slate-800 focus:outline-none focus:ring-1 focus:ring-red-500 focus:border-red-500"
+                >
+                <div class="absolute inset-y-0 right-0 pr-2.5 flex items-center pointer-events-none">
+                  <svg class="h-4 w-4 text-red-500" viewBox="0 0 20 20" fill="currentColor">
+                    <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                  </svg>
+                </div>
+              </div>
+              <p class="text-[11px] text-red-600 mt-1">Formato o valor incorrecto</p>
+            </div>
+          </div>
+
+          <!-- Estado de error alternativo visible bajo los campos -->
+          <div class="bg-red-50 border border-red-200 rounded p-2.5 flex items-start gap-2 text-xs text-red-700">
+            <svg class="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+            <div>
+              <span class="font-semibold text-red-800">Error de validación:</span> El bloqueo tiene que terminar después de empezar (RN-AG-17).
+            </div>
+          </div>
+
+          <!-- Motivo -->
+          <div>
+            <label for="motivo" class="block text-xs font-semibold uppercase tracking-wider text-slate-700 mb-1.5">
+              Motivo
+            </label>
+            <input
+              type="text"
+              id="motivo"
+              placeholder="Ej.: Ausencia, Vacaciones, Curso de posgrado, Feriado..."
+              value="Ausencia programada"
+              class="w-full bg-white border border-slate-300 rounded px-3 py-2 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-primary focus:border-primary"
+            >
+          </div>
+
+          <!-- Botón de acción primario -->
+          <div class="pt-2">
+            <button
+              type="button"
+              class="w-full inline-flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#0284C7] hover:bg-[#0369a1] rounded transition-colors shadow-none"
+            >
+              <!-- Ícono de candado -->
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"></rect>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"></path>
+              </svg>
+              Bloquear
+            </button>
+          </div>
+        </form>
+
+        <!-- SECCIÓN DE FEEDBACK POSITIVO / RECIENTE POST-CREACIÓN -->
+        <div class="mt-5 pt-4 border-t border-slate-200 space-y-2.5">
+          <div class="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Último resultado operativo</div>
+
+          <div class="bg-emerald-50 border border-emerald-200 rounded p-3 text-xs text-emerald-900">
+            <div class="flex items-start gap-2 mb-2 font-medium">
+              <svg class="w-4 h-4 text-emerald-600 mt-0.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"></path>
+                <polyline points="22 4 12 14.01 9 11.01"></polyline>
+              </svg>
+              <span>Bloqueo creado. Hay 2 turnos activos en ese horario: no se cancelaron, hay que reprogramarlos o cancelarlos.</span>
+            </div>
+
+            <!-- Filas compactas de turnos alcanzados -->
+            <div class="space-y-1.5 pl-6 border-l-2 border-emerald-300 ml-1">
+              <div class="flex items-center justify-between text-[11px] bg-white/75 border border-emerald-100 rounded px-2.5 py-1 text-slate-700">
+                <span class="font-medium text-slate-800">Turno 7 · 02/11/2026 10:00 a 10:30</span>
+                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                  reservado
+                </span>
+              </div>
+              <div class="flex items-center justify-between text-[11px] bg-white/75 border border-emerald-100 rounded px-2.5 py-1 text-slate-700">
+                <span class="font-medium text-slate-800">Turno 8 · 02/11/2026 11:00 a 11:30</span>
+                <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-emerald-50 text-emerald-700 border border-emerald-200">
+                  confirmado
+                </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- COLUMNA DERECHA: TABLA BLOQUEOS CARGADOS (7 COLUMNAS) -->
+      <section class="lg:col-span-7 bg-white border border-slate-200 rounded-lg p-5 shadow-none" aria-labelledby="table-title">
+        <div class="flex items-center justify-between border-b border-slate-100 pb-3 mb-4">
+          <div class="flex items-center gap-2">
+            <h2 id="table-title" class="text-base font-semibold text-slate-900">Bloqueos cargados</h2>
+            <span class="text-xs font-medium text-slate-500 bg-slate-100 px-2 py-0.5 rounded">3 registros activos</span>
+          </div>
+          <span class="text-xs text-slate-400">Orden cronológico</span>
+        </div>
+
+        <!-- TABLA COMPACTA -->
+        <div class="overflow-x-auto border border-slate-200 rounded">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="bg-slate-50 border-b border-slate-200 text-[11px] font-semibold text-slate-600 uppercase tracking-wider">
+                <th scope="col" class="py-2.5 px-3">Alcance</th>
+                <th scope="col" class="py-2.5 px-3 font-mono">Desde</th>
+                <th scope="col" class="py-2.5 px-3 font-mono">Hasta</th>
+                <th scope="col" class="py-2.5 px-3">Motivo</th>
+                <th scope="col" class="py-2.5 px-3 text-right">Acción</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-200 text-xs">
+              <!-- Fila 1 -->
+              <tr class="hover:bg-slate-50 transition-colors">
+                <td class="py-2.5 px-3">
+                  <div class="flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-sky-500 flex-shrink-0"></span>
+                    <span class="font-medium text-slate-900">Profesional:</span>
+                    <span class="text-slate-700">Dra. Demo Ficticia</span>
+                  </div>
+                </td>
+                <td class="py-2.5 px-3 font-mono text-slate-700 whitespace-nowrap">02/11/2026 09:00</td>
+                <td class="py-2.5 px-3 font-mono text-slate-700 whitespace-nowrap">02/11/2026 13:00</td>
+                <td class="py-2.5 px-3 text-slate-600">
+                  <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-slate-100 text-slate-700">
+                    Ausencia
+                  </span>
+                </td>
+                <td class="py-2.5 px-3 text-right whitespace-nowrap">
+                  <button
+                    type="button"
+                    title="Eliminar bloqueo"
+                    class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-red-700 bg-white border border-red-200 rounded hover:bg-red-50 hover:border-red-300 transition-colors"
+                  >
+                    <svg class="w-3.5 h-3.5 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="3 6 5 6 21 6"></polyline>
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                      <line x1="10" y1="11" x2="10" y2="17"></line>
+                      <line x1="14" y1="11" x2="14" y2="17"></line>
+                    </svg>
+                    Eliminar
+                  </button>
+                </td>
+              </tr>
+
+              <!-- Fila 2 -->
+              <tr class="hover:bg-slate-50 transition-colors">
+                <td class="py-2.5 px-3">
+                  <div class="flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-sky-500 flex-shrink-0"></span>
+                    <span class="font-medium text-slate-900">Profesional:</span>
+                    <span class="text-slate-700">Dra. Demo Ficticia</span>
+                  </div>
+                </td>
+                <td class="py-2.5 px-3 font-mono text-slate-700 whitespace-nowrap">09/11/2026 00:00</td>
+                <td class="py-2.5 px-3 font-mono text-slate-700 whitespace-nowrap">14/11/2026 00:00</td>
+                <td class="py-2.5 px-3 text-slate-600">
+                  <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-amber-50 text-amber-800 border border-amber-200">
+                    Vacaciones
+                  </span>
+                </td>
+                <td class="py-2.5 px-3 text-right whitespace-nowrap">
+                  <button
+                    type="button"
+                    title="Eliminar bloqueo"
+                    class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-red-700 bg-white border border-red-200 rounded hover:bg-red-50 hover:border-red-300 transition-colors"
+                  >
+                    <svg class="w-3.5 h-3.5 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="3 6 5 6 21 6"></polyline>
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                      <line x1="10" y1="11" x2="10" y2="17"></line>
+                      <line x1="14" y1="11" x2="14" y2="17"></line>
+                    </svg>
+                    Eliminar
+                  </button>
+                </td>
+              </tr>
+
+              <!-- Fila 3 -->
+              <tr class="hover:bg-slate-50 transition-colors">
+                <td class="py-2.5 px-3">
+                  <div class="flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-purple-500 flex-shrink-0"></span>
+                    <span class="font-medium text-slate-900">Todo el consultorio</span>
+                  </div>
+                </td>
+                <td class="py-2.5 px-3 font-mono text-slate-700 whitespace-nowrap">23/11/2026 00:00</td>
+                <td class="py-2.5 px-3 font-mono text-slate-700 whitespace-nowrap">24/11/2026 00:00</td>
+                <td class="py-2.5 px-3 text-slate-600">
+                  <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-purple-50 text-purple-800 border border-purple-200">
+                    Feriado
+                  </span>
+                </td>
+                <td class="py-2.5 px-3 text-right whitespace-nowrap">
+                  <button
+                    type="button"
+                    title="Eliminar bloqueo"
+                    class="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium text-red-700 bg-white border border-red-200 rounded hover:bg-red-50 hover:border-red-300 transition-colors"
+                  >
+                    <svg class="w-3.5 h-3.5 text-red-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <polyline points="3 6 5 6 21 6"></polyline>
+                      <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                      <line x1="10" y1="11" x2="10" y2="17"></line>
+                      <line x1="14" y1="11" x2="14" y2="17"></line>
+                    </svg>
+                    Eliminar
+                  </button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Pie de tabla informativo -->
+        <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
+          <div class="flex items-center gap-1.5">
+            <span class="inline-block w-2 h-2 rounded-full bg-emerald-500"></span>
+            <span>Módulo de indisponibilidad sincronizado con la agenda en tiempo real</span>
+          </div>
+          <span>Zona horaria: UTC-3 (Buenos Aires)</span>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- PIE DE PÁGINA INSTITUCIONAL -->
+  <footer class="mt-auto border-t border-slate-200 py-4 bg-white text-center text-xs text-slate-500">
+    Turnos Odontológicos AR · Módulo de Bloqueos e Indisponibilidad Clínica · Sede Central
+  </footer>
+
+</body>
+</html>
