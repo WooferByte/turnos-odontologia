@@ -218,7 +218,15 @@ export interface ServidorFalso {
   retener(ruta: string): () => void
   /** Emite una sesión válida sin pasar por el login (por ejemplo, para simular un refresh ya guardado). */
   emitirSesion(email?: string): { access: string; refresh: string }
+  /**
+   * Solo esa ruta falla y las demás responden: `'red'` (fetch rechaza), un estado (esa respuesta de error) o
+   * `{ cuerpo }` (un `200` con ese cuerpo JSON, de otra forma que la de la API). `caerse` y `responderConError`
+   * hacen fallar todas las rutas.
+   */
+  fallarRuta(ruta: string, falla: FallaDeRuta): void
 }
+
+export type FallaDeRuta = 'red' | number | { cuerpo: unknown }
 
 interface ErrorDeCampoFalso {
   campo: string | null
@@ -532,6 +540,7 @@ export function crearServidorFalso(opciones: OpcionesDelServidorFalso = {}): Ser
   const sinPermiso = new Set<string>()
   let accessSiempreRechazado = false
   const retenciones = new Map<string, Promise<void>>()
+  const fallas = new Map<string, FallaDeRuta>()
 
   function usuarioPorEmail(email: string): UsuarioFalso | undefined {
     return usuarios.find((u) => u.email === email)
@@ -964,6 +973,14 @@ export function crearServidorFalso(opciones: OpcionesDelServidorFalso = {}): Ser
     })
   }
 
+  /** `GET /api/auth/yo`: el email y los roles del usuario del access, en el orden fijo de la API (D306). */
+  function usuarioDeLaSesion(init: RequestInit | undefined): Response {
+    const { rechazo, actor } = autorizar(init, ORDEN_DE_ROLES)
+    if (rechazo !== null || actor === null) return rechazo ?? sesionInvalida()
+    const { email, roles } = salidaDeUsuario(actor)
+    return json(200, { email, roles })
+  }
+
   const falso: Fetch = (entrada, init) => {
     contadores.set(entrada, (contadores.get(entrada) ?? 0) + 1)
     const metodo = init?.method ?? 'GET'
@@ -980,9 +997,16 @@ export function crearServidorFalso(opciones: OpcionesDelServidorFalso = {}): Ser
     if (estado5xx !== null) {
       return Promise.resolve(problema(estado5xx, '/errores/interno', 'Error del servidor', 'Error.', []))
     }
+    const falla = fallas.get(entrada)
+    if (falla === 'red') return Promise.reject(new TypeError('Failed to fetch'))
+    if (typeof falla === 'number') {
+      return Promise.resolve(problema(falla, '/errores/interno', 'Error del servidor', 'Error.', []))
+    }
+    if (falla !== undefined) return Promise.resolve(json(200, falla.cuerpo))
     if (entrada === '/api/auth/login' && init?.method === 'POST') return Promise.resolve(login(init))
     if (entrada === '/api/auth/refresh' && init?.method === 'POST') return refrescar(init)
     const metodo = init?.method ?? 'GET'
+    if (entrada === '/api/auth/yo' && metodo === 'GET') return Promise.resolve(usuarioDeLaSesion(init))
     if (entrada === '/api/prestaciones' && metodo === 'GET') return Promise.resolve(listarPrestaciones(init))
     if (entrada === '/api/prestaciones' && metodo === 'POST') return Promise.resolve(crearPrestacion(init))
     if (entrada === '/api/usuarios' && metodo === 'GET') return Promise.resolve(listarUsuarios(init))
@@ -1087,6 +1111,9 @@ export function crearServidorFalso(opciones: OpcionesDelServidorFalso = {}): Ser
     },
     emitirSesion: (email = EMAIL_ACTIVA) => {
       return { access: emitirAccess(email), refresh: emitirRefresh(email) }
+    },
+    fallarRuta: (ruta, falla) => {
+      fallas.set(ruta, falla)
     },
   }
 }
