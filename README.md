@@ -610,6 +610,39 @@ curl -i -X POST http://127.0.0.1:8000/auth/refresh -H "Content-Type: application
 
 Los tokens de la demo dejan de valer al reiniciarla: cada arranque genera un secreto efímero (D196). En la API sobre PostgreSQL el secreto sale de `JWT_SECRET` (32 bytes como mínimo) y los tokens sobreviven a un reinicio.
 
+### Quién inició sesión: `GET /auth/yo`
+
+Ruta nueva (C-50) para saber con qué usuario y con qué roles se pidió algo. Pide el access token como cualquier otra ruta del panel, la pueden usar los tres roles y solo informa el `email` y los `roles`: nunca el hash de la contraseña, la `token_version`, el id ni nada más de la cuenta. Con la demo recién arrancada:
+
+1. `POST /auth/login` con la odontóloga y «Authorize» con su `access_token`. `GET /auth/yo` → `200`, con `{"email": "odontologa@consultorio-demo.test", "roles": ["odontologo", "dueno"]}` y la cabecera `Cache-Control: no-store`. Los roles salen siempre en el orden `odontologo`, `recepcionista`, `dueno`, sin importar el orden en que se asignaron.
+2. Lo mismo con la recepcionista (`POST /auth/login` y «Authorize» con su token) → `200`, con `{"email": "recepcion@consultorio-demo.test", "roles": ["recepcionista"]}`.
+3. Sin token, con uno alterado o con el `refresh_token` en lugar del access → `401`, con `WWW-Authenticate: Bearer` y `codigos` igual a `["RN-AU-03"]`.
+4. Con el token de la odontóloga, `POST /usuarios` con `{"email": "prueba@consultorio-demo.test", "contrasena": "clave-ficticia-2026", "roles": ["recepcionista"]}` → `201` (`id` `3`). Iniciar sesión con ese usuario y `GET /auth/yo` con su token → `200`. Con el token de la odontóloga, `PATCH /usuarios/3` con `{"activo": false}` → `200`. El mismo `GET /auth/yo` con el token del usuario desactivado → `401`, con `["RN-AU-03"]`.
+
+Los roles se leen de la base en cada petición: si la odontóloga le suma o le quita un rol a un usuario con `PATCH /usuarios/{id}`, el mismo token responde con los roles nuevos en la petición siguiente. Un usuario activo sin ningún rol (la API no lo crea) recibe `403` con `["RN-AU-05"]`.
+
+Con `curl`:
+
+```
+curl -i http://127.0.0.1:8000/auth/yo -H "Authorization: Bearer PEGAR_EL_ACCESS_TOKEN"
+```
+
+#### Escenario → test (usuario de la sesión, API)
+
+Los escenarios están en `openspec/changes/usuario-de-la-sesion/specs/usuario-de-la-sesion/spec.md`. Los 13 tests de la API están en `backend/tests/api/test_usuario_de_la_sesion.py`; la regla pura, en `backend/tests/unit/test_roles.py`, y el caso de uso, en `backend/tests/integration/test_acceso.py`:
+
+| Escenario | Qué verifica | Test titular (`test_usuario_de_la_sesion.py` de la API, salvo que se indique) |
+|---|---|---|
+| SES-1a | La odontóloga (login con el email con mayúsculas y espacios) obtiene su email guardado y `["odontologo", "dueno"]`; su `token_version` no cambia | `test_ses1a_la_odontologa_obtiene_su_email_y_sus_roles`; `test_ses1a_sesion_leer_para_los_tres_roles` (`unit/test_roles.py`); `test_ses1a_usuario_de_la_sesion_devuelve_el_email_guardado_y_los_roles_del_actor` y `test_ses1a_un_usuario_que_ya_no_existe_levanta_sesion_invalida` (`integration/test_acceso.py`) |
+| SES-1b | La recepcionista y el dueño (creado con `POST /usuarios`) obtienen los suyos | `test_ses1b_la_recepcionista_y_el_dueno_obtienen_los_suyos` |
+| SES-1c | Un rol sumado o quitado con `PATCH` se ve en la petición siguiente con el mismo token | `test_ses1c_un_rol_cambiado_se_ve_en_la_peticion_siguiente` |
+| SES-1d | Los roles salen en el orden fijo aunque se hayan asignado en otro | `test_ses1d_los_roles_salen_en_el_orden_fijo` |
+| SES-2a | Solo `email` y `roles`, sin hash ni token, `Cache-Control: no-store` y el esquema `200` de `/openapi.json` con esos dos campos | `test_ses2a_la_respuesta_trae_solo_el_email_y_los_roles_sin_cache` |
+| SES-3a a SES-3e | El mismo `401` (`RN-AU-03`, `WWW-Authenticate: Bearer`) sin cabecera, con otro esquema, con un token ilegible, con el refresh como access y con un access vencido (en el instante exacto de los 15 minutos) | `test_ses3a_sin_cabecera_responde_401`, `test_ses3b_otro_esquema_responde_401`, `test_ses3c_token_ilegible_responde_401`, `test_ses3d_refresh_como_access_responde_401`, `test_ses3e_access_vencido_responde_401` |
+| SES-3f | Un usuario desactivado recibe el `401` con su token anterior | `test_ses3f_un_usuario_desactivado_recibe_401` |
+| SES-3g | Restablecer la contraseña corta las dos sesiones abiertas y el inicio de sesión nuevo sirve | `test_ses3g_restablecer_corta_todas_las_sesiones_y_el_login_nuevo_sirve` |
+| SES-3h | Un usuario activo sin roles recibe `403` `RN-AU-05` sin su email; su `token_version` no cambia | `test_ses3h_un_usuario_sin_roles_no_obtiene_su_usuario`; `test_ses3h_un_usuario_sin_roles_no_tiene_sesion_leer` (`unit/test_roles.py`) |
+
 ## Protección del panel
 
 Desde C-07, **toda ruta del panel exige un access token** y un rol que la permita. Solo `POST /auth/login`, `POST /auth/refresh`, `/docs` y `/openapi.json` se pueden llamar sin token.
@@ -640,6 +673,7 @@ Un usuario puede tener varios roles y sus permisos **se suman**. Los roles se le
 | `POST /sillones`, `PATCH /sillones/{id}` | sí | no | no |
 | `GET /usuarios` | sí | no | sí |
 | `POST /usuarios`, `PATCH /usuarios/{id}` | sí | no | no |
+| `GET /auth/yo` | sí | sí | sí |
 
 ### Usuarios de prueba
 
@@ -1043,7 +1077,7 @@ La migración autogenerada **se revisa a mano** antes de usarla, y cada change q
 - **`profesional.matricula` existe pero nadie la escribe ni la lee todavía** (D215).
 - **Dar el rol `odontologo` no crea ni vincula un profesional** (U16, D246): el usuario puede tener el permiso de la odontóloga y no aparecer como profesional en la agenda. El vínculo usuario-profesional se resuelve en un change posterior.
 - **El largo de la contraseña inicial se valida después del formato** (U5, D177): un cuerpo con un email mal formado y una contraseña corta informa solo el error del email; el de la contraseña aparece al corregirlo.
-- **No hay registro de auditoría de los cambios de usuarios**: no queda constancia de quién creó, desactivó o cambió los roles de quién. Tampoco hay `GET /auth/yo`: la interfaz no sabe qué usuario inició sesión.
+- **No hay registro de auditoría de los cambios de usuarios**: no queda constancia de quién creó, desactivó o cambió los roles de quién.
 - **La pantalla de usuarios no se vio renderizada bajo la CSP de Compose** (C-09, V5 parcial): en Compose se comprobaron la cabecera, el paquete servido y la consola sin violaciones en el ingreso, pero no se recorrió la pantalla con sesión iniciada. La prueba manual del autor cubrió la demo (corte de sesión al desactivar, ingreso rechazado mientras está inactiva y reactivación); los dos `409` `RN-AU-06` los verificaron el agente y las suites.
 - **Desactivar a un usuario no pide confirmación** (D250) y la API no borra usuarios: un usuario desactivado se reactiva con `PATCH`.
 - Los turnos guardados antes de la migración `0003` (por ejemplo, los de la prueba manual de C-02 en el volumen de PostgreSQL) **no tienen historial**: la consulta devuelve `200` con `[]` (D160). La migración no inventa eventos del pasado.

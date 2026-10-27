@@ -41,7 +41,7 @@ Reglas de trabajo para todos los grupos (no son tareas):
 
 ## 5. API en el README
 
-- [ ] 5.1 Completar el `README.md` de la raíz (design Y16): `GET /auth/yo` en «Probar desde Swagger» (con la odontóloga y con la recepcionista de la demo, el `401` sin token y después de desactivar a un usuario), la tabla escenario → test de `usuario-de-la-sesion` (`SES-1a` a `SES-3h`) con la cantidad real de tests, y en los límites conocidos quitar «Tampoco hay `GET /auth/yo`». Verificación: cada paso nuevo se ejecutó tal cual con la demo (`crear_app_demo`) en `/docs` y dio lo que dice.
+- [x] 5.1 Completar el `README.md` de la raíz (design Y16): `GET /auth/yo` en «Probar desde Swagger» (con la odontóloga y con la recepcionista de la demo, el `401` sin token y después de desactivar a un usuario), la tabla escenario → test de `usuario-de-la-sesion` (`SES-1a` a `SES-3h`) con la cantidad real de tests, y en los límites conocidos quitar «Tampoco hay `GET /auth/yo`». Verificación: cada paso nuevo se ejecutó tal cual con la demo (`crear_app_demo`) en `/docs` y dio lo que dice.
 
 ## 6. Servidor falso y cliente
 
