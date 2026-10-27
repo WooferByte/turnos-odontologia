@@ -979,7 +979,7 @@ Primer change: `/opsx:propose crear-turno-sin-solapamientos`.
   - `knowledge-base/08_arquitectura_propuesta.md` §«Estructura de directorios» (frontend) y párrafo «Interfaz»
 
 ### [C-50] `usuario-de-la-sesion`
-- **Estado**: `[~]` en curso · **Orden**: 3 · **Gobernanza**: ALTO
+- **Estado**: `[x]` archivado · **Orden**: 3 · **Gobernanza**: ALTO
 - **Objetivo** (change técnico y de frontend, sin historia; ningún criterio de la Épica 10 lo pide): que el panel muestre qué usuario inició sesión y con qué roles. Agregado el 2026-10-27: en la prueba manual de C-09 y C-10 con varias ventanas abiertas no se distinguía de quién era cada sesión; D225, D230 y D249 lo dejaron fuera a propósito hasta tener una ruta que informe el usuario.
 - **Alcance — dentro**: `GET /auth/yo`, de solo lectura y para los tres roles (permiso `sesion.leer`; sin roles, `403`), que devuelve solo el email y los roles del usuario del token, sin caché (nunca el hash, `token_version` ni el estado interno; D305 a D307); el encabezado del panel muestra el email y los roles junto a «Cerrar sesión»; pantalla generada en Stitch (D234).
 - **Alcance — fuera**: cambios de esquema; edición del perfil; recuperación de contraseña; ocultar enlaces y acciones según el rol (D230 y D249 siguen; queda para un change posterior, D312).

@@ -60,11 +60,13 @@ proyecto/
 │   └── src/
 │       ├── main.tsx, App.tsx    # rutas del panel (ingreso y panel base)
 │       ├── shared/api/          # clienteHttp, sesion, errores
+│       ├── shared/roles.ts      # etiquetas de los roles, una sola fuente (C-09, C-50; D308)
 │       ├── features/ingreso/    # pantalla de inicio de sesión
 │       ├── features/usuarios/    # pantalla de usuarios (C-09)
 │       ├── features/contrasenas/ # pantalla «Mi contraseña» (C-10)
 │       ├── features/horario/     # pantalla de horario (C-12)
 │       ├── features/bloqueos/    # pantalla de bloqueos (C-13)
+│       ├── features/sesion/      # indicador del usuario de la sesión en el encabezado (C-50)
 │       ├── pages/               # panel base y rutas protegidas
 │       └── test/                # servidor falso de la API para las pruebas
 ├── docker-compose.yml           # api, worker, postgres, redis, frontend (C-02 crea api y postgres, D151)
@@ -239,6 +241,7 @@ Decisión del autor 2026-10-05 (D80; RN-GL-05):
 ## Seguridad
 
 - **Autenticación** (change de usuarios y acceso, Épica 10; **el primer change no la tiene**, DD-14): JWT firmado (HS256 con secreto de entorno) para el panel. Decisión del autor 2026-10-05 (D74; SU-09): access token de 15 minutos y refresh token de 7 días, ambos JWT; el refresh no se revoca de a uno (no hay tabla de tokens) pero se **invalida en bloque por usuario** con el claim `token_version` (se compara en cada petición y en el refresh y se incrementa al desactivar al usuario o al cambiar o restablecer su contraseña; D43); además `activo` se verifica en cada petición y en el refresh (RN-AU-04); contraseñas con hash **bcrypt**, de **10 caracteres como mínimo y 72 bytes como máximo** (el tope de bcrypt; RN-AU-07). Credenciales inválidas → `401` genérico (RN-AU-04).
+- **Usuario de la sesión en el panel** (C-50, D305 a D310): el encabezado muestra el email y los roles del usuario del token con `GET /auth/yo` (permiso `sesion.leer`, `Cache-Control: no-store`), una vez por entrada al panel y sin guardarlos en el navegador; si el pedido falla, el indicador no se muestra. Solo informa: no oculta acciones (D312).
 - **Autorización**: RBAC por rol (`odontologo`, `recepcionista`, `dueno`) vía dependencies de FastAPI; unión de roles. Los roles se leen de la base en cada petición: quitar un rol tiene efecto inmediato (RN-AU-02, D102). Ficha clínica solo `odontologo`.
 - **Paciente**: sin cuenta; **token de gestión firmado** por turno (**sin vencimiento propio**: su validez sale del estado del turno, RN-TD-08) y por oferta de lista de espera (válido hasta el `vence_en` de la oferta); la entrada de lista de espera tiene además su propio token para retirarse (`EntradaListaEspera.token`, D29). **Todo turno tiene token, también el cargado desde el panel** (D94); el link se entrega en la respuesta de la reserva y, desde US-030, en los mensajes `wa.me` (D93). Nunca datos personales en la URL (RN-PR-06).
 - **Webhooks**: verificación de firma del webhook de Mercado Pago y consulta del pago a su API antes de acreditar. El webhook de WhatsApp (verificación de firma de Meta) es **Fase 2**.

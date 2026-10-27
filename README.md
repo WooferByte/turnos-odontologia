@@ -790,6 +790,7 @@ Desde C-50, el encabezado muestra **quién inició sesión**: a la derecha de la
 4. «Cerrar sesión» e ingresar con la recepcionista en la misma pestaña → el encabezado muestra `recepcion@consultorio-demo.test` y «Recepcionista»; el email de la odontóloga no aparece en ningún momento.
 5. Con **dos ventanas privadas a la vez**, la odontóloga en una y la recepcionista en la otra: cada encabezado muestra su email y sus roles (es el caso que originó el change: distinguir de quién es cada ventana).
 6. En «Usuarios», la odontóloga le suma «Dueño» a la recepcionista: el encabezado de la recepcionista lo muestra **después de recargar** su pestaña (límite conocido, D309).
+8. Límite conocido de diseño, pendiente de decisión del autor: entre unos 721 y 1100 px de ancho las pastillas de la navegación se acomodan en dos líneas y la barra crece, porque el corte a filas de D311 es a 720 px y a esos anchos no hay una fila propia para el indicador (no hay desplazamiento horizontal). Detalle en `docs/skills-mcp/evidencias/sesion-nueva/stitch-usuario-de-la-sesion.md`, sección 4.
 7. En «Usuarios», la odontóloga desactiva a un usuario creado para la prueba que tiene su sesión abierta en otra ventana: esa ventana vuelve a `/ingresar` con el aviso «Tu sesión terminó. Iniciá sesión de nuevo.» en su próxima acción o al recargar.
 
 #### Escenario → test (encabezado del panel)
