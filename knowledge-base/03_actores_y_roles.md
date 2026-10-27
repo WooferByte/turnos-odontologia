@@ -42,6 +42,7 @@ C = crear, R = leer, U = actualizar, D = eliminar/anular. "Propio" = solo sus tu
 | Reportes (ocupación, ausentismo, cobros) | R | — | R | — |
 | Usuarios del consultorio (alta con contraseña inicial, roles, desactivar, restablecer contraseña; RN-AU-06, RN-AU-07, RN-AU-08) | CRUD | — | R | — |
 | Cambiar la propia contraseña (pidiendo la actual, RN-AU-07) | U propio | U propio | U propio | — |
+| Ver el propio usuario de la sesión (email y roles; `GET /auth/yo`, permiso `sesion.leer`; un usuario sin roles recibe `403` `RN-AU-05`; D307, D313) | R propio | R propio | R propio | — |
 
 > `GET /profesionales` (lista de profesionales para elegir su horario, solo lectura; D260) lo leen los tres roles (C-12).
 

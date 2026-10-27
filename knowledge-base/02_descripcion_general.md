@@ -81,7 +81,7 @@ Detalle, restricciones y preguntas en `11_integraciones_whatsapp_y_mercadopago.m
 
 | Recurso | Endpoints principales | Acceso |
 |---|---|---|
-| Auth | `POST /auth/login`, `POST /auth/refresh`, `POST /auth/cambiar-contrasena` (el usuario cambia la propia, pidiendo la actual) | Público (login); `POST /auth/refresh` tampoco usa el JWT de acceso: se autentica con el refresh token (RN-AU-03); `cambiar-contrasena` con sesión; change de usuarios y acceso (Épica 10) |
+| Auth | `POST /auth/login`, `POST /auth/refresh`, `POST /auth/cambiar-contrasena` (el usuario cambia la propia, pidiendo la actual), `GET /auth/yo` (el email y los roles del usuario del token, sin caché; D305, D306) | Público (login); `POST /auth/refresh` tampoco usa el JWT de acceso: se autentica con el refresh token (RN-AU-03); `cambiar-contrasena` y `yo` con sesión (`yo`: los tres roles, D307); change de usuarios y acceso (Épica 10) |
 | Usuarios | `GET/POST /usuarios`, `PATCH /usuarios/{id}` (roles, activar o desactivar), `POST /usuarios/{id}/restablecer-contrasena` | Odontólogo (el dueño solo lee) |
 | Prestaciones | `GET/POST /prestaciones`, `PATCH /prestaciones/{id}` (editar o desactivar; no hay borrado) | Lectura: los tres roles; escritura: odontólogo (D205) |
 | Sillones | `GET/POST /sillones`, `PATCH /sillones/{id}` (renombrar, desactivar o reactivar; no hay borrado) (MVP: 1 sillón por defecto) | Lectura: los tres roles; escritura: odontólogo (D205) |
