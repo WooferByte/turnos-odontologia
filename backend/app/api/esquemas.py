@@ -13,6 +13,7 @@ from pydantic import (
     model_validator,
 )
 
+from app.application.acceso import UsuarioDeLaSesion
 from app.application.bloqueos import BloqueoCreado, BloqueosDelConsultorio
 from app.application.horario import HorarioDelProfesional
 from app.application.usuarios import UsuarioConRoles
@@ -383,6 +384,17 @@ class UsuarioSalida(BaseModel):
             roles=[rol for rol in Rol if rol in usuario.roles],  # en el orden del enum, no el de la base
             activo=usuario.datos.activo,
         )
+
+
+class UsuarioDeLaSesionSalida(BaseModel):
+    """Quien inició sesión (``GET /auth/yo``): solo ``email`` y ``roles``, nunca el id ni datos de la cuenta (D306)."""
+
+    email: str
+    roles: list[Rol]
+
+    @classmethod
+    def desde_usuario(cls, usuario: UsuarioDeLaSesion) -> "UsuarioDeLaSesionSalida":
+        return cls(email=usuario.email, roles=[rol for rol in Rol if rol in usuario.roles])  # orden del enum
 
 
 # --- Horario recurrente (C-12) ---

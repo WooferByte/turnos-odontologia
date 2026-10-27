@@ -4,9 +4,17 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Response
 
 from app.api.deps import get_firmador, get_hasher, get_reloj, get_uow, get_vigencias
-from app.api.esquemas import AccessSalida, CambiarContrasenaEntrada, LoginEntrada, RefreshEntrada, TokensSalida
+from app.api.esquemas import (
+    AccessSalida,
+    CambiarContrasenaEntrada,
+    LoginEntrada,
+    RefreshEntrada,
+    TokensSalida,
+    UsuarioDeLaSesionSalida,
+)
 from app.api.seguridad import requiere
 from app.api.respuestas import RESPUESTAS_DE_ACCESO, _respuesta_de_error
+from app.application.acceso import usuario_de_la_sesion
 from app.application.puertos import FirmadorDeTokens, HasherDeContrasenas, UnidadDeTrabajo
 from app.application.sesion import (
     IniciarSesionComando,
@@ -98,3 +106,14 @@ def post_cambiar_contrasena(
         refresh_token=tokens.refresh_token,
         expires_in=int(vigencias.access.total_seconds()),
     )
+
+
+@router.get("/yo", response_model=UsuarioDeLaSesionSalida, responses=RESPUESTAS_DE_ACCESO)
+def get_yo(
+    respuesta: Response,
+    actor: Annotated[UsuarioDelPanel, Depends(requiere(Permiso.SESION_LEER))],
+    uow: Annotated[UnidadDeTrabajo, Depends(get_uow)],
+) -> UsuarioDeLaSesionSalida:
+    """Email y roles de quien hace la petición, leídos de la base (RN-AU-02); sin caché."""
+    _sin_cache(respuesta)
+    return UsuarioDeLaSesionSalida.desde_usuario(usuario_de_la_sesion(actor, uow))
