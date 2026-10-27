@@ -47,6 +47,7 @@
   --ancho-contenido: 1280px;
   --tamano-icono: 16px;
   --tamano-muestra: 16px;
+  --tamano-avatar: 32px;
   --sombra-tarjeta: 0 1px 2px rgb(15 23 42 / 6%);
 
   --fuente: Inter, system-ui, sans-serif;

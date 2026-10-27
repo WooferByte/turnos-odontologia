@@ -108,7 +108,7 @@ python -m pytest
 
 Los tests corren con **SQLite en memoria**: no necesitan Docker, PostgreSQL ni Redis, ni ningún archivo de base de datos.
 
-La corrida termina con **«856 passed, 58 deselected, 1 warning»**. Los 58 «deselected» son los del perfil opcional con PostgreSQL (más abajo), que la corrida por defecto excluye a propósito. El warning es un aviso de deprecación interno de Starlette (`starlette/testclient.py`, sobre `anyio.abc.BlockingPortal`): viene de una dependencia con versión fijada, no del código del proyecto, y no indica ningún problema.
+La corrida termina con **«879 passed, 58 deselected, 1 warning»**. Los 58 «deselected» son los del perfil opcional con PostgreSQL (más abajo), que la corrida por defecto excluye a propósito. El warning es un aviso de deprecación interno de Starlette (`starlette/testclient.py`, sobre `anyio.abc.BlockingPortal`): viene de una dependencia con versión fijada, no del código del proyecto, y no indica ningún problema.
 
 ### Escenario → test
 
@@ -257,7 +257,7 @@ Una parte de los tests (la que prueba lo que solo PostgreSQL garantiza) está fu
 
    Se usa `127.0.0.1` y no `localhost`: en Windows `localhost` resuelve primero a IPv6 y la conexión espera varios segundos antes de caer a IPv4.
 
-Con la base levantada, la corrida termina con **«58 passed, 856 deselected, 1 warning»**. **Si PostgreSQL no está disponible** (Docker apagado, `TEST_DATABASE_URL` sin definir o base que no responde), los 56 tests del perfil **se omiten con el motivo en el resumen** (**«56 skipped, 796 deselected»**) y la corrida termina con código de salida 0. Si la base de `TEST_DATABASE_URL` no termina en `_test`, el perfil falla a propósito para no borrar otra base.
+Con la base levantada, la corrida termina con **«58 passed, 879 deselected, 1 warning»**. **Si PostgreSQL no está disponible** (Docker apagado, `TEST_DATABASE_URL` sin definir o base que no responde), los 58 tests del perfil **se omiten con el motivo en el resumen** (**«58 skipped, 879 deselected»**) y la corrida termina con código de salida 0. Si la base de `TEST_DATABASE_URL` no termina en `_test`, el perfil falla a propósito para no borrar otra base.
 
 El esquema de estos tests sale siempre de las migraciones, nunca de `create_all`. Por eso el perfil también comprueba que las migraciones y los modelos coinciden (INF-1): si alguien cambia un modelo sin escribir su migración, ese test se pone en rojo. **La suite por defecto no avisa de esto**: hay que correr el perfil cada vez que se toque el esquema.
 
@@ -734,7 +734,7 @@ npm test
 npm run typecheck
 ```
 
-`npm test` corre **235 tests en 21 archivos** («Tests 235 passed (235)»); no necesita el backend, Docker ni red. `npm run typecheck` (`tsc --noEmit`) termina sin salida. `npm run build` genera `frontend/dist/`.
+`npm test` corre **254 tests en 23 archivos** («Tests 254 passed (254)»); no necesita el backend, Docker ni red. `npm run typecheck` (`tsc --noEmit`) termina sin salida. `npm run build` genera `frontend/dist/`.
 
 ### Probar el panel (demo sin Docker, dos terminales)
 
@@ -779,6 +779,35 @@ docker compose exec postgres psql -U app -d turnos -c "UPDATE usuario SET activo
 ```
 
 Con la odontóloga adentro, `UPDATE usuario SET token_version = token_version + 1 WHERE id = 1` (con el mismo `docker compose exec postgres psql ...`) y recargar `/panel` te lleva a `/ingresar` con el aviso «Tu sesión terminó. Iniciá sesión de nuevo.». Con otra copia del repositorio, agregá `-p otro-nombre` a todos los comandos de `docker compose`.
+
+### Usuario de la sesión en el encabezado
+
+Desde C-50, el encabezado muestra **quién inició sesión**: a la derecha de la navegación e inmediatamente antes de «Cerrar sesión», el email y debajo los roles («Odontólogo · Dueño», «Recepcionista»), con las etiquetas de la pantalla de usuarios y en el orden fijo de la API. Los pide a `GET /api/auth/yo` una sola vez por entrada al panel (después de iniciar sesión o de recargar la pestaña; ver «Quién inició sesión: `GET /auth/yo`») y no los guarda en el navegador. Es texto: no es un menú y no oculta ni cambia ninguna acción. Si el pedido falla (sin conexión, error del servidor, un usuario sin roles o una respuesta de otra forma), el encabezado queda sin el indicador, sin ningún aviso, y la sesión sigue. La referencia visual es la pantalla generada en Stitch (`docs/skills-mcp/evidencias/sesion-nueva/stitch-usuario-de-la-sesion.md`). Con la demo levantada como en «Probar el panel»:
+
+1. Ingresar con la odontóloga → el encabezado muestra `odontologa@consultorio-demo.test` y «Odontólogo · Dueño», y a continuación «Cerrar sesión». En la pestaña de red hay un solo `GET /api/auth/yo` (`200`) en Compose; con `npm run dev` aparece **dos veces seguidas** porque React, en desarrollo, monta cada componente dos veces (modo estricto); el compilado no lo hace.
+2. Abrir «Prestaciones», «Usuarios», «Horario», «Bloqueos» y «Mi contraseña»: el indicador no cambia y no hay otro `GET /api/auth/yo` (ni siquiera con `npm run dev`).
+3. Recargar la pestaña → primero `POST /api/auth/refresh` y después `GET /api/auth/yo`; el indicador vuelve a aparecer.
+4. «Cerrar sesión» e ingresar con la recepcionista en la misma pestaña → el encabezado muestra `recepcion@consultorio-demo.test` y «Recepcionista»; el email de la odontóloga no aparece en ningún momento.
+5. Con **dos ventanas privadas a la vez**, la odontóloga en una y la recepcionista en la otra: cada encabezado muestra su email y sus roles (es el caso que originó el change: distinguir de quién es cada ventana).
+6. En «Usuarios», la odontóloga le suma «Dueño» a la recepcionista: el encabezado de la recepcionista lo muestra **después de recargar** su pestaña (límite conocido, D309).
+7. En «Usuarios», la odontóloga desactiva a un usuario creado para la prueba que tiene su sesión abierta en otra ventana: esa ventana vuelve a `/ingresar` con el aviso «Tu sesión terminó. Iniciá sesión de nuevo.» en su próxima acción o al recargar.
+
+#### Escenario → test (encabezado del panel)
+
+Los escenarios están en `openspec/changes/usuario-de-la-sesion/specs/encabezado-del-panel/spec.md`. Los 19 tests están en `frontend/src/features/sesion/IndicadorDeSesion.test.tsx` (11, sobre `<App/>` con el servidor falso) y `apiSesion.test.ts` (8, el cliente de `GET /api/auth/yo`). Lo puramente visual (la línea, el círculo, el corte del email a 390 px) no tiene test: se compara con Stitch en el navegador.
+
+| Escenario | Qué verifica | Test titular |
+|---|---|---|
+| SES-4a | Después de iniciar sesión, el encabezado muestra el email y los roles antes de «Cerrar sesión», con un solo pedido | `IndicadorDeSesion.test.tsx` — «SES-4a: después de iniciar sesión el encabezado muestra el email y los roles»; `apiSesion.test.ts` — «SES-4a: obtenerUsuarioDeLaSesion devuelve el email y los roles» y «SES-4a: con otro usuario devuelve los datos de ese usuario» |
+| SES-4b | Navegar entre cuatro pantallas no vuelve a pedir el usuario | «SES-4b: navegar entre pantallas no vuelve a pedir el usuario» |
+| SES-4c | Al recargar, el refresh va antes, no hay email mientras espera y después aparece | «SES-4c: al recargar la pestaña el usuario se muestra después de renovar» |
+| SES-4d | Otro usuario en la misma pestaña ve solo sus datos, con un pedido por inicio de sesión | «SES-4d: otro usuario en la misma pestaña ve sus propios datos» |
+| SES-4e | Una respuesta tardía después de «Cerrar sesión» no se muestra | «SES-4e: una respuesta tardía después de cerrar sesión no se muestra» |
+| SES-4f, SES-4g | Sin conexión o con un `500`, el panel sigue sin el indicador, sin aviso ni reintento | «SES-4f: sin conexión el panel sigue sin el indicador», «SES-4g: con un error del servidor el panel sigue sin el indicador»; `apiSesion.test.ts` — «SES-4f: una falla de red levanta SinConexion», «SES-4g: un 500 levanta SinConexion» |
+| SES-4h | Con `403` el panel sigue sin el indicador | «SES-4h: con 403 el panel sigue sin el indicador»; `apiSesion.test.ts` — «SES-4h: un 403 devuelve null» |
+| SES-4i | Con una respuesta de otra forma (un rol desconocido, sin email) el panel sigue sin el indicador | «SES-4i: con una respuesta de otra forma el panel sigue sin el indicador»; `apiSesion.test.ts` — dos tests «SES-4i» |
+| SES-5a | Un `401` sin renovación posible vuelve al inicio de sesión con el aviso, sin tokens | «SES-5a: un 401 sin renovación posible vuelve al inicio de sesión»; `apiSesion.test.ts` — «SES-5a: un 401 sin renovación posible levanta SesionTerminada» |
+| SES-5b | Un `401` con el refresh vigente renueva una vez y muestra el usuario | «SES-5b: un 401 con el refresh vigente renueva y muestra el usuario» |
 
 ### Pantalla de prestaciones
 
@@ -868,7 +897,7 @@ Escenario → test (`src/features/usuarios/`, API reemplazada por el servidor fa
 
 El cliente de la API (`apiUsuarios.test.ts`, 10 tests) y los mensajes de U19 (`mensajes.test.ts`, 3 tests) se prueban aparte. La disposición, la jerarquía, el botón «Cerrar» y la nota de roles siguen la pantalla generada en Stitch (`projects/14200813501064679723/screens/a9ea01c76448418b9168e729229a36e5`; referencia visual: `docs/skills-mcp/evidencias/sesion-nueva/stitch-usuarios-pantalla/pantalla.png`; qué se tomó y qué no, en «Referencia visual (Stitch)» del design del change), traducida a `tokens.css` y `panel.css` sin Tailwind ni recursos de otro origen.
 
-Límites conocidos de la pantalla: el enlace «Usuarios» y todas las acciones se ven con cualquier rol, porque la interfaz no sabe quién inició sesión (U20, D249): la API decide con `403` o `409` y la pantalla lo muestra; «Desactivar» no pide confirmación (D250) y se deshace con «Reactivar».
+Límites conocidos de la pantalla: el enlace «Usuarios» y todas las acciones se ven con cualquier rol, aunque el encabezado ya muestra quién inició sesión: ocultar acciones según el rol queda para un change posterior (U20, D249, D312): la API decide con `403` o `409` y la pantalla lo muestra; «Desactivar» no pide confirmación (D250) y se deshace con «Reactivar».
 
 ### Pantalla de horario
 
@@ -898,7 +927,7 @@ Escenario → test (`src/features/horario/`, API reemplazada por el servidor fal
 
 El cliente de la API (`apiHorario.test.ts`, 7 tests) y los mensajes (`mensajes.test.ts`, 3 tests) se prueban aparte. La disposición (encabezado con selector y botón, nota azul, tarjeta «Semana», cajas de franja, errores en rojo) sigue la pantalla generada en Stitch (`projects/14200813501064679723/screens/c3cccdb362364deba0d4eaac0d678b4d`; referencia visual: `docs/skills-mcp/evidencias/sesion-nueva/stitch-horario-pantalla/pantalla.png`; qué se tomó y qué no, en «Referencia visual (Stitch)» del design del change), traducida a `tokens.css` y `panel.css` sin Tailwind ni recursos de otro origen.
 
-Límites conocidos de la pantalla: el enlace «Horario» y las acciones «Agregar franja», «Quitar franja» y «Guardar horario» se ven con cualquier rol, porque la interfaz no sabe quién inició sesión (H16, D249): la API decide con `403`. Cambiar de profesional descarta lo editado sin preguntar. Las horas se escriben con el selector de hora del navegador (`<input type="time">`), que muestra el formato de cada navegador. La vigencia de las franjas no se ve ni se edita (D259).
+Límites conocidos de la pantalla: el enlace «Horario» y las acciones «Agregar franja», «Quitar franja» y «Guardar horario» se ven con cualquier rol, aunque el encabezado ya muestra quién inició sesión: ocultar acciones según el rol queda para un change posterior (H16, D249, D312): la API decide con `403`. Cambiar de profesional descarta lo editado sin preguntar. Las horas se escriben con el selector de hora del navegador (`<input type="time">`), que muestra el formato de cada navegador. La vigencia de las franjas no se ve ni se edita (D259).
 
 ### Pantalla de bloqueos
 
@@ -930,7 +959,7 @@ Escenario → test (`src/features/bloqueos/`, API reemplazada por el servidor fa
 
 El cliente de la API (`apiBloqueos.test.ts`, 7 tests), la conversión de hora (`horaDelConsultorio.test.ts`, 4) y los mensajes (`mensajes.test.ts`, 6) se prueban aparte. La disposición (dos columnas con el alta a la izquierda y la lista a la derecha, etiquetas en mayúsculas, «Bloquear» a todo el ancho, error rojo bajo «Hasta», aviso verde con una fila por turno afectado) sigue la pantalla generada en Stitch (`projects/14200813501064679723/screens/05d78d7e7d144f92bb9f77d0e4a220db`; referencia visual: `docs/skills-mcp/evidencias/sesion-nueva/stitch-bloqueos-pantalla/pantalla.png`; qué se tomó y qué no, en «Referencia visual (Stitch)» del design del change), traducida a `tokens.css` y `panel.css` sin Tailwind ni recursos de otro origen.
 
-Límites conocidos de la pantalla: el enlace «Bloqueos» y las acciones «Bloquear» y «Eliminar» se ven con cualquier rol, porque la interfaz no sabe quién inició sesión (D249): la API decide con `403`. «Eliminar» no pide confirmación (D286; el bloqueo se puede volver a crear). No hay opción «Todo el día»: un día completo es de las 00:00 a las 00:00 del día siguiente (D285). Las fechas se escriben con el selector del navegador (`<input type="datetime-local">`), que muestra el formato de cada navegador. Los turnos afectados se ven solo en el aviso del alta; la lista no los muestra después.
+Límites conocidos de la pantalla: el enlace «Bloqueos» y las acciones «Bloquear» y «Eliminar» se ven con cualquier rol, aunque el encabezado ya muestra quién inició sesión: ocultar acciones según el rol queda para un change posterior (D249, D312). La API decide con `403`. «Eliminar» no pide confirmación (D286; el bloqueo se puede volver a crear). No hay opción «Todo el día»: un día completo es de las 00:00 a las 00:00 del día siguiente (D285). Las fechas se escriben con el selector del navegador (`<input type="datetime-local">`), que muestra el formato de cada navegador. Los turnos afectados se ven solo en el aviso del alta; la lista no los muestra después.
 
 ### Pantalla de contraseñas
 
@@ -967,7 +996,7 @@ Escenario → test (`src/features/usuarios/` y `src/features/contrasenas/`, API 
 
 El cliente de la API (`apiContrasenas.test.ts`, 7 tests), los mensajes de K14 como funciones puras (`mensajes.test.ts`, 2) y `reemplazarTokens` (`src/shared/api/ProveedorDeSesion.test.tsx`, 1) se prueban aparte. El servidor falso autentica con la contraseña vigente de cada usuario (la odontóloga conserva la de C-08; los demás parten de `demo-consultorio-2026`). La disposición sigue las pantallas generadas en Stitch: «Mi contraseña» (`projects/14200813501064679723/screens/fa6faa69cae34252a7c79e2cb82210c5`) y «Usuarios» con el panel «Restablecer contraseña» (`projects/14200813501064679723/screens/925f1e4028294cb2bb9bdeeea81ffd09`); la referencia visual está en `docs/skills-mcp/evidencias/sesion-nueva/stitch-contrasenas-pantalla/`.
 
-Límites conocidos de las pantallas: «Restablecer contraseña» se ve en todas las filas, también en la propia y en las inactivas, porque la interfaz no sabe quién inició sesión (D249): la API decide, y sobre la propia fila responde `409` con `RN-AU-10`. La pantalla no muestra la contraseña, no tiene medidor de fortaleza ni pide confirmación antes de cerrar las sesiones del usuario. No hay límite de peticiones en el cambio de contraseña (como en el inicio de sesión, D195).
+Límites conocidos de las pantallas: «Restablecer contraseña» se ve en todas las filas, también en la propia y en las inactivas, aunque el encabezado ya muestra quién inició sesión: ocultar acciones según el rol queda para un change posterior (D249, D312). La API decide, y sobre la propia fila responde `409` con `RN-AU-10`. La pantalla no muestra la contraseña, no tiene medidor de fortaleza ni pide confirmación antes de cerrar las sesiones del usuario. No hay límite de peticiones en el cambio de contraseña (como en el inicio de sesión, D195).
 
 ### Versiones fijadas del frontend
 
@@ -1001,7 +1030,7 @@ La API se reemplaza en los tests por un servidor falso escrito a mano (`frontend
 
 Hay además tests de la renovación compartida, del `403`, del cierre de sesión y de que ninguna URL contenga un token, y cinco guards (`src/test/guards.test.ts`) que fallan si aparece `any`, `vi.mock`, `localStorage`, `dangerouslySetInnerHTML`, un archivo `index.ts` de reexportación o un recurso de otro origen (STI-1).
 
-Resultado actual de las dos suites: frontend «Tests 235 passed (235)»; backend «856 passed, 58 deselected, 1 warning».
+Resultado actual de las dos suites: frontend «Tests 254 passed (254)»; backend «879 passed, 58 deselected, 1 warning».
 
 ## Levantar la API con PostgreSQL
 
@@ -1090,8 +1119,8 @@ La migración autogenerada **se revisa a mano** antes de usarla, y cada change q
 - **La sesión del panel no se comparte entre pestañas ni sobrevive al cierre del navegador**: el access vive en memoria y el refresh en `sessionStorage`. Recargar la pestaña la conserva; otra pestaña pide iniciar sesión. Si `sessionStorage` no está disponible, la sesión vive solo en memoria.
 - **El refresh en `sessionStorage` lo podría leer un script inyectado (XSS)**: lo mitigan React (escapa el texto), la ausencia de HTML crudo y la política de contenido de nginx. La alternativa, una cookie `HttpOnly`, cambiaría el contrato de `/auth/refresh` y queda fuera de C-08.
 - **El panel renueva el access solo cuando recibe un `401`** (no antes de que venza): un `401` extra cada 15 minutos de uso.
-- **El panel no muestra quién inició sesión** (no hay ruta que lo informe) y solo tiene una pantalla de negocio, la de prestaciones.
-- **Los botones «Nueva prestación», «Editar», «Desactivar» y «Reactivar» se ven con cualquier rol** (D230): la interfaz no conoce el rol, y la API rechaza a quien no es odontólogo con `403` y `RN-AU-05`, que la pantalla muestra sin cerrar la sesión.
+- **El rol cambiado con la sesión abierta se ve en el encabezado al volver a entrar al panel o al recargar** (D309): el indicador pide `GET /auth/yo` una vez por entrada al panel, no en cada pantalla. La API aplica el cambio en la petición siguiente (RN-AU-02) y las pantallas muestran el `403` si corresponde.
+- **Los botones «Nueva prestación», «Editar», «Desactivar» y «Reactivar» se ven con cualquier rol** (D230, D312): el encabezado muestra el rol, pero la interfaz no oculta nada; la API rechaza a quien no es odontólogo con `403` y `RN-AU-05`, que la pantalla muestra sin cerrar la sesión.
 - **El mensaje de `RN-AG-01` dice «múltiplo de 5 minutos»** (constante de D99) hasta que US-005 haga configurable la granularidad; entonces tendrá que salir del valor configurado.
 - **La demo arranca con las cinco prestaciones activas** (el catálogo de partida de los tests tiene «Urgencia» inactiva): para ver una fila inactiva en la demo se la desactiva primero desde la pantalla.
 - **La fuente Inter se usa solo si está instalada** en el equipo; si no, el navegador usa la fuente del sistema (la política de contenido de nginx no permite cargarla desde fuera).

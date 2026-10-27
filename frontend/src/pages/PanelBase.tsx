@@ -50,11 +50,13 @@ export function PanelBase() {
               Mi contraseña
             </NavLink>
           </nav>
-          <IndicadorDeSesion />
-          <button type="button" className="boton-secundario" onClick={cerrar}>
-            <IconoSalida />
-            Cerrar sesión
-          </button>
+          <div className="sesion-del-encabezado">
+            <IndicadorDeSesion />
+            <button type="button" className="boton-secundario" onClick={cerrar}>
+              <IconoSalida />
+              Cerrar sesión
+            </button>
+          </div>
         </div>
       </header>
       <main className="contenido">

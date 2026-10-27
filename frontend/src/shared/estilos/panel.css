@@ -20,9 +20,9 @@
   gap: 32px;
   box-sizing: border-box;
   max-width: var(--ancho-contenido);
-  height: var(--alto-barra);
+  min-height: var(--alto-barra);
   margin: 0 auto;
-  padding: 0 32px;
+  padding: 8px 32px;
 }
 
 .encabezado nav {
@@ -89,6 +89,109 @@
 .subtitulo-de-pantalla {
   margin: 4px 0 0;
   color: var(--texto-tenue);
+}
+
+/* Usuario de la sesión (C-50, pantalla de Stitch, D234, D311): a la derecha de la navegación e inmediatamente antes
+   de «Cerrar sesión», con una línea vertical fina; un círculo gris con la persona, el email en seminegrita y los roles
+   debajo. Es texto, no un menú. Debajo de 720 px la barra pasa a filas y el email se corta con puntos suspensivos. */
+.sesion-del-encabezado {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.usuario-de-la-sesion {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  padding-right: 16px;
+  border-right: 1px solid var(--borde);
+}
+
+.usuario-de-la-sesion-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  box-sizing: border-box;
+  width: var(--tamano-avatar);
+  height: var(--tamano-avatar);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-pastilla);
+  background: var(--borde-suave);
+  color: var(--texto-tenue);
+}
+
+.usuario-de-la-sesion-texto {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  margin: 0;
+  line-height: 1.25;
+}
+
+.usuario-de-la-sesion-email {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--texto);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.usuario-de-la-sesion-roles {
+  color: var(--texto-tenue);
+  font-size: 11px;
+}
+
+/* Con el usuario de la sesión la barra no entra en una sola línea: las pastillas pierden el ícono y el relleno. */
+@media (max-width: 1360px) {
+  .encabezado-interior {
+    gap: 20px;
+  }
+
+  .enlace-del-panel {
+    padding: 6px 10px;
+  }
+
+  .enlace-del-panel .icono {
+    display: none;
+  }
+}
+
+@media (max-width: 720px) {
+  .encabezado-interior {
+    flex-wrap: wrap;
+    gap: 12px;
+    padding: 12px 16px;
+  }
+
+  .enlace-del-panel {
+    padding: 4px 10px;
+  }
+
+  .encabezado nav {
+    flex: 1 1 100%;
+  }
+
+  .sesion-del-encabezado {
+    flex: 1 1 100%;
+    justify-content: space-between;
+    min-width: 0;
+    padding-top: 8px;
+    border-top: 1px solid var(--borde-suave);
+  }
+
+  .usuario-de-la-sesion {
+    flex: 1;
+    padding-right: 0;
+    border-right: none;
+  }
+
+  .sesion-del-encabezado .boton-secundario {
+    flex: none;
+  }
 }
 
 /* Botones */
