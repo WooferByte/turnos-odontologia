@@ -4,10 +4,11 @@ RN-AU-01, RN-AU-02, RN-AU-03, RN-AU-04, RN-AU-05. Sin ``commit()`` ni SQL. Los r
 ``token_version`` se leen de la base en cada petición: no se guardan entre una y otra (D102).
 """
 from collections.abc import Callable
+from dataclasses import dataclass
 from datetime import datetime
 
 from app.application.puertos import FirmadorDeTokens, TokenIlegible, UnidadDeTrabajo
-from app.domain.acceso.roles import Permiso, UsuarioDelPanel, exigir_permiso
+from app.domain.acceso.roles import Permiso, Rol, UsuarioDelPanel, exigir_permiso
 from app.domain.acceso.sesion import TipoDeToken, exigir_token_valido
 from app.domain.errors import SesionInvalida
 
@@ -36,3 +37,20 @@ def autorizar(usuario: UsuarioDelPanel, permiso: Permiso) -> UsuarioDelPanel:
     """Devuelve al usuario si alguno de sus roles tiene el permiso; si no, ``PermisoInsuficiente`` (RN-AU-05)."""
     exigir_permiso(usuario.roles, permiso)
     return usuario
+
+
+@dataclass(frozen=True)
+class UsuarioDeLaSesion:
+    """Lo único de la cuenta que ``GET /auth/yo`` informa: el email guardado y los roles de ahora (D306)."""
+
+    email: str
+    roles: frozenset[Rol]
+
+
+def usuario_de_la_sesion(actor: UsuarioDelPanel, uow: UnidadDeTrabajo) -> UsuarioDeLaSesion:
+    """El email del actor; los roles son los que ``identificar_usuario`` leyó de la base en esta petición (D102)."""
+    with uow:
+        usuario = uow.usuarios.obtener(actor.id)
+    if usuario is None:
+        raise SesionInvalida()
+    return UsuarioDeLaSesion(email=usuario.email, roles=actor.roles)

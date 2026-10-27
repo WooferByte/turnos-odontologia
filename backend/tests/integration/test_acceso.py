@@ -6,7 +6,7 @@ from datetime import datetime, timedelta
 
 import pytest
 
-from app.application.acceso import autorizar, identificar_usuario
+from app.application.acceso import UsuarioDeLaSesion, autorizar, identificar_usuario, usuario_de_la_sesion
 from app.application.sesion import IniciarSesionComando, Vigencias, iniciar_sesion
 from app.domain.acceso.roles import Permiso, Rol, UsuarioDelPanel
 from app.domain.acceso.sesion import ClaimsDeSesion, TipoDeToken, claims_para
@@ -227,3 +227,23 @@ def test_us091_ca1_recepcionista_y_dueno_suman_permisos(sesion, uow, firmador, c
     assert autorizar(identificado, Permiso.HISTORIAL_LEER) == identificado
     with pytest.raises(PermisoInsuficiente):
         autorizar(identificado, Permiso.PRESTACIONES_EDITAR)
+
+
+def test_ses1a_usuario_de_la_sesion_devuelve_el_email_guardado_y_los_roles_del_actor(
+    sesion, uow, consultorio
+) -> None:
+    usuario = un_usuario(
+        sesion, consultorio, email="odontologa@consultorio-demo.test", roles=(Rol.ODONTOLOGO, Rol.DUENO)
+    )
+    actor = UsuarioDelPanel(id=usuario.id, roles=frozenset({Rol.DUENO}))  # los roles son los del actor, no los releídos
+
+    resultado = usuario_de_la_sesion(actor, uow)
+
+    assert resultado == UsuarioDeLaSesion(email="odontologa@consultorio-demo.test", roles=frozenset({Rol.DUENO}))
+
+
+def test_ses1a_un_usuario_que_ya_no_existe_levanta_sesion_invalida(uow) -> None:
+    with pytest.raises(SesionInvalida) as error:
+        usuario_de_la_sesion(UsuarioDelPanel(id=999, roles=frozenset({Rol.ODONTOLOGO})), uow)
+
+    assert error.value.codigos == ["RN-AU-03"]
