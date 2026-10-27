@@ -189,6 +189,7 @@ El agente repite los escenarios de `encabezado-del-panel` con la demo (salvo `SE
 - **V2** (antes de la tarea 7.1): los tests de C-08 a C-13 que cuentan peticiones o rutas pedidas, con el pedido nuevo de `PanelBase` (Y14).
 - **V3** (antes de la tarea 9.1, en Compose): consola sin violaciones de la CSP con el ícono nuevo y sin desplazamiento horizontal a 390 px.
 - **V4** (al empezar el Apply, tarea 1.1; duda que `revisor-de-escenarios` no pudo confirmar): si `POST /auth/login` (`sesion-del-panel`) admite iniciar sesión a un usuario activo **sin roles**, como da por hecho `SES-3h`. Si lo admite, el test inicia sesión como en los demás; si lo rechaza, el test arma el access token con `SECRETO_DE_PRUEBA` (token real, sin `dependency_overrides`), el escenario sigue igual y se anota el resultado acá.
+  - **Resultado (Apply, 2026-10-27): `POST /auth/login` admite a un usuario activo sin roles** (`iniciar_sesion` no mira los roles; lo prueba `test_us093_ca7_…_un_usuario_sin_roles_no`, que inicia sesión con `200` y recibe `403` `RN-AU-05` en la ruta). `SES-3h` inicia sesión como los demás escenarios; no hace falta armar el token a mano.
 
 ## Migration Plan
 
