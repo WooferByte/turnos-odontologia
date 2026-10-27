@@ -81,12 +81,13 @@ describe('IndicadorDeSesion: el usuario en el encabezado', () => {
     await within(await screen.findByRole('banner')).findByText(EMAIL_RECEPCIONISTA)
     expect(within(encabezado()).getByText('Recepcionista')).toBeDefined()
 
-    for (const [enlace, titulo] of [
-      ['Prestaciones', 'Prestaciones'],
-      ['Horario', 'Horario de atención'],
-      ['Bloqueos', 'Bloqueos'],
-      ['Mi contraseña', 'Mi contraseña'],
-    ]) {
+    const pantallas = [
+      { enlace: 'Prestaciones', titulo: 'Prestaciones' },
+      { enlace: 'Horario', titulo: 'Horario de atención' },
+      { enlace: 'Bloqueos', titulo: 'Bloqueos' },
+      { enlace: 'Mi contraseña', titulo: 'Mi contraseña' },
+    ]
+    for (const { enlace, titulo } of pantallas) {
       await usuario.click(within(encabezado()).getByRole('link', { name: enlace }))
       await screen.findByRole('heading', { name: titulo })
       expect(within(encabezado()).getByText(EMAIL_RECEPCIONISTA)).toBeDefined()
