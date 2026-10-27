@@ -2,7 +2,7 @@
 // insignia «Inactivo», así el estado no depende solo del color. No hay acción de borrar (RN-GL-03).
 import { IconoLlave } from '../../shared/iconos/IconoLlave'
 import type { Usuario } from './apiUsuarios'
-import { nombreDelRol } from './mensajes'
+import { nombreDelRol } from '../../shared/roles'
 
 interface Propiedades {
   usuarios: readonly Usuario[]

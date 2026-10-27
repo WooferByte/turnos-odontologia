@@ -10,8 +10,9 @@ import { IconoLlave } from '../../shared/iconos/IconoLlave'
 import { IconoLapiz } from '../../shared/iconos/IconoLapiz'
 import { IconoPersonaMas } from '../../shared/iconos/IconoPersonaMas'
 import { AYUDA_DE_LARGO, NOTA_DE_RESTABLECER } from '../contrasenas/mensajes'
-import { ROLES, type DatosDeAltaDeUsuario, type Rol, type Usuario } from './apiUsuarios'
-import { NOTA_DE_ROLES, nombreDelRol, subtituloDelPanel, tituloDelAviso, type ErroresDelPanel } from './mensajes'
+import { ROLES, nombreDelRol, type Rol } from '../../shared/roles'
+import type { DatosDeAltaDeUsuario, Usuario } from './apiUsuarios'
+import { NOTA_DE_ROLES, subtituloDelPanel, tituloDelAviso, type ErroresDelPanel } from './mensajes'
 
 interface Propiedades {
   /** El usuario cuyos roles se editan; `null` abre el alta. */

@@ -3,10 +3,7 @@
 import type { PedidoDelPanel } from '../../shared/api/clienteHttp'
 import { SinConexion } from '../../shared/api/errores'
 import { traducirRechazo } from '../../shared/api/rechazos'
-
-export type Rol = 'odontologo' | 'recepcionista' | 'dueno'
-
-export const ROLES: readonly Rol[] = ['odontologo', 'recepcionista', 'dueno']
+import { ROLES, esRol, type Rol } from '../../shared/roles'
 
 export interface Usuario {
   id: number
@@ -29,10 +26,6 @@ export interface CambiosDeUsuario {
 
 const RUTA = '/api/usuarios'
 const MENSAJE_SIN_CONEXION = 'No se pudo conectar con el servidor.'
-
-function esRol(valor: unknown): valor is Rol {
-  return ROLES.some((rol) => rol === valor)
-}
 
 function esUsuario(valor: unknown): valor is Usuario {
   if (typeof valor !== 'object' || valor === null) return false

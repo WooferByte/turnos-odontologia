@@ -1,7 +1,6 @@
 // Textos fijos de la pantalla de usuarios y el único lugar que decide qué mensaje corresponde a cada rechazo
 // (design U19, como T11 de C-11). No se muestra el `detail` de la API.
 import { EntradaRechazada, PermisoInsuficiente, ReglaRechazada } from '../../shared/api/errores'
-import type { Rol } from './apiUsuarios'
 
 export const SUBTITULO_DE_PANTALLA = 'Usuarios del consultorio: acceso al panel y roles.'
 export const MENSAJE_SIN_CONEXION = 'No se pudo conectar con el servidor. Probá de nuevo en unos minutos.'
@@ -18,16 +17,6 @@ export const MENSAJE_USUARIO_INEXISTENTE = 'El usuario ya no existe (RN-GL-04).'
 export const MENSAJE_SIN_PERMISO_DE_ESCRITURA = 'Tu usuario no tiene permiso para modificar usuarios (RN-AU-05).'
 /** Nota del panel de edición (D254): los roles valen desde la petición siguiente (RN-AU-02). */
 export const NOTA_DE_ROLES = 'Quitar o asignar un rol vale desde la próxima acción del usuario, sin cerrar su sesión.'
-
-const NOMBRES_DE_ROL: Record<Rol, string> = {
-  odontologo: 'Odontólogo',
-  recepcionista: 'Recepcionista',
-  dueno: 'Dueño',
-}
-
-export function nombreDelRol(rol: Rol): string {
-  return NOMBRES_DE_ROL[rol]
-}
 
 /** Título corto de un aviso; los demás van sin título porque lo repetirían. */
 export function tituloDelAviso(mensaje: string): string | null {

@@ -1,6 +1,7 @@
-// Diseño común del panel (design F11, D225, T2, T17): barra superior con la marca, la navegación y el
-// cierre de sesión, ningún dato del usuario, y debajo la pantalla elegida por la ruta.
+// Diseño común del panel (design F11, D225, T2, T17): barra superior con la marca, la navegación, el usuario
+// de la sesión (C-50) y el cierre de sesión, y debajo la pantalla elegida por la ruta.
 import { NavLink, Outlet, useNavigate } from 'react-router'
+import { IndicadorDeSesion } from '../features/sesion/IndicadorDeSesion'
 import { useSesionDelPanel } from '../shared/api/ProveedorDeSesion'
 import { IconoCalendario } from '../shared/iconos/IconoCalendario'
 import { IconoLlave } from '../shared/iconos/IconoLlave'
@@ -49,6 +50,7 @@ export function PanelBase() {
               Mi contraseña
             </NavLink>
           </nav>
+          <IndicadorDeSesion />
           <button type="button" className="boton-secundario" onClick={cerrar}>
             <IconoSalida />
             Cerrar sesión

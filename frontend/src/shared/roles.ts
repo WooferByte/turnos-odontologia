@@ -9,3 +9,13 @@ export const ROLES: readonly Rol[] = ['odontologo', 'recepcionista', 'dueno']
 export function esRol(valor: unknown): valor is Rol {
   return ROLES.some((rol) => rol === valor)
 }
+
+const NOMBRES_DE_ROL: Record<Rol, string> = {
+  odontologo: 'Odontólogo',
+  recepcionista: 'Recepcionista',
+  dueno: 'Dueño',
+}
+
+export function nombreDelRol(rol: Rol): string {
+  return NOMBRES_DE_ROL[rol]
+}
