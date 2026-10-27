@@ -24,7 +24,7 @@
 - Intervalos `[inicio, fin)`; fechas aware en UTC con la medianoche del consultorio para RN-AG-10d; SQLAlchemy 2.x sincrónico; suite por defecto en SQLite en memoria, sin PostgreSQL ni Redis; sin mocks de sesión ni de repositorio; TDD estricto.
 - Los vencimientos se evalúan al consultar y solo la tarea periódica dispara efectos (RN-GL-05). WhatsApp en la v1 es el enlace `wa.me`. Sin sobreturnos ni excepción de horario. El paciente no tiene cuenta: usa un token.
 - El archivo único de dependencias y sus versiones exactas se fijan en el `design.md` de C-01; cada change siguiente agrega sus dependencias a ese mismo archivo, con versión exacta, en su design (D116). Este índice no nombra versiones.
-- **IDs de escenario:** `E#` y `US-NNN: CA-n` son los de `knowledge-base/06_funcionalidades.md`. Un ID con otro prefijo (`INF`, `TP`, `HIS`, `HOR`, `REP`, `CAN`, `CFG`, `DIS`, `VEN`, `APR`, `PUB`, `LNK`, `RPL`, `MSG`, `CNF`, `LEP`, `WHK`, `STI`) lo define este índice donde la KB no da uno; `CA-a+CA-b` cuenta como un solo escenario.
+- **IDs de escenario:** `E#` y `US-NNN: CA-n` son los de `knowledge-base/06_funcionalidades.md`. Un ID con otro prefijo (`INF`, `TP`, `HIS`, `HOR`, `REP`, `CAN`, `CFG`, `DIS`, `VEN`, `APR`, `PUB`, `LNK`, `RPL`, `MSG`, `CNF`, `LEP`, `WHK`, `STI`, `SES`) lo define este índice donde la KB no da uno; `CA-a+CA-b` cuenta como un solo escenario.
 
 ---
 
@@ -51,7 +51,8 @@ C-06 sesion-con-jwt                              (C-02)
               ├── C-11 panel-de-prestaciones     (C-04)
               ├── C-12 horario-recurrente        (C-07)
               ├── C-13 bloqueos-puntuales        (C-07)
-              └── C-49 inicio-de-sesion-con-diseno-de-stitch   (C-11)
+              ├── C-49 inicio-de-sesion-con-diseno-de-stitch   (C-11)
+              └── C-50 usuario-de-la-sesion                    (C-07)
 
 BLOQUE 4 (orden 4) — operación diaria del panel
 C-14 agenda-del-dia                              (C-07, C-08)
@@ -103,7 +104,7 @@ C-47 reporte-de-ocupacion                        (C-12, C-13, C-18)
 
 ### Paralelismo por fase
 
-> Cada puerta (gate) es un punto de sincronización. Los changes de una misma puerta no dependen entre sí. Como las migraciones de Alembic son lineales y el autor trabaja solo, «en paralelo» significa **proponer** en paralelo y **aplicar de a uno**; la excepción son los changes sin migración (C-08, C-11, C-15, C-28, C-49), que pueden aplicarse mientras otro change de backend está en curso.
+> Cada puerta (gate) es un punto de sincronización. Los changes de una misma puerta no dependen entre sí. Como las migraciones de Alembic son lineales y el autor trabaja solo, «en paralelo» significa **proponer** en paralelo y **aplicar de a uno**; la excepción son los changes sin migración (C-08, C-11, C-15, C-28, C-49, C-50), que pueden aplicarse mientras otro change de backend está en curso.
 
 ```
 GATE 0: ninguna
@@ -126,6 +127,7 @@ GATE 4: C-08 archivado                                ← FORK (4 paralelos)
   → C-13 bloqueos-puntuales                          [Agente B]
   → C-11 panel-de-prestaciones                       [Agente C]
   → C-49 inicio-de-sesion-con-diseno-de-stitch       [Agente C]   (después de C-11)
+  → C-50 usuario-de-la-sesion                        [Agente C]   (después de C-49)
 
 GATE 5: fase 3 archivada
   → C-14 agenda-del-dia                              [Agente A]
@@ -190,7 +192,7 @@ Paso │ Agente A (aplica backend)       │ Agente B (propone lo siguiente) │
 ─────┼─────────────────────────────────┼─────────────────────────────────┼──────────────────────────
   1  │ C-01                            │ C-02                            │ —
   2  │ C-02, C-03, C-04, C-05          │ C-06, C-07                      │ —
-  3  │ C-06, C-07, C-09, C-10          │ C-12, C-13                      │ C-08, C-11, C-49
+  3  │ C-06, C-07, C-09, C-10          │ C-12, C-13                      │ C-08, C-11, C-49, C-50
   4  │ C-12, C-13, C-14, C-16 a C-19   │ C-20, C-21                      │ C-15
   5  │ C-20 a C-27                     │ C-29, C-30                      │ C-28
   6  │ C-29 a C-37                     │ C-38, C-39, C-40                │ —
@@ -236,7 +238,7 @@ Cada historia tiene un change titular. Cuando una historia se partió, la tercer
 | US-093 | C-09 | C-10 | — |
 | US-094 | C-06 | — | — |
 
-Changes técnicos (no son historias): C-02 `infraestructura-postgresql` y C-31 `tarea-periodica-con-redis`. Docker Compose no tiene change propio: cada servicio entra con el change que lo necesita (`api` y `postgres` en C-02, `frontend` en C-08, `redis` y `worker` en C-31).
+Changes técnicos (no son historias): C-02 `infraestructura-postgresql`, C-31 `tarea-periodica-con-redis` y C-50 `usuario-de-la-sesion`. Docker Compose no tiene change propio: cada servicio entra con el change que lo necesita (`api` y `postgres` en C-02, `frontend` en C-08, `redis` y `worker` en C-31).
 
 ### Tablas del modelo → change que las crea
 
@@ -272,7 +274,7 @@ Changes técnicos (no son historias): C-02 `infraestructura-postgresql` y C-31 `
 |---|---|---|---|
 | 1 | 1 | C-01 | Change de la consigna e hito de entrega |
 | 2 | 2 | C-02 a C-05 | PostgreSQL, Alembic, historial, prestaciones y sillones (solo API) |
-| 3 | 3 | C-06 a C-13 y C-49 | Usuarios y acceso, primera interfaz, horario y bloqueos |
+| 3 | 3 | C-06 a C-13, C-49 y C-50 | Usuarios y acceso, primera interfaz, horario y bloqueos |
 | 4 | 4 | C-14 a C-21 | Agenda, reprogramar, cancelar, marcar y pacientes |
 | 5 | 5 | C-22 a C-30 | Reglas, consentimiento, reserva pública y link de gestión |
 | 6 | 6 | C-31 a C-37 | Tarea periódica, recordatorios, confirmación y lista de espera |
@@ -361,7 +363,7 @@ Primer change: `/opsx:propose crear-turno-sin-solapamientos`.
 
 ## FASE 3 — Usuarios y acceso, primera interfaz y horario (orden 3)
 
-> C-06, C-07 y C-08 van en serie. Después, C-09, C-11, C-12 y C-13 no dependen entre sí. Desde C-08 cada change incluye su pantalla. C-49 (orden 3, agregado el 2026-10-20) está al final del índice, en «Changes agregados después del índice original».
+> C-06, C-07 y C-08 van en serie. Después, C-09, C-11, C-12 y C-13 no dependen entre sí. Desde C-08 cada change incluye su pantalla. C-49 (orden 3, agregado el 2026-10-20) y C-50 (orden 3, agregado el 2026-10-27) están al final del índice, en «Changes agregados después del índice original».
 
 ### [C-06] `sesion-con-jwt`
 - **Estado**: `[x]` archivado · **Orden**: 3 · **Gobernanza**: CRITICO
@@ -416,7 +418,7 @@ Primer change: `/opsx:propose crear-turno-sin-solapamientos`.
   - `knowledge-base/02_descripcion_general.md` §«API REST (resumen)», fila Usuarios
 
 ### [C-10] `contrasenas-de-usuarios`
-- **Estado**: `[~]` en curso · **Orden**: 3 · **Gobernanza**: CRITICO
+- **Estado**: `[x]` archivado · **Orden**: 3 · **Gobernanza**: CRITICO
 - **Objetivo** (US-093): restablecer la contraseña de un usuario y que cada usuario cambie la propia (parte de contraseñas).
 - **Alcance — dentro**: `POST /usuarios/{id}/restablecer-contrasena` (solo odontólogo) y `POST /auth/cambiar-contrasena` (pide la actual); ambos incrementan `token_version`; largo de 10 caracteres como mínimo y 72 bytes como máximo para la contraseña restablecida y la cambiada (la inicial la valida C-09, D242); formularios en el panel.
 - **Alcance — fuera**: recuperación de contraseña por email (ninguna historia la pide); revocación de tokens de a uno.
@@ -424,7 +426,7 @@ Primer change: `/opsx:propose crear-turno-sin-solapamientos`.
 - **Escenarios mínimos**: US-093: CA-6, CA-7, CA-9
 - **Leer antes**:
   - `knowledge-base/06_funcionalidades.md` §US-093 (CA-6, CA-7, CA-9)
-  - `knowledge-base/05_reglas_de_negocio.md` RN-AU-03, RN-AU-07, RN-AU-08
+  - `knowledge-base/05_reglas_de_negocio.md` RN-AU-03, RN-AU-07, RN-AU-08, RN-AU-09, RN-AU-10 · `knowledge-base/10_preguntas_abiertas.md` (ya implementado, D290 a D303)
   - `knowledge-base/08_arquitectura_propuesta.md` §Seguridad · `knowledge-base/09_decisiones_y_supuestos.md` SU-09
   - `knowledge-base/02_descripcion_general.md` §«API REST (resumen)», filas Auth y Usuarios
 
@@ -976,30 +978,42 @@ Primer change: `/opsx:propose crear-turno-sin-solapamientos`.
   - `knowledge-base/10_preguntas_abiertas.md` D234, D235 a D240 · `knowledge-base/05_reglas_de_negocio.md` RN-AU-03, RN-AU-04
   - `knowledge-base/08_arquitectura_propuesta.md` §«Estructura de directorios» (frontend) y párrafo «Interfaz»
 
+### [C-50] `usuario-de-la-sesion`
+- **Estado**: `[ ]` pendiente · **Orden**: 3 · **Gobernanza**: ALTO
+- **Objetivo** (change técnico y de frontend, sin historia; ningún criterio de la Épica 10 lo pide): que el panel muestre qué usuario inició sesión y con qué roles. Agregado el 2026-10-27: en la prueba manual de C-09 y C-10 con varias ventanas abiertas no se distinguía de quién era cada sesión; D225, D230 y D249 lo dejaron fuera a propósito hasta tener una ruta que informe el usuario.
+- **Alcance — dentro**: ruta de solo lectura en `/auth`, para los tres roles, que devuelve el email y los roles del usuario del token (nunca el hash, `token_version` ni el estado interno; D225 la nombró «yo»; el nombre lo cierra el propose); el encabezado del panel muestra el email y los roles junto a «Cerrar sesión»; pantalla generada en Stitch (D234).
+- **Alcance — fuera**: cambios de esquema; edición del perfil; recuperación de contraseña. Pregunta abierta para el propose, sin decidir: ocultar enlaces y acciones según el rol (lo que D230 y D249 dejaron visible para todos) o dejarlo para un change posterior.
+- **Depende de**: C-07, C-08
+- **Escenarios mínimos**: SES-1 (el token de cada rol obtiene su email y sus roles), SES-2 (la respuesta no trae el hash ni `token_version`), SES-3 (sin sesión válida, el `401` de sesión inválida), SES-4 (el encabezado muestra el email y los roles), SES-5 (un `401` en esa ruta vuelve al inicio de sesión)
+- **Leer antes**:
+  - `knowledge-base/06_funcionalidades.md` nota «Changes técnicos y frontend» y §US-090
+  - `knowledge-base/10_preguntas_abiertas.md` D225, D230, D234, D249 · `knowledge-base/05_reglas_de_negocio.md` RN-AU-03, RN-AU-05
+  - `knowledge-base/03_actores_y_roles.md` matriz · `knowledge-base/08_arquitectura_propuesta.md` §Seguridad y §«Estructura de directorios» (frontend)
+
 ---
 
 ## Verificación cruzada
 
-**Fecha de la verificación: 2026-10-20** (octava corrida, al agregar C-49 `inicio-de-sesion-con-diseno-de-stitch`, con C-01 a C-08 y C-11 archivados y las decisiones de la knowledge-base hasta D240; las anteriores fueron del 2026-10-15, del 2026-10-14 y del 2026-10-05). Esta corrida repitió todas las filas con `scripts/verificar_changes.py` (versionado, solo lectura, solo biblioteca estándar), que lee este archivo y la knowledge-base tal como están y compara los identificadores uno por uno; se corre con `python scripts/verificar_changes.py` desde la raíz del repositorio (en Windows, `backend/.venv/Scripts/python.exe scripts/verificar_changes.py`), no modifica nada y sale con código 1 si hay alguna diferencia. El docstring del script define qué cuenta como «citado» en cada fila. **Hay que repetirla cada vez que se edite este archivo o los archivos 02 a 06, 09 o 10 de la knowledge-base**: el resultado vale solo para el contenido verificado.
+**Fecha de la verificación: 2026-10-27** (novena corrida, al agregar C-50 `usuario-de-la-sesion`, con C-01 a C-13 y C-49 archivados y las decisiones de la knowledge-base hasta D303; las anteriores fueron del 2026-10-20, del 2026-10-15, del 2026-10-14 y del 2026-10-05). Esta corrida repitió todas las filas con `scripts/verificar_changes.py` (versionado, solo lectura, solo biblioteca estándar), que lee este archivo y la knowledge-base tal como están y compara los identificadores uno por uno; se corre con `python scripts/verificar_changes.py` desde la raíz del repositorio (en Windows, `backend/.venv/Scripts/python.exe scripts/verificar_changes.py`), no modifica nada y sale con código 1 si hay alguna diferencia. El docstring del script define qué cuenta como «citado» en cada fila. **Hay que repetirla cada vez que se edite este archivo o los archivos 02 a 06, 09 o 10 de la knowledge-base**: el resultado vale solo para el contenido verificado.
 
 Qué compara cada fila: las cinco primeras son las verificaciones pedidas por el autor (la tercera se muestra separada en reglas, decisiones y escenarios); las marcadas «Adicional» se agregaron para cubrir el resto del índice. En la fila 6 «criterio» es un par (historia, CA-n) distinto y «cita» cada aparición en el archivo; no se cuentan solo las de «Escenarios mínimos» (178 citas, 158 pares), que es lo que midió por error la corrida del 2026-10-14 anterior a esta aclaración; un rango «CA-7 a CA-10» cita todos los del medio y «CA-2b» se agrupa con CA-2. Aplicado a los commits de las corridas del 2026-10-14 (2fc4bba y f5ab071), el script reproduce las cifras de las filas 1 a 8 y 10 a 12 y las 178 citas de «Escenarios mínimos»; difieren dos criterios. En la fila 7 se excluye esta sección y un rango «D195 a D203» cita solo sus extremos (con ese criterio salen las 59 y 63 D de aquellas corridas); el 66 de la corrida anterior contaba D115, que solo aparece en esta sección. En la fila 9 las 511 y 516 referencias de aquellas corridas no se pueden reproducir con ninguna definición razonable (el script anterior no se conservó): ahora se cuenta cada archivo, ID, sección, flujo y fila que nombra «Leer antes».
 
 | # | Verificación | Elementos revisados | Resultado |
 |---|---|---|---|
-| 1 | Dependencias: cada dependencia citada en una entrada es un change que existe en este archivo, y ningún change depende de uno de orden posterior | 106 dependencias en 49 changes | sin diferencias |
+| 1 | Dependencias: cada dependencia citada en una entrada es un change que existe en este archivo, y ningún change depende de uno de orden posterior | 108 dependencias en 50 changes | sin diferencias |
 | 2 | Historias: cada US-NNN de `06_funcionalidades.md` (v1) tiene exactamente una fila y un change titular en «Mapeo historia → change»; las historias del Objetivo de cada entrada coinciden con ese mapeo; toda US citada existe en 06 | 30 historias de 06; 30 citadas | sin diferencias |
-| 3a | Reglas: cada RN-XX-NN citada está definida en `05_reglas_de_negocio.md` | 79 reglas distintas (05 define 81) | sin diferencias |
+| 3a | Reglas: cada RN-XX-NN citada está definida en `05_reglas_de_negocio.md` | 82 reglas distintas (05 define 86) | sin diferencias |
 | 3b | Decisiones: cada DD-NN citada existe en `09_decisiones_y_supuestos.md` | 17 decisiones distintas (09 define 19) | sin diferencias |
 | 3c | Escenarios: cada E# citado existe en la tabla de US-010 de 06 | 12 escenarios distintos (06 define 12) | sin diferencias |
-| 4 | Rutas: cada ruta HTTP citada (método y ruta) existe en `02_descripcion_general.md` o en `03_actores_y_roles.md` | 67 rutas citadas (02 y 03 listan 69, dos de ellas de Fase 2) | sin diferencias |
+| 4 | Rutas: cada ruta HTTP citada (método y ruta) existe en `02_descripcion_general.md` o en `03_actores_y_roles.md` | 68 rutas citadas (02 y 03 listan 70, dos de ellas de Fase 2) | sin diferencias |
 | 5 | Tablas: cada entidad de `04_modelo_de_datos.md` tiene un change que la crea en «Tablas del modelo → change que las crea», ese change implementa la historia que nombra la columna «Change que la crea» de 04 y su entrada nombra la tabla | 23 tablas | sin diferencias |
 | 6 | Adicional: cada criterio CA-n citado como escenario, o como criterio que se completa en otro change, existe en su historia de 06 | 165 criterios distintos (pares historia y CA), en 263 citas de todo el índice (incluye «Leer antes» y el mapeo) | sin diferencias |
-| 7 | Adicional: cada decisión D-NN citada figura en el registro de `10_preguntas_abiertas.md`, cada SU-NN en 09 y cada P-NN en 10 | 73 D, 3 SU y 2 P | sin diferencias |
-| 8 | Adicional: cada ruta de la v1 listada en 02 y 03 está citada en alguna entrada (ninguna ruta queda sin change) | 67 rutas de la v1 | sin diferencias |
-| 9 | Adicional: cada sección («…», §), flujo e ID de «Leer antes» aparece en el archivo de la KB que la entrada indica, y el archivo existe | 836 referencias | sin diferencias |
-| 10 | Adicional: el árbol por bloques muestra el mismo nombre, bloque y dependencias que cada entrada, y las puertas nombran los 49 changes | 49 nodos | sin diferencias |
+| 7 | Adicional: cada decisión D-NN citada figura en el registro de `10_preguntas_abiertas.md`, cada SU-NN en 09 y cada P-NN en 10 | 82 D, 3 SU y 2 P | sin diferencias |
+| 8 | Adicional: cada ruta de la v1 listada en 02 y 03 está citada en alguna entrada (ninguna ruta queda sin change) | 68 rutas de la v1 | sin diferencias |
+| 9 | Adicional: cada sección («…», §), flujo e ID de «Leer antes» aparece en el archivo de la KB que la entrada indica, y el archivo existe | 863 referencias | sin diferencias |
+| 10 | Adicional: el árbol por bloques muestra el mismo nombre, bloque y dependencias que cada entrada, y las puertas nombran los 50 changes | 50 nodos | sin diferencias |
 | 11 | Adicional: el camino crítico es una cadena de dependencias directas y es la más larga hasta un change del MVP | 15 changes | sin diferencias |
-| 12 | Adicional, formato: códigos consecutivos, nombres kebab-case únicos, 12 líneas como máximo por entrada, 3 a 6 escenarios (8 en C-01), 3 o 4 líneas de «Leer antes», sin emoji | 49 entradas | sin diferencias |
+| 12 | Adicional, formato: códigos consecutivos, nombres kebab-case únicos, 12 líneas como máximo por entrada, 3 a 6 escenarios (8 en C-01), 3 o 4 líneas de «Leer antes», sin emoji | 50 entradas | sin diferencias |
 
 **Qué no cubre.** La verificación compara identificadores, no significados: confirma que una regla, una ruta o una tabla citada existe y está asignada, no que la entrada la interprete bien. Los IDs de escenario propios de este índice (`INF`, `TP`, `HIS` y los demás de la leyenda) no existen en la KB y por eso no se comparan. Las páginas de la interfaz no son rutas HTTP y quedan fuera de la fila 4.
 

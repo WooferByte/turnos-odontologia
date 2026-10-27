@@ -62,6 +62,7 @@ proyecto/
 │       ├── shared/api/          # clienteHttp, sesion, errores
 │       ├── features/ingreso/    # pantalla de inicio de sesión
 │       ├── features/usuarios/    # pantalla de usuarios (C-09)
+│       ├── features/contrasenas/ # pantalla «Mi contraseña» (C-10)
 │       ├── features/horario/     # pantalla de horario (C-12)
 │       ├── features/bloqueos/    # pantalla de bloqueos (C-13)
 │       ├── pages/               # panel base y rutas protegidas
@@ -202,6 +203,8 @@ class EntradaInvalida(ErrorDeDominio):       # validación de entrada: se inform
 | Recurso identificado en la URL que no existe (por ejemplo, `GET /turnos/{id}` con un id inexistente) | Validación de entrada | `404` | Distinción confirmada por el autor 2026-10-05 (D73): `404` es para un recurso inexistente **identificado en la URL**; `422` es para una referencia inválida **dentro del cuerpo** (por ejemplo, `prestacion_id` inexistente en `POST /turnos`). No aplica al primer change, que solo expone `POST /turnos`; lo usan después `GET /turnos/{id}/historial` (C-03), `PATCH /prestaciones/{id}` (C-04) y `PATCH /sillones/{id}` (C-05), con la clase base `RecursoDeLaUrlNoEncontrado` (D188). Los nombres de los campos del cuerpo y del error se fijan en el design |
 | Duración de una prestación que no es mayor que 0 ni múltiplo de la granularidad (`POST /prestaciones`, `PATCH /prestaciones/{id}`) | Validación de entrada | `422` | Error de dominio `RN-AG-01` dentro de `EntradaInvalida`, con el error del campo `duracion_minutos` (C-04, D177). Se evalúa después del `404` de la URL y antes del nombre repetido |
 | Nombre de prestación repetido en el consultorio | Regla de negocio | `409` | Error de dominio `RN-AG-15`, `type` `/errores/nombre-repetido` (C-04, D171, D177). Se evalúa solo con la entrada válida |
+| Contraseña actual incorrecta (`POST /auth/cambiar-contrasena`) | Regla de negocio | `422` | Error de dominio `RN-AU-09`, `type` `/errores/contrasena-actual-incorrecta` (C-10, D292). Se evalúa solo con la entrada válida, con la fila del usuario bloqueada (D299) |
+| Restablecer la propia contraseña (`POST /usuarios/{id}/restablecer-contrasena` con el id del usuario del token) | Regla de negocio | `409` | Error de dominio `RN-AU-10`, `type` `/errores/restablecer-la-propia` (C-10, D293): la propia se cambia con la actual |
 
 ```json
 {
