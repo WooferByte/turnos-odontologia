@@ -31,6 +31,7 @@ class Permiso(StrEnum):
     BLOQUEOS_LEER = "bloqueos.leer"
     BLOQUEOS_EDITAR = "bloqueos.editar"
     CONTRASENA_PROPIA = "contrasena.propia"
+    SESION_LEER = "sesion.leer"
 
 
 _TODOS = frozenset({Rol.ODONTOLOGO, Rol.RECEPCIONISTA, Rol.DUENO})
@@ -53,6 +54,7 @@ MATRIZ: Mapping[Permiso, frozenset[Rol]] = {
     Permiso.BLOQUEOS_LEER: _TODOS,
     Permiso.BLOQUEOS_EDITAR: _SOLO_EL_ODONTOLOGO,
     Permiso.CONTRASENA_PROPIA: _TODOS,
+    Permiso.SESION_LEER: _TODOS,
 }
 
 

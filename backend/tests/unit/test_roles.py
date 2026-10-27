@@ -22,6 +22,7 @@ TABLA_R4 = [
     ("bloqueos.leer", True, True, True),
     ("bloqueos.editar", True, False, False),
     ("contrasena.propia", True, True, True),
+    ("sesion.leer", True, True, True),
 ]
 CASOS_MATRIZ = [
     (permiso, rol, esperado)
@@ -35,9 +36,9 @@ def test_us091_ca3_matriz_de_las_rutas_existentes(permiso, rol, esperado):
     assert puede(frozenset({rol}), Permiso(permiso)) is esperado
 
 
-def test_us091_ca3_la_tabla_cubre_los_14_permisos_y_los_3_roles():
+def test_us091_ca3_la_tabla_cubre_los_15_permisos_y_los_3_roles():
     assert {Permiso(p) for p, *_ in TABLA_R4} == set(Permiso)
-    assert len(CASOS_MATRIZ) == 14 * 3
+    assert len(CASOS_MATRIZ) == 15 * 3
 
 
 def test_us091_ca1_los_permisos_son_la_union_de_los_roles():
@@ -48,6 +49,18 @@ def test_us091_ca1_los_permisos_son_la_union_de_los_roles():
     assert puede(recepcion_y_dueno, Permiso.HISTORIAL_LEER)
     assert not puede(recepcion_y_dueno, Permiso.PRESTACIONES_EDITAR)
     assert all(puede(odontologa_y_dueno, permiso) for permiso in Permiso)
+
+
+@pytest.mark.parametrize("rol", [ODONTOLOGO, RECEPCIONISTA, DUENO])
+def test_ses1a_sesion_leer_para_los_tres_roles(rol):
+    assert puede(frozenset({rol}), Permiso.SESION_LEER)
+
+
+def test_ses3h_un_usuario_sin_roles_no_tiene_sesion_leer():
+    assert not puede(frozenset(), Permiso.SESION_LEER)
+    with pytest.raises(PermisoInsuficiente) as error:
+        exigir_permiso(frozenset(), Permiso.SESION_LEER)
+    assert error.value.codigos == ["RN-AU-05"]
 
 
 def test_us091_ca3_sin_roles_no_hay_ningun_permiso():
