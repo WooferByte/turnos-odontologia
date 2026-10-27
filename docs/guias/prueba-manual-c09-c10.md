@@ -60,7 +60,9 @@ Vas a necesitar **varias sesiones abiertas a la vez**, cada una con un usuario d
 
 - **Ventana A**: la odontóloga (una pestaña normal).
 - **Ventana B**: la recepcionista, en una **ventana privada o de incógnito** nueva (Ctrl+Shift+N en Chrome y Edge, Ctrl+Shift+P en Firefox).
-- **Ventana C**: una **segunda ventana privada** (o una pestaña nueva dentro de la privada, abierta escribiendo la dirección; **no uses «Duplicar pestaña»**, porque copia la sesión). Primero la usa el dueño; más adelante la reusás para una segunda sesión de la recepcionista y para la colega.
+- **Ventana C**: una **segunda ventana privada** (o una pestaña nueva dentro de la privada, abierta escribiendo la dirección; **no uses «Duplicar pestaña»**, porque copia la sesión). Abrila ahora, pero **no ingreses todavía**: el dueño no existe hasta que lo creás en el paso 1.4, y con él ingresás recién en el paso 1.9. Más adelante la reusás para una segunda sesión de la recepcionista (2.6) y para la colega (2.10).
+
+**El panel no muestra con qué usuario estás** (todavía no hay una ruta que lo informe; D225, D249). Para no perderte, anotá en un papel qué usuario tiene cada ventana y actualizalo cada vez que un paso dice «Cerrar sesión» e «ingresá con…». **No pruebes una acción para averiguarlo**: desactivar y reactivar a alguien, por ejemplo, corta todas sus sesiones (reactivar no las revive) y deja otra ventana afuera.
 
 En todas, la dirección es **http://127.0.0.1:5173** (no uses `localhost`). Si una ventana te muestra algo raro porque quedó una sesión vieja, andá a `http://127.0.0.1:5173/ingresar`, y si hace falta «Cerrar sesión».
 
@@ -277,6 +279,8 @@ Mientras el panel está abierto, ni **«Guardar» con el campo vacío**, ni **«
 3. En la ventana C pulsá **Cambiar contraseña**.
 
 **Esperado:** vuelve a `/ingresar` con «Tu sesión terminó. Iniciá sesión de nuevo.» (no el mensaje de conexión). La contraseña **no** quedó en `colega-nueva-2026`: ingresar con ella da «El email o la contraseña no son correctos.», y con `clave-colega-2026` (la que puso la odontóloga) entra.
+
+**Si pulsaste «Cambiar contraseña» antes del punto 2:** el cambio se guardó (aviso verde en la ventana C) y la contraseña de la colega ya es `colega-nueva-2026`; la ventana C sigue adentro y la ventana A no se entera. Para repetir el paso, volvé al punto 1 usando `colega-nueva-2026` como actual y otra nueva (por ejemplo `colega-otra-2026`). Si en el punto 2 la ventana A te manda a ingresar, no es por la colega: la sesión de la odontóloga ya estaba cortada (por ejemplo, porque alguien la desactivó y reactivó); ingresá de nuevo con ella y repetí el punto 2.
 
 ---
 
