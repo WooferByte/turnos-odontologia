@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agenda del día - Historial del turno - Turnos Odontológicos AR</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            primary: {
+              DEFAULT: '#0284c7',
+              hover: '#0369a1',
+              light: '#e0f2fe',
+              text: '#0369a1'
+            },
+            slate: {
+              body: '#0f172a',
+              muted: '#64748b',
+              subtle: '#94a3b8',
+              border: '#e2e8f0',
+              bg: '#f8fafc',
+              hover: '#f1f5f9'
+            }
+          },
+          borderRadius: {
+            btn: '4px',
+            card: '8px'
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      color: #0f172a;
+      background-color: #f8fafc;
+    }
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col bg-slate-50 text-slate-900 antialiased">
+
+  <!-- BARRA SUPERIOR HORIZONTAL -->
+  <header class="bg-white border-b border-slate-200 px-6 py-2.5 flex items-center justify-between sticky top-0 z-30 shadow-xs">
+    <div class="flex items-center gap-6">
+      <!-- Marca / Isotipo diente -->
+      <div class="flex items-center gap-2.5 pr-2">
+        <div class="w-8 h-8 rounded-btn bg-sky-50 border border-sky-100 flex items-center justify-center text-primary">
+          <svg class="w-5 h-5 text-sky-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2C8.5 2 6 4.5 6 8c0 3.5 1.5 6.5 2 10.5.3 2.1 1.6 3.5 3 3.5 1 0 1.5-.7 1.5-1.5 0-.8.5-1.5 1.5-1.5s1.5.7 1.5 1.5c0 .8.5 1.5 1.5 1.5 1.4 0 2.7-1.4 3-3.5.5-4 2-7 2-10.5 0-3.5-2.5-6-6-6z"/>
+          </svg>
+        </div>
+        <span class="font-bold text-[17px] text-slate-900 tracking-tight">Turnos Odontológicos AR</span>
+      </div>
+
+      <!-- Navegación por pastillas -->
+      <nav class="flex items-center gap-1.5">
+        <!-- Agenda (activa) -->
+        <a href="#" class="inline-flex items-center gap-2 px-3 py-1.5 rounded-btn text-sm font-medium bg-sky-100 text-sky-700 transition-colors">
+          <svg class="w-4 h-4 text-sky-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+          </svg>
+          Agenda
+        </a>
+        <a href="#" class="px-3 py-1.5 rounded-btn text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors">Prestaciones</a>
+        <a href="#" class="px-3 py-1.5 rounded-btn text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors">Usuarios</a>
+        <a href="#" class="px-3 py-1.5 rounded-btn text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors">Horario</a>
+        <a href="#" class="px-3 py-1.5 rounded-btn text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors">Bloqueos</a>
+        <a href="#" class="px-3 py-1.5 rounded-btn text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 transition-colors">Mi contraseña</a>
+      </nav>
+    </div>
+
+    <!-- Usuario y sesión -->
+    <div class="flex items-center gap-4">
+      <div class="flex items-center gap-2 text-right">
+        <div>
+          <div class="text-sm font-medium text-slate-800 leading-none">recepcion@consultorio-demo.test</div>
+          <div class="text-xs text-slate-500 mt-0.5 leading-none">Recepcionista</div>
+        </div>
+      </div>
+      <div class="h-6 w-px bg-slate-200"></div>
+      <button class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-btn text-xs font-medium text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 hover:text-slate-900 transition-colors">
+        <svg class="w-3.5 h-3.5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+          <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/>
+        </svg>
+        Cerrar sesión
+      </button>
+    </div>
+  </header>
+
+  <!-- CONTENIDO PRINCIPAL: LAYOUT DE 2 COLUMNAS (AGENDA + HISTORIAL) -->
+  <div class="flex-1 flex overflow-hidden">
+    
+    <!-- ÁREA DE LA AGENDA (Izquierda) -->
+    <main class="flex-1 overflow-y-auto p-8">
+      <div class="max-w-5xl mx-auto">
+        
+        <!-- Encabezado de vista -->
+        <div class="flex items-start justify-between mb-6">
+          <div>
+            <h1 class="text-2xl font-bold text-slate-900 tracking-tight">Agenda del día</h1>
+            <p class="text-xs text-slate-500 mt-1">Horas del consultorio (America/Argentina/Buenos_Aires).</p>
+          </div>
+          <button class="inline-flex items-center gap-1.5 px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded-btn text-sm font-medium shadow-xs transition-colors">
+            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4"/>
+            </svg>
+            Nuevo turno
+          </button>
+        </div>
+
+        <!-- Barra de selector de fecha -->
+        <div class="bg-white border border-slate-200 rounded-card p-2 mb-6 flex items-center justify-between shadow-xs">
+          <div class="flex items-center gap-2">
+            <button class="inline-flex items-center gap-1 px-3 py-1.5 rounded-btn text-xs font-medium text-slate-600 border border-slate-200 hover:bg-slate-50 hover:text-slate-900 transition-colors">
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/>
+              </svg>
+              Día anterior
+            </button>
+            <div class="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-btn text-xs font-semibold tabular-nums text-slate-800">
+              02/11/2026
+            </div>
+            <span class="text-sm font-medium text-slate-700 px-2">
+              lunes 2 de noviembre de 2026
+            </span>
+            <button class="inline-flex items-center gap-1 px-3 py-1.5 rounded-btn text-xs font-medium text-slate-600 border border-slate-200 hover:bg-slate-50 hover:text-slate-900 transition-colors">
+              Día siguiente
+              <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/>
+              </svg>
+            </button>
+          </div>
+          <div>
+            <button class="px-3 py-1.5 rounded-btn text-xs font-medium text-slate-700 border border-slate-200 hover:bg-slate-50 transition-colors">
+              Hoy
+            </button>
+          </div>
+        </div>
+
+        <!-- Tabla densa de turnos -->
+        <div class="bg-white border border-slate-200 rounded-card shadow-xs overflow-hidden">
+          <table class="w-full text-left border-collapse text-xs">
+            <thead>
+              <tr class="border-b border-slate-200 bg-slate-50/75 text-slate-500 font-semibold tracking-wider">
+                <th class="py-2.5 px-4 font-semibold">HORA</th>
+                <th class="py-2.5 px-4 font-semibold">PACIENTE</th>
+                <th class="py-2.5 px-4 font-semibold">PRESTACIÓN</th>
+                <th class="py-2.5 px-4 font-semibold">ESTADO</th>
+                <th class="py-2.5 px-4 text-right font-normal sr-only">ACCIONES</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-slate-100">
+              
+              <!-- FILA 1: Ana Ejemplo (SELECCIONADA) -->
+              <tr class="relative bg-sky-50/60 hover:bg-sky-50 transition-colors group">
+                <!-- Franja de color de prestación -->
+                <td class="py-3 px-4 tabular-nums font-semibold text-slate-900 relative">
+                  <div class="absolute left-0 top-0 bottom-0 w-1 bg-[#1E88E5]"></div>
+                  09:00 – 09:30
+                </td>
+                <td class="py-3 px-4 font-semibold text-slate-900">
+                  Ana Ejemplo
+                </td>
+                <td class="py-3 px-4">
+                  <div class="flex items-center gap-2 text-slate-700 font-medium">
+                    <span class="w-2 h-2 rounded-full inline-block" style="background-color: #1E88E5;"></span>
+                    Consulta / control
+                  </div>
+                </td>
+                <td class="py-3 px-4">
+                  <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-sky-100 text-sky-800 border border-sky-200/60">
+                    Reservado
+                  </span>
+                </td>
+                <td class="py-3 px-4 text-right">
+                  <button class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-btn text-[11px] font-medium text-sky-700 bg-white border border-sky-300 hover:bg-sky-50 shadow-2xs transition-colors">
+                    <svg class="w-3.5 h-3.5 text-sky-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    Historial
+                  </button>
+                </td>
+              </tr>
+
+              <!-- FILA 2: Bruno Ficticio -->
+              <tr class="hover:bg-slate-50/80 transition-colors group">
+                <td class="py-3 px-4 tabular-nums font-medium text-slate-800 relative">
+                  <div class="absolute left-0 top-0 bottom-0 w-1 bg-[#43A047]"></div>
+                  10:00 – 10:45
+                </td>
+                <td class="py-3 px-4 font-medium text-slate-800">
+                  Bruno Ficticio
+                </td>
+                <td class="py-3 px-4">
+                  <div class="flex items-center gap-2 text-slate-700">
+                    <span class="w-2 h-2 rounded-full inline-block" style="background-color: #43A047;"></span>
+                    Limpieza
+                  </div>
+                </td>
+                <td class="py-3 px-4">
+                  <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-sky-100 text-sky-800 border border-sky-200/60">
+                    Reservado
+                  </span>
+                </td>
+                <td class="py-3 px-4 text-right">
+                  <button class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-btn text-[11px] font-medium text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 hover:text-slate-900 transition-colors">
+                    <svg class="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    Historial
+                  </button>
+                </td>
+              </tr>
+
+              <!-- FILA 3: Carla Inventada -->
+              <tr class="hover:bg-slate-50/80 transition-colors group">
+                <td class="py-3 px-4 tabular-nums font-medium text-slate-800 relative">
+                  <div class="absolute left-0 top-0 bottom-0 w-1 bg-[#FB8C00]"></div>
+                  11:00 – 12:00
+                </td>
+                <td class="py-3 px-4 font-medium text-slate-800">
+                  Carla Inventada
+                </td>
+                <td class="py-3 px-4">
+                  <div class="flex items-center gap-2 text-slate-700">
+                    <span class="w-2 h-2 rounded-full inline-block" style="background-color: #FB8C00;"></span>
+                    Obturación
+                  </div>
+                </td>
+                <td class="py-3 px-4">
+                  <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-sky-100 text-sky-800 border border-sky-200/60">
+                    Reservado
+                  </span>
+                </td>
+                <td class="py-3 px-4 text-right">
+                  <button class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-btn text-[11px] font-medium text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 hover:text-slate-900 transition-colors">
+                    <svg class="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    Historial
+                  </button>
+                </td>
+              </tr>
+
+            </tbody>
+          </table>
+          <div class="px-4 py-2.5 bg-slate-50/50 border-t border-slate-200 flex items-center justify-between text-xs text-slate-500">
+            <span class="tabular-nums font-medium text-slate-600">3 turnos agendados</span>
+            <div class="flex items-center gap-1.5 text-[11px]">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+              Agenda sincronizada en tiempo real
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </main>
+
+    <!-- PANEL LATERAL DERECHO: HISTORIAL DEL TURNO (~420px, solo lectura, borde izquierdo) -->
+    <aside class="w-[420px] bg-white border-l border-slate-200 flex flex-col shadow-lg z-20 shrink-0">
+      
+      <!-- Cabecera del panel -->
+      <div class="p-5 border-b border-slate-200 flex items-start justify-between">
+        <div>
+          <div class="flex items-center gap-2">
+            <h2 class="text-base font-bold text-slate-900 tracking-tight">Historial del turno</h2>
+            <span class="px-2 py-0.5 rounded text-[10px] font-medium uppercase tracking-wide bg-slate-100 text-slate-600 border border-slate-200">
+              Solo lectura
+            </span>
+          </div>
+          <!-- Resumen del turno en gris -->
+          <div class="mt-2 space-y-0.5">
+            <div class="text-xs font-semibold text-slate-700 flex items-center gap-1.5">
+              <span>Ana Ejemplo</span>
+              <span class="text-slate-300">·</span>
+              <span class="text-slate-600 font-normal">Consulta / control</span>
+            </div>
+            <div class="text-[11px] text-slate-500 tabular-nums">
+              lunes 2 de noviembre de 2026, 09:00 – 09:30
+            </div>
+          </div>
+          <!-- Nota chica gris -->
+          <p class="text-[11px] text-slate-400 italic mt-2">
+            Solo lectura: el historial no se puede editar.
+          </p>
+        </div>
+
+        <button aria-label="Cerrar panel" class="p-1 rounded-btn text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors">
+          <svg class="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12"/>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Cuerpo deslizable del panel con la línea de tiempo -->
+      <div class="flex-1 overflow-y-auto p-5 space-y-6">
+        
+        <!-- SECCIÓN: LÍNEA DE TIEMPO VERTICAL -->
+        <div>
+          <div class="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-3">
+            Trazabilidad de eventos
+          </div>
+
+          <div class="relative pl-6 space-y-4 before:content-[''] before:absolute before:left-2 before:top-2 before:bottom-2 before:w-0.5 before:bg-slate-200">
+            
+            <!-- Evento 1: Turno creado -->
+            <div class="relative">
+              <!-- Punto en la línea -->
+              <div class="absolute -left-6 top-1 w-4 h-4 rounded-full bg-white border-2 border-sky-600 flex items-center justify-center">
+                <div class="w-1.5 h-1.5 rounded-full bg-sky-600"></div>
+              </div>
+              
+              <div class="bg-slate-50 border border-slate-200 rounded-card p-3 shadow-2xs">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-semibold text-slate-900">Turno creado</span>
+                  <span class="text-[10px] text-slate-400 tabular-nums font-mono">EV-01</span>
+                </div>
+                <div class="text-[11px] text-slate-600 tabular-nums mt-0.5">
+                  lunes 26 de octubre de 2026, 10:15
+                </div>
+                <div class="text-[11px] text-slate-700 mt-1 font-medium">
+                  Por: <span class="text-slate-900">Usuario n.º 2</span>
+                </div>
+                <div class="mt-2 pt-2 border-t border-slate-200/70 text-[11px] text-slate-500 flex items-center gap-1.5">
+                  <span class="w-1.5 h-1.5 rounded-full bg-sky-500"></span>
+                  <span>Estado inicial: Reservado · 09:00 – 09:30</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Evento 2: Actor sin identificar -->
+            <div class="relative">
+              <!-- Punto en la línea -->
+              <div class="absolute -left-6 top-1 w-4 h-4 rounded-full bg-white border-2 border-slate-400 flex items-center justify-center">
+                <div class="w-1.5 h-1.5 rounded-full bg-slate-400"></div>
+              </div>
+
+              <div class="bg-slate-50 border border-slate-200 rounded-card p-3 shadow-2xs">
+                <div class="flex items-center justify-between">
+                  <span class="text-xs font-semibold text-slate-900">Turno creado</span>
+                  <span class="text-[10px] text-slate-400 tabular-nums font-mono">EV-02</span>
+                </div>
+                <div class="text-[11px] text-slate-600 tabular-nums mt-0.5">
+                  martes 27 de octubre de 2026, 08:40
+                </div>
+                <div class="text-[11px] text-slate-700 mt-1 font-medium">
+                  Por: <span class="text-slate-500 italic">Usuario del panel (sin identificar)</span>
+                </div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        <!-- SEPARADOR CON LÍNEA PUNTEADA Y ESTADOS ALTERNATIVOS -->
+        <div class="pt-2">
+          <div class="relative flex items-center justify-center mb-4">
+            <div class="border-t border-dashed border-slate-300 w-full absolute"></div>
+            <span class="bg-white px-2.5 text-[10px] font-semibold uppercase tracking-wider text-slate-400 relative z-10">
+              Estados alternativos
+            </span>
+          </div>
+
+          <div class="space-y-3">
+            <!-- Ejemplo 1: Sin eventos registrados -->
+            <div class="p-3 bg-slate-50/70 border border-dashed border-slate-200 rounded-card text-center">
+              <p class="text-xs text-slate-500">
+                Este turno no tiene eventos registrados.
+              </p>
+            </div>
+
+            <!-- Ejemplo 2: Aviso rojo suave (ya no existe) -->
+            <div class="p-3 bg-red-50 border border-red-200 rounded-card flex items-start gap-2.5">
+              <svg class="w-4 h-4 text-red-600 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/>
+              </svg>
+              <div class="text-xs text-red-800">
+                El turno ya no existe <span class="font-mono text-[11px] font-semibold text-red-900 bg-red-100/80 px-1 py-0.5 rounded">(RN-GL-04)</span>.
+              </div>
+            </div>
+
+            <!-- Ejemplo 3: Error de red con reintentar -->
+            <div class="p-3 bg-amber-50/80 border border-amber-200 rounded-card flex items-start justify-between gap-3">
+              <div class="flex items-start gap-2">
+                <svg class="w-4 h-4 text-amber-600 shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                  <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                </svg>
+                <p class="text-xs text-amber-900 leading-snug">
+                  No se pudo conectar con el servidor. Probá de nuevo en unos minutos.
+                </p>
+              </div>
+              <button class="shrink-0 px-2.5 py-1 bg-white border border-amber-300 text-amber-900 hover:bg-amber-100/50 rounded-btn text-[11px] font-medium transition-colors shadow-2xs">
+                Reintentar
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Pie del panel: solo botón con borde «Cerrar» -->
+      <div class="p-4 border-t border-slate-200 bg-slate-50 flex items-center justify-end">
+        <button class="w-full py-2 px-4 rounded-btn text-xs font-semibold text-slate-700 bg-white border border-slate-300 hover:bg-slate-100 hover:text-slate-900 transition-colors shadow-2xs">
+          Cerrar
+        </button>
+      </div>
+
+    </aside>
+
+  </div>
+
+  <!-- Pie institucional inferior -->
+  <footer class="bg-white border-t border-slate-200 px-6 py-2 text-center text-[11px] text-slate-400">
+    Turnos Odontológicos AR · Módulo de Agenda y Turnos del Día · Sede Central
+  </footer>
+
+</body>
+</html>

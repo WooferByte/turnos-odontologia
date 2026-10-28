@@ -489,7 +489,7 @@ Primer change: `/opsx:propose crear-turno-sin-solapamientos`.
   - `knowledge-base/05_reglas_de_negocio.md` RN-AG-01, RN-GL-01, RN-GL-02, RN-GL-04 · `knowledge-base/10_preguntas_abiertas.md` D110, D231, D234, D312, D315 a D325
 
 ### [C-15] `panel-historial-de-turno`
-- **Estado**: `[ ]` pendiente · **Orden**: 4 · **Gobernanza**: BAJO
+- **Estado**: `[~]` en curso · **Orden**: 4 · **Gobernanza**: BAJO
 - **Objetivo** (US-015): ver desde el panel quién cambió qué y cuándo en un turno (parte de interfaz; la API es de C-03).
 - **Alcance — dentro**: vista de solo lectura del historial de un turno, abierta desde la agenda, contra `GET /turnos/{id}/historial`; visible para odontólogo, recepcionista y dueño.
 - **Alcance — fuera**: editar o borrar eventos (no existe); historial para el paciente (D68); auditoría de pacientes (C-21).
@@ -499,7 +499,7 @@ Primer change: `/opsx:propose crear-turno-sin-solapamientos`.
   - `knowledge-base/06_funcionalidades.md` §US-015
   - `knowledge-base/03_actores_y_roles.md` matriz, fila «Historial de cambios de turno»
   - `knowledge-base/04_modelo_de_datos.md` §EventoTurno
-  - `knowledge-base/05_reglas_de_negocio.md` RN-AG-11
+  - `knowledge-base/05_reglas_de_negocio.md` RN-AG-11 · `knowledge-base/10_preguntas_abiertas.md` D68, D112, D159, D160, D234, D323, D326 a D331
 
 ### [C-16] `reprogramar-turno`
 - **Estado**: `[ ]` pendiente · **Orden**: 4 · **Gobernanza**: MEDIO
@@ -995,7 +995,7 @@ Primer change: `/opsx:propose crear-turno-sin-solapamientos`.
 
 ## Verificación cruzada
 
-**Fecha de la verificación: 2026-10-28** (undécima corrida, después del archive de C-14 `agenda-del-dia`, que sumó las citas de D315 a D325 y dejó C-14 `[x]`; la décima fue del 2026-10-27, después del `/opsx:update` de C-50 `usuario-de-la-sesion`, que sumó `GET /auth/yo` a `02` y `03` y citó la ruta y D304 a D314 en su entrada, con C-01 a C-13 y C-49 archivados y las decisiones de la knowledge-base hasta D314; la novena fue del mismo día, al agregar C-50, y las anteriores fueron del 2026-10-20, del 2026-10-15, del 2026-10-14 y del 2026-10-05). Esta corrida repitió todas las filas con `scripts/verificar_changes.py` (versionado, solo lectura, solo biblioteca estándar), que lee este archivo y la knowledge-base tal como están y compara los identificadores uno por uno; se corre con `python scripts/verificar_changes.py` desde la raíz del repositorio (en Windows, `backend/.venv/Scripts/python.exe scripts/verificar_changes.py`), no modifica nada y sale con código 1 si hay alguna diferencia. El docstring del script define qué cuenta como «citado» en cada fila. **Hay que repetirla cada vez que se edite este archivo o los archivos 02 a 06, 09 o 10 de la knowledge-base**: el resultado vale solo para el contenido verificado.
+**Fecha de la verificación: 2026-10-28** (duodécima corrida, después del `/opsx:update` de C-15 `panel-historial-de-turno`, que citó D326 a D331 en su entrada y anotó D331 en `02` y la lectura de US-015 en `06`; la undécima fue del mismo día, después del archive de C-14 `agenda-del-dia`, que sumó las citas de D315 a D325 y dejó C-14 `[x]`; la décima fue del 2026-10-27, después del `/opsx:update` de C-50 `usuario-de-la-sesion`, que sumó `GET /auth/yo` a `02` y `03` y citó la ruta y D304 a D314 en su entrada, con C-01 a C-13 y C-49 archivados y las decisiones de la knowledge-base hasta D314; la novena fue del mismo día, al agregar C-50, y las anteriores fueron del 2026-10-20, del 2026-10-15, del 2026-10-14 y del 2026-10-05). Esta corrida repitió todas las filas con `scripts/verificar_changes.py` (versionado, solo lectura, solo biblioteca estándar), que lee este archivo y la knowledge-base tal como están y compara los identificadores uno por uno; se corre con `python scripts/verificar_changes.py` desde la raíz del repositorio (en Windows, `backend/.venv/Scripts/python.exe scripts/verificar_changes.py`), no modifica nada y sale con código 1 si hay alguna diferencia. El docstring del script define qué cuenta como «citado» en cada fila. **Hay que repetirla cada vez que se edite este archivo o los archivos 02 a 06, 09 o 10 de la knowledge-base**: el resultado vale solo para el contenido verificado.
 
 Qué compara cada fila: las cinco primeras son las verificaciones pedidas por el autor (la tercera se muestra separada en reglas, decisiones y escenarios); las marcadas «Adicional» se agregaron para cubrir el resto del índice. En la fila 6 «criterio» es un par (historia, CA-n) distinto y «cita» cada aparición en el archivo; no se cuentan solo las de «Escenarios mínimos» (178 citas, 158 pares), que es lo que midió por error la corrida del 2026-10-14 anterior a esta aclaración; un rango «CA-7 a CA-10» cita todos los del medio y «CA-2b» se agrupa con CA-2. Aplicado a los commits de las corridas del 2026-10-14 (2fc4bba y f5ab071), el script reproduce las cifras de las filas 1 a 8 y 10 a 12 y las 178 citas de «Escenarios mínimos»; difieren dos criterios. En la fila 7 se excluye esta sección y un rango «D195 a D203» cita solo sus extremos (con ese criterio salen las 59 y 63 D de aquellas corridas); el 66 de la corrida anterior contaba D115, que solo aparece en esta sección. En la fila 9 las 511 y 516 referencias de aquellas corridas no se pueden reproducir con ninguna definición razonable (el script anterior no se conservó): ahora se cuenta cada archivo, ID, sección, flujo y fila que nombra «Leer antes».
 
@@ -1009,9 +1009,9 @@ Qué compara cada fila: las cinco primeras son las verificaciones pedidas por el
 | 4 | Rutas: cada ruta HTTP citada (método y ruta) existe en `02_descripcion_general.md` o en `03_actores_y_roles.md` | 69 rutas citadas (02 y 03 listan 71, dos de ellas de Fase 2) | sin diferencias |
 | 5 | Tablas: cada entidad de `04_modelo_de_datos.md` tiene un change que la crea en «Tablas del modelo → change que las crea», ese change implementa la historia que nombra la columna «Change que la crea» de 04 y su entrada nombra la tabla | 23 tablas | sin diferencias |
 | 6 | Adicional: cada criterio CA-n citado como escenario, o como criterio que se completa en otro change, existe en su historia de 06 | 165 criterios distintos (pares historia y CA), en 263 citas de todo el índice (incluye «Leer antes» y el mapeo) | sin diferencias |
-| 7 | Adicional: cada decisión D-NN citada figura en el registro de `10_preguntas_abiertas.md`, cada SU-NN en 09 y cada P-NN en 10 | 89 D, 3 SU y 2 P | sin diferencias |
+| 7 | Adicional: cada decisión D-NN citada figura en el registro de `10_preguntas_abiertas.md`, cada SU-NN en 09 y cada P-NN en 10 | 94 D, 3 SU y 2 P | sin diferencias |
 | 8 | Adicional: cada ruta de la v1 listada en 02 y 03 está citada en alguna entrada (ninguna ruta queda sin change) | 69 rutas de la v1 | sin diferencias |
-| 9 | Adicional: cada sección («…», §), flujo e ID de «Leer antes» aparece en el archivo de la KB que la entrada indica, y el archivo existe | 877 referencias | sin diferencias |
+| 9 | Adicional: cada sección («…», §), flujo e ID de «Leer antes» aparece en el archivo de la KB que la entrada indica, y el archivo existe | 886 referencias | sin diferencias |
 | 10 | Adicional: el árbol por bloques muestra el mismo nombre, bloque y dependencias que cada entrada, y las puertas nombran los 50 changes | 50 nodos | sin diferencias |
 | 11 | Adicional: el camino crítico es una cadena de dependencias directas y es la más larga hasta un change del MVP | 15 changes | sin diferencias |
 | 12 | Adicional, formato: códigos consecutivos, nombres kebab-case únicos, 12 líneas como máximo por entrada, 3 a 6 escenarios (8 en C-01), 3 o 4 líneas de «Leer antes», sin emoji | 50 entradas | sin diferencias |
