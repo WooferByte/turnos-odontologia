@@ -171,8 +171,8 @@ def _manejar_error_de_dominio(request: Request, error: ErrorDeDominio) -> JSONRe
 
 
 def _campo_de(ubicacion: tuple) -> str | None:
-    """Ubicación de Pydantic sin el prefijo body ni path, unida con puntos; None si es del cuerpo."""
-    partes = [str(parte) for parte in ubicacion if parte not in ("body", "path")]
+    """Ubicación de Pydantic sin el prefijo body, path ni query, unida con puntos; None si es del cuerpo."""
+    partes = [str(parte) for parte in ubicacion if parte not in ("body", "path", "query")]
     return ".".join(partes) or None
 
 

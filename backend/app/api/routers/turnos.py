@@ -1,13 +1,21 @@
-"""``POST /turnos`` (D4) y ``GET /turnos/{id}/historial`` (H9). Endpoints síncronos (``def``, D12)."""
+"""``POST /turnos`` (D4), ``GET /turnos`` y ``GET /turnos/{id}`` (C-14) y ``GET /turnos/{id}/historial`` (H9). Endpoints síncronos (``def``, D12)."""
 from typing import Annotated
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 
 from app.api.deps import get_reloj, get_uow
-from app.api.esquemas import CrearTurnoEntrada, EventoTurnoSalida, TurnoSalida
+from app.api.esquemas import (
+    AgendaDelDiaSalida,
+    CrearTurnoEntrada,
+    EventoTurnoSalida,
+    FechaDelDia,
+    TurnoDeLaAgendaSalida,
+    TurnoSalida,
+)
 from app.api.respuestas import RESPUESTAS_DE_ACCESO, _respuesta_de_error
 from app.api.seguridad import requiere
 from app.application.crear_turno import CrearTurnoComando, crear_turno
+from app.application.consultar_turnos import agenda_del_dia, turno_de_la_agenda
 from app.application.historial import consultar_historial
 from app.application.puertos import UnidadDeTrabajo
 from app.domain.acceso.roles import Permiso, UsuarioDelPanel
@@ -20,6 +28,15 @@ RESPUESTAS_DE_ERROR = {
     **RESPUESTAS_DE_ACCESO,
     409: _respuesta_de_error("Solapamiento con un turno activo"),
     422: _respuesta_de_error("Entrada inválida o intervalo inválido"),
+}
+RESPUESTAS_DE_LA_AGENDA = {
+    **RESPUESTAS_DE_ACCESO,
+    422: _respuesta_de_error("La fecha no es un día aaaa-mm-dd entre 0001-01-02 y 9999-12-30"),
+}
+RESPUESTAS_DE_UN_TURNO = {
+    **RESPUESTAS_DE_ACCESO,
+    404: _respuesta_de_error("El turno no existe o es de otro consultorio (RN-GL-04)"),
+    422: _respuesta_de_error("El identificador del turno no es un número entero"),
 }
 RESPUESTAS_DEL_HISTORIAL = {
     **RESPUESTAS_DE_ACCESO,
@@ -45,6 +62,28 @@ def post_turnos(
     return TurnoSalida.desde_turno(
         crear_turno(comando, uow, reloj, actor=actor, creado_por=usuario.id)
     )
+
+
+@router.get("", response_model=AgendaDelDiaSalida, responses=RESPUESTAS_DE_LA_AGENDA)
+def get_turnos(
+    uow: Annotated[UnidadDeTrabajo, Depends(get_uow)],
+    reloj: Annotated[Reloj, Depends(get_reloj)],
+    usuario: Annotated[UsuarioDelPanel, Depends(requiere(Permiso.TURNOS_LEER))],
+    fecha: Annotated[
+        FechaDelDia | None,
+        Query(description="Día del consultorio (aaaa-mm-dd). Sin ella, el día de hoy del consultorio."),
+    ] = None,
+) -> AgendaDelDiaSalida:
+    return AgendaDelDiaSalida.desde_agenda(agenda_del_dia(fecha, usuario.id, uow, reloj))
+
+
+@router.get("/{turno_id}", response_model=TurnoDeLaAgendaSalida, responses=RESPUESTAS_DE_UN_TURNO)
+def get_turno(
+    turno_id: int,
+    uow: Annotated[UnidadDeTrabajo, Depends(get_uow)],
+    usuario: Annotated[UsuarioDelPanel, Depends(requiere(Permiso.TURNOS_LEER))],
+) -> TurnoDeLaAgendaSalida:
+    return TurnoDeLaAgendaSalida.desde_turno(turno_de_la_agenda(turno_id, usuario.id, uow))
 
 
 @router.get(

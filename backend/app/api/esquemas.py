@@ -1,5 +1,6 @@
 """Esquemas HTTP de ``/turnos`` (D4), ``/prestaciones`` (C-04), ``/sillones`` (C-05) y ``/bloqueos`` (C-13). Es la única capa que conoce Pydantic."""
-from datetime import datetime, time
+import re
+from datetime import date, datetime, time
 from typing import Annotated, Any
 
 from pydantic import (
@@ -15,7 +16,9 @@ from pydantic import (
 
 from app.application.acceso import UsuarioDeLaSesion
 from app.application.bloqueos import BloqueoCreado, BloqueosDelConsultorio
+from app.application.consultar_turnos import AgendaDelDia
 from app.application.horario import HorarioDelProfesional
+from app.application.puertos import TurnoDeLaAgenda
 from app.application.usuarios import UsuarioConRoles
 from app.domain.acceso.roles import Rol
 from app.domain.agenda.bloqueos import DatosBloqueo
@@ -103,6 +106,84 @@ class EventoTurnoSalida(BaseModel):
             antes=evento.antes,
             despues=evento.despues,
             motivo=evento.motivo,
+        )
+
+
+_SOLO_FECHA = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+
+
+def _exigir_solo_fecha(valor: object) -> object:
+    """``fecha`` es un día de calendario: sin hora ni zona, aunque la hora sea 00:00 (D316)."""
+    if isinstance(valor, str) and not _SOLO_FECHA.match(valor):
+        raise ValueError("La fecha debe tener el formato aaaa-mm-dd, sin hora ni zona.")
+    return valor
+
+
+# De 0001-01-02 a 9999-12-30: pasado a UTC el día tiene que caber en una fecha-hora para cualquier zona (D322).
+FechaDelDia = Annotated[
+    date,
+    BeforeValidator(_exigir_solo_fecha),
+    Field(ge=date(1, 1, 2), le=date(9999, 12, 30)),
+]
+
+
+class PacienteDeLaAgendaSalida(BaseModel):
+    """Del paciente solo el nombre: la agenda no trae el teléfono ni otros datos (RN-PR-01, D318)."""
+
+    id: int
+    nombre: str
+    apellido: str
+
+
+class PrestacionDeLaAgendaSalida(BaseModel):
+    id: int
+    nombre: str
+    color: str
+
+
+class TurnoDeLaAgendaSalida(BaseModel):
+    """Un turno de la agenda del día o de ``GET /turnos/{id}`` (D318)."""
+
+    id: int
+    inicio: datetime
+    fin: datetime
+    duracion_minutos: int
+    estado: str
+    profesional_id: int
+    sillon_id: int
+    paciente: PacienteDeLaAgendaSalida
+    prestacion: PrestacionDeLaAgendaSalida
+
+    @classmethod
+    def desde_turno(cls, turno: TurnoDeLaAgenda) -> "TurnoDeLaAgendaSalida":
+        return cls(
+            id=turno.id,
+            inicio=turno.inicio,
+            fin=turno.fin,
+            duracion_minutos=turno.duracion_minutos,
+            estado=turno.estado,
+            profesional_id=turno.profesional_id,
+            sillon_id=turno.sillon_id,
+            paciente=PacienteDeLaAgendaSalida(
+                id=turno.paciente_id, nombre=turno.paciente_nombre, apellido=turno.paciente_apellido
+            ),
+            prestacion=PrestacionDeLaAgendaSalida(
+                id=turno.prestacion_id, nombre=turno.prestacion_nombre, color=turno.prestacion_color
+            ),
+        )
+
+
+class AgendaDelDiaSalida(BaseModel):
+    fecha: date
+    zona_horaria: str
+    turnos: list[TurnoDeLaAgendaSalida]
+
+    @classmethod
+    def desde_agenda(cls, agenda: AgendaDelDia) -> "AgendaDelDiaSalida":
+        return cls(
+            fecha=agenda.fecha,
+            zona_horaria=agenda.zona_horaria,
+            turnos=[TurnoDeLaAgendaSalida.desde_turno(t) for t in agenda.turnos],
         )
 
 
