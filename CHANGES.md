@@ -476,7 +476,7 @@ Primer change: `/opsx:propose crear-turno-sin-solapamientos`.
 > C-14 y C-20 pueden empezar a la vez. C-15 a C-18 dependen de C-14 y no entre sí.
 
 ### [C-14] `agenda-del-dia`
-- **Estado**: `[ ]` pendiente · **Orden**: 4 · **Gobernanza**: BAJO
+- **Estado**: `[~]` en curso · **Orden**: 4 · **Gobernanza**: BAJO
 - **Objetivo** (US-011): ver los turnos del día y crear un turno desde la agenda.
 - **Alcance — dentro**: `GET /turnos` filtrado por fecha y `GET /turnos/{id}`; pantalla de agenda ordenada por inicio, con paciente, prestación, estado y color; formulario que crea el turno con `POST /turnos` y muestra los errores de dominio de US-010.
 - **Alcance — fuera**: las acciones sobre un turno, que cada change suma a esta agenda sin pantalla nueva: reprogramar, cancelar y marcar (C-16 a C-19), aprobar o rechazar (C-27, D112) y confirmar (C-33, D113); alta de pacientes (C-20); agenda multi-profesional y multi-sillón (Fase 2).
@@ -486,7 +486,7 @@ Primer change: `/opsx:propose crear-turno-sin-solapamientos`.
   - `knowledge-base/06_funcionalidades.md` §US-011 y nota «Changes técnicos y frontend» (D110)
   - `knowledge-base/02_descripcion_general.md` §«API REST (resumen)», fila Turnos · `knowledge-base/03_actores_y_roles.md` matriz, fila Turnos
   - `knowledge-base/07_flujos_principales.md` Flujo 1 · `knowledge-base/08_arquitectura_propuesta.md` §«Contrato del primer change» (mapeo a HTTP)
-  - `knowledge-base/05_reglas_de_negocio.md` RN-AG-01, RN-GL-02, RN-GL-04
+  - `knowledge-base/05_reglas_de_negocio.md` RN-AG-01, RN-GL-01, RN-GL-02, RN-GL-04 · `knowledge-base/10_preguntas_abiertas.md` D110, D231, D234, D312, D315 a D325
 
 ### [C-15] `panel-historial-de-turno`
 - **Estado**: `[ ]` pendiente · **Orden**: 4 · **Gobernanza**: BAJO
