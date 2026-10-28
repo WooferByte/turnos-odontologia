@@ -2,7 +2,7 @@
 import { IconoPapelera } from '../../shared/iconos/IconoPapelera'
 import type { Profesional } from '../horario/apiHorario'
 import type { Bloqueo, Sillon } from './apiBloqueos'
-import { aLocal } from './horaDelConsultorio'
+import { aLocal } from '../../shared/horaDelConsultorio'
 import { etiquetaDelAlcance } from './mensajes'
 
 interface Propiedades {

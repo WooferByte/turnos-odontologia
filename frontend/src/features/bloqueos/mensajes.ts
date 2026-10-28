@@ -3,7 +3,7 @@
 import { EntradaRechazada, PermisoInsuficiente, RecursoInexistente } from '../../shared/api/errores'
 import type { Profesional } from '../horario/apiHorario'
 import type { Bloqueo, Sillon, TurnoAfectado } from './apiBloqueos'
-import { aLocal } from './horaDelConsultorio'
+import { aLocal } from '../../shared/horaDelConsultorio'
 
 export const MENSAJE_CARGANDO = 'Cargando bloqueos…'
 export const MENSAJE_SIN_CONEXION = 'No se pudo conectar con el servidor. Probá de nuevo en unos minutos.'

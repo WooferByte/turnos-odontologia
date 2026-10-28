@@ -1,9 +1,28 @@
 import { describe, expect, it } from 'vitest'
-import { aLocal, aUtc } from './horaDelConsultorio'
+import { aLocal, aUtc, fechaLocal, horaLocal } from './horaDelConsultorio'
 
 const ZONA = 'America/Argentina/Buenos_Aires'
 
 describe('horaDelConsultorio', () => {
+  it('AGE-4a: horaLocal da la hora del consultorio', () => {
+    expect(horaLocal('2026-11-02T12:00:00Z', ZONA)).toBe('09:00')
+    expect(horaLocal('2026-11-02T15:00:00Z', ZONA)).toBe('12:00')
+  })
+
+  it('AGE-4a: horaLocal cruza la medianoche de UTC hacia el día anterior del consultorio', () => {
+    expect(horaLocal('2026-11-03T02:59:00Z', ZONA)).toBe('23:59')
+    expect(horaLocal('2026-11-03T03:00:00Z', ZONA)).toBe('00:00')
+  })
+
+  it('AGE-5h: fechaLocal da la fecha del consultorio, no la de UTC', () => {
+    expect(fechaLocal('2026-11-04T01:00:00Z', ZONA)).toBe('2026-11-03')
+    expect(fechaLocal('2026-11-02T03:00:00Z', ZONA)).toBe('2026-11-02')
+  })
+
+  it('AGE-5h: fechaLocal justo antes de la medianoche local sigue en el día anterior', () => {
+    expect(fechaLocal('2026-11-02T02:59:00Z', ZONA)).toBe('2026-11-01')
+  })
+
   it('US-003 CA-1: 23/11/2026 00:00 del consultorio es 2026-11-23T03:00:00Z y vuelve igual', () => {
     const utc = aUtc('2026-11-23T00:00', ZONA)
 

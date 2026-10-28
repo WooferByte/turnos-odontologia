@@ -8,6 +8,7 @@ import {
   SinConexion,
   type ErrorDeApi,
   type ErrorDeCampo,
+  type ReferenciaRechazada,
 } from './errores'
 
 const MENSAJE_SIN_CONEXION = 'No se pudo conectar con el servidor.'
@@ -15,6 +16,7 @@ const MENSAJE_SIN_CONEXION = 'No se pudo conectar con el servidor.'
 interface CuerpoDelProblema {
   codigos: string[]
   errores: ErrorDeCampo[]
+  referencias: ReferenciaRechazada[]
 }
 
 function esObjeto(valor: unknown): valor is Record<string, unknown> {
@@ -30,10 +32,18 @@ function errorDeCampo(valor: unknown): ErrorDeCampo | null {
   return { campo, codigo, mensaje }
 }
 
+function referencia(valor: unknown): ReferenciaRechazada | null {
+  if (!esObjeto(valor)) return null
+  const { recurso, recurso_id: id, motivo } = valor
+  if (typeof recurso !== 'string' || typeof motivo !== 'string') return null
+  if (id !== null && typeof id !== 'number') return null
+  return { recurso, recurso_id: id, motivo }
+}
+
 async function leerProblema(respuesta: Response): Promise<CuerpoDelProblema> {
   try {
     const cuerpo: unknown = await respuesta.clone().json()
-    if (!esObjeto(cuerpo)) return { codigos: [], errores: [] }
+    if (!esObjeto(cuerpo)) return { codigos: [], errores: [], referencias: [] }
     const codigos = Array.isArray(cuerpo.codigos)
       ? cuerpo.codigos.filter((c: unknown): c is string => typeof c === 'string')
       : []
@@ -43,14 +53,20 @@ async function leerProblema(respuesta: Response): Promise<CuerpoDelProblema> {
           return campo === null ? [] : [campo]
         })
       : []
-    return { codigos, errores }
+    const referencias = Array.isArray(cuerpo.referencias)
+      ? cuerpo.referencias.flatMap((r: unknown) => {
+          const ref = referencia(r)
+          return ref === null ? [] : [ref]
+        })
+      : []
+    return { codigos, errores, referencias }
   } catch {
-    return { codigos: [], errores: [] }
+    return { codigos: [], errores: [], referencias: [] }
   }
 }
 
 export async function traducirRechazo(respuesta: Response): Promise<ErrorDeApi> {
-  const { codigos, errores } = await leerProblema(respuesta)
+  const { codigos, errores, referencias } = await leerProblema(respuesta)
   const codigo = codigos[0] ?? null
   switch (respuesta.status) {
     case 403:
@@ -58,9 +74,9 @@ export async function traducirRechazo(respuesta: Response): Promise<ErrorDeApi> 
     case 404:
       return new RecursoInexistente('Recurso inexistente.', codigo)
     case 409:
-      return new ReglaRechazada('Regla de negocio rechazada.', codigo)
+      return new ReglaRechazada('Regla de negocio rechazada.', codigo, codigos)
     case 422:
-      return new EntradaRechazada('Entrada rechazada.', codigo, codigos, errores)
+      return new EntradaRechazada('Entrada rechazada.', codigo, codigos, errores, referencias)
     default:
       return new SinConexion(MENSAJE_SIN_CONEXION, null)
   }

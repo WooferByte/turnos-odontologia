@@ -8,7 +8,7 @@ import { IconoInfo } from '../../shared/iconos/IconoInfo'
 import { crearApiHorario, type Profesional } from '../horario/apiHorario'
 import { crearApiBloqueos, type Bloqueo, type NuevoBloqueo, type Sillon, type TurnoAfectado } from './apiBloqueos'
 import { FORMULARIO_VACIO, FormularioDeBloqueo, type ValoresDelFormulario } from './FormularioDeBloqueo'
-import { aUtc } from './horaDelConsultorio'
+import { aUtc } from '../../shared/horaDelConsultorio'
 import { ListaDeBloqueos } from './ListaDeBloqueos'
 import {
   MENSAJE_CARGANDO,

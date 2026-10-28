@@ -114,7 +114,7 @@ export interface BloqueoFalso {
   creado_por: number
 }
 
-/** Un turno de partida del falso, para calcular los turnos afectados al crear un bloqueo (US-003 CA-2). */
+/** Un turno de partida del falso, para calcular los turnos afectados al crear un bloqueo (US-003 CA-2) y para la agenda. */
 export interface TurnoFalso {
   id: number
   inicio: string
@@ -123,7 +123,32 @@ export interface TurnoFalso {
   profesional_id: number
   sillon_id: number
   paciente_id: number
+  /** La prestación del turno en la agenda; sin ella, la 1 (los tests de los bloqueos no la usan). */
+  prestacion_id?: number
 }
+
+export interface PacienteFalso {
+  id: number
+  nombre: string
+  apellido: string
+}
+
+/** Los tres pacientes de la demo (ids 1 a 3), ficticios (RN-PR-01). */
+export const PACIENTES_DE_PARTIDA: readonly PacienteFalso[] = [
+  { id: 1, nombre: 'Ana', apellido: 'Ejemplo' },
+  { id: 2, nombre: 'Bruno', apellido: 'Ficticio' },
+  { id: 3, nombre: 'Carla', apellido: 'Inventada' },
+]
+
+/** El «hoy» del consultorio en el falso: el lunes 2 de noviembre de 2026. */
+export const HOY_DEL_FALSO = '2026-11-02'
+
+/** Los tres turnos del 2 de noviembre de la agenda (AGE-4a): 09:00, 10:00 y 11:00 hora del consultorio. */
+export const TURNOS_DE_LA_AGENDA: readonly TurnoFalso[] = [
+  { id: 11, inicio: '2026-11-02T12:00:00Z', fin: '2026-11-02T12:30:00Z', estado: 'reservado', profesional_id: 1, sillon_id: 1, paciente_id: 1, prestacion_id: 1 },
+  { id: 12, inicio: '2026-11-02T13:00:00Z', fin: '2026-11-02T13:45:00Z', estado: 'reservado', profesional_id: 1, sillon_id: 1, paciente_id: 2, prestacion_id: 2 },
+  { id: 13, inicio: '2026-11-02T14:00:00Z', fin: '2026-11-02T15:00:00Z', estado: 'confirmado', profesional_id: 1, sillon_id: 1, paciente_id: 3, prestacion_id: 3 },
+]
 
 /** Vacaciones del profesional 1 (9 al 14 de noviembre de 2026, hora del consultorio). */
 export const BLOQUEO_DE_VACACIONES: BloqueoFalso = {
@@ -166,8 +191,12 @@ export interface OpcionesDelServidorFalso {
   sillones?: readonly SillonFalso[]
   /** Bloqueos de partida; por defecto ninguno. */
   bloqueos?: readonly BloqueoFalso[]
-  /** Turnos de partida (solo para calcular los turnos afectados); por defecto ninguno. */
+  /** Turnos de partida (los afectados por un bloqueo y los de la agenda); por defecto ninguno. */
   turnos?: readonly TurnoFalso[]
+  /** Pacientes del consultorio; por defecto `PACIENTES_DE_PARTIDA`. */
+  pacientes?: readonly PacienteFalso[]
+  /** El día de hoy del consultorio (`aaaa-mm-dd`); por defecto `HOY_DEL_FALSO`. */
+  hoy?: string
 }
 
 export interface ServidorFalso {
@@ -200,6 +229,12 @@ export interface ServidorFalso {
   quitarBloqueo(id: number): void
   /** Marca inactivo a un profesional (la demo no tiene cómo hacerlo). */
   marcarInactivo(id: number): void
+  /** Copia de los turnos del falso en este momento (los de partida y los creados con `POST /api/turnos`). */
+  turnosActuales(): TurnoFalso[]
+  /** El próximo `POST /api/turnos` responde ese rechazo (con esos códigos) en lugar de evaluarse; vale una sola vez. */
+  responderAlCrear(estado: number, codigos: readonly string[]): void
+  /** Esa prestación pasa a inactiva justo después de la próxima respuesta de `GET /api/prestaciones`. */
+  desactivarTrasListar(prestacionId: number): void
   /** A partir de ahora toda petición falla como una red caída (fetch rechaza). */
   caerse(): void
   /** Deshace `caerse` y `responderConError`: la API vuelve a responder. */
@@ -523,6 +558,10 @@ export function crearServidorFalso(opciones: OpcionesDelServidorFalso = {}): Ser
   const sillones: SillonFalso[] = (opciones.sillones ?? SILLONES_DE_PARTIDA).map((x) => ({ ...x }))
   const bloqueos: BloqueoFalso[] = (opciones.bloqueos ?? []).map((b) => ({ ...b }))
   const turnos: TurnoFalso[] = (opciones.turnos ?? []).map((t) => ({ ...t }))
+  const pacientes: PacienteFalso[] = (opciones.pacientes ?? PACIENTES_DE_PARTIDA).map((p) => ({ ...p }))
+  const hoy = opciones.hoy ?? HOY_DEL_FALSO
+  let rechazoAlCrear: { estado: number; codigos: readonly string[] } | null = null
+  let prestacionADesactivar: number | null = null
   // Versión del token de cada usuario: desactivar la sube y los tokens anteriores dejan de servir (RN-AU-03).
   const versiones = new Map<number, number>()
   // Contraseña vigente por usuario, en claro: es un falso de tests, nunca sale de ellos (K13).
@@ -627,7 +666,13 @@ export function crearServidorFalso(opciones: OpcionesDelServidorFalso = {}): Ser
   }
 
   function listarPrestaciones(init: RequestInit | undefined): Response {
-    return autorizar(init, null).rechazo ?? json(200, catalogo.map((p) => ({ ...p })))
+    const respuesta = autorizar(init, null).rechazo ?? json(200, catalogo.map((p) => ({ ...p })))
+    if (prestacionADesactivar !== null) {
+      const prestacion = catalogo.find((p) => p.id === prestacionADesactivar)
+      if (prestacion !== undefined) prestacion.activa = false
+      prestacionADesactivar = null
+    }
+    return respuesta
   }
 
   function crearPrestacion(init: RequestInit | undefined): Response {
@@ -875,6 +920,106 @@ export function crearServidorFalso(opciones: OpcionesDelServidorFalso = {}): Ser
     return new Response(null, { status: 204 })
   }
 
+  /** Un turno de la agenda: el paciente y la prestación salen del catálogo del falso (la prestación puede estar inactiva). */
+  function salidaDeTurnoDeLaAgenda(turno: TurnoFalso) {
+    const paciente = pacientes.find((p) => p.id === turno.paciente_id)
+    const prestacion = catalogo.find((p) => p.id === (turno.prestacion_id ?? 1))
+    return {
+      id: turno.id,
+      inicio: turno.inicio,
+      fin: turno.fin,
+      duracion_minutos: (Date.parse(turno.fin) - Date.parse(turno.inicio)) / 60000,
+      estado: turno.estado,
+      profesional_id: turno.profesional_id,
+      sillon_id: turno.sillon_id,
+      paciente: { id: turno.paciente_id, nombre: paciente?.nombre ?? '', apellido: paciente?.apellido ?? '' },
+      prestacion: {
+        id: prestacion?.id ?? turno.prestacion_id ?? 1,
+        nombre: prestacion?.nombre ?? '',
+        color: prestacion?.color ?? '#9E9E9E',
+      },
+    }
+  }
+
+  /** `GET /api/turnos[?fecha=aaaa-mm-dd]`: el día del consultorio es de 03:00Z a 03:00Z (UTC-3 fijo), por inicio e id. */
+  function listarTurnos(fechaPedida: string | undefined, init: RequestInit | undefined): Response {
+    const { rechazo } = autorizar(init, null)
+    if (rechazo !== null) return rechazo
+    const fecha = fechaPedida ?? hoy
+    const desde = Date.parse(`${fecha}T03:00:00Z`)
+    const hasta = desde + 24 * 60 * 60 * 1000
+    const delDia = turnos
+      .filter((t) => Date.parse(t.inicio) >= desde && Date.parse(t.inicio) < hasta)
+      .sort((a, b) => Date.parse(a.inicio) - Date.parse(b.inicio) || a.id - b.id)
+    return json(200, { fecha, zona_horaria: ZONA_DEL_CONSULTORIO, turnos: delDia.map(salidaDeTurnoDeLaAgenda) })
+  }
+
+  /**
+   * `POST /api/turnos` con tres comportamientos mínimos (A16): las referencias inexistentes o inactivas
+   * (`422` `RN-GL-04`), el solapamiento con un turno activo (`409` `RN-AG-05` y `RN-AG-08`, porque el falso tiene
+   * un solo profesional y un solo sillón) y, si no, `201` `reservado`. Los demás rechazos salen de `responderAlCrear`.
+   */
+  function crearTurno(init: RequestInit | undefined): Response {
+    const { rechazo, actor } = autorizar(init, ['odontologo', 'recepcionista'])
+    if (rechazo !== null || actor === null) return rechazo ?? sesionInvalida()
+    if (rechazoAlCrear !== null) {
+      const { estado, codigos } = rechazoAlCrear
+      rechazoAlCrear = null
+      return problema(estado, '/errores/regla', 'Regla rechazada', 'Rechazado.', [...codigos])
+    }
+    const cuerpo = leerCuerpo(init)
+    const pacienteId = Number(cuerpo?.paciente_id)
+    const prestacionId = Number(cuerpo?.prestacion_id)
+    const inicio = String(cuerpo?.inicio)
+    const referencias: { recurso: string; recurso_id: number; motivo: string }[] = []
+    if (!pacientes.some((p) => p.id === pacienteId)) {
+      referencias.push({ recurso: 'paciente', recurso_id: pacienteId, motivo: 'inexistente' })
+    }
+    const prestacion = catalogo.find((p) => p.id === prestacionId)
+    if (prestacion === undefined) {
+      referencias.push({ recurso: 'prestacion', recurso_id: prestacionId, motivo: 'inexistente' })
+    } else if (!prestacion.activa) {
+      referencias.push({ recurso: 'prestacion', recurso_id: prestacionId, motivo: 'inactivo' })
+    }
+    if (referencias.length > 0 || prestacion === undefined) {
+      return problema(422, '/errores/referencia-invalida', 'Referencia inválida', 'Hay referencias inválidas.', ['RN-GL-04'], {
+        referencias,
+      })
+    }
+    const desde = Date.parse(inicio)
+    const hasta = desde + prestacion.duracion_minutos * 60000
+    const ocupado = turnos.some(
+      (t) => ESTADOS_ACTIVOS.has(t.estado) && Date.parse(t.inicio) < hasta && desde < Date.parse(t.fin),
+    )
+    if (ocupado) {
+      return problema(409, '/errores/solapamiento-turno', 'Turno solapado', 'Solapamiento.', ['RN-AG-05', 'RN-AG-08'])
+    }
+    const nuevo: TurnoFalso = {
+      id: Math.max(0, ...turnos.map((t) => t.id)) + 1,
+      inicio: new Date(desde).toISOString().replace('.000Z', 'Z'),
+      fin: new Date(hasta).toISOString().replace('.000Z', 'Z'),
+      estado: 'reservado',
+      profesional_id: 1,
+      sillon_id: 1,
+      paciente_id: pacienteId,
+      prestacion_id: prestacionId,
+    }
+    turnos.push(nuevo)
+    return json(201, {
+      id: nuevo.id,
+      consultorio_id: 1,
+      paciente_id: nuevo.paciente_id,
+      profesional_id: 1,
+      sillon_id: 1,
+      prestacion_id: prestacionId,
+      inicio: nuevo.inicio,
+      fin: nuevo.fin,
+      duracion_minutos: prestacion.duracion_minutos,
+      estado: 'reservado',
+      creado_en: '2026-11-02T12:00:00Z',
+    })
+  }
+
   function subirVersion(id: number): void {
     versiones.set(id, (versiones.get(id) ?? 0) + 1)
   }
@@ -1028,6 +1173,9 @@ export function crearServidorFalso(opciones: OpcionesDelServidorFalso = {}): Ser
     if (delHorario !== null && metodo === 'PUT') {
       return Promise.resolve(reemplazarHorario(Number(delHorario[1]), init))
     }
+    const delDia = /^\/api\/turnos(?:\?fecha=(\d{4}-\d{2}-\d{2}))?$/.exec(entrada)
+    if (delDia !== null && metodo === 'GET') return Promise.resolve(listarTurnos(delDia[1], init))
+    if (entrada === '/api/turnos' && metodo === 'POST') return Promise.resolve(crearTurno(init))
     if (entrada === '/api/sillones' && metodo === 'GET') return Promise.resolve(listarSillones(init))
     if (entrada === '/api/bloqueos' && metodo === 'GET') return Promise.resolve(listarBloqueos(init))
     if (entrada === '/api/bloqueos' && metodo === 'POST') return Promise.resolve(crearBloqueo(init))
@@ -1064,6 +1212,13 @@ export function crearServidorFalso(opciones: OpcionesDelServidorFalso = {}): Ser
     },
     horarioActual: (profesionalId) => (horarios.get(profesionalId) ?? []).map((f) => ({ ...f })),
     bloqueosActuales: () => bloqueos.map((b) => ({ ...b })),
+    turnosActuales: () => turnos.map((t) => ({ ...t })),
+    responderAlCrear: (estado, codigos) => {
+      rechazoAlCrear = { estado, codigos }
+    },
+    desactivarTrasListar: (prestacionId) => {
+      prestacionADesactivar = prestacionId
+    },
     quitarBloqueo: (id) => {
       const indice = bloqueos.findIndex((b) => b.id === id)
       if (indice >= 0) bloqueos.splice(indice, 1)

@@ -18,6 +18,13 @@ export interface ErrorDeCampo {
   mensaje: string
 }
 
+/** Una referencia inválida de un `422` `RN-GL-04` (`referencias` de `application/problem+json`). */
+export interface ReferenciaRechazada {
+  recurso: string
+  recurso_id: number | null
+  motivo: string
+}
+
 /** 401 del login: email inexistente, contraseña incorrecta o usuario inactivo (RN-AU-04). */
 export class CredencialesRechazadas extends ErrorDeApi {}
 
@@ -25,16 +32,19 @@ export class CredencialesRechazadas extends ErrorDeApi {}
 export class EntradaRechazada extends ErrorDeApi {
   readonly codigos: readonly string[]
   readonly errores: readonly ErrorDeCampo[]
+  readonly referencias: readonly ReferenciaRechazada[]
 
   constructor(
     mensaje: string,
     codigo: string | null,
     codigos: readonly string[] = [],
     errores: readonly ErrorDeCampo[] = [],
+    referencias: readonly ReferenciaRechazada[] = [],
   ) {
     super(mensaje, codigo)
     this.codigos = codigos
     this.errores = errores
+    this.referencias = referencias
   }
 }
 
@@ -42,7 +52,15 @@ export class EntradaRechazada extends ErrorDeApi {
 export class PermisoInsuficiente extends ErrorDeApi {}
 
 /** 409: una regla de negocio rechazó la petición (por ejemplo `RN-AG-15`). */
-export class ReglaRechazada extends ErrorDeApi {}
+export class ReglaRechazada extends ErrorDeApi {
+  /** Todos los códigos del cuerpo (E4 trae dos); `codigo` es el primero. */
+  readonly codigos: readonly string[]
+
+  constructor(mensaje: string, codigo: string | null, codigos: readonly string[] = codigo === null ? [] : [codigo]) {
+    super(mensaje, codigo)
+    this.codigos = codigos
+  }
+}
 
 /** 404 `RN-GL-04`: el recurso de la URL no existe. */
 export class RecursoInexistente extends ErrorDeApi {}

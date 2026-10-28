@@ -1,5 +1,5 @@
-// Hora del consultorio (design B15, RN-GL-01): la pantalla escribe y muestra fechas en la zona del consultorio
-// y la API habla en UTC. Solo `Intl`, sin dependencias.
+// Hora del consultorio (RN-GL-01, design A9): la API habla en UTC y la pantalla muestra la hora y la fecha de la
+// zona del consultorio. Solo `Intl`, sin dependencias (D285).
 
 const FECHA_LOCAL = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})/
 
@@ -26,6 +26,22 @@ function partesEn(instante: number, zona: string): Partes {
   return { anio: leer('year'), mes: leer('month'), dia: leer('day'), hora: leer('hour'), minuto: leer('minute') }
 }
 
+function dosCifras(n: number): string {
+  return String(n).padStart(2, '0')
+}
+
+/** ISO en UTC a `hh:mm` en la zona del consultorio. */
+export function horaLocal(utc: string, zona: string): string {
+  const p = partesEn(Date.parse(utc), zona)
+  return `${dosCifras(p.hora)}:${dosCifras(p.minuto)}`
+}
+
+/** ISO en UTC a `aaaa-mm-dd` en la zona del consultorio (el día del consultorio, no el de UTC). */
+export function fechaLocal(utc: string, zona: string): string {
+  const p = partesEn(Date.parse(utc), zona)
+  return `${p.anio}-${dosCifras(p.mes)}-${dosCifras(p.dia)}`
+}
+
 /** Desfase de la zona en ese instante, en milisegundos (hora local menos UTC). */
 function desfaseEn(instante: number, zona: string): number {
   const p = partesEn(instante, zona)
@@ -42,10 +58,6 @@ export function aUtc(fechaHoraLocal: string, zona: string): string {
   const primero = comoUtc - desfaseEn(comoUtc, zona)
   const instante = comoUtc - desfaseEn(primero, zona)
   return new Date(instante).toISOString().replace('.000Z', 'Z')
-}
-
-function dosCifras(n: number): string {
-  return String(n).padStart(2, '0')
 }
 
 /** ISO en UTC a `dd/mm/aaaa hh:mm` en la zona del consultorio. */
