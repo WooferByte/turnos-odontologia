@@ -1,5 +1,6 @@
 // Textos fijos de la agenda y el único lugar que decide qué texto corresponde a cada estado (design A12, A15).
 // No se muestra el `detail` ni el `mensaje` de la API: la pantalla decide por el tipo de error y por el código.
+import { EntradaRechazada, PermisoInsuficiente, ReglaRechazada, type ReferenciaRechazada } from '../../shared/api/errores'
 import type { EstadoDelTurno } from './apiAgenda'
 
 export const MENSAJE_CARGANDO = 'Cargando agenda…'
@@ -102,4 +103,73 @@ export function tituloDelAviso(mensaje: string): string | null {
   if (mensaje === MENSAJE_SIN_PERMISO_PARA_VER) return 'Acceso restringido'
   if (mensaje === MENSAJE_SIN_CONEXION) return 'Sin conexión'
   return null
+}
+
+export const MENSAJE_FORMULARIO_INCOMPLETO = 'Completá paciente, prestación, fecha y hora.'
+export const MENSAJE_TURNO_CREADO = 'Turno creado.'
+export const MENSAJE_REVISAR_DATOS = 'Revisá los datos del turno.'
+export const MENSAJE_SIN_PERMISO_PARA_CREAR = 'Tu usuario no tiene permiso para crear turnos (RN-AU-05).'
+
+const MENSAJE_E4 = 'El profesional y el sillón ya tienen un turno activo en ese horario (RN-AG-05, RN-AG-08).'
+const MENSAJE_RN_AG_05 = 'El profesional ya tiene un turno activo en ese horario (RN-AG-05).'
+const MENSAJE_RN_AG_08 = 'El sillón ya tiene un turno activo en ese horario (RN-AG-08).'
+const MENSAJE_RN_AG_04 = 'El turno no cae dentro del horario de atención del profesional (RN-AG-04).'
+const MENSAJE_RN_AG_04B = 'Ese horario está bloqueado (RN-AG-04b).'
+const MENSAJE_RN_AG_10D = 'El turno no puede pasar de la medianoche del consultorio (RN-AG-10d).'
+const MENSAJE_RN_GL_01 = 'La fecha y hora no es válida (RN-GL-01).'
+
+const NOMBRES_DE_RECURSO: Readonly<Record<string, string>> = {
+  paciente: 'paciente',
+  prestacion: 'prestación',
+  profesional: 'profesional',
+  sillon: 'sillón',
+}
+
+/** «no existe», «inactiva»/«inactivo» según el recurso, «no hay ninguno activo» o «hay más de uno activo». */
+function textoDelMotivo(recurso: string, motivo: string): string {
+  if (motivo === 'inexistente') return 'no existe'
+  if (motivo === 'inactivo') return recurso === 'prestacion' ? 'inactiva' : 'inactivo'
+  if (motivo === 'ninguno_activo') return 'no hay ninguno activo'
+  if (motivo === 'varios_activos') return 'hay más de uno activo'
+  return motivo
+}
+
+/** «paciente 99 (no existe)»; sin id cuando el dato se omitió (el profesional o el sillón únicos). */
+export function textoDeReferencia(referencia: ReferenciaRechazada): string {
+  const nombre = NOMBRES_DE_RECURSO[referencia.recurso] ?? referencia.recurso
+  const id = referencia.recurso_id === null ? '' : ` ${referencia.recurso_id}`
+  return `${nombre}${id} (${textoDelMotivo(referencia.recurso, referencia.motivo)})`
+}
+
+function mensajeDeEntradaRechazada(error: EntradaRechazada): string {
+  const { codigos } = error
+  if (codigos.includes('RN-GL-04')) {
+    const referencias = error.referencias.map(textoDeReferencia).join(', ')
+    return `Hay datos que no existen o no están activos: ${referencias} (RN-GL-04).`
+  }
+  if (codigos.includes('RN-AG-04b')) return MENSAJE_RN_AG_04B
+  if (codigos.includes('RN-AG-04')) return MENSAJE_RN_AG_04
+  if (codigos.includes('RN-AG-10d')) return MENSAJE_RN_AG_10D
+  if (codigos.includes('RN-GL-01')) return MENSAJE_RN_GL_01
+  return MENSAJE_REVISAR_DATOS
+}
+
+function mensajeDeReglaRechazada(error: ReglaRechazada): string {
+  const { codigos } = error
+  if (codigos.includes('RN-AG-05') && codigos.includes('RN-AG-08')) return MENSAJE_E4
+  if (codigos.includes('RN-AG-05')) return MENSAJE_RN_AG_05
+  if (codigos.includes('RN-AG-08')) return MENSAJE_RN_AG_08
+  return MENSAJE_REVISAR_DATOS
+}
+
+/** Mensaje del panel para un rechazo de `POST /turnos`: por el tipo y el código, nunca por el texto de la API. */
+export function mensajeDeCreacion(error: unknown): string {
+  if (error instanceof PermisoInsuficiente) return MENSAJE_SIN_PERMISO_PARA_CREAR
+  if (error instanceof ReglaRechazada) return mensajeDeReglaRechazada(error)
+  if (error instanceof EntradaRechazada) return mensajeDeEntradaRechazada(error)
+  return MENSAJE_SIN_CONEXION
+}
+
+export function textoDeFin(hora: string): string {
+  return `Termina a las ${hora}.`
 }
