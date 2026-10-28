@@ -22,7 +22,7 @@ proyecto/
 ├── backend/
 │   ├── app/
 │   │   ├── domain/
-│   │   │   ├── agenda/          # Intervalo, solapamiento, horario.py (C-12), bloqueos.py (C-13)
+│   │   │   ├── agenda/          # Intervalo, solapamiento, horario.py (C-12), bloqueos.py (C-13), dia.py (C-14)
 │   │   │   ├── turnos/          # Turno, estados, transiciones, EventoTurno
 │   │   │   ├── lista_espera/
 │   │   │   ├── pagos/           # Sena, RegistroPago
@@ -61,12 +61,14 @@ proyecto/
 │       ├── main.tsx, App.tsx    # rutas del panel (ingreso y panel base)
 │       ├── shared/api/          # clienteHttp, sesion, errores
 │       ├── shared/roles.ts      # etiquetas de los roles, una sola fuente (C-09, C-50; D308)
+│       ├── shared/horaDelConsultorio.ts # horas y fechas en hora del consultorio (C-14)
 │       ├── features/ingreso/    # pantalla de inicio de sesión
 │       ├── features/usuarios/    # pantalla de usuarios (C-09)
 │       ├── features/contrasenas/ # pantalla «Mi contraseña» (C-10)
 │       ├── features/horario/     # pantalla de horario (C-12)
 │       ├── features/bloqueos/    # pantalla de bloqueos (C-13)
 │       ├── features/sesion/      # indicador del usuario de la sesión en el encabezado (C-50)
+│       ├── features/agenda/      # agenda del día y formulario «Nuevo turno» (C-14)
 │       ├── pages/               # panel base y rutas protegidas
 │       └── test/                # servidor falso de la API para las pruebas
 ├── docker-compose.yml           # api, worker, postgres, redis, frontend (C-02 crea api y postgres, D151)
