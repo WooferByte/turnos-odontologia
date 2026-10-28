@@ -108,7 +108,7 @@ Los criterios de US-010 usan IDs estables `E1..E12` (compartidos con `07_flujos_
 
 ### US-011 — Agenda del día
 **Como** odontólogo **quiero** ver los turnos del día con color por prestación y estado **para** organizar la atención.
-- [ ] CA-1: se listan los turnos del profesional ordenados por inicio, con paciente, prestación y estado.
+- [ ] CA-1: se listan los turnos del profesional ordenados por inicio, con paciente, prestación y estado. (Lectura del autor 2026-10-28, D316: en la v1 el consultorio tiene un solo profesional, así que son los turnos del consultorio del usuario en un día del consultorio; la lista no filtra por profesional hasta la agenda multi-profesional de la Fase 2.)
 - [ ] CA-2 (crear turno desde la agenda; decisión del autor 2026-10-05, D110): desde la agenda del día se crea un turno con un formulario que usa `POST /turnos` (US-010). Esta pantalla pertenece a US-011; US-010 sigue siendo solo API, sin interfaz. Las reglas y los errores de dominio son los de US-010 (el formulario los muestra).
 **Orden**: 4
 **Depende de**: US-010, US-092

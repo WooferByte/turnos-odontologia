@@ -45,6 +45,8 @@ C = crear, R = leer, U = actualizar, D = eliminar/anular. "Propio" = solo sus tu
 | Ver el propio usuario de la sesión (email y roles; `GET /auth/yo`, permiso `sesion.leer`; un usuario sin roles recibe `403` `RN-AU-05`; D307, D313) | R propio | R propio | R propio | — |
 
 > `GET /profesionales` (lista de profesionales para elegir su horario, solo lectura; D260) lo leen los tres roles (C-12).
+>
+> `GET /turnos?fecha` y `GET /turnos/{id}` (la agenda del día y un turno, solo lectura; permiso `turnos.leer`, fila Turnos, «R» para los tres roles) los leen los tres roles; un usuario sin roles recibe `403` `RN-AU-05`, y un turno de otro consultorio no se lista y su id responde `404` `RN-GL-04` como uno inexistente (D321, C-14).
 
 **Decisión del autor (2026-10-02, P-09 / SU-04):** la recepcionista ve los datos **administrativos** del paciente (identificación, contacto, turnos, pagos) pero **no** los datos **clínicos** (anamnesis, evolución, odontograma), por minimización de datos de salud (Ley 25.326). Ver RN-FC-02.
 
