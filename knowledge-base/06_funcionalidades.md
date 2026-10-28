@@ -153,6 +153,7 @@ Los criterios de US-010 usan IDs estables `E1..E12` (compartidos con `07_flujos_
 
 ### US-015 — Historial de cambios
 **Como** dueño **quiero** ver quién cambió qué y cuándo en cada turno **para** tener trazabilidad.
+Lectura del autor (2026-10-28, C-15): «Como dueño» se lee con la matriz de `03_actores_y_roles.md`, que da lectura del historial al odontólogo, a la recepcionista y al dueño, y no al paciente (D68); la vista del panel abre el historial desde la agenda del día, sin pantalla nueva (D327).
 - [ ] CA-1: el historial es de solo lectura y no puede editarse.
 **Orden**: 2
 **Depende de**: US-010
