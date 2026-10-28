@@ -106,4 +106,34 @@ Una columna de unos 390 px con la barra en tres filas (marca; pastillas en dos l
 
 ## 4. Comparación con la implementación
 
-Pendiente: se completa en el Apply, tarea 11.1 (prueba en el navegador a 1280 y 390 px contra las tres capturas).
+Hecha el 2026-10-28 en la tarea 11.1, con la demo (`crear_app_demo` en 8000 y `npm run dev` en 5173) en el navegador integrado de la app, a 1280 px y a 390 px. Capturas de la implementación en `stitch-agenda-pantalla/`: `implementacion-agenda-escritorio.png`, `implementacion-nuevo-turno-con-error.jpg` e `implementacion-agenda-angosta.jpg`. La herramienta de captura del navegador integrado recorta la imagen al ancho del panel (con densidad de píxeles 2), así que las capturas muestran la parte izquierda y superior de la pantalla; el resto se comprobó con el texto y el árbol de accesibilidad de la página.
+
+### Recorrido y resultado
+
+| Paso | Resultado |
+|---|---|
+| Agenda de hoy (miércoles 28/10/2026), recepcionista | «No hay turnos para este día.», «0 turnos» |
+| Lunes 2/11/2026 con el selector de fecha | Encabezado «lunes 2 de noviembre de 2026» |
+| Tres turnos por la pantalla (pacientes 1 a 3; 11:00, 09:00 y 10:00) | «Turno creado.»; la tabla los muestra ordenados por inicio (09:00 Limpieza, 10:00 Consulta / control, 11:00 Obturación), cada uno con la franja y el punto del color de su prestación y el estado «Reservado» |
+| E4: repetir 11:00 | «El profesional y el sillón ya tienen un turno activo en ese horario (RN-AG-05, RN-AG-08).»; el formulario queda abierto con los datos |
+| E12: paciente 99 | «Hay datos que no existen o no están activos: paciente 99 (no existe) (RN-GL-04).» |
+| Sábado 7/11 10:00 | «El turno no cae dentro del horario de atención del profesional (RN-AG-04).» |
+| Bloqueo del profesional el 3/11 de 15:00 a 17:00 (creado por la API con la odontóloga) y turno a las 15:30 | «Ese horario está bloqueado (RN-AG-04b).» |
+| Usuaria solo `dueno` (creada para la prueba) da un turno | «Tu usuario no tiene permiso para crear turnos (RN-AU-05).»; la agenda se lee |
+| `GET /turnos?fecha=2026-11-02` y `GET /turnos/1` (API, token de la odontóloga) | `200`, con `fecha`, `zona_horaria`, paciente {id, nombre, apellido} y prestación {id, nombre, color}; sin teléfono. `/openapi.json` lista `/turnos` y `/turnos/{turno_id}` |
+| `GET /turnos?fecha=9999-12-31` | `422` de formato, `codigos` vacío, error en `fecha` (D322, H7) |
+| 390 px | Sin desplazamiento horizontal (`scrollWidth` = 390); el selector de fecha se oculta y queda «lun 02/11/2026» entre las flechas |
+| Consola | Solo los errores de red esperados de las respuestas `409` y `422`; ningún token, contraseña ni dato de paciente en la URL ni en la consola |
+
+### Diferencias con Stitch y su motivo
+
+- **Sin columna «Acciones» ni «Ver ficha»**: las acciones sobre un turno son de C-15 a C-19 y la ficha de C-43 (fuera de alcance).
+- **El total de turnos va en un chip del título «Turnos»** y no en el pie de la tabla; no se muestra «Agenda sincronizada en tiempo real» (no hay tiempo real en la v1) ni el pie de página «Módulo de Agenda…».
+- **Sin la tarjeta «Referencia de estado»**: el día vacío es el texto «No hay turnos para este día.» dentro de la tabla.
+- **«Nuevo turno» se abre como panel al costado de la agenda**, como el de prestaciones, y no sobre la agenda atenuada; el aviso de error es un texto con el código entre paréntesis (D323), sin chips de código.
+- **Debajo de 720 px** el selector de fecha se oculta y el día se cambia con las flechas y «Hoy», como en la captura angosta.
+- Los estados «Confirmado» y «Cancelado por el paciente» de la captura no se pueden producir todavía desde el panel (C-17 y C-33); sus etiquetas están cubiertas por los tests de `mensajes`.
+
+### Recorrido en Compose
+
+Con `docker compose up --build -d` (`postgres`, `api` y `frontend` en `healthy`) y `http://127.0.0.1:5173`: la recepcionista entra, abre la agenda y crea un turno el lunes 9/11/2026 a las 10:15 (paciente 1, Limpieza), que aparece en la agenda de ese día con «Turno creado.». La consola queda vacía (ninguna violación de la CSP) y a 390 px no hay desplazamiento horizontal (`scrollWidth` = 390).
