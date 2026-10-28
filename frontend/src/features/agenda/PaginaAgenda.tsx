@@ -135,7 +135,7 @@ export function PaginaAgenda() {
 
   return (
     <section aria-labelledby="titulo-agenda">
-      <div className="barra-de-pantalla">
+      <div className="barra-de-pantalla barra-de-agenda">
         <div>
           <h1 id="titulo-agenda">Agenda del día</h1>
           {dia === null ? null : <p className="subtitulo-de-pantalla">{subtituloDeAgenda(dia.zona)}</p>}
@@ -145,7 +145,7 @@ export function PaginaAgenda() {
           Nuevo turno
         </button>
       </div>
-      <div className="pantalla-con-panel">
+      <div className="pantalla-con-panel pantalla-de-agenda">
         <div className="zona-de-tabla">
           {dia === null ? null : (
             <div className="tarjeta barra-de-fecha">
@@ -163,8 +163,8 @@ export function PaginaAgenda() {
                     if (e.target.value !== '') ir(e.target.value)
                   }}
                 />
-                <p className="nombre-del-dia">
-                  {nombreDelDia(dia.fecha)}
+                <p className="nombre-del-dia-de-agenda">
+                  <span className="dia-largo">{nombreDelDia(dia.fecha)}</span>
                   <span className="dia-compacto" aria-hidden="true">
                     {diaCompacto(dia.fecha)}
                   </span>

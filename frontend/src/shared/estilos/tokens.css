@@ -33,6 +33,13 @@
   --encabezado-tabla: #f1f5f9;
   --gris-insignia: #e2e8f0;
 
+  /* Chips de estado de la agenda (C-14, Stitch): el celeste, el verde y el rojo suave de «Clinical Ops» */
+  --chip-celeste-fondo: #e0f2fe;
+  --chip-verde-fondo: #dcfce7;
+  --chip-rojo-fondo: #fee2e2;
+  --chip-rojo-borde: #fecaca;
+  --chip-rojo-texto: #b91c1c;
+
   /* Radios */
   --radio: 4px;
   --radio-medio: 6px;
@@ -48,6 +55,10 @@
   --tamano-icono: 16px;
   --tamano-muestra: 16px;
   --tamano-avatar: 32px;
+  --tamano-punto: 10px;
+  --ancho-franja: 4px;
+  --ancho-franja-tarjeta: 6px;
+  --ancho-panel-turno: 420px;
   --sombra-tarjeta: 0 1px 2px rgb(15 23 42 / 6%);
 
   --fuente: Inter, system-ui, sans-serif;

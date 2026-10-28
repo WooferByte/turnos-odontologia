@@ -1405,3 +1405,306 @@ p.pantalla-de-ingreso {
   margin-top: 2px;
   margin-bottom: 2px;
 }
+
+/* Agenda del día (C-14, pantallas de Stitch, D234). Escritorio: encabezado con «Nuevo turno», barra de fecha en una
+   tarjeta, tabla densa con una franja del color de la prestación, chips de estado y panel lateral de 420 px. Debajo
+   de 720 px cada turno es una tarjeta (hora y chip arriba, paciente y prestación debajo) y la barra de fecha queda
+   compacta. Todo con los tokens existentes y los pocos nuevos de «Agenda»; sin Tailwind, fuentes ni íconos externos. */
+.barra-de-fecha {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 14px;
+  margin-bottom: 24px;
+}
+
+.barra-de-fecha-izquierda {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.barra-de-fecha .boton-secundario {
+  min-height: var(--alto-campo);
+  padding: 0 12px;
+  font-size: 12px;
+}
+
+.selector-de-fecha {
+  box-sizing: border-box;
+  height: var(--alto-campo);
+  padding: 0 8px;
+  border: 1px solid var(--borde-fuerte);
+  border-radius: var(--radio);
+  background: var(--superficie);
+  color: var(--texto);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.nombre-del-dia-de-agenda {
+  margin: 0;
+  color: var(--texto);
+  font-weight: 500;
+}
+
+.dia-compacto {
+  display: none;
+}
+
+.tabla-de-agenda th:last-child {
+  text-align: left;
+}
+
+.tabla-de-agenda td {
+  padding: 8px 16px;
+  font-size: 12px;
+  vertical-align: middle;
+}
+
+.tabla-de-agenda th {
+  padding: 10px 16px;
+}
+
+.tabla-de-agenda td:nth-child(2) {
+  font-weight: 600;
+}
+
+.fila-de-turno td:first-child {
+  position: relative;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.fila-de-turno td:first-child::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  width: var(--ancho-franja);
+  background: var(--color-de-prestacion);
+}
+
+.marca-de-color {
+  display: inline-block;
+  flex: none;
+  width: var(--tamano-punto);
+  height: var(--tamano-punto);
+  margin-right: 8px;
+  border-radius: var(--radio-pastilla);
+  vertical-align: middle;
+}
+
+.chip-de-estado {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border: 1px solid;
+  border-radius: var(--radio);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.chip-celeste {
+  background: var(--chip-celeste-fondo);
+  border-color: var(--primario-borde);
+  color: var(--primario);
+}
+
+.chip-verde {
+  background: var(--chip-verde-fondo);
+  border-color: var(--borde-exito);
+  color: var(--exito);
+}
+
+.chip-ambar {
+  background: var(--fondo-ambar);
+  border-color: var(--borde-ambar);
+  color: var(--texto-ambar);
+}
+
+.chip-rojo {
+  background: var(--chip-rojo-fondo);
+  border-color: var(--chip-rojo-borde);
+  color: var(--chip-rojo-texto);
+}
+
+.sin-turnos {
+  margin: 0;
+  padding: 24px 20px;
+  color: var(--texto-tenue);
+}
+
+.zona-de-tabla > .aviso,
+.zona-de-tabla > .aviso-de-exito {
+  margin-bottom: 16px;
+}
+
+/* Panel «Nuevo turno» */
+.panel-de-turno {
+  flex: none;
+  box-sizing: border-box;
+  width: var(--ancho-panel-turno);
+  max-width: 100%;
+}
+
+.panel-de-turno .campo input[type='text'],
+.panel-de-turno .campo input[type='date'],
+.panel-de-turno .campo input[type='time'],
+.panel-de-turno .campo select {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
+  height: var(--alto-campo);
+  padding: 0 12px;
+  border: 1px solid var(--borde-fuerte);
+  border-radius: var(--radio-medio);
+  background: var(--superficie);
+  color: var(--texto);
+  font: inherit;
+}
+
+.panel-de-turno .aviso {
+  margin-bottom: 16px;
+}
+
+.campos-en-fila {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.panel-de-turno .campo + .ayuda {
+  margin: -8px 0 16px;
+}
+
+@media (max-width: 960px) {
+  .pantalla-de-agenda {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}
+
+@media (max-width: 720px) {
+  .barra-de-agenda {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .barra-de-agenda .boton-primario {
+    width: 100%;
+  }
+
+  .barra-de-fecha {
+    flex-wrap: nowrap;
+    gap: 6px;
+    padding: 6px;
+  }
+
+  .barra-de-fecha-izquierda {
+    flex-wrap: nowrap;
+    gap: 4px;
+  }
+
+  .barra-de-fecha .boton-secundario {
+    padding: 0 8px;
+  }
+
+  /* Solo la flecha: el texto del botón queda para los lectores de pantalla. */
+  .texto-del-boton {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+    white-space: nowrap;
+  }
+
+  .selector-de-fecha,
+  .dia-largo {
+    display: none;
+  }
+
+  .dia-compacto {
+    display: inline;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+  }
+
+  .tabla-de-agenda,
+  .tabla-de-agenda tbody {
+    display: block;
+  }
+
+  .tabla-de-agenda thead {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .tabla-de-agenda .fila-de-turno {
+    position: relative;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 6px 8px;
+    padding: 12px 12px 12px 18px;
+    border-bottom: 1px solid var(--borde-suave);
+  }
+
+  .tabla-de-agenda .fila-de-turno::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: var(--ancho-franja-tarjeta);
+    background: var(--color-de-prestacion);
+  }
+
+  .tabla-de-agenda td,
+  .tabla-de-agenda tr:last-child td {
+    padding: 0;
+    border: 0;
+  }
+
+  .fila-de-turno td:first-child::before {
+    display: none;
+  }
+
+  .fila-de-turno td:first-child {
+    grid-column: 1;
+    grid-row: 1;
+    font-size: 14px;
+    font-weight: 600;
+  }
+
+  .fila-de-turno td:nth-child(4) {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  .fila-de-turno td:nth-child(2) {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    font-size: 13px;
+  }
+
+  .fila-de-turno td:nth-child(3) {
+    grid-column: 1 / -1;
+    grid-row: 3;
+    color: var(--texto-tenue);
+  }
+
+  .panel-de-turno {
+    width: 100%;
+  }
+}

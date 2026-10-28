@@ -772,7 +772,7 @@ npm test
 npm run typecheck
 ```
 
-`npm test` corre **254 tests en 23 archivos** («Tests 254 passed (254)»); no necesita el backend, Docker ni red. `npm run typecheck` (`tsc --noEmit`) termina sin salida. `npm run build` genera `frontend/dist/`.
+`npm test` corre **306 tests en 26 archivos** («Tests 306 passed (306)»); no necesita el backend, Docker ni red. `npm run typecheck` (`tsc --noEmit`) termina sin salida. `npm run build` genera `frontend/dist/`.
 
 ### Probar el panel (demo sin Docker, dos terminales)
 
@@ -1037,6 +1037,46 @@ El cliente de la API (`apiContrasenas.test.ts`, 7 tests), los mensajes de K14 co
 
 Límites conocidos de las pantallas: «Restablecer contraseña» se ve en todas las filas, también en la propia y en las inactivas, aunque el encabezado ya muestra quién inició sesión: ocultar acciones según el rol queda para un change posterior (D249, D312). La API decide, y sobre la propia fila responde `409` con `RN-AU-10`. La pantalla no muestra la contraseña, no tiene medidor de fortaleza ni pide confirmación antes de cerrar las sesiones del usuario. No hay límite de peticiones en el cambio de contraseña (como en el inicio de sesión, D195).
 
+### Pantalla de agenda
+
+Desde C-14 el panel tiene la pantalla «Agenda» y es la primera de la barra. Cómo llegar: iniciar sesión y pulsar **Agenda** en el encabezado (`/panel/agenda`; `/panel` sigue mostrando el panel base). La pantalla usa `GET /api/turnos` (la agenda de un día), `POST /api/turnos` (crear), `GET /api/prestaciones` (al abrir «Nuevo turno»); el contrato es el de «Agenda del día» y «Petición de ejemplo», en la API. No cambia la API ni evalúa reglas: solo exige que estén los campos obligatorios, y cada rechazo de la API se ve con su texto fijo y su código `RN`.
+
+Recorrido con la demo sin Docker (las dos terminales de «Probar el panel», con la demo **recién arrancada**, sin turnos; los pacientes de la demo son 1 «Ana Ejemplo», 2 «Bruno Ficticio» y 3 «Carla Inventada»):
+
+1. Ingresar con `odontologa@consultorio-demo.test` y pulsar «Agenda»: el título es «Agenda del día», el subtítulo dice «Horas del consultorio (America/Argentina/Buenos_Aires).», se ve el día de hoy del consultorio con «No hay turnos para este día.» y el contador «0 turnos». En la pestaña de red hay un solo `GET /api/turnos`, **sin** `fecha`: el día de hoy lo calcula la API, no el navegador.
+2. En el selector de fecha elegir `02/11/2026` → `GET /api/turnos?fecha=2026-11-02` y «lunes 2 de noviembre de 2026». «Día siguiente», «Día anterior» y «Hoy» cambian de día (cruzan fin de mes y de año); «Hoy» vuelve a pedir sin `fecha`.
+3. «Nuevo turno»: escribir el paciente `1`, elegir «Consulta / control · 30 min», dejar la fecha `02/11/2026` y escribir la hora `09:00` → debajo se lee «Termina a las 09:30.». «Crear turno» → un solo `POST /api/turnos` con `{"paciente_id": 1, "prestacion_id": 1, "inicio": "2026-11-02T12:00:00Z"}` (sin profesional ni sillón: la API usa el único activo), se ve «Turno creado.», el panel se cierra y la fila «09:00 – 09:30», «Ana Ejemplo», «Consulta / control», «Reservado» aparece con la marca azul. «Urgencia», que está inactiva, no se ofrece.
+4. Repetir con el paciente `2`, «Limpieza · 45 min» a las `10:00` y con el paciente `3`, «Obturación · 60 min» a las `11:00`: las tres filas quedan ordenadas por hora, con la marca de color de cada prestación (azul, verde y naranja). El contador dice «3 turnos».
+5. **E4**: «Nuevo turno», paciente `2`, «Consulta / control · 30 min», `02/11/2026` a las `09:00` → `POST` con `409` y `["RN-AG-05", "RN-AG-08"]`: «El profesional y el sillón ya tienen un turno activo en ese horario (RN-AG-05, RN-AG-08).» El panel sigue abierto con lo cargado y no se ve «Turno creado.».
+6. **E12**: paciente `99` → `422` con `["RN-GL-04"]`: «Hay datos que no existen o no están activos: paciente 99 (no existe) (RN-GL-04).»
+7. **`RN-AG-04`**: la fecha `07/11/2026` (sábado) a las `10:00` → `422` con `["RN-AG-04"]`: «El turno no cae dentro del horario de atención del profesional (RN-AG-04).» (la demo atiende de lunes a viernes de 09:00 a 13:00 y de 15:00 a 19:00).
+8. **`RN-AG-04b`**: en «Bloqueos» bloquear al profesional el `02/11/2026` de `14:00` a `16:00` y volver a «Agenda»: un turno a las `15:00` → `422` con `["RN-AG-04b"]`: «Ese horario está bloqueado (RN-AG-04b).»
+9. **Los otros roles**: «Cerrar sesión» e ingresar con `recepcion@consultorio-demo.test`: la recepcionista ve la misma agenda y crea turnos igual. El dueño lee la agenda pero no crea: en «Usuarios» crear un usuario solo con el rol `dueno`, ingresar con él, y «Crear turno» → `403` con `["RN-AU-05"]`: «Tu usuario no tiene permiso para crear turnos (RN-AU-05).» en un aviso, sin perder la sesión (no hay `POST /api/auth/refresh`).
+
+Un campo vacío al crear muestra «Completá paciente, prestación, fecha y hora.» y no manda nada; «Cancelar» y «Cerrar» cierran el panel sin mandar nada; «Crear turno» queda deshabilitado mientras espera, así que pulsarlo dos veces manda un solo pedido. Un turno que cruza la medianoche de UTC se pide con la fecha del consultorio: las 22:00 del `03/11/2026` viajan como `2026-11-04T01:00:00Z` y después se muestra «martes 3 de noviembre de 2026». Con la API detenida, la agenda muestra «No se pudo conectar con el servidor. Probá de nuevo en unos minutos.» con «Reintentar»; si pasa al crear, el mensaje aparece sin «Reintentar» y lo cargado se conserva. Un usuario sin roles ve «Tu usuario no tiene permiso para ver la agenda (RN-AU-05).». Si la sesión termina mientras se usa la pantalla, la interfaz vuelve a `/ingresar` con «Tu sesión terminó. Iniciá sesión de nuevo.». Los códigos `RN` aparecen siempre; el `detail` de la API no se muestra.
+
+Escenario → test (`src/features/agenda/`, API reemplazada por el servidor falso). Los 13 escenarios de `openspec/changes/agenda-del-dia/specs/pantalla-de-agenda/spec.md` están en `PaginaAgenda.test.tsx`, con 27 tests (cada causa de un escenario con varias es un test propio):
+
+| Escenario | Test titular |
+|---|---|
+| AGE-4a (la agenda de hoy) | «AGE-4a: la odontóloga ve la agenda de hoy» |
+| AGE-4b (cambiar de día y volver a hoy; fin de mes y de año) | «AGE-4b: cambiar de día y volver a hoy», «AGE-4b: el día siguiente cruza fin de mes y de año», «AGE-4b: el día anterior cruza fin de mes» |
+| AGE-4c (los nueve estados; solo contra el servidor falso) | «AGE-4c: cada estado se ve con su etiqueta» |
+| AGE-4d (cargando, sin conexión, sin permiso; el último solo contra el servidor falso) | «AGE-4d: mientras carga se ve «Cargando agenda…» sin filas», «AGE-4d: sin conexión se ve el mensaje con Reintentar, que al responder la API muestra el día», «AGE-4d: sin roles se ve el 403 de la lectura, sin tabla ni Reintentar y sin renovar la sesión» |
+| AGE-5a (dar un turno y verlo) | «AGE-5a: la recepcionista da un turno y lo ve en la agenda» |
+| AGE-5b (campo vacío, cancelar, doble clic; el último solo contra el servidor falso) | «AGE-5b: un campo vacío no manda nada», «AGE-5b: Cancelar no manda nada», «AGE-5b: el doble clic manda un solo POST» |
+| AGE-5h (otro día que cruza la medianoche de UTC; solo contra el servidor falso) | «AGE-5h: un turno en otro día que cruza la medianoche UTC» |
+| AGE-5c (E4, los dos códigos) | «AGE-5c: E4 muestra los dos códigos» |
+| AGE-5d (E12, las referencias; el paso que desactiva la prestación, solo contra el servidor falso) | «AGE-5d: E12 muestra RN-GL-04 con las referencias» |
+| AGE-5e (las demás reglas de US-010; contra el servidor falso) | «AGE-5e: el 409 con ["RN-AG-05"] …» y los otros seis casos parametrizados (`RN-AG-08`, `RN-AG-04`, `RN-AG-04b`, `RN-AG-10d`, `RN-GL-01` y un `422` sin código) |
+| AGE-5f (el dueño no crea) | «AGE-5f: el dueño no puede crear turnos» |
+| AGE-5g (sin conexión al crear; solo contra el servidor falso) | «AGE-5g: sin conexión al crear se conserva lo cargado» |
+| AGE-6a (la sesión al cargar el día y al crear) | «AGE-6a: con el refresh vigente, la carga del día se renueva sin aviso», «AGE-6a: una sesión irrenovable al cargar el día vuelve al inicio de sesión», «AGE-6a: una sesión irrenovable al crear un turno vuelve al inicio de sesión» |
+
+El cliente de la API (`apiAgenda.test.ts`, 6 tests), la hora del consultorio (`src/shared/horaDelConsultorio.test.ts`, 8: 4 de la agenda y 4 de los bloqueos, movidos sin cambios) y los textos (`mensajes.test.ts`, 15) se prueban aparte. La disposición (barra de fecha en una tarjeta, tabla densa con una franja y un punto del color de la prestación, chips de estado, panel lateral de 420 px y, debajo de 720 px, una tarjeta por turno) sigue las pantallas generadas en Stitch con el design system «Clinical Ops» (`projects/14200813501064679723/screens/cd19642b8b1b4bcda5162e35d6291e10`, `…/5371dfaf7cc441c08af62712e311c326` y `…/20bcd71b007a43f7874a05ae70a45753`; capturas y HTML en `docs/skills-mcp/evidencias/sesion-nueva/stitch-agenda-pantalla/`), traducidas a `tokens.css` y `panel.css` sin dependencias.
+
+Límites conocidos de la pantalla: el paciente se elige **por su número** hasta C-20, que trae la búsqueda; la demo tiene los pacientes 1 a 3 y un número que no existe vuelve como `RN-GL-04`. No hay selector de profesional ni de sillón (Fase 2): la API usa el único activo, y con más de un sillón activo responde `RN-GL-04` («hay más de uno activo»). La agenda **no se refresca sola**: otro usuario puede dar un turno en el mismo horario y el `409` de la API lo avisa. «Nuevo turno» se ve con cualquier rol, también para el dueño, que recibe `RN-AU-05` (D312). Los turnos no tienen acciones todavía (cancelar, confirmar, reprogramar: C-15 a C-19). Debajo de 720 px el selector de fecha se oculta (se cambia de día con las flechas y «Hoy»).
+
 ### Versiones fijadas del frontend
 
 Las versiones exactas viven en `frontend/package.json`; `frontend/package-lock.json` se generó con `npm install --before=2026-10-12` (ningún paquete publicado desde esa fecha) y se instala siempre con `npm ci`.
@@ -1069,7 +1109,7 @@ La API se reemplaza en los tests por un servidor falso escrito a mano (`frontend
 
 Hay además tests de la renovación compartida, del `403`, del cierre de sesión y de que ninguna URL contenga un token, y cinco guards (`src/test/guards.test.ts`) que fallan si aparece `any`, `vi.mock`, `localStorage`, `dangerouslySetInnerHTML`, un archivo `index.ts` de reexportación o un recurso de otro origen (STI-1).
 
-Resultado actual de las dos suites: frontend «Tests 254 passed (254)»; backend «879 passed, 58 deselected, 1 warning».
+Resultado actual de las dos suites: frontend «Tests 306 passed (306)»; backend «937 passed, 58 deselected, 1 warning».
 
 ## Levantar la API con PostgreSQL
 
