@@ -311,7 +311,7 @@ python -m uvicorn app.main:crear_app_demo --factory
 
 Swagger queda en <http://127.0.0.1:8000/docs>. Para detener el servidor, `Ctrl+C`.
 
-La demo usa una base SQLite en memoria con datos ficticios. Cada arranque parte de los mismos datos y al reiniciar se pierden los turnos creados. Los endpoints de lectura son el historial de un turno y los listados de prestaciones y de sillones; el resto de los identificadores son fijos:
+La demo usa una base SQLite en memoria con datos ficticios. Cada arranque parte de los mismos datos y al reiniciar se pierden los turnos creados. Los endpoints de lectura son la agenda de un día y un turno por su id, el historial de un turno y los listados de prestaciones y de sillones; el resto de los identificadores son fijos:
 
 | Qué | Identificadores |
 |---|---|
@@ -586,6 +586,44 @@ Los escenarios están en `openspec/changes/bloqueos-puntuales/specs/` (`bloqueos
 | INF-1 y US-003 CA-1 (PostgreSQL) | La migración `0009`, los `CHECK` de la tabla `bloqueo` | Ver «Escenario → test (perfil con PostgreSQL)» |
 
 Ningún test anterior cambió de resultado ni de horas: ninguna fábrica, test ni seed tenía bloqueos.
+
+### Agenda del día
+
+Desde C-14 la API devuelve los turnos de un día del consultorio y un turno por su id, con el nombre del paciente y la prestación (con su color) que necesita la agenda del panel. Las dos rutas piden el access token y las leen los tres roles (permiso `turnos.leer`); un usuario activo sin roles recibe `403`. **Solo leen**: no cambian nada. El «día» es el **del consultorio** (de las 00:00 a las 00:00 en su zona horaria, `America/Argentina/Buenos_Aires` en la demo), no el de UTC. Con la demo **recién arrancada** (los pasos 2 en adelante dependen del paso 1), en Swagger o con `curl`:
+
+1. Con el token de la odontóloga, `POST /turnos` con `{"paciente_id": 1, "prestacion_id": 1, "inicio": "2026-11-02T13:00:00Z"}` → `201` (lunes 10:00 del consultorio), y otro con `{"paciente_id": 2, "prestacion_id": 2, "inicio": "2026-11-02T12:00:00Z"}` → `201` (lunes 09:00).
+2. `GET /turnos?fecha=2026-11-02` (con el token de la recepcionista o el de la odontóloga) → `200`, con `fecha` `2026-11-02`, `zona_horaria` `America/Argentina/Buenos_Aires` y dos turnos **ordenados por inicio**: primero el de Bruno Ficticio con «Limpieza» (`2026-11-02T12:00:00Z` a `12:45:00Z`) y después el de Ana Ejemplo con «Consulta / control». Cada turno trae `id`, `inicio`, `fin`, `duracion_minutos`, `estado`, `profesional_id`, `sillon_id`, `paciente` (`id`, `nombre`, `apellido`) y `prestacion` (`id`, `nombre`, `color`); no trae el teléfono ni otro dato del paciente. Se listan los turnos en **cualquier estado**.
+3. `GET /turnos?fecha=2026-11-01` → `200` con `turnos` vacío (los turnos de las 09:00 y las 10:00 del 2 de noviembre no son de ese día). Sin `fecha` (`GET /turnos`) → el día de hoy del consultorio, con su `fecha` en la respuesta.
+4. `GET /turnos/1` → `200`, con la misma forma que un elemento de `turnos`. `GET /turnos/999` → `404`, con `codigos` igual a `["RN-GL-04"]` y en `referencias` `{"recurso": "turno", "recurso_id": 999, "motivo": "inexistente"}`; `GET /turnos/abc` → `422`, con `codigos` igual a `[]`. Un turno de otro consultorio responde igual que uno inexistente.
+5. `GET /turnos?fecha=02/11/2026` (o `2026-13-01`, `2026-11-02T03:00:00Z`, `0001-01-01` o `9999-12-31`) → `422`, con `codigos` igual a `[]` y el error en el campo `fecha`. `fecha` es un día `aaaa-mm-dd`, sin hora ni zona, de `0001-01-02` a `9999-12-30`; `GET /turnos?fecha=9999-12-30` → `200` vacío.
+6. Sin token → `401`, con `["RN-AU-03"]`. El `401` y el `403` se informan antes que el `422` de una `fecha` mal formada.
+
+Con `curl`:
+
+```
+curl -i "http://127.0.0.1:8000/turnos?fecha=2026-11-02" -H "Authorization: Bearer PEGAR_EL_ACCESS_TOKEN"
+curl -i http://127.0.0.1:8000/turnos/1 -H "Authorization: Bearer PEGAR_EL_ACCESS_TOKEN"
+```
+
+En la v1 el consultorio tiene un solo profesional, así que la agenda lista los turnos del consultorio (no filtra por profesional hasta la Fase 2). El `estado` es el guardado: hasta la seña (C-35) no hay turnos `pendiente_sena` ni vencimientos que evaluar.
+
+#### Escenario → test (agenda del día, API)
+
+Los escenarios están en `openspec/changes/agenda-del-dia/specs/consulta-de-turnos/spec.md`. Las reglas puras del día (`backend/tests/unit/test_dia.py`, 16 tests, sin base de datos) y el permiso (`test_roles.py`), la lectura sobre la base en memoria (`backend/tests/integration/test_consultar_turnos.py`, 10) y la API (`backend/tests/api/test_agenda.py`, 24):
+
+| Escenario | Qué verifica | Test titular |
+|---|---|---|
+| AGE-1a | La odontóloga ve el día ordenado por inicio, con paciente, prestación y estado, sin teléfono, y la base queda igual | `test_age1a_la_odontologa_ve_el_dia_ordenado` (API), `test_age1a_agenda_del_dia_ordena_por_inicio_con_paciente_y_prestacion` (integración) |
+| AGE-1b | El día es el del consultorio, no el de UTC (medianoche local, cambio de año, días de 23 y 25 horas) | `test_age1b_el_dia_es_el_del_consultorio_no_el_de_utc` (API), `test_age1b_el_dia_del_consultorio_va_de_medianoche_a_medianoche_local` y otros tres (`test_dia.py`) |
+| AGE-1c | Sin `fecha` se lista el día de hoy del consultorio, con el reloj inyectado | `test_age1c_sin_fecha_se_lista_el_dia_de_hoy_del_consultorio` (API), `test_age1c_sin_fecha_usa_hoy_del_consultorio` (integración), `test_age1c_hoy_es_la_fecha_local_del_reloj` y otros tres (`test_dia.py`) |
+| AGE-1d | Un día sin turnos, un turno cancelado y una prestación inactiva aparecen | `test_age1d_un_dia_sin_turnos_da_200_con_la_lista_vacia`, `test_age1d_un_turno_cancelado_y_una_prestacion_inactiva_aparecen` (API) y tres en integración |
+| AGE-1e | La recepcionista y el dueño leen la agenda; el permiso es de los tres roles | `test_age1e_la_recepcionista_y_el_dueno_leen_la_agenda` (API), `test_age1e_turnos_leer_para_los_tres_roles` (`test_roles.py`) |
+| AGE-1f | A igual inicio, los turnos salen por `id` | `test_age1f_a_igual_inicio_los_turnos_salen_por_id` (API), `test_age1f_a_igual_inicio_ordena_por_id` (integración) |
+| AGE-2a | La recepcionista lee un turno por su id | `test_age2a_la_recepcionista_lee_un_turno` |
+| AGE-2b | Un turno inexistente da `404` con `RN-GL-04`; un id que no es entero, `422` sin código | `test_age2b_un_turno_inexistente_da_404`, `test_age2b_un_id_no_entero_da_422` |
+| AGE-3a | Una fecha mal formada o en los extremos del calendario da `422` sin código, nunca `500`; los extremos aceptados dan `200` vacío | `test_age3a_una_fecha_mal_formada_da_422_sin_codigos` (parametrizado), `test_age3a_los_extremos_aceptados_dan_200_vacio`, `test_age3a_los_extremos_aceptados_del_calendario_no_desbordan` (`test_dia.py`) |
+| AGE-3b | Sin sesión `401`; sin roles `403` `RN-AU-05` antes de validar la fecha y al leer un turno | `test_age3b_sin_sesion_401`, `test_age3b_sin_roles_403_antes_de_validar`, `test_age3b_sin_roles_403_al_leer_un_turno`, `test_age3b_un_usuario_sin_roles_no_tiene_turnos_leer` (`test_roles.py`) |
+| AGE-3c | Un turno de otro consultorio no se lista y su id responde `404` como un inexistente | `test_age3c_la_lista_no_trae_turnos_de_otro_consultorio`, `test_age3c_un_turno_de_otro_consultorio_da_el_mismo_404` (API) y dos en integración |
 
 ## Sesión del panel
 

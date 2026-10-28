@@ -50,7 +50,7 @@ Reglas de trabajo para todos los grupos (no son tareas):
 
 ## 6. API en el README
 
-- [ ] 6.1 Completar el `README.md` de la raíz (design A18): `GET /turnos` y `GET /turnos/{id}` en «Probar desde Swagger» (con la odontóloga y la recepcionista de la demo, sin `fecha`, con `fecha=2026-11-02` después de crear un turno, con `fecha=02/11/2026`, con `fecha=9999-12-31` y con un id inexistente) y la tabla escenario → test de `consulta-de-turnos` (`AGE-1a` a `AGE-3c`) con la cantidad real de tests. Verificación: cada paso nuevo se ejecutó tal cual con la demo (`crear_app_demo`) en `/docs` y dio lo que dice.
+- [x] 6.1 Completar el `README.md` de la raíz (design A18): `GET /turnos` y `GET /turnos/{id}` en «Probar desde Swagger» (con la odontóloga y la recepcionista de la demo, sin `fecha`, con `fecha=2026-11-02` después de crear un turno, con `fecha=02/11/2026`, con `fecha=9999-12-31` y con un id inexistente) y la tabla escenario → test de `consulta-de-turnos` (`AGE-1a` a `AGE-3c`) con la cantidad real de tests. Verificación: cada paso nuevo se ejecutó tal cual con la demo (`crear_app_demo`) en `/docs` y dio lo que dice.
 
 ## 7. Servidor falso, cliente y rechazos
 
