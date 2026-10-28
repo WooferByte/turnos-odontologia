@@ -1,6 +1,7 @@
 """Puertos que la capa de aplicación necesita; los implementa ``infrastructure`` (D12)."""
 from collections.abc import Sequence
 from dataclasses import dataclass
+from datetime import datetime
 from typing import Literal, Protocol
 
 from app.domain.acceso.roles import Rol
@@ -24,6 +25,30 @@ class OcupadosEnElIntervalo:
 
     del_profesional: Sequence[TurnoOcupado]
     del_sillon: Sequence[TurnoOcupado]
+
+
+@dataclass(frozen=True)
+class TurnoDeLaAgenda:
+    """Un turno con lo mínimo del paciente y de la prestación para la agenda (RN-PR-01, D318).
+
+    Es un tipo de lectura, no una entidad del dominio. ``consultorio_id`` sirve para decidir si el
+    turno es visible para el usuario y no sale por la API.
+    """
+
+    id: int
+    consultorio_id: int
+    inicio: datetime
+    fin: datetime
+    duracion_minutos: int
+    estado: str
+    profesional_id: int
+    sillon_id: int
+    paciente_id: int
+    paciente_nombre: str
+    paciente_apellido: str
+    prestacion_id: int
+    prestacion_nombre: str
+    prestacion_color: str
 
 
 class RepositorioAgenda(Protocol):
@@ -65,6 +90,14 @@ class RepositorioAgenda(Protocol):
         ...
 
     def existe_turno(self, turno_id: int) -> bool: ...
+
+    def turnos_del_dia(
+        self, consultorio_id: int, desde: datetime, hasta: datetime
+    ) -> Sequence[TurnoDeLaAgenda]:
+        """Turnos del consultorio con ``desde <= inicio < hasta``, en cualquier estado, por inicio e id."""
+        ...
+
+    def turno_de_la_agenda(self, turno_id: int) -> TurnoDeLaAgenda | None: ...
 
     def turnos_activos_que_intersecan(self, bloqueo: DatosBloqueo) -> Sequence[Turno]:
         """Los turnos activos del alcance del bloqueo (profesional, sillón o consultorio) que lo intersecan.

@@ -1,5 +1,6 @@
 """Repositorio de la agenda sobre SQLAlchemy. Traduce modelos ORM a tipos de dominio (D12)."""
 from collections.abc import Sequence
+from datetime import datetime
 from dataclasses import replace
 from typing import Literal
 
@@ -7,7 +8,7 @@ from sqlalchemy import or_, select
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.orm import Session
 
-from app.application.puertos import OcupadosEnElIntervalo, SolapamientoEnLaBase
+from app.application.puertos import OcupadosEnElIntervalo, SolapamientoEnLaBase, TurnoDeLaAgenda
 from app.domain.agenda.bloqueos import Alcance, DatosBloqueo
 from app.domain.agenda.intervalo import Intervalo
 from app.domain.agenda.recursos import Paciente, Prestacion, Profesional, Sillon
@@ -46,6 +47,32 @@ def _turno_a_dominio(modelo: TurnoModelo) -> Turno:
         creado_en=modelo.creado_en,
         creado_por=modelo.creado_por,
     )
+
+
+def _turno_de_la_agenda(turno: TurnoModelo, paciente: PacienteModelo, prestacion: PrestacionModelo) -> TurnoDeLaAgenda:
+    return TurnoDeLaAgenda(
+        id=turno.id,
+        consultorio_id=turno.consultorio_id,
+        inicio=turno.inicio,
+        fin=turno.fin,
+        duracion_minutos=turno.duracion_minutos,
+        estado=turno.estado,
+        profesional_id=turno.profesional_id,
+        sillon_id=turno.sillon_id,
+        paciente_id=paciente.id,
+        paciente_nombre=paciente.nombre,
+        paciente_apellido=paciente.apellido,
+        prestacion_id=prestacion.id,
+        prestacion_nombre=prestacion.nombre,
+        prestacion_color=prestacion.color,
+    )
+
+
+def _consulta_de_la_agenda():
+    # Una sola consulta con join: sin N+1 y sin traer del paciente más que nombre y apellido (D318).
+    return select(TurnoModelo, PacienteModelo, PrestacionModelo).join(
+        PacienteModelo, PacienteModelo.id == TurnoModelo.paciente_id
+    ).join(PrestacionModelo, PrestacionModelo.id == TurnoModelo.prestacion_id)
 
 
 class RepositorioAgendaSqlAlchemy:
@@ -176,3 +203,21 @@ class RepositorioAgendaSqlAlchemy:
             consulta = consulta.where(TurnoModelo.sillon_id == bloqueo.sillon_id)
         consulta = consulta.order_by(TurnoModelo.inicio, TurnoModelo.id)
         return [_turno_a_dominio(m) for m in self._sesion.scalars(consulta)]
+
+    def turnos_del_dia(
+        self, consultorio_id: int, desde: datetime, hasta: datetime
+    ) -> Sequence[TurnoDeLaAgenda]:
+        consulta = (
+            _consulta_de_la_agenda()
+            .where(
+                TurnoModelo.consultorio_id == consultorio_id,
+                TurnoModelo.inicio >= desde,
+                TurnoModelo.inicio < hasta,
+            )
+            .order_by(TurnoModelo.inicio, TurnoModelo.id)
+        )
+        return [_turno_de_la_agenda(*fila) for fila in self._sesion.execute(consulta)]
+
+    def turno_de_la_agenda(self, turno_id: int) -> TurnoDeLaAgenda | None:
+        fila = self._sesion.execute(_consulta_de_la_agenda().where(TurnoModelo.id == turno_id)).first()
+        return None if fila is None else _turno_de_la_agenda(*fila)
