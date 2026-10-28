@@ -1,5 +1,6 @@
 // Rutas de la interfaz (design F6, T2). El `fetch` se inyecta solo en los tests.
 import { Navigate, Route, Routes } from 'react-router'
+import { PaginaAgenda } from './features/agenda/PaginaAgenda'
 import { PaginaIngreso } from './features/ingreso/PaginaIngreso'
 import { PaginaMiContrasena } from './features/contrasenas/PaginaMiContrasena'
 import { PaginaBloqueos } from './features/bloqueos/PaginaBloqueos'
@@ -30,6 +31,7 @@ export function App({ fetch }: Propiedades) {
           }
         >
           <Route index element={<InicioDelPanel />} />
+          <Route path="agenda" element={<PaginaAgenda />} />
           <Route path="prestaciones" element={<PaginaPrestaciones />} />
           <Route path="usuarios" element={<PaginaUsuarios />} />
           <Route path="horario" element={<PaginaHorario />} />

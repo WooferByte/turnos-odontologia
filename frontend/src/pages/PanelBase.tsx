@@ -3,6 +3,7 @@
 import { NavLink, Outlet, useNavigate } from 'react-router'
 import { IndicadorDeSesion } from '../features/sesion/IndicadorDeSesion'
 import { useSesionDelPanel } from '../shared/api/ProveedorDeSesion'
+import { IconoAgenda } from '../shared/iconos/IconoAgenda'
 import { IconoCalendario } from '../shared/iconos/IconoCalendario'
 import { IconoLlave } from '../shared/iconos/IconoLlave'
 import { IconoDiente } from '../shared/iconos/IconoDiente'
@@ -29,6 +30,10 @@ export function PanelBase() {
             Turnos Odontológicos AR
           </strong>
           <nav aria-label="Principal">
+            <NavLink to="/panel/agenda" className="enlace-del-panel">
+              <IconoAgenda />
+              Agenda
+            </NavLink>
             <NavLink to="/panel/prestaciones" className="enlace-del-panel">
               <IconoMaletin />
               Prestaciones
