@@ -45,12 +45,12 @@ function abrirPanel(servidor: ServidorFalso, ruta = '/panel', email = EMAIL_ACTI
   return userEvent.setup()
 }
 
-/** Las filas de datos de la tabla (sin el encabezado), con el texto de cada celda. */
+/** Las filas de datos de la tabla (sin el encabezado), con el texto de las cuatro celdas de datos (la de «Acciones» la prueba C-15). */
 function filasDeLaAgenda(): string[][] {
   return screen
     .getAllByRole('row')
     .slice(1)
-    .map((fila) => within(fila).getAllByRole('cell').map((celda) => celda.textContent ?? ''))
+    .map((fila) => within(fila).getAllByRole('cell').slice(0, 4).map((celda) => celda.textContent ?? ''))
 }
 
 function colorDeLaMarca(fila: HTMLElement): string {

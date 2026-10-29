@@ -25,10 +25,16 @@ import {
   textoDelContador,
   tituloDelAviso,
 } from './mensajes'
+import { PanelHistorial } from '../historial/PanelHistorial'
 import { PanelNuevoTurno } from './PanelNuevoTurno'
 import { TablaDeTurnos } from './TablaDeTurnos'
 
 type Carga = { tipo: 'cargando' } | { tipo: 'sin-conexion' } | { tipo: 'sin-permiso' } | { tipo: 'dia' }
+
+/** Un solo panel lateral a la vez (design G2). */
+type Panel = { tipo: 'ninguno' } | { tipo: 'nuevo-turno' } | { tipo: 'historial'; turno: TurnoDeLaAgenda }
+
+const SIN_PANEL: Panel = { tipo: 'ninguno' }
 
 interface Dia {
   fecha: string
@@ -49,7 +55,7 @@ export function PaginaAgenda() {
   const [pedido, setPedido] = useState<Pedido>({ fecha: undefined, numero: 0 })
   const [carga, setCarga] = useState<Carga>({ tipo: 'cargando' })
   const [dia, setDia] = useState<Dia | null>(null)
-  const [panelAbierto, setPanelAbierto] = useState(false)
+  const [panel, setPanel] = useState<Panel>(SIN_PANEL)
   const [prestaciones, setPrestaciones] = useState<readonly Prestacion[] | null>(null)
   const [enviando, setEnviando] = useState(false)
   const [errorDelPanel, setErrorDelPanel] = useState<string | null>(null)
@@ -84,6 +90,8 @@ export function PaginaAgenda() {
   /** Cambio de día pedido por la persona: el aviso del turno creado ya no corresponde. */
   function ir(fecha: string | undefined): void {
     setTurnoCreado(false)
+    // El turno del historial ya no está a la vista: se cierra sin pedirlo de nuevo.
+    setPanel((actual) => (actual.tipo === 'historial' ? SIN_PANEL : actual))
     pedirDia(fecha)
   }
 
@@ -104,13 +112,18 @@ export function PaginaAgenda() {
   function abrirPanel(): void {
     setErrorDelPanel(null)
     setPrestaciones(null)
-    setPanelAbierto(true)
+    setPanel({ tipo: 'nuevo-turno' })
     pedirPrestaciones()
+  }
+
+  function verHistorial(turno: TurnoDeLaAgenda): void {
+    pedidoDePrestaciones.current += 1
+    setPanel({ tipo: 'historial', turno })
   }
 
   function cerrarPanel(): void {
     pedidoDePrestaciones.current += 1
-    setPanelAbierto(false)
+    setPanel(SIN_PANEL)
   }
 
   async function crear(nuevo: NuevoTurno, zona: string): Promise<void> {
@@ -200,12 +213,17 @@ export function PaginaAgenda() {
               {dia.turnos.length === 0 ? (
                 <p className="sin-turnos">{MENSAJE_SIN_TURNOS}</p>
               ) : (
-                <TablaDeTurnos turnos={dia.turnos} zonaHoraria={dia.zona} />
+                <TablaDeTurnos
+                  turnos={dia.turnos}
+                  zonaHoraria={dia.zona}
+                  turnoSeleccionadoId={panel.tipo === 'historial' ? panel.turno.id : null}
+                  onVerHistorial={verHistorial}
+                />
               )}
             </section>
           ) : null}
         </div>
-        {panelAbierto ? (
+        {panel.tipo === 'nuevo-turno' ? (
           <PanelNuevoTurno
             prestaciones={prestaciones}
             fechaInicial={dia?.fecha ?? ''}
@@ -214,6 +232,14 @@ export function PaginaAgenda() {
             error={errorDelPanel}
             onCrear={(nuevo) => void crear(nuevo, dia?.zona ?? '')}
             onCancelar={cerrarPanel}
+          />
+        ) : null}
+        {panel.tipo === 'historial' ? (
+          <PanelHistorial
+            key={panel.turno.id}
+            turno={panel.turno}
+            zonaHoraria={dia?.zona ?? ''}
+            onCerrar={cerrarPanel}
           />
         ) : null}
       </div>

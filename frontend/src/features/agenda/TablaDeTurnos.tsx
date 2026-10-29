@@ -1,20 +1,25 @@
-// Tabla de la agenda del día (design A9, A14): una fila por turno en el orden de la API. Debajo de 720 px cada
-// fila se acomoda como tarjeta (solo CSS). El color de la prestación es un dato de la API: va como `style` en línea.
+// Tabla de la agenda del día (design A9, A14, G2): una fila por turno en el orden de la API, con la columna
+// «Acciones» (botón «Historial»). Debajo de 720 px cada fila se acomoda como tarjeta (solo CSS). El color de la
+// prestación es un dato de la API: va como `style` en línea.
 import type { CSSProperties } from 'react'
 import { horaLocal } from '../../shared/horaDelConsultorio'
+import { IconoReloj } from '../../shared/iconos/IconoReloj'
 import type { TurnoDeLaAgenda } from './apiAgenda'
 import { ETIQUETAS_DE_ESTADO, TONOS_DE_ESTADO } from './mensajes'
 
 interface Propiedades {
   turnos: readonly TurnoDeLaAgenda[]
   zonaHoraria: string
+  /** El turno cuyo historial está abierto, para marcar su fila; `null` si no hay. */
+  turnoSeleccionadoId: number | null
+  onVerHistorial(turno: TurnoDeLaAgenda): void
 }
 
 function estiloDeFila(color: string): CSSProperties {
   return { '--color-de-prestacion': color } as CSSProperties
 }
 
-export function TablaDeTurnos({ turnos, zonaHoraria }: Propiedades) {
+export function TablaDeTurnos({ turnos, zonaHoraria, turnoSeleccionadoId, onVerHistorial }: Propiedades) {
   return (
     <table className="tabla tabla-de-agenda" aria-label="Turnos del día">
       <thead>
@@ -23,11 +28,16 @@ export function TablaDeTurnos({ turnos, zonaHoraria }: Propiedades) {
           <th scope="col">Paciente</th>
           <th scope="col">Prestación</th>
           <th scope="col">Estado</th>
+          <th scope="col">Acciones</th>
         </tr>
       </thead>
       <tbody>
         {turnos.map((turno) => (
-          <tr key={turno.id} className="fila-de-turno" style={estiloDeFila(turno.prestacion.color)}>
+          <tr
+            key={turno.id}
+            className={turno.id === turnoSeleccionadoId ? 'fila-de-turno fila-seleccionada' : 'fila-de-turno'}
+            style={estiloDeFila(turno.prestacion.color)}
+          >
             <td className="cifras">
               {horaLocal(turno.inicio, zonaHoraria)} – {horaLocal(turno.fin, zonaHoraria)}
             </td>
@@ -46,6 +56,18 @@ export function TablaDeTurnos({ turnos, zonaHoraria }: Propiedades) {
               <span className={`chip-de-estado chip-${TONOS_DE_ESTADO[turno.estado]}`}>
                 {ETIQUETAS_DE_ESTADO[turno.estado]}
               </span>
+            </td>
+            <td className="acciones-del-turno">
+              <button
+                type="button"
+                className="boton-secundario boton-de-historial"
+                aria-label={`Historial del turno de ${turno.paciente.nombre} ${turno.paciente.apellido}, ${horaLocal(turno.inicio, zonaHoraria)}`}
+                data-turno-id={turno.id}
+                onClick={() => onVerHistorial(turno)}
+              >
+                <IconoReloj />
+                Historial
+              </button>
             </td>
           </tr>
         ))}

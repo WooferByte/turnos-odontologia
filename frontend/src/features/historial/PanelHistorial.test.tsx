@@ -1,0 +1,170 @@
+import { cleanup, render, screen, within } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import { MemoryRouter } from 'react-router'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { App } from '../../App'
+import { CLAVE_DE_SESION } from '../../shared/api/sesion'
+import {
+  EMAIL_ACTIVA,
+  EMAIL_DUENO,
+  EMAIL_RECEPCIONISTA,
+  EVENTO_CREADO_DEL_TURNO_11,
+  PRESTACIONES_DE_PARTIDA,
+  TURNOS_DE_LA_AGENDA,
+  USUARIOS_DE_PARTIDA,
+  USUARIO_DUENO,
+  crearServidorFalso,
+  type OpcionesDelServidorFalso,
+  type ServidorFalso,
+} from '../../test/servidorFalso'
+
+type Usuario = ReturnType<typeof userEvent.setup>
+
+const HISTORIAL_DEL_TURNO_11 = { 11: [EVENTO_CREADO_DEL_TURNO_11] }
+
+/** El falso con las prestaciones y los tres turnos del 2 de noviembre y el historial del turno 11 (HIS-2a). */
+function falso(opciones: OpcionesDelServidorFalso = {}): ServidorFalso {
+  return crearServidorFalso({
+    prestaciones: PRESTACIONES_DE_PARTIDA,
+    turnos: TURNOS_DE_LA_AGENDA,
+    historiales: HISTORIAL_DEL_TURNO_11,
+    ...opciones,
+  })
+}
+
+/** Monta la aplicación con una sesión guardada y espera la agenda del 2 de noviembre. */
+async function abrirAgenda(servidor: ServidorFalso, email = EMAIL_RECEPCIONISTA): Promise<Usuario> {
+  sessionStorage.setItem(CLAVE_DE_SESION, JSON.stringify({ refresh: servidor.emitirSesion(email).refresh }))
+  render(
+    <MemoryRouter initialEntries={['/panel/agenda']}>
+      <App fetch={servidor.fetch} />
+    </MemoryRouter>,
+  )
+  await screen.findByText('lunes 2 de noviembre de 2026')
+  return userEvent.setup()
+}
+
+function botonDeHistorial(nombre: string): HTMLElement {
+  return screen.getByRole('button', { name: nombre })
+}
+
+const ANA = 'Historial del turno de Ana Ejemplo, 09:00'
+const BRUNO = 'Historial del turno de Bruno Ficticio, 10:00'
+
+function peticionesDeHistorial(servidor: ServidorFalso): string[] {
+  return servidor.rutasPedidas().filter((ruta) => ruta.endsWith('/historial'))
+}
+
+beforeEach(() => {
+  sessionStorage.clear()
+})
+
+afterEach(() => {
+  cleanup()
+})
+
+describe('PanelHistorial: ver el historial desde la agenda', () => {
+  it('HIS-2a: la recepcionista ve el evento creado del turno', async () => {
+    const servidor = falso()
+    const usuario = await abrirAgenda(servidor)
+
+    await usuario.click(botonDeHistorial(ANA))
+
+    const panel = await screen.findByRole('complementary', { name: 'Historial del turno' })
+    await within(panel).findByText('Turno creado')
+    expect(peticionesDeHistorial(servidor)).toEqual(['/api/turnos/11/historial'])
+    expect(servidor.peticiones('/api/turnos/11/historial')).toBe(1)
+    expect(within(panel).getByText('Ana Ejemplo · Consulta / control')).toBeDefined()
+    expect(within(panel).getByText('lunes 2 de noviembre de 2026, 09:00 – 09:30')).toBeDefined()
+    expect(within(panel).getByText('Solo lectura: el historial no se puede editar.')).toBeDefined()
+    expect(within(panel).getByText('lunes 26 de octubre de 2026, 10:15')).toBeDefined()
+    expect(within(panel).getByText('Por: Usuario n.º 2')).toBeDefined()
+    expect(within(panel).getByText('Estado inicial: Reservado · 09:00 – 09:30')).toBeDefined()
+    expect(within(panel).queryAllByRole('textbox')).toHaveLength(0)
+    expect(within(panel).getAllByRole('button').map((b) => b.getAttribute('aria-label') ?? b.textContent)).toSatisfy(
+      (nombres: string[]) => nombres.length > 0 && nombres.every((n) => n === 'Cerrar'),
+    )
+  })
+
+  it.each([
+    ['la odontóloga', EMAIL_ACTIVA],
+    ['el dueño', EMAIL_DUENO],
+  ])('HIS-2a: %s ve el historial', async (_rol, email) => {
+    const usuario = await abrirAgenda(falso({ usuarios: [...USUARIOS_DE_PARTIDA, USUARIO_DUENO] }), email)
+
+    await usuario.click(botonDeHistorial(ANA))
+
+    const panel = await screen.findByRole('complementary', { name: 'Historial del turno' })
+    await within(panel).findByText('Turno creado')
+    expect(within(panel).getByText('Por: Usuario n.º 2')).toBeDefined()
+  })
+
+  it('HIS-2b: tres eventos en el orden de la respuesta con su actor y su fecha', async () => {
+    const base = { turno_id: 12, actor_tipo: 'usuario', antes: null, despues: null }
+    const servidor = falso({
+      historiales: {
+        12: [
+          {
+            ...base,
+            id: 21,
+            tipo: 'creado',
+            actor_id: null,
+            ocurrido_en: '2026-10-27T11:40:00Z',
+            motivo: null,
+            despues: { estado: 'reservado', inicio: '2026-11-02T13:00:00Z', fin: '2026-11-02T13:45:00Z' },
+          },
+          { ...base, id: 22, tipo: 'reprogramado', actor_id: '1', ocurrido_en: '2026-10-30T19:05:00Z', motivo: null },
+          {
+            ...base,
+            id: 23,
+            tipo: 'reprogramado',
+            actor_id: '2',
+            ocurrido_en: '2026-11-01T02:30:00Z',
+            motivo: 'Pedido del paciente',
+          },
+        ],
+      },
+    })
+    const usuario = await abrirAgenda(servidor, EMAIL_ACTIVA)
+
+    await usuario.click(botonDeHistorial(BRUNO))
+
+    const panel = await screen.findByRole('complementary', { name: 'Historial del turno' })
+    const entradas = await within(panel).findAllByRole('listitem')
+    expect(entradas.map((e) => e.textContent)).toEqual([
+      'Turno creadomartes 27 de octubre de 2026, 08:40Por: Usuario del panel (sin identificar)Estado inicial: Reservado · 10:00 – 10:45',
+      'Cambio registrado (reprogramado)viernes 30 de octubre de 2026, 16:05Por: Usuario n.º 1',
+      'Cambio registrado (reprogramado)sábado 31 de octubre de 2026, 23:30Por: Usuario n.º 2Motivo: Pedido del paciente',
+    ])
+  })
+
+  it('HIS-2f: abrir Historial cierra Nuevo turno y al revés', async () => {
+    const usuario = await abrirAgenda(falso())
+    await usuario.click(screen.getByRole('button', { name: 'Nuevo turno' }))
+    await screen.findByRole('complementary', { name: 'Nuevo turno' })
+
+    await usuario.click(botonDeHistorial(ANA))
+
+    await screen.findByRole('complementary', { name: 'Historial del turno' })
+    expect(screen.queryByRole('complementary', { name: 'Nuevo turno' })).toBeNull()
+
+    await usuario.click(screen.getByRole('button', { name: 'Nuevo turno' }))
+
+    await screen.findByRole('complementary', { name: 'Nuevo turno' })
+    expect(screen.queryByRole('complementary', { name: 'Historial del turno' })).toBeNull()
+  })
+
+  it('HIS-2f: cambiar de día cierra el historial', async () => {
+    const servidor = falso()
+    const usuario = await abrirAgenda(servidor)
+    await usuario.click(botonDeHistorial(ANA))
+    await screen.findByText('Turno creado')
+
+    await usuario.click(screen.getByRole('button', { name: 'Día siguiente' }))
+
+    await screen.findByText('martes 3 de noviembre de 2026')
+    expect(screen.queryByRole('complementary', { name: 'Historial del turno' })).toBeNull()
+    expect(peticionesDeHistorial(servidor)).toEqual(['/api/turnos/11/historial'])
+    expect(servidor.peticiones('/api/turnos/11/historial')).toBe(1)
+  })
+})
