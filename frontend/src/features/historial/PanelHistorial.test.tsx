@@ -1,6 +1,6 @@
-import { cleanup, render, screen, within } from '@testing-library/react'
+import { cleanup, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter } from 'react-router'
+import { MemoryRouter, useLocation } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { App } from '../../App'
 import { CLAVE_DE_SESION } from '../../shared/api/sesion'
@@ -20,6 +20,13 @@ import {
 
 type Usuario = ReturnType<typeof userEvent.setup>
 
+const MENSAJE_DE_CONEXION = 'No se pudo conectar con el servidor. Probá de nuevo en unos minutos.'
+
+function LugarActual() {
+  const ubicacion = useLocation()
+  return <p data-testid="lugar">{ubicacion.pathname}</p>
+}
+
 const HISTORIAL_DEL_TURNO_11 = { 11: [EVENTO_CREADO_DEL_TURNO_11] }
 
 /** El falso con las prestaciones y los tres turnos del 2 de noviembre y el historial del turno 11 (HIS-2a). */
@@ -37,6 +44,7 @@ async function abrirAgenda(servidor: ServidorFalso, email = EMAIL_RECEPCIONISTA)
   sessionStorage.setItem(CLAVE_DE_SESION, JSON.stringify({ refresh: servidor.emitirSesion(email).refresh }))
   render(
     <MemoryRouter initialEntries={['/panel/agenda']}>
+      <LugarActual />
       <App fetch={servidor.fetch} />
     </MemoryRouter>,
   )
@@ -166,5 +174,201 @@ describe('PanelHistorial: ver el historial desde la agenda', () => {
     expect(screen.queryByRole('complementary', { name: 'Historial del turno' })).toBeNull()
     expect(peticionesDeHistorial(servidor)).toEqual(['/api/turnos/11/historial'])
     expect(servidor.peticiones('/api/turnos/11/historial')).toBe(1)
+  })
+})
+
+function tituloDelPanel(): HTMLElement {
+  return screen.getByRole('heading', { name: 'Historial del turno' })
+}
+
+function botonCerrarDelPanel(): HTMLElement {
+  const panel = screen.getByRole('complementary', { name: 'Historial del turno' })
+  // El panel tiene dos «Cerrar» (la X de arriba y el botón del pie): se usa el del pie.
+  return within(panel).getAllByRole('button', { name: 'Cerrar' }).at(-1) as HTMLElement
+}
+
+describe('PanelHistorial: vacío, cierre, foco, rechazos, carga y sesión', () => {
+  it('HIS-2a: al abrir, el foco va al título del panel', async () => {
+    const usuario = await abrirAgenda(falso())
+
+    await usuario.click(botonDeHistorial(ANA))
+
+    await screen.findByText('Turno creado')
+    expect(document.activeElement).toBe(tituloDelPanel())
+  })
+
+  it('HIS-2c: un turno sin eventos', async () => {
+    const usuario = await abrirAgenda(falso())
+
+    await usuario.click(botonDeHistorial(BRUNO))
+
+    expect(await screen.findByText('Este turno no tiene eventos registrados.')).toBeDefined()
+    expect(screen.queryByText('Turno creado')).toBeNull()
+  })
+
+  it('HIS-2c: Cerrar no hace ninguna petición nueva y devuelve el foco al botón de la fila', async () => {
+    const servidor = falso()
+    const usuario = await abrirAgenda(servidor)
+    await usuario.click(botonDeHistorial(BRUNO))
+    await screen.findByText('Este turno no tiene eventos registrados.')
+
+    await usuario.click(botonCerrarDelPanel())
+
+    expect(screen.queryByRole('complementary', { name: 'Historial del turno' })).toBeNull()
+    expect(screen.getByRole('table', { name: 'Turnos del día' })).toBeDefined()
+    expect(document.activeElement).toBe(botonDeHistorial(BRUNO))
+    expect(peticionesDeHistorial(servidor)).toEqual(['/api/turnos/12/historial'])
+    expect(servidor.peticiones('/api/turnos/12/historial')).toBe(1)
+  })
+
+  it('HIS-2c: una respuesta que llega después de Cerrar no reabre el panel', async () => {
+    const servidor = falso()
+    const liberar = servidor.retener('/api/turnos/12/historial')
+    const usuario = await abrirAgenda(servidor)
+    await usuario.click(botonDeHistorial(BRUNO))
+    await screen.findByText('Cargando historial…')
+
+    await usuario.click(botonCerrarDelPanel())
+    liberar()
+
+    await waitFor(() => expect(screen.queryByRole('complementary', { name: 'Historial del turno' })).toBeNull())
+    await new Promise((resolver) => setTimeout(resolver, 50))
+    expect(screen.queryByRole('complementary', { name: 'Historial del turno' })).toBeNull()
+    expect(screen.queryByText('Este turno no tiene eventos registrados.')).toBeNull()
+  })
+
+  it('HIS-2f: cambiar de turno muestra solo el último pedido', async () => {
+    const servidor = falso()
+    const liberar = servidor.retener('/api/turnos/12/historial')
+    const usuario = await abrirAgenda(servidor)
+    await usuario.click(botonDeHistorial(BRUNO))
+    await screen.findByText('Cargando historial…')
+
+    await usuario.click(botonDeHistorial(ANA))
+    await screen.findByText('Turno creado')
+    liberar()
+    await new Promise((resolver) => setTimeout(resolver, 50))
+
+    expect(screen.queryByText('Este turno no tiene eventos registrados.')).toBeNull()
+    expect(screen.getByText('Turno creado')).toBeDefined()
+    expect(screen.getByText('Ana Ejemplo · Consulta / control')).toBeDefined()
+  })
+
+  it('HIS-2f: una respuesta que llega después de cambiar de día no reabre el panel', async () => {
+    const servidor = falso()
+    const liberar = servidor.retener('/api/turnos/11/historial')
+    const usuario = await abrirAgenda(servidor)
+    await usuario.click(botonDeHistorial(ANA))
+    await screen.findByText('Cargando historial…')
+
+    await usuario.click(screen.getByRole('button', { name: 'Día siguiente' }))
+    await screen.findByText('martes 3 de noviembre de 2026')
+    liberar()
+    await new Promise((resolver) => setTimeout(resolver, 50))
+
+    expect(screen.queryByRole('complementary', { name: 'Historial del turno' })).toBeNull()
+    expect(screen.queryByText('Turno creado')).toBeNull()
+  })
+
+  it('HIS-2d: el turno ya no existe', async () => {
+    const servidor = falso()
+    const usuario = await abrirAgenda(servidor, EMAIL_ACTIVA)
+    servidor.quitarTurno(11)
+
+    await usuario.click(botonDeHistorial(ANA))
+
+    const aviso = await screen.findByRole('alert')
+    expect(aviso.textContent).toContain('El turno ya no existe (RN-GL-04).')
+    expect(screen.queryByText('Turno creado')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Reintentar' })).toBeNull()
+    expect(screen.getByRole('table', { name: 'Turnos del día' })).toBeDefined()
+  })
+
+  it('HIS-2d: sin permiso se ve el 403 del historial', async () => {
+    const servidor = falso()
+    const usuario = await abrirAgenda(servidor, EMAIL_ACTIVA)
+    const renovacionesAntes = servidor.llamadas('POST', '/api/auth/refresh')
+    servidor.quitarPermiso(EMAIL_ACTIVA)
+
+    await usuario.click(botonDeHistorial(ANA))
+
+    const aviso = await screen.findByRole('alert')
+    expect(aviso.textContent).toContain('Tu usuario no tiene permiso para ver el historial (RN-AU-05).')
+    expect(screen.queryByText('Turno creado')).toBeNull()
+    expect(screen.queryByRole('button', { name: 'Reintentar' })).toBeNull()
+    expect(servidor.llamadas('POST', '/api/auth/refresh')).toBe(renovacionesAntes)
+    expect(screen.getByRole('table', { name: 'Turnos del día' })).toBeDefined()
+  })
+
+  it('HIS-2e: mientras carga', async () => {
+    const servidor = falso()
+    servidor.retener('/api/turnos/11/historial')
+    const usuario = await abrirAgenda(servidor)
+
+    await usuario.click(botonDeHistorial(ANA))
+
+    expect(await screen.findByText('Cargando historial…')).toBeDefined()
+    expect(screen.queryByRole('listitem')).toBeNull()
+    expect(screen.queryByText('Turno creado')).toBeNull()
+  })
+
+  it('HIS-2e: sin conexión con Reintentar', async () => {
+    const servidor = falso()
+    const liberar = servidor.retener('/api/turnos/11/historial')
+    const usuario = await abrirAgenda(servidor)
+    await usuario.click(botonDeHistorial(ANA))
+    await screen.findByText('Cargando historial…')
+    servidor.caerse()
+    liberar()
+
+    expect((await screen.findByRole('alert')).textContent).toContain(MENSAJE_DE_CONEXION)
+    expect(screen.queryByText('Cargando historial…')).toBeNull()
+    servidor.recuperar()
+    const liberarElReintento = servidor.retener('/api/turnos/11/historial')
+    await usuario.click(screen.getByRole('button', { name: 'Reintentar' }))
+
+    expect(await screen.findByText('Cargando historial…')).toBeDefined()
+    expect(screen.queryByRole('alert')).toBeNull()
+    liberarElReintento()
+    expect(await screen.findByText('Turno creado')).toBeDefined()
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
+
+  it('HIS-2e: un 500 muestra el aviso de conexión con Reintentar', async () => {
+    const servidor = falso()
+    servidor.fallarRuta('/api/turnos/11/historial', 500)
+    const usuario = await abrirAgenda(servidor)
+
+    await usuario.click(botonDeHistorial(ANA))
+
+    expect((await screen.findByRole('alert')).textContent).toContain(MENSAJE_DE_CONEXION)
+    expect(screen.getByRole('button', { name: 'Reintentar' })).toBeDefined()
+    expect(screen.queryByText('Turno creado')).toBeNull()
+  })
+
+  it('HIS-2e: con el refresh vigente se renueva sin aviso', async () => {
+    const servidor = falso()
+    const usuario = await abrirAgenda(servidor)
+    const renovacionesAntes = servidor.llamadas('POST', '/api/auth/refresh')
+    servidor.vencerAccess()
+
+    await usuario.click(botonDeHistorial(ANA))
+
+    expect(await screen.findByText('Turno creado')).toBeDefined()
+    expect(servidor.llamadas('POST', '/api/auth/refresh')).toBe(renovacionesAntes + 1)
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
+
+  it('HIS-2e: una sesión irrenovable vuelve al inicio de sesión', async () => {
+    const servidor = falso()
+    const usuario = await abrirAgenda(servidor)
+    servidor.vencerAccess()
+    servidor.invalidarRefresh()
+
+    await usuario.click(botonDeHistorial(ANA))
+
+    await waitFor(() => expect(screen.getByTestId('lugar').textContent).toBe('/ingresar'))
+    expect(screen.queryByText(MENSAJE_DE_CONEXION)).toBeNull()
+    expect(screen.queryByText('Turno creado')).toBeNull()
   })
 })

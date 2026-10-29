@@ -1,7 +1,7 @@
 // Panel lateral «Historial del turno» (design G2, G3, G5, G6, G9): un solo pedido por apertura, con una bandera de
 // vigencia por pedido para que solo se muestre la última respuesta (y ninguna después de cerrar). El estado se
 // deriva de lo que respondió la API; la pantalla no reordena ni evalúa reglas.
-import { useEffect, useId, useMemo, useState } from 'react'
+import { useEffect, useId, useMemo, useRef, useState } from 'react'
 import { PermisoInsuficiente, RecursoInexistente, SesionTerminada } from '../../shared/api/errores'
 import { useSesionDelPanel } from '../../shared/api/ProveedorDeSesion'
 import { Aviso } from '../../shared/componentes/Aviso'
@@ -40,6 +40,7 @@ interface Propiedades {
 
 export function PanelHistorial({ turno, zonaHoraria, onCerrar }: Propiedades) {
   const idTitulo = useId()
+  const titulo = useRef<HTMLHeadingElement>(null)
   const { pedidoDelPanel } = useSesionDelPanel()
   const api = useMemo(() => crearApiHistorial(pedidoDelPanel), [pedidoDelPanel])
   const [carga, setCarga] = useState<Carga>({ tipo: 'cargando' })
@@ -64,6 +65,11 @@ export function PanelHistorial({ turno, zonaHoraria, onCerrar }: Propiedades) {
     }
   }, [api, turno.id, intento])
 
+  // Al abrir (y al pasar a otro turno, que remonta el panel) el foco va al título (design G9).
+  useEffect(() => {
+    titulo.current?.focus()
+  }, [])
+
   function reintentar(): void {
     setCarga({ tipo: 'cargando' })
     setIntento((anterior) => anterior + 1)
@@ -76,7 +82,7 @@ export function PanelHistorial({ turno, zonaHoraria, onCerrar }: Propiedades) {
     <aside aria-labelledby={idTitulo} className="panel-lateral panel-de-historial">
       <header className="panel-encabezado">
         <div>
-          <h2 id={idTitulo}>
+          <h2 id={idTitulo} ref={titulo} tabIndex={-1}>
             <IconoReloj />
             {TITULO_DEL_PANEL}
           </h2>

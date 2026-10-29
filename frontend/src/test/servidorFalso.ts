@@ -270,6 +270,8 @@ export interface ServidorFalso {
   marcarInactivo(id: number): void
   /** Copia de los turnos del falso en este momento (los de partida y los creados con `POST /api/turnos`). */
   turnosActuales(): TurnoFalso[]
+  /** Saca un turno (la API real no borra turnos; sirve para simular un `404` en su historial con la agenda ya cargada). */
+  quitarTurno(id: number): void
   /** El próximo `POST /api/turnos` responde ese rechazo (con esos códigos) en lugar de evaluarse; vale una sola vez. */
   responderAlCrear(estado: number, codigos: readonly string[]): void
   /** Esa prestación pasa a inactiva justo después de la próxima respuesta de `GET /api/prestaciones`. */
@@ -1265,6 +1267,10 @@ export function crearServidorFalso(opciones: OpcionesDelServidorFalso = {}): Ser
     horarioActual: (profesionalId) => (horarios.get(profesionalId) ?? []).map((f) => ({ ...f })),
     bloqueosActuales: () => bloqueos.map((b) => ({ ...b })),
     turnosActuales: () => turnos.map((t) => ({ ...t })),
+    quitarTurno: (id) => {
+      const indice = turnos.findIndex((t) => t.id === id)
+      if (indice >= 0) turnos.splice(indice, 1)
+    },
     responderAlCrear: (estado, codigos) => {
       rechazoAlCrear = { estado, codigos }
     },

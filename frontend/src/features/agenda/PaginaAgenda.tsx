@@ -62,6 +62,9 @@ export function PaginaAgenda() {
   const [turnoCreado, setTurnoCreado] = useState(false)
   const enCurso = useRef(false)
   const pedidoDePrestaciones = useRef(0)
+  const zonaDeTabla = useRef<HTMLDivElement>(null)
+  /** El turno cuyo botón «Historial» recupera el foco cuando se cierra su panel (design G9). */
+  const focoAlCerrar = useRef<number | null>(null)
 
   useEffect(() => {
     let vigente = true
@@ -81,6 +84,13 @@ export function PaginaAgenda() {
       vigente = false
     }
   }, [api, pedido])
+
+  useEffect(() => {
+    if (panel.tipo !== 'ninguno' || focoAlCerrar.current === null) return
+    const boton = zonaDeTabla.current?.querySelector<HTMLElement>(`[data-turno-id="${focoAlCerrar.current}"]`)
+    focoAlCerrar.current = null
+    boton?.focus()
+  }, [panel])
 
   function pedirDia(fecha: string | undefined): void {
     setCarga({ tipo: 'cargando' })
@@ -121,6 +131,11 @@ export function PaginaAgenda() {
     setPanel({ tipo: 'historial', turno })
   }
 
+  function cerrarHistorial(turno: TurnoDeLaAgenda): void {
+    focoAlCerrar.current = turno.id
+    setPanel(SIN_PANEL)
+  }
+
   function cerrarPanel(): void {
     pedidoDePrestaciones.current += 1
     setPanel(SIN_PANEL)
@@ -159,7 +174,7 @@ export function PaginaAgenda() {
         </button>
       </div>
       <div className="pantalla-con-panel pantalla-de-agenda">
-        <div className="zona-de-tabla">
+        <div className="zona-de-tabla" ref={zonaDeTabla}>
           {dia === null ? null : (
             <div className="tarjeta barra-de-fecha">
               <div className="barra-de-fecha-izquierda">
@@ -239,7 +254,7 @@ export function PaginaAgenda() {
             key={panel.turno.id}
             turno={panel.turno}
             zonaHoraria={dia?.zona ?? ''}
-            onCerrar={cerrarPanel}
+            onCerrar={() => cerrarHistorial(panel.turno)}
           />
         ) : null}
       </div>
