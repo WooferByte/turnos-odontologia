@@ -1558,6 +1558,8 @@ p.pantalla-de-ingreso {
 .panel-de-turno .campo input[type='date'],
 .panel-de-turno .campo input[type='time'],
 .panel-de-turno .campo select {
+  /* `.campo input[type='text']` trae `flex: 1 1 0%`, que en la columna de `.campo` le ganaba al alto. */
+  flex: none;
   box-sizing: border-box;
   width: 100%;
   min-width: 0;

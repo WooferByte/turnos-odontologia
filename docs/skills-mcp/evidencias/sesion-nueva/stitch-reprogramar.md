@@ -78,4 +78,30 @@ Una columna de unos 390 px con la barra en tres filas (marca; pastillas en dos l
 
 ## 4. Comparación con la implementación
 
-Pendiente: se completa en la prueba en el navegador del Apply (tarea 12.1 de `reprogramar-turno`), con las capturas de la implementación a 1280 y 390 px guardadas junto a las de Stitch y las diferencias anotadas con su motivo.
+Hecha el 2026-10-29 en la tarea 12.1, con la demo (`crear_app_demo` y `npm run dev`) y después con Compose, en el navegador integrado de la app. Capturas en `stitch-reprogramar-pantalla/`: `implementacion-reprogramar-escritorio.jpg` (1280 px, REP-1 con el panel abierto) e `implementacion-reprogramar-angosta.jpg` (390 px, el panel). Para que el panel del navegador entrara completo, las capturas se tomaron con la página escalada (`transform: scale`) sin cambiar el ancho de la ventana emulada (1280 y 390 px).
+
+### Recorrido del README («Reprogramar un turno desde la agenda») y resultado
+
+| Paso | Resultado |
+|---|---|
+| 1. Recepcionista, 02/11/2026, tres turnos (Ana 09:00, Bruno 10:00, Carla 11:00) | Las tres filas tienen «Reprogramar» e «Historial». «Reprogramar» en Ana: «Reprogramar turno», «Ana Ejemplo · Consulta / control», «Ahora: lunes 2 de noviembre de 2026, 09:00 – 09:30», Fecha `2026-11-02`, Hora `09:00`, Duración `30`, «Termina a las 09:30.»; foco en «Fecha», fila de Ana resaltada, ningún pedido |
+| 2. Hora 12:30 | «Termina a las 13:00.»; un solo `PATCH /api/turnos/1` y después `GET /api/turnos?fecha=2026-11-02`; «Turno reprogramado.», panel cerrado, Ana de 12:30 a 13:00 después de Carla |
+| 3. Solo la duración (Bruno, 60) y a otro día (Ana, 03/11 10:00) | Bruno de 10:00 a 11:00 («Termina a las 11:00.»); la agenda pasa al «martes 3 de noviembre de 2026» con Ana de 10:00 a 10:30 |
+| 4. REP-1 (Bruno a las 11:30, sobre Carla) | «El profesional y el sillón ya tienen un turno activo en ese horario (RN-AG-05, RN-AG-08).» y «El turno no cambió.»; el panel sigue abierto y Bruno sigue de 10:00 a 11:00 |
+| 5. Duración 42, las 07:30 y controles locales | RN-AG-01 y RN-AG-04 con «El turno no cambió.»; vacío y «media» → «Completá fecha, hora y duración.»; sin cambios → «No cambiaste la fecha, la hora ni la duración.»; ninguno de los tres hace un pedido; «Cancelar» cierra y devuelve el foco a «Reprogramar el turno de Bruno Ficticio, 10:00» |
+| 6. Usuaria solo `dueno` (creada para la prueba) | Ve «Reprogramar» en las filas activas (D312) y recibe «Tu usuario no tiene permiso para reprogramar turnos (RN-AU-05).» con «El turno no cambió.» |
+| 7. Historial de Ana (V4) | «Turno creado» y dos «Turno reprogramado» con «Por: Usuario n.º 2», «Antes: lunes 2 de noviembre de 2026, 09:00 – 09:30 (30 min)» / «Después: lunes 2 de noviembre de 2026, 12:30 – 13:00 (30 min)» y «Antes: … 12:30 – 13:00 (30 min)» / «Después: martes 3 de noviembre de 2026, 10:00 – 10:30 (30 min)»; «Reprogramar» cierra el historial y «Día siguiente» cierra el panel |
+| 8. API | `PATCH /turnos/2` con `{"inicio": "2026-11-02T14:30:00Z"}` → el mismo `409` con `["RN-AG-05", "RN-AG-08"]` y `conflictos`; `/openapi.json` tiene `patch` en `/turnos/{turno_id}` |
+| Compose (`http://127.0.0.1:5173`), turno del 9/11/2026 | Reprogramado de 10:15 a 16:00 con un solo `PATCH` y la recarga del día; consola vacía (ninguna violación de la CSP); a 390 px sin desplazamiento horizontal (`scrollWidth` = 390) |
+
+### Corrección hecha en la prueba
+
+- **El campo «Duración (minutos)» salía con 20 px de alto** en lugar de 36 px, como «Fecha» y «Hora». La regla general `.campo input[type='text']` trae `flex: 1 1 0%`, que en la columna flexible de `.campo` le ganaba al `height`. Afectaba también a «N.º de paciente» de «Nuevo turno» (C-14). Se agregó `flex: none` a la regla de los campos de `.panel-de-turno` (que también cubre el panel de reprogramar) y ahora los tres miden 36 px, en la demo y en Compose.
+
+### Diferencias con Stitch y su motivo
+
+- **El panel va dentro de la página, al costado de la agenda**, con el pie dentro de la tarjeta, como «Nuevo turno» e «Historial» (D339), y no como columna de alto completo pegada al borde.
+- **El aviso lleva el código entre paréntesis** y no en un chip; los campos no se pintan de rojo (D339).
+- **La fila seleccionada** conserva la franja del color de la prestación (C-14) y resalta el botón «Reprogramar».
+- Sin el pie «Agenda sincronizada en tiempo real» ni «4 turnos agendados»: el total va en el chip del título, como en C-14.
+- A 390 px los campos quedan en una columna, el botón primario arriba de «Cancelar» a todo el ancho y los dos botones de la fila al pie de la tarjeta, como en la captura angosta.
