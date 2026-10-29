@@ -69,6 +69,7 @@ proyecto/
 │       ├── features/bloqueos/    # pantalla de bloqueos (C-13)
 │       ├── features/sesion/      # indicador del usuario de la sesión en el encabezado (C-50)
 │       ├── features/agenda/      # agenda del día y formulario «Nuevo turno» (C-14)
+│       ├── features/historial/   # panel «Historial del turno», solo lectura (C-15)
 │       ├── pages/               # panel base y rutas protegidas
 │       └── test/                # servidor falso de la API para las pruebas
 ├── docker-compose.yml           # api, worker, postgres, redis, frontend (C-02 crea api y postgres, D151)
