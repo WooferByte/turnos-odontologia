@@ -24,6 +24,7 @@ TABLA_R4 = [
     ("contrasena.propia", True, True, True),
     ("sesion.leer", True, True, True),
     ("turnos.leer", True, True, True),
+    ("turnos.reprogramar", True, True, False),
 ]
 CASOS_MATRIZ = [
     (permiso, rol, esperado)
@@ -37,9 +38,9 @@ def test_us091_ca3_matriz_de_las_rutas_existentes(permiso, rol, esperado):
     assert puede(frozenset({rol}), Permiso(permiso)) is esperado
 
 
-def test_us091_ca3_la_tabla_cubre_los_16_permisos_y_los_3_roles():
+def test_us091_ca3_la_tabla_cubre_los_17_permisos_y_los_3_roles():
     assert {Permiso(p) for p, *_ in TABLA_R4} == set(Permiso)
-    assert len(CASOS_MATRIZ) == 16 * 3
+    assert len(CASOS_MATRIZ) == 17 * 3
 
 
 def test_us091_ca1_los_permisos_son_la_union_de_los_roles():
@@ -135,3 +136,15 @@ def test_us093_ca7_contrasena_propia_para_los_tres_roles_y_no_para_un_usuario_si
         assert puede(frozenset({rol}), Permiso.CONTRASENA_PROPIA)
     assert MATRIZ[Permiso.CONTRASENA_PROPIA] == {ODONTOLOGO, RECEPCIONISTA, DUENO}
     assert not puede(frozenset(), Permiso.CONTRASENA_PROPIA)
+
+
+@pytest.mark.parametrize("rol", [ODONTOLOGO, RECEPCIONISTA])
+def test_rep4a_turnos_reprogramar_para_odontologo_y_recepcionista(rol):
+    assert puede(frozenset({rol}), Permiso.TURNOS_REPROGRAMAR)
+
+
+@pytest.mark.parametrize("roles", [frozenset({DUENO}), frozenset()])
+def test_rep4a_el_dueno_y_sin_roles_no_reprograman(roles):
+    assert not puede(roles, Permiso.TURNOS_REPROGRAMAR)
+    with pytest.raises(PermisoInsuficiente):
+        exigir_permiso(roles, Permiso.TURNOS_REPROGRAMAR)

@@ -21,10 +21,14 @@ def detectar_conflictos(
     ocupados_profesional: Sequence[TurnoOcupado],
     sillon_id: int,
     ocupados_sillon: Sequence[TurnoOcupado],
+    excluir_turno_id: int | None = None,
 ) -> tuple[Conflicto, ...]:
+    """``excluir_turno_id``: el turno que se reprograma no choca consigo mismo (RN-AG-10b)."""
     # El repositorio puede devolver turnos de otro horario del recurso: la regla de
     # solapamiento (RN-AG-09) la decide el dominio con Intervalo.se_solapa_con.
     # Primero el profesional, después el sillón.
+    ocupados_profesional = [o for o in ocupados_profesional if o.turno_id != excluir_turno_id]
+    ocupados_sillon = [o for o in ocupados_sillon if o.turno_id != excluir_turno_id]
     posibles = (
         _conflicto_de_recurso(
             "RN-AG-05", "profesional", profesional_id, candidato, ocupados_profesional

@@ -212,6 +212,15 @@ class AdministracionSinOdontologo(ErrorDeDominio):
     codigo = "RN-AU-06"
 
 
+class TurnoNoReprogramable(ErrorDeDominio):
+    """El turno está en un estado terminal y no se reprograma desde el panel (RN-AG-18, D334)."""
+
+    codigo = "RN-AG-18"
+
+    def __init__(self) -> None:
+        super().__init__("El turno no se puede reprogramar en su estado.")
+
+
 class IntervaloInvalido(ErrorDeDominio):
     codigo = "RN-AG-10d"
 

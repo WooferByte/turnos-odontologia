@@ -9,6 +9,7 @@ from app.domain.turnos.turno import Turno
 
 class TipoEvento(StrEnum):
     CREADO = "creado"
+    REPROGRAMADO = "reprogramado"
 
 
 class ActorTipo(StrEnum):
@@ -55,5 +56,29 @@ def evento_creado(turno: Turno, actor: Actor) -> EventoTurno:
             "profesional_id": turno.profesional_id,
             "sillon_id": turno.sillon_id,
         },
+        motivo=None,
+    )
+
+
+def _horario_del_turno(turno: Turno) -> dict[str, object]:
+    return {
+        "inicio": a_texto_utc(turno.inicio),
+        "fin": a_texto_utc(turno.fin),
+        "duracion_minutos": turno.duracion_minutos,
+    }
+
+
+def evento_reprogramado(antes: Turno, despues: Turno, actor: Actor, ocurrido_en: datetime) -> EventoTurno:
+    """El evento ``reprogramado``: el horario antes y después, lo único que puede cambiar (D338)."""
+    if antes.id is None or despues.id is None:
+        raise ValueError("El evento reprogramado cuelga de un turno guardado: el turno no tiene id.")
+    return EventoTurno(
+        turno_id=despues.id,
+        tipo=TipoEvento.REPROGRAMADO,
+        actor_tipo=actor.tipo,
+        actor_id=actor.id,
+        ocurrido_en=ocurrido_en,
+        antes=_horario_del_turno(antes),
+        despues=_horario_del_turno(despues),
         motivo=None,
     )

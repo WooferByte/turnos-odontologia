@@ -33,6 +33,7 @@ class Permiso(StrEnum):
     CONTRASENA_PROPIA = "contrasena.propia"
     SESION_LEER = "sesion.leer"
     TURNOS_LEER = "turnos.leer"
+    TURNOS_REPROGRAMAR = "turnos.reprogramar"
 
 
 _TODOS = frozenset({Rol.ODONTOLOGO, Rol.RECEPCIONISTA, Rol.DUENO})
@@ -57,6 +58,7 @@ MATRIZ: Mapping[Permiso, frozenset[Rol]] = {
     Permiso.CONTRASENA_PROPIA: _TODOS,
     Permiso.SESION_LEER: _TODOS,
     Permiso.TURNOS_LEER: _TODOS,
+    Permiso.TURNOS_REPROGRAMAR: _ODONTOLOGO_Y_RECEPCION,
 }
 
 

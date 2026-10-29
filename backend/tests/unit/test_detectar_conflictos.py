@@ -132,3 +132,63 @@ def test_e6_estados_activos_si_generan_conflicto(estado):
         Conflicto(codigo="RN-AG-05", recurso="profesional", recurso_id=1, turno_id=7),
         Conflicto(codigo="RN-AG-08", recurso="sillon", recurso_id=2, turno_id=8),
     )
+
+
+def test_rep1b_el_turno_no_choca_consigo_mismo():
+    propio = TurnoOcupado(7, Intervalo(a_las(13), a_las(13, 30)), EstadoTurno.RESERVADO)
+
+    conflictos = detectar_conflictos(
+        candidato=Intervalo(a_las(13, 15), a_las(13, 45)),
+        profesional_id=1,
+        ocupados_profesional=[propio],
+        sillon_id=2,
+        ocupados_sillon=[propio],
+        excluir_turno_id=7,
+    )
+
+    assert conflictos == ()
+
+
+def test_rep1b_excluir_un_turno_no_excluye_a_los_demas():
+    propio = TurnoOcupado(7, Intervalo(a_las(13), a_las(13, 30)), EstadoTurno.RESERVADO)
+    otro = TurnoOcupado(8, Intervalo(a_las(13, 30), a_las(14)), EstadoTurno.CONFIRMADO)
+
+    conflictos = detectar_conflictos(
+        candidato=Intervalo(a_las(13, 15), a_las(13, 45)),
+        profesional_id=1,
+        ocupados_profesional=[propio, otro],
+        sillon_id=2,
+        ocupados_sillon=[propio, otro],
+        excluir_turno_id=7,
+    )
+
+    assert conflictos == (
+        Conflicto(codigo="RN-AG-05", recurso="profesional", recurso_id=1, turno_id=8),
+        Conflicto(codigo="RN-AG-08", recurso="sillon", recurso_id=2, turno_id=8),
+    )
+
+
+@pytest.mark.parametrize("excluir_turno_id", [None, 99])
+def test_rep1b_sin_excluir_o_excluyendo_otro_id_el_propio_turno_choca(excluir_turno_id):
+    propio = TurnoOcupado(7, Intervalo(a_las(13), a_las(13, 30)), EstadoTurno.RESERVADO)
+
+    conflictos = detectar_conflictos(
+        Intervalo(a_las(13, 15), a_las(13, 45)),
+        1,
+        [propio],
+        2,
+        [],
+        excluir_turno_id=excluir_turno_id,
+    )
+
+    assert conflictos == (
+        Conflicto(codigo="RN-AG-05", recurso="profesional", recurso_id=1, turno_id=7),
+    )
+
+
+def test_rep1b_el_comportamiento_de_siempre_no_cambia_sin_el_parametro():
+    propio = TurnoOcupado(7, Intervalo(a_las(13), a_las(13, 30)), EstadoTurno.RESERVADO)
+
+    conflictos = detectar_conflictos(Intervalo(a_las(13, 15), a_las(13, 45)), 1, [propio], 2, [])
+
+    assert [c.turno_id for c in conflictos] == [7]
