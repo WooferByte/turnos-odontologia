@@ -292,3 +292,169 @@ describe('PanelCancelar: bordes', () => {
     expect(celdasDeFila('18:00 – 18:30')[3]).toBe('Cancelado por el consultorio')
   })
 })
+
+describe('PanelCancelar: los rechazos', () => {
+  it('CAN-5a: un turno que ya no está activo muestra RN-AG-12 y no cambia', async () => {
+    const servidor = falso()
+    const usuario = await abrirAgenda(servidor)
+    await abrirCancelar(usuario)
+    servidor.cambiarEstado(11, 'cancelado_profesional')
+
+    await usuario.click(opcion('El paciente'))
+    await usuario.click(botonCancelarTurno())
+
+    const aviso = await screen.findByRole('alert')
+    expect(aviso.textContent).toContain('Este turno ya no se puede cancelar por su estado (RN-AG-12).')
+    expect(aviso.textContent).toContain('El turno no cambió.')
+    expect(servidor.llamadas('POST', '/api/turnos/11/cancelar')).toBe(1)
+    expect(screen.getByRole('complementary', { name: 'Cancelar turno' })).toBeDefined()
+    expect(opcion('El paciente').checked).toBe(true)
+    expect(screen.queryByText('Turno cancelado.')).toBeNull()
+  })
+
+  it('CAN-5b: sin opción no manda nada', async () => {
+    const servidor = falso()
+    const usuario = await abrirAgenda(servidor)
+    await abrirCancelar(usuario)
+    const antes = totalDePeticiones(servidor)
+
+    await usuario.click(botonCancelarTurno())
+
+    expect((await screen.findByRole('alert')).textContent).toContain('Elegí quién pidió la cancelación.')
+    expect(totalDePeticiones(servidor)).toBe(antes)
+    expect(servidor.llamadas('POST', '/api/turnos/11/cancelar')).toBe(0)
+    await usuario.click(opcion('El paciente'))
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
+
+  it('CAN-5b: el 404 con su texto', async () => {
+    const servidor = falso()
+    const usuario = await abrirAgenda(servidor)
+    await abrirCancelar(usuario)
+    servidor.quitarTurno(11)
+
+    await usuario.click(opcion('El consultorio'))
+    await usuario.click(botonCancelarTurno())
+
+    const aviso = await screen.findByRole('alert')
+    expect(aviso.textContent).toContain('El turno ya no existe (RN-GL-04).')
+    expect(aviso.textContent).toContain('El turno no cambió.')
+    expect(opcion('El consultorio').checked).toBe(true)
+    expect(screen.queryByText('Turno cancelado.')).toBeNull()
+  })
+
+  it('CAN-5b: el dueño ve la acción y recibe el 403', async () => {
+    const servidor = falso({ usuarios: [...USUARIOS_DE_PARTIDA, USUARIO_DUENO] })
+    const usuario = await abrirAgenda(servidor, EMAIL_DUENO)
+    expect(screen.getAllByRole('button', { name: /^Cancelar el turno/ })).toHaveLength(3)
+    await abrirCancelar(usuario)
+    const refrescosAntes = servidor.llamadas('POST', '/api/auth/refresh')
+
+    await usuario.click(opcion('El paciente'))
+    await usuario.click(botonCancelarTurno())
+
+    const aviso = await screen.findByRole('alert')
+    expect(aviso.textContent).toContain('Tu usuario no tiene permiso para cancelar turnos (RN-AU-05).')
+    expect(aviso.textContent).toContain('El turno no cambió.')
+    expect(opcion('El paciente').checked).toBe(true)
+    expect(servidor.llamadas('POST', '/api/auth/refresh')).toBe(refrescosAntes)
+    expect(servidor.turnosActuales().find((t) => t.id === 11)?.estado).toBe('reservado')
+  })
+
+  it('CAN-5b: el doble clic manda un solo POST', async () => {
+    const servidor = falso()
+    const usuario = await abrirAgenda(servidor)
+    await abrirCancelar(usuario)
+    await usuario.click(opcion('El paciente'))
+    const liberar = servidor.retener('/api/turnos/11/cancelar')
+
+    await usuario.click(botonCancelarTurno())
+    expect(botonCancelarTurno().disabled).toBe(true)
+    await usuario.click(botonCancelarTurno())
+    liberar()
+
+    await screen.findByText('Turno cancelado.')
+    expect(servidor.llamadas('POST', '/api/turnos/11/cancelar')).toBe(1)
+  })
+
+  it('CAN-5b: sin conexión se conserva la opción', async () => {
+    const servidor = falso()
+    const usuario = await abrirAgenda(servidor)
+    await abrirCancelar(usuario)
+    await usuario.click(opcion('El consultorio'))
+    servidor.caerse()
+
+    await usuario.click(botonCancelarTurno())
+
+    const aviso = await screen.findByRole('alert')
+    expect(aviso.textContent).toContain(MENSAJE_DE_CONEXION)
+    expect(aviso.textContent).toContain('El turno no cambió.')
+    expect(botonCancelarTurno().disabled).toBe(false)
+    expect(opcion('El consultorio').checked).toBe(true)
+    expect(screen.queryByText('Turno cancelado.')).toBeNull()
+  })
+
+  it('CAN-5b: un 500 muestra el aviso de conexión', async () => {
+    const servidor = falso()
+    const usuario = await abrirAgenda(servidor)
+    await abrirCancelar(usuario)
+    await usuario.click(opcion('El paciente'))
+    servidor.responderAlCancelar(500, [])
+
+    await usuario.click(botonCancelarTurno())
+
+    const aviso = await screen.findByRole('alert')
+    expect(aviso.textContent).toContain(MENSAJE_DE_CONEXION)
+    expect(aviso.textContent).toContain('El turno no cambió.')
+    expect(opcion('El paciente').checked).toBe(true)
+    expect(screen.queryByText('Turno cancelado.')).toBeNull()
+  })
+
+  it('CAN-5b: un 422 muestra el aviso de conexión', async () => {
+    const servidor = falso()
+    const usuario = await abrirAgenda(servidor)
+    await abrirCancelar(usuario)
+    await usuario.click(opcion('El consultorio'))
+    servidor.responderAlCancelar(422, [])
+
+    await usuario.click(botonCancelarTurno())
+
+    const aviso = await screen.findByRole('alert')
+    expect(aviso.textContent).toContain(MENSAJE_DE_CONEXION)
+    expect(aviso.textContent).toContain('El turno no cambió.')
+    expect(opcion('El consultorio').checked).toBe(true)
+    expect(screen.queryByText('Turno cancelado.')).toBeNull()
+  })
+
+  it('CAN-5b: con el refresh vigente se renueva sin aviso', async () => {
+    const servidor = falso()
+    const usuario = await abrirAgenda(servidor)
+    await abrirCancelar(usuario)
+    await usuario.click(opcion('El paciente'))
+    const refrescosAntes = servidor.llamadas('POST', '/api/auth/refresh')
+    servidor.vencerAccess()
+
+    await usuario.click(botonCancelarTurno())
+
+    expect(await screen.findByText('Turno cancelado.')).toBeDefined()
+    expect(servidor.llamadas('POST', '/api/auth/refresh')).toBe(refrescosAntes + 1)
+    expect(servidor.llamadas('POST', '/api/turnos/11/cancelar')).toBe(2)
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
+
+  it('CAN-5b: una sesión irrenovable vuelve al inicio de sesión', async () => {
+    const servidor = falso()
+    const usuario = await abrirAgenda(servidor)
+    await abrirCancelar(usuario)
+    await usuario.click(opcion('El paciente'))
+    servidor.vencerAccess()
+    servidor.invalidarRefresh()
+
+    await usuario.click(botonCancelarTurno())
+
+    expect((await screen.findByRole('status')).textContent).toBe('Tu sesión terminó. Iniciá sesión de nuevo.')
+    expect(screen.getByTestId('lugar').textContent).toBe('/ingresar')
+    expect(screen.queryByText(MENSAJE_DE_CONEXION)).toBeNull()
+    expect(servidor.turnosActuales().find((t) => t.id === 11)?.estado).toBe('reservado')
+  })
+})
