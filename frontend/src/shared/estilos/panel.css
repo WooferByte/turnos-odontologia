@@ -1708,3 +1708,140 @@ p.pantalla-de-ingreso {
     width: 100%;
   }
 }
+
+/* Historial del turno (C-15, pantallas de Stitch, D234). Botón «Historial» con borde y reloj en la última columna de
+   la agenda, fila del turno abierto en celeste suave y panel lateral de 420 px con la línea de tiempo vertical: una
+   tarjeta por evento con el título, la fecha, «Por: …» y, para el creado, el estado inicial. Debajo de 720 px el
+   panel ocupa el ancho y el botón queda al pie de cada tarjeta. Solo tokens existentes; sin Tailwind ni CDN. */
+.tabla-de-agenda td.acciones-del-turno {
+  text-align: right;
+}
+
+.boton-de-historial {
+  min-height: var(--alto-campo);
+  padding: 0 12px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.fila-seleccionada {
+  background: var(--primario-suave);
+}
+
+.panel-de-historial {
+  flex: none;
+  box-sizing: border-box;
+  width: var(--ancho-panel-turno);
+  max-width: 100%;
+}
+
+.panel-de-historial .panel-encabezado h2:focus {
+  outline: none;
+}
+
+.panel-de-historial .panel-encabezado h2:focus-visible {
+  outline: 2px solid var(--primario);
+  outline-offset: 2px;
+  border-radius: var(--radio);
+}
+
+.nota-de-solo-lectura {
+  margin: 0 0 16px;
+  color: var(--texto-tenue);
+  font-size: 12px;
+  font-style: italic;
+}
+
+.panel-de-historial .aviso {
+  margin-bottom: 16px;
+}
+
+.historial-vacio {
+  margin: 0 0 16px;
+  padding: 14px;
+  border: 1px dashed var(--borde-fuerte);
+  border-radius: var(--radio-medio);
+  color: var(--texto-tenue);
+  text-align: center;
+}
+
+.linea-de-tiempo {
+  position: relative;
+  padding: 0;
+  margin: 0 0 16px;
+  list-style: none;
+}
+
+.linea-de-tiempo::before {
+  content: '';
+  position: absolute;
+  top: 8px;
+  bottom: 8px;
+  left: 4px;
+  width: 1px;
+  background: var(--borde-fuerte);
+}
+
+.evento-del-historial {
+  position: relative;
+  padding: 12px 14px;
+  margin: 0 0 12px 24px;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-medio);
+  background: var(--superficie-suave);
+  font-size: 12px;
+  color: var(--texto-suave);
+}
+
+.evento-del-historial::before {
+  content: '';
+  position: absolute;
+  top: 14px;
+  left: -24px;
+  box-sizing: border-box;
+  width: var(--tamano-punto);
+  height: var(--tamano-punto);
+  border: 2px solid var(--primario);
+  border-radius: var(--radio-pastilla);
+  background: var(--superficie);
+}
+
+.evento-del-historial h3 {
+  margin: 0 0 4px;
+  color: var(--texto);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.evento-del-historial p {
+  margin: 0 0 2px;
+}
+
+.evento-del-historial .evento-detalle {
+  padding-top: 8px;
+  margin-top: 8px;
+  border-top: 1px solid var(--borde);
+  color: var(--texto-tenue);
+}
+
+.panel-de-historial .panel-pie {
+  justify-content: stretch;
+  margin-top: 8px;
+}
+
+.panel-de-historial .panel-pie .boton-secundario {
+  width: 100%;
+}
+
+@media (max-width: 720px) {
+  .fila-de-turno td.acciones-del-turno {
+    grid-column: 1 / -1;
+    grid-row: 4;
+    margin-top: 4px;
+    text-align: left;
+  }
+
+  .panel-de-historial {
+    width: 100%;
+  }
+}
