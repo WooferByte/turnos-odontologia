@@ -1845,3 +1845,90 @@ p.pantalla-de-ingreso {
     width: 100%;
   }
 }
+
+/* Reprogramar un turno (C-16, pantallas de Stitch, D234). Botón «Reprogramar» con borde y calendario antes de
+   «Historial» en la última columna de la agenda (resaltado en la fila del turno abierto) y panel lateral de 420 px
+   con el resumen del turno en dos líneas, la nota «Fecha y hora del consultorio.», el aviso de error con su segunda
+   línea «El turno no cambió.», «Fecha» y «Hora» en una fila, «Duración (minutos)» debajo con la ayuda a la izquierda
+   y «Termina a las…» a la derecha, y el pie con «Cancelar» y «Reprogramar». Debajo de 720 px los campos quedan en
+   una columna, los dos botones del pie ocupan el ancho (el primario arriba) y los de la fila van al pie de la
+   tarjeta. Solo tokens existentes; sin Tailwind, sin CDN y con íconos en SVG en línea. */
+.boton-de-reprogramar {
+  min-height: var(--alto-campo);
+  padding: 0 12px;
+  margin-right: 8px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.fila-seleccionada .boton-de-reprogramar {
+  border-color: var(--primario);
+  color: var(--primario-oscuro);
+}
+
+.panel-de-reprogramar {
+  flex: none;
+  box-sizing: border-box;
+  width: var(--ancho-panel-turno);
+  max-width: 100%;
+}
+
+.panel-de-reprogramar .panel-subtitulo:first-of-type {
+  margin-top: 12px;
+  font-size: 14px;
+}
+
+.nota-del-panel {
+  margin: 0 0 16px;
+  color: var(--texto-tenue);
+  font-size: 12px;
+}
+
+.aviso-texto .aviso-segunda-linea {
+  margin-top: 4px;
+}
+
+.ayudas-de-duracion {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin: -8px 0 16px;
+}
+
+.evento-del-historial .evento-detalle + .evento-detalle {
+  padding-top: 0;
+  margin-top: 2px;
+  border-top: 0;
+}
+
+@media (max-width: 720px) {
+  .panel-de-reprogramar {
+    width: 100%;
+  }
+
+  .panel-de-reprogramar .campos-en-fila {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0;
+  }
+
+  .panel-de-reprogramar .panel-pie {
+    flex-direction: column-reverse;
+  }
+
+  .panel-de-reprogramar .panel-pie .boton-secundario,
+  .panel-de-reprogramar .panel-pie .boton-primario {
+    width: 100%;
+  }
+
+  .fila-de-turno td.acciones-del-turno {
+    display: flex;
+    gap: 8px;
+  }
+
+  .fila-de-turno td.acciones-del-turno .boton-secundario {
+    flex: 1 1 0;
+    justify-content: center;
+    margin-right: 0;
+  }
+}
