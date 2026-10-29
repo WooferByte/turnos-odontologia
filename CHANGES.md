@@ -502,7 +502,7 @@ Primer change: `/opsx:propose crear-turno-sin-solapamientos`.
   - `knowledge-base/05_reglas_de_negocio.md` RN-AG-11 · `knowledge-base/10_preguntas_abiertas.md` D68, D112, D159, D160, D234, D323, D326 a D331
 
 ### [C-16] `reprogramar-turno`
-- **Estado**: `[ ]` pendiente · **Orden**: 4 · **Gobernanza**: MEDIO
+- **Estado**: `[~]` en curso · **Orden**: 4 · **Gobernanza**: MEDIO
 - **Objetivo** (US-012): mover un turno a otro horario o cambiar su duración desde el panel sin perder el historial.
 - **Alcance — dentro**: `PATCH /turnos/{id}`; el turno se valida como uno nuevo excluyéndose a sí mismo (RN-AG-10b), con horario y bloqueos (RN-TD-04: RN-AG-04 y RN-AG-04b, con `exigir_dentro_del_horario` de C-12 y `exigir_sin_bloqueos` de C-13); duración nueva mayor que 0 y múltiplo de la constante de 5 minutos, con `fin` recalculado; evento `reprogramado` con el antes y el después (DD-05); acción en la agenda.
 - **Alcance — fuera**: conservar la seña (US-012 CA-3, se completa en C-40); reprogramación por el paciente (C-30); granularidad configurable (C-22).
@@ -510,14 +510,14 @@ Primer change: `/opsx:propose crear-turno-sin-solapamientos`.
 - **Escenarios mínimos**: US-012: CA-1, CA-2, CA-4; REP-1 (reprogramar sobre otro turno activo se rechaza con RN-AG-05 y RN-AG-08 y el turno no cambia)
 - **Leer antes**:
   - `knowledge-base/06_funcionalidades.md` §US-012
-  - `knowledge-base/05_reglas_de_negocio.md` RN-AG-01, RN-AG-02, RN-AG-04, RN-AG-04b, RN-AG-10b, RN-AG-11, RN-TD-03, RN-TD-04
+  - `knowledge-base/05_reglas_de_negocio.md` RN-AG-01, RN-AG-02, RN-AG-04, RN-AG-04b, RN-AG-10b, RN-AG-11, RN-AG-18, RN-TD-03, RN-TD-04 · `knowledge-base/10_preguntas_abiertas.md` D65, D312, D332 a D342
   - `knowledge-base/09_decisiones_y_supuestos.md` DD-05 · `knowledge-base/04_modelo_de_datos.md` §Turno y «Máquina de estados del turno»
   - `knowledge-base/02_descripcion_general.md` §«API REST (resumen)», fila Turnos
 
 ### [C-17] `cancelar-turno`
 - **Estado**: `[ ]` pendiente · **Orden**: 4 · **Gobernanza**: MEDIO
 - **Objetivo** (US-013): cancelar un turno desde el panel y liberar su horario.
-- **Alcance — dentro**: `POST /turnos/{id}/cancelar` indicando quién lo pidió (`cancelado_profesional` o `cancelado_paciente`), en cualquier momento; transición según la tabla (RN-AG-12); evento `cancelado`; acción en la agenda.
+- **Alcance — dentro**: `POST /turnos/{id}/cancelar` indicando quién lo pidió (`cancelado_profesional` o `cancelado_paciente`), en cualquier momento; transición según la tabla (RN-AG-12); evento `cancelado`; acción en la agenda; corregir en el frontend el estado `cancelado_consultorio` por `cancelado_profesional` (apiAgenda.ts, mensajes.ts y el test de PaginaAgenda; D342).
 - **Alcance — fuera**: ofrecer el hueco a la lista de espera (US-013 CA-2, el disparo llega en C-36); efecto sobre la seña (CA-3, en C-41); cancelación por el paciente (C-29).
 - **Depende de**: C-03, C-14
 - **Escenarios mínimos**: US-013: CA-1, CA-2; CAN-1 (cancelar un turno en estado terminal se rechaza con RN-AG-12 y no cambia)

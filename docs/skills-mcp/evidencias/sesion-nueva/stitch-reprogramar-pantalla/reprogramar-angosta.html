@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agenda del día - Reprogramar turno móvil - Turnos Odontológicos AR</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: #F8FAFC;
+      color: #0F172A;
+      -webkit-font-smoothing: antialiased;
+    }
+    .font-tabular {
+      font-variant-numeric: tabular-nums;
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-slate-50 flex justify-center py-4 sm:py-8 px-2">
+  <!-- Contenedor móvil angosto (390px) -->
+  <main class="w-full max-w-[390px] bg-white border border-[#E2E8F0] rounded-xl shadow-sm overflow-hidden flex flex-col">
+    
+    <!-- Barra superior en varias filas -->
+    <header class="bg-white border-b border-[#E2E8F0] p-4 flex flex-col gap-3">
+      <!-- Fila 1: Marca con ícono simple de diente -->
+      <div class="flex items-center gap-2">
+        <svg class="w-6 h-6 text-[#0284C7] flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2C8.5 2 6 4.5 6 8c0 3.5 1.5 7 2.5 10 .8 2.4 2 4 3.5 4s2.7-1.6 3.5-4c1-3 2.5-6.5 2.5-10 0-3.5-2.5-6-6-6z"/>
+          <path d="M9.5 8.5c.5-1 1.5-1.5 2.5-1.5s2 .5 2.5 1.5"/>
+        </svg>
+        <span class="font-bold text-[17px] tracking-tight text-[#0F172A]">Turnos Odontológicos AR</span>
+      </div>
+
+      <!-- Fila 2: Pastillas de navegación en 2 líneas -->
+      <nav class="flex flex-wrap gap-1.5" aria-label="Navegación principal">
+        <a href="#" class="px-2.5 py-1 text-xs font-semibold rounded bg-[#0284C7]/10 text-[#0284C7] border border-[#0284C7]/20">Agenda</a>
+        <a href="#" class="px-2.5 py-1 text-xs font-medium rounded text-[#64748B] hover:bg-slate-100 border border-transparent">Prestaciones</a>
+        <a href="#" class="px-2.5 py-1 text-xs font-medium rounded text-[#64748B] hover:bg-slate-100 border border-transparent">Usuarios</a>
+        <a href="#" class="px-2.5 py-1 text-xs font-medium rounded text-[#64748B] hover:bg-slate-100 border border-transparent">Horario</a>
+        <a href="#" class="px-2.5 py-1 text-xs font-medium rounded text-[#64748B] hover:bg-slate-100 border border-transparent">Bloqueos</a>
+        <a href="#" class="px-2.5 py-1 text-xs font-medium rounded text-[#64748B] hover:bg-slate-100 border border-transparent">Mi contraseña</a>
+      </nav>
+
+      <!-- Fila 3: Usuario en sesión y botón cerrar sesión -->
+      <div class="pt-2 border-t border-slate-100 flex items-center justify-between gap-2">
+        <div class="flex flex-col min-w-0">
+          <span class="text-xs font-medium text-[#0F172A] truncate">odontologa@consultorio-demo.test</span>
+          <span class="text-[11px] text-[#64748B]">Odontólogo · Dueño</span>
+        </div>
+        <button type="button" class="flex-shrink-0 px-2.5 py-1 rounded-[4px] border border-[#E2E8F0] text-xs font-medium text-[#0F172A] hover:bg-slate-50 flex items-center gap-1 transition-colors">
+          <svg class="w-3.5 h-3.5 text-[#64748B]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+          </svg>
+          <span>Cerrar sesión</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Panel a todo el ancho: Reprogramar turno -->
+    <section class="p-4 flex flex-col bg-white">
+      <!-- Encabezado del panel -->
+      <div class="flex items-center justify-between pb-3 border-b border-[#E2E8F0]">
+        <div class="flex items-center gap-2">
+          <svg class="w-5 h-5 text-[#0284C7]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+          <h1 class="text-base font-bold text-[#0F172A]">Reprogramar turno</h1>
+        </div>
+        <button type="button" aria-label="Cerrar" class="p-1 rounded-[4px] text-[#64748B] hover:text-[#0F172A] hover:bg-slate-100 transition-colors">
+          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+      </div>
+
+      <!-- Resumen del turno actual -->
+      <div class="py-3 flex flex-col gap-0.5">
+        <div class="text-sm font-semibold text-[#0F172A]">
+          Bruno Ficticio <span class="text-[#64748B] font-normal">· Limpieza</span>
+        </div>
+        <p class="text-xs text-[#64748B] font-tabular">
+          Ahora: <span class="text-[#334155] font-medium">lunes 2 de noviembre de 2026, 10:00 – 10:45</span>
+        </p>
+        <p class="text-[11px] text-[#64748B] mt-0.5">Fecha y hora del consultorio.</p>
+      </div>
+
+      <!-- Aviso rojo suave con error de validación -->
+      <div class="my-2 p-3 bg-red-50 border border-red-200 rounded-[8px] flex items-start gap-2.5">
+        <svg class="w-4 h-4 text-red-600 flex-shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+        <div class="flex flex-col text-xs text-red-800 leading-snug">
+          <span class="font-medium">La duración debe ser mayor que 0 y múltiplo de 5 minutos (RN-AG-01).</span>
+          <span class="text-red-700 text-[11px] mt-0.5">El turno no cambió.</span>
+        </div>
+      </div>
+
+      <!-- Formulario en una columna -->
+      <form class="mt-2 flex flex-col gap-3.5" onsubmit="event.preventDefault();">
+        <!-- Campo Fecha -->
+        <div class="flex flex-col gap-1">
+          <label for="fecha" class="text-xs font-semibold text-[#0F172A]">
+            Fecha <span class="text-red-500">*</span>
+          </label>
+          <div class="relative">
+            <input 
+              id="fecha" 
+              type="text" 
+              value="03/11/2026" 
+              class="w-full px-3 py-2 text-sm bg-white border border-[#E2E8F0] rounded-[4px] font-tabular text-[#0F172A] focus:outline-none focus:ring-1 focus:ring-[#0284C7] focus:border-[#0284C7]" 
+            />
+            <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#64748B]">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <!-- Campo Hora -->
+        <div class="flex flex-col gap-1">
+          <label for="hora" class="text-xs font-semibold text-[#0F172A]">
+            Hora <span class="text-red-500">*</span>
+          </label>
+          <div class="relative">
+            <input 
+              id="hora" 
+              type="text" 
+              value="15:00" 
+              class="w-full px-3 py-2 text-sm bg-white border border-[#E2E8F0] rounded-[4px] font-tabular text-[#0F172A] focus:outline-none focus:ring-1 focus:ring-[#0284C7] focus:border-[#0284C7]" 
+            />
+            <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-[#64748B]">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+            </div>
+          </div>
+        </div>
+
+        <!-- Campo Duración con error -->
+        <div class="flex flex-col gap-1">
+          <label for="duracion" class="text-xs font-semibold text-[#0F172A]">
+            Duración (minutos) <span class="text-red-500">*</span>
+          </label>
+          <div class="relative">
+            <input 
+              id="duracion" 
+              type="text" 
+              value="42" 
+              class="w-full px-3 py-2 text-sm bg-white border-2 border-red-500 text-red-900 rounded-[4px] font-tabular focus:outline-none focus:ring-1 focus:ring-red-500" 
+            />
+            <div class="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-red-500">
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+              </svg>
+            </div>
+          </div>
+          <span class="text-[11px] text-[#64748B]">Múltiplo de 5 minutos.</span>
+        </div>
+
+        <!-- Pie de acciones -->
+        <div class="pt-2 flex flex-col gap-2">
+          <button 
+            type="submit" 
+            class="w-full py-2.5 px-4 bg-[#0284C7] hover:bg-[#0369a1] text-white text-sm font-semibold rounded-[4px] shadow-sm transition-colors text-center"
+          >
+            Reprogramar
+          </button>
+          <button 
+            type="button" 
+            class="w-full py-2.5 px-4 bg-white hover:bg-slate-50 text-[#0F172A] border border-[#E2E8F0] text-sm font-medium rounded-[4px] transition-colors text-center"
+          >
+            Cancelar
+          </button>
+        </div>
+      </form>
+    </section>
+
+    <!-- Separador y Sección "Después de reprogramar" -->
+    <section class="border-t border-dashed border-[#E2E8F0] bg-slate-50/70 p-4 flex flex-col gap-3">
+      <div class="flex items-center gap-2">
+        <span class="text-[11px] font-bold tracking-wider text-[#64748B] uppercase">Después de reprogramar</span>
+        <div class="flex-1 h-px bg-[#E2E8F0]"></div>
+      </div>
+
+      <!-- Aviso verde suave de éxito -->
+      <div class="p-2.5 bg-emerald-50 border border-emerald-200 rounded-[8px] flex items-center gap-2">
+        <svg class="w-4 h-4 text-emerald-600 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+        </svg>
+        <span class="text-xs font-medium text-emerald-800">Turno reprogramado.</span>
+      </div>
+
+      <!-- Tarjeta de turno reprogramado -->
+      <div class="p-3 bg-white border border-[#E2E8F0] rounded-[8px] shadow-sm flex flex-col gap-2.5 border-l-4 border-l-[#16A34A]">
+        <div class="flex flex-col gap-1">
+          <div class="flex items-center justify-between">
+            <span class="text-sm font-bold font-tabular text-[#0F172A]">15:00 – 15:45</span>
+            <span class="px-2 py-0.5 rounded text-[11px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">
+              Reservado
+            </span>
+          </div>
+          <div class="text-xs text-[#334155] font-medium flex items-center gap-1.5">
+            <span>Bruno Ficticio</span>
+            <span class="text-[#64748B]">·</span>
+            <span class="text-[#64748B]">Limpieza</span>
+          </div>
+        </div>
+
+        <!-- Botones con borde -->
+        <div class="flex items-center gap-2 pt-1 border-t border-slate-100">
+          <button type="button" class="flex-1 py-1.5 px-2.5 text-xs font-medium text-[#0F172A] bg-white hover:bg-slate-50 border border-[#E2E8F0] rounded-[4px] transition-colors flex items-center justify-center gap-1">
+            <svg class="w-3.5 h-3.5 text-[#64748B]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+            </svg>
+            <span>Reprogramar</span>
+          </button>
+          <button type="button" class="flex-1 py-1.5 px-2.5 text-xs font-medium text-[#0F172A] bg-white hover:bg-slate-50 border border-[#E2E8F0] rounded-[4px] transition-colors flex items-center justify-center gap-1">
+            <svg class="w-3.5 h-3.5 text-[#64748B]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>Historial</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Pie institucional / contexto -->
+    <footer class="py-2.5 px-4 bg-slate-50 text-center border-t border-[#E2E8F0]">
+      <span class="text-[10px] text-[#64748B]">Turnos Odontológicos AR · Módulo de Agenda Móvil</span>
+    </footer>
+
+  </main>
+</body>
+</html>
