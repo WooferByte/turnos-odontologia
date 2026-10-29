@@ -1,0 +1,45 @@
+import { describe, expect, it } from 'vitest'
+import { EVENTO_CREADO_DEL_TURNO_11 } from '../../test/servidorFalso'
+import { cuandoOcurrio, detalleDelCreado, textoDelActor, tituloDelEvento } from './mensajes'
+
+const ZONA = 'America/Argentina/Buenos_Aires'
+
+describe('mensajes del historial', () => {
+  it('HIS-2a: el creado se titula Turno creado', () => {
+    expect(tituloDelEvento('creado')).toBe('Turno creado')
+  })
+
+  it('HIS-2a: cuándo ocurrió en hora del consultorio', () => {
+    expect(cuandoOcurrio('2026-10-26T13:15:00Z', ZONA)).toBe('lunes 26 de octubre de 2026, 10:15')
+  })
+
+  it('HIS-2a: el actor con id', () => {
+    expect(textoDelActor('usuario', '2')).toBe('Por: Usuario n.º 2')
+  })
+
+  it('HIS-2a: el detalle del creado', () => {
+    expect(detalleDelCreado(EVENTO_CREADO_DEL_TURNO_11.despues, ZONA)).toBe('Estado inicial: Reservado · 09:00 – 09:30')
+  })
+
+  it('HIS-2b: un actor sin id es el usuario del panel sin identificar', () => {
+    expect(textoDelActor('usuario', null)).toBe('Por: Usuario del panel (sin identificar)')
+  })
+
+  it('HIS-2b: un tipo desconocido es Cambio registrado', () => {
+    expect(tituloDelEvento('reprogramado')).toBe('Cambio registrado (reprogramado)')
+  })
+
+  it('HIS-2b: la fecha es la del consultorio y no la de UTC', () => {
+    expect(cuandoOcurrio('2026-11-01T02:30:00Z', ZONA)).toBe('sábado 31 de octubre de 2026, 23:30')
+  })
+
+  it('G4: un actor_tipo desconocido se muestra tal cual', () => {
+    expect(textoDelActor('sistema', null)).toBe('Por: sistema')
+  })
+
+  it('G5: un despues incompleto no tiene detalle', () => {
+    expect(detalleDelCreado({ estado: 'reservado', inicio: '2026-11-02T12:00:00Z' }, ZONA)).toBeNull()
+    expect(detalleDelCreado({ estado: 'raro', inicio: '2026-11-02T12:00:00Z', fin: '2026-11-02T12:30:00Z' }, ZONA)).toBeNull()
+    expect(detalleDelCreado(null, ZONA)).toBeNull()
+  })
+})

@@ -127,6 +127,21 @@ export interface TurnoFalso {
   prestacion_id?: number
 }
 
+/** Un evento del historial de un turno, con la forma de `EventoTurnoSalida` de la API (C-03). */
+export interface EventoFalso {
+  id: number
+  turno_id: number
+  tipo: string
+  actor_tipo: string
+  /** El id del usuario como texto; `null` si no se identificó (D159). */
+  actor_id: string | null
+  /** ISO en UTC con `Z`. */
+  ocurrido_en: string
+  antes: Record<string, unknown> | null
+  despues: Record<string, unknown> | null
+  motivo: string | null
+}
+
 export interface PacienteFalso {
   id: number
   nombre: string
@@ -178,6 +193,28 @@ export const TURNOS_DEL_2_DE_NOVIEMBRE: readonly TurnoFalso[] = [
   { id: 8, inicio: '2026-11-02T14:00:00Z', fin: '2026-11-02T14:30:00Z', estado: 'confirmado', profesional_id: 1, sillon_id: 1, paciente_id: 2 },
 ]
 
+/** El evento `creado` del turno 11 (HIS-2a): 26/10/2026 10:15 en el consultorio, por el usuario 2; `despues` es la foto del turno al nacer. */
+export const EVENTO_CREADO_DEL_TURNO_11: EventoFalso = {
+  id: 1,
+  turno_id: 11,
+  tipo: 'creado',
+  actor_tipo: 'usuario',
+  actor_id: '2',
+  ocurrido_en: '2026-10-26T13:15:00Z',
+  antes: null,
+  despues: {
+    estado: 'reservado',
+    inicio: '2026-11-02T12:00:00Z',
+    fin: '2026-11-02T12:30:00Z',
+    duracion_minutos: 30,
+    paciente_id: 1,
+    prestacion_id: 1,
+    profesional_id: 1,
+    sillon_id: 1,
+  },
+  motivo: null,
+}
+
 export interface OpcionesDelServidorFalso {
   /** Profesionales del consultorio; por defecto `PROFESIONALES_DE_PARTIDA`. */
   profesionales?: readonly ProfesionalFalso[]
@@ -193,6 +230,8 @@ export interface OpcionesDelServidorFalso {
   bloqueos?: readonly BloqueoFalso[]
   /** Turnos de partida (los afectados por un bloqueo y los de la agenda); por defecto ninguno. */
   turnos?: readonly TurnoFalso[]
+  /** Eventos del historial por id de turno, tal como los devuelve la API (el falso no los reordena). */
+  historiales?: Readonly<Record<number, readonly EventoFalso[]>>
   /** Pacientes del consultorio; por defecto `PACIENTES_DE_PARTIDA`. */
   pacientes?: readonly PacienteFalso[]
   /** El día de hoy del consultorio (`aaaa-mm-dd`); por defecto `HOY_DEL_FALSO`. */
@@ -558,6 +597,9 @@ export function crearServidorFalso(opciones: OpcionesDelServidorFalso = {}): Ser
   const sillones: SillonFalso[] = (opciones.sillones ?? SILLONES_DE_PARTIDA).map((x) => ({ ...x }))
   const bloqueos: BloqueoFalso[] = (opciones.bloqueos ?? []).map((b) => ({ ...b }))
   const turnos: TurnoFalso[] = (opciones.turnos ?? []).map((t) => ({ ...t }))
+  const historiales = new Map<number, readonly EventoFalso[]>(
+    Object.entries(opciones.historiales ?? {}).map(([id, eventos]) => [Number(id), eventos.map((e) => ({ ...e }))]),
+  )
   const pacientes: PacienteFalso[] = (opciones.pacientes ?? PACIENTES_DE_PARTIDA).map((p) => ({ ...p }))
   const hoy = opciones.hoy ?? HOY_DEL_FALSO
   let rechazoAlCrear: { estado: number; codigos: readonly string[] } | null = null
@@ -832,6 +874,14 @@ export function crearServidorFalso(opciones: OpcionesDelServidorFalso = {}): Ser
     return problema(404, '/errores/recurso-no-encontrado', 'Recurso no encontrado', 'No existe.', ['RN-GL-04'], {
       referencias: [{ recurso, recurso_id: id, motivo: 'inexistente' }],
     })
+  }
+
+  /** `GET /api/turnos/{id}/historial`: los eventos tal como están, `[]` sin eventos y `404` `RN-GL-04` sin turno (D159, D160, D166). */
+  function leerHistorial(id: number, init: RequestInit | undefined): Response {
+    const { rechazo } = autorizar(init, null)
+    if (rechazo !== null) return rechazo
+    if (!turnos.some((t) => t.id === id)) return recursoInexistente('turno', id)
+    return json(200, historiales.get(id) ?? [])
   }
 
   function salidaDeBloqueo(bloqueo: BloqueoFalso) {
@@ -1173,6 +1223,8 @@ export function crearServidorFalso(opciones: OpcionesDelServidorFalso = {}): Ser
     if (delHorario !== null && metodo === 'PUT') {
       return Promise.resolve(reemplazarHorario(Number(delHorario[1]), init))
     }
+    const delHistorial = /^\/api\/turnos\/(\d+)\/historial$/.exec(entrada)
+    if (delHistorial !== null && metodo === 'GET') return Promise.resolve(leerHistorial(Number(delHistorial[1]), init))
     const delDia = /^\/api\/turnos(?:\?fecha=(\d{4}-\d{2}-\d{2}))?$/.exec(entrada)
     if (delDia !== null && metodo === 'GET') return Promise.resolve(listarTurnos(delDia[1], init))
     if (entrada === '/api/turnos' && metodo === 'POST') return Promise.resolve(crearTurno(init))
