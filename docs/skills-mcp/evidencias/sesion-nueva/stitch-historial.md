@@ -77,4 +77,25 @@ Una columna de unos 390 px con la barra en tres filas (marca; pastillas en dos l
 
 ## 4. Comparación con la implementación
 
-Pendiente: se completa en la prueba en el navegador del Apply (tarea 6.1 de `tasks.md`).
+Hecha el 2026-10-29 en la tarea 6.1, con la demo (`crear_app_demo` y `npm run dev`) y después con Compose, en el navegador integrado de la app. Capturas de la implementación en `stitch-historial-pantalla/`: `implementacion-historial-escritorio.jpg` (1280 px) e `implementacion-historial-angosta.jpg` (390 px).
+
+### Recorrido y resultado
+
+| Paso | Resultado |
+|---|---|
+| V3: la recepcionista da un turno el lunes 2/11/2026 a las 09:00 (paciente 1, Consulta / control) y pulsa «Historial» | Panel «Historial del turno» con «Ana Ejemplo · Consulta / control», «lunes 2 de noviembre de 2026, 09:00 – 09:30», «Solo lectura: el historial no se puede editar.» y «Turno creado» con la hora del consultorio (08:25), «Por: Usuario n.º 2» y «Estado inicial: Reservado · 09:00 – 09:30». Sin campos ni acciones de edición; el foco va al título |
+| «Cerrar» (botón del pie) | El panel se cierra, ningún pedido nuevo y el foco vuelve al botón «Historial» de la fila |
+| Un solo panel a la vez | «Nuevo turno» cierra el historial y «Historial» cierra «Nuevo turno»; «Día siguiente» cierra el historial |
+| La odontóloga y una usuaria solo `dueno` (creada para la prueba) | Ven el mismo historial |
+| `GET /turnos/1/historial` (API) | El mismo evento `creado`, con `actor_id` `"2"`; `/openapi.json` lista la ruta |
+| Pedidos al abrir | En la demo con `npm run dev` se ven dos `GET …/historial`: es el `StrictMode` de React, que en desarrollo monta los efectos dos veces. En Compose (build de producción) hay **uno solo**, como dice el README |
+| Compose (`http://127.0.0.1:5173`), turno del 9/11/2026 | El historial se abre con su evento `creado`; consola vacía (ninguna violación de la CSP) |
+| 390 px (demo y Compose) | Sin desplazamiento horizontal (`scrollWidth` = 390); el panel queda debajo de la agenda |
+
+### Diferencias con Stitch y su motivo
+
+- **El panel va dentro de la página, al costado de la agenda**, y no como columna de alto completo pegada al borde: es el mismo panel lateral de «Nuevo turno» (D327).
+- **Sin la etiqueta «SOLO LECTURA» ni «EV-01»**, sin el subtítulo «Trazabilidad de eventos» ni la sección «Estados alternativos»: la nota de solo lectura es un texto (D330), los ids no se muestran (D329) y los estados alternativos de la captura son los mensajes del panel, que aparecen de a uno.
+- **El aviso de error lleva el código entre paréntesis** y no en un chip (D323, D330).
+- **Sin «Agenda sincronizada en tiempo real»** ni pie de página, igual que en C-14.
+- A 390 px el botón «Historial» va en la tarjeta del turno y el panel debajo de la agenda, como en la captura angosta.
