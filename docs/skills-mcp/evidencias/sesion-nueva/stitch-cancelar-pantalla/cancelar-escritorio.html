@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agenda del día - Cancelar turno con error - Turnos Odontológicos AR</title>
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            clinical: {
+              primary: '#0284c7',
+              primaryHover: '#0369a1',
+              destructive: '#dc2626',
+              destructiveHover: '#b91c1c',
+              destructiveBg: '#fef2f2',
+              destructiveBorder: '#fecaca',
+              text: '#0f172a',
+              textSecondary: '#64748b',
+              border: '#e2e8f0',
+              bg: '#f8fafc',
+              surface: '#ffffff',
+            }
+          },
+          borderRadius: {
+            'btn': '4px',
+            'card': '8px',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #f8fafc;
+      color: #0f172a;
+      -webkit-font-smoothing: antialiased;
+    }
+    .font-tabular {
+      font-variant-numeric: tabular-nums;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col bg-[#f8fafc] text-[#0f172a]">
+
+  <!-- BARRA SUPERIOR HORIZONTAL -->
+  <header class="bg-white border-b border-[#e2e8f0] sticky top-0 z-30">
+    <div class="max-w-[1720px] mx-auto px-6 h-16 flex items-center justify-between">
+      <!-- Marca y Navegación Principal -->
+      <div class="flex items-center gap-8">
+        <!-- Logotipo / Isotipo -->
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded bg-[#e0f2fe] border border-[#bae6fd] flex items-center justify-center text-[#0284c7]">
+            <!-- Tooth / Clinic Icon -->
+            <svg class="w-5 h-5 stroke-[2]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 2C8 2 5 4 5 8c0 3.5 1.5 6 3 9 1 2 1.5 5 4 5s3-3 4-5c1.5-3 3-5.5 3-9 0-4-3-6-7-6z"></path>
+              <path d="M12 2v8"></path>
+            </svg>
+          </div>
+          <span class="text-base font-bold text-[#0f172a] tracking-tight">Turnos Odontológicos AR</span>
+        </div>
+
+        <!-- Pastillas de Navegación -->
+        <nav class="flex items-center gap-1.5" aria-label="Navegación principal">
+          <a href="#" class="px-3.5 py-1.5 rounded-btn text-sm font-semibold bg-[#e0f2fe] text-[#0284c7] transition-colors" aria-current="page">Agenda</a>
+          <a href="#" class="px-3.5 py-1.5 rounded-btn text-sm font-medium text-[#475569] hover:text-[#0f172a] hover:bg-[#f1f5f9] transition-colors">Prestaciones</a>
+          <a href="#" class="px-3.5 py-1.5 rounded-btn text-sm font-medium text-[#475569] hover:text-[#0f172a] hover:bg-[#f1f5f9] transition-colors">Usuarios</a>
+          <a href="#" class="px-3.5 py-1.5 rounded-btn text-sm font-medium text-[#475569] hover:text-[#0f172a] hover:bg-[#f1f5f9] transition-colors">Horario</a>
+          <a href="#" class="px-3.5 py-1.5 rounded-btn text-sm font-medium text-[#475569] hover:text-[#0f172a] hover:bg-[#f1f5f9] transition-colors">Bloqueos</a>
+          <a href="#" class="px-3.5 py-1.5 rounded-btn text-sm font-medium text-[#475569] hover:text-[#0f172a] hover:bg-[#f1f5f9] transition-colors">Mi contraseña</a>
+        </nav>
+      </div>
+
+      <!-- Datos de usuario en sesión y cerrar sesión -->
+      <div class="flex items-center gap-4">
+        <div class="text-right">
+          <div class="text-sm font-semibold text-[#0f172a] leading-none">recepcion@consultorio-demo.test</div>
+          <div class="text-xs text-[#64748b] mt-1">Recepcionista</div>
+        </div>
+        <button type="button" class="inline-flex items-center gap-1.5 px-3 py-1.5 border border-[#e2e8f0] rounded-btn text-xs font-medium text-[#334155] bg-white hover:bg-[#f8fafc] hover:text-[#0f172a] transition-colors">
+          <svg class="w-4 h-4 text-[#64748b]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
+          </svg>
+          <span>Cerrar sesión</span>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- CONTENIDO PRINCIPAL: LAYOUT SPLIT CON AGENDA Y PANEL LATERAL -->
+  <div class="flex-1 flex overflow-hidden">
+    
+    <!-- ÁREA IZQUIERDA: AGENDA DEL DÍA -->
+    <main class="flex-1 overflow-y-auto p-8 max-w-[1300px]">
+      
+      <!-- Título de sección y acción principal -->
+      <div class="flex items-start justify-between mb-6">
+        <div>
+          <h1 class="text-2xl font-bold text-[#0f172a] tracking-tight">Agenda del día</h1>
+          <p class="text-sm text-[#64748b] mt-1 font-tabular">Horas del consultorio (America/Argentina/Buenos_Aires).</p>
+        </div>
+        <button type="button" class="inline-flex items-center gap-2 px-4 py-2 bg-[#0284c7] hover:bg-[#0369a1] text-white text-sm font-semibold rounded-btn shadow-sm transition-colors">
+          <svg class="w-4 h-4 stroke-[2.5]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="5" x2="12" y2="19"></line>
+            <line x1="5" y1="12" x2="19" y2="12"></line>
+          </svg>
+          Nuevo turno
+        </button>
+      </div>
+
+      <!-- Barra de navegación de fechas -->
+      <div class="flex items-center gap-2 mb-6">
+        <div class="inline-flex items-center border border-[#e2e8f0] bg-white rounded-btn shadow-sm overflow-hidden p-0.5">
+          <button type="button" class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-[#475569] hover:bg-[#f1f5f9] hover:text-[#0f172a] transition-colors rounded-btn">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="15 18 9 12 15 6"></polyline>
+            </svg>
+            Día anterior
+          </button>
+          
+          <div class="px-3 py-1 text-xs font-semibold text-[#0f172a] border-l border-r border-[#e2e8f0] bg-[#f8fafc] font-tabular">
+            02/11/2026
+          </div>
+
+          <div class="px-3 py-1 text-xs font-medium text-[#334155]">
+            lunes 2 de noviembre de 2026
+          </div>
+
+          <button type="button" class="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-[#475569] hover:bg-[#f1f5f9] hover:text-[#0f172a] transition-colors rounded-btn border-l border-[#e2e8f0]">
+            Día siguiente
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="9 18 15 12 9 6"></polyline>
+            </svg>
+          </button>
+        </div>
+
+        <button type="button" class="px-3.5 py-1.5 border border-[#e2e8f0] bg-white hover:bg-[#f8fafc] text-xs font-semibold text-[#334155] rounded-btn shadow-sm transition-colors">
+          Hoy
+        </button>
+      </div>
+
+      <!-- Tabla densa de turnos -->
+      <div class="bg-white border border-[#e2e8f0] rounded-card shadow-sm overflow-hidden">
+        <table class="w-full text-left border-collapse">
+          <thead>
+            <tr class="bg-[#f8fafc] border-b border-[#e2e8f0] text-[11px] font-bold text-[#64748b] tracking-wider uppercase">
+              <th scope="col" class="py-3 px-4 w-36">HORA</th>
+              <th scope="col" class="py-3 px-4">PACIENTE</th>
+              <th scope="col" class="py-3 px-4">PRESTACIÓN</th>
+              <th scope="col" class="py-3 px-4 w-36">ESTADO</th>
+              <th scope="col" class="py-3 px-4 text-right pr-6 w-[340px]">ACCIONES</th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-[#e2e8f0] text-sm">
+            
+            <!-- Fila 1: SELECCIONADA (09:00 - 09:30 Ana Ejemplo) -->
+            <tr class="bg-[#f0f9ff] relative transition-colors">
+              <td class="py-3 px-4 font-semibold text-[#0f172a] font-tabular relative">
+                <!-- Franja izquierda de selección azul -->
+                <div class="absolute left-0 top-0 bottom-0 w-1 bg-[#0284c7]"></div>
+                09:00 – 09:30
+              </td>
+              <td class="py-3 px-4 font-medium text-[#0f172a]">
+                Ana Ejemplo
+              </td>
+              <td class="py-3 px-4">
+                <div class="inline-flex items-center gap-2 text-[#334155]">
+                  <span class="w-2.5 h-2.5 rounded-full bg-[#0284c7] shrink-0"></span>
+                  <span>Consulta / control</span>
+                </div>
+              </td>
+              <td class="py-3 px-4">
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[#e0f2fe] text-[#0369a1] border border-[#bae6fd]">
+                  Reservado
+                </span>
+              </td>
+              <td class="py-3 px-4 text-right pr-6">
+                <div class="inline-flex items-center justify-end gap-1.5">
+                  <button type="button" class="inline-flex items-center gap-1 px-2.5 py-1 border border-[#e2e8f0] rounded-btn text-xs font-medium text-[#334155] bg-white hover:bg-[#f8fafc] transition-colors shadow-2xs">
+                    <svg class="w-3.5 h-3.5 text-[#64748b]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                      <line x1="16" y1="2" x2="16" y2="6"></line>
+                      <line x1="8" y1="2" x2="8" y2="6"></line>
+                      <line x1="3" y1="10" x2="21" y2="10"></line>
+                    </svg>
+                    Reprogramar
+                  </button>
+                  <button type="button" class="inline-flex items-center gap-1 px-2.5 py-1 border border-[#fecaca] rounded-btn text-xs font-semibold text-[#dc2626] bg-[#fef2f2] hover:bg-[#fee2e2] transition-colors shadow-2xs">
+                    <svg class="w-3.5 h-3.5 text-[#dc2626]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="10"></line>
+                      <line x1="15" y1="9" x2="9" y2="15"></line>
+                      <line x1="9" y1="9" x2="15" y2="15"></line>
+                    </svg>
+                    Cancelar
+                  </button>
+                  <button type="button" class="inline-flex items-center gap-1 px-2.5 py-1 border border-[#e2e8f0] rounded-btn text-xs font-medium text-[#334155] bg-white hover:bg-[#f8fafc] transition-colors shadow-2xs">
+                    <svg class="w-3.5 h-3.5 text-[#64748b]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                    Historial
+                  </button>
+                </div>
+              </td>
+            </tr>
+
+            <!-- Fila 2: Bruno Ficticio -->
+            <tr class="hover:bg-[#f8fafc] transition-colors">
+              <td class="py-3 px-4 font-semibold text-[#0f172a] font-tabular">
+                10:00 – 10:45
+              </td>
+              <td class="py-3 px-4 font-medium text-[#0f172a]">
+                Bruno Ficticio
+              </td>
+              <td class="py-3 px-4">
+                <div class="inline-flex items-center gap-2 text-[#334155]">
+                  <span class="w-2.5 h-2.5 rounded-full bg-[#16a34a] shrink-0"></span>
+                  <span>Limpieza</span>
+                </div>
+              </td>
+              <td class="py-3 px-4">
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[#e0f2fe] text-[#0369a1] border border-[#bae6fd]">
+                  Reservado
+                </span>
+              </td>
+              <td class="py-3 px-4 text-right pr-6">
+                <div class="inline-flex items-center justify-end gap-1.5">
+                  <button type="button" class="inline-flex items-center gap-1 px-2.5 py-1 border border-[#e2e8f0] rounded-btn text-xs font-medium text-[#334155] bg-white hover:bg-[#f8fafc] transition-colors shadow-2xs">
+                    <svg class="w-3.5 h-3.5 text-[#64748b]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                      <line x1="16" y1="2" x2="16" y2="6"></line>
+                      <line x1="8" y1="2" x2="8" y2="6"></line>
+                      <line x1="3" y1="10" x2="21" y2="10"></line>
+                    </svg>
+                    Reprogramar
+                  </button>
+                  <button type="button" class="inline-flex items-center gap-1 px-2.5 py-1 border border-[#fecaca] rounded-btn text-xs font-medium text-[#dc2626] bg-white hover:bg-[#fef2f2] transition-colors shadow-2xs">
+                    <svg class="w-3.5 h-3.5 text-[#dc2626]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <line x1="15" y1="9" x2="9" y2="15"></line>
+                      <line x1="9" y1="9" x2="15" y2="15"></line>
+                    </svg>
+                    Cancelar
+                  </button>
+                  <button type="button" class="inline-flex items-center gap-1 px-2.5 py-1 border border-[#e2e8f0] rounded-btn text-xs font-medium text-[#334155] bg-white hover:bg-[#f8fafc] transition-colors shadow-2xs">
+                    <svg class="w-3.5 h-3.5 text-[#64748b]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                    Historial
+                  </button>
+                </div>
+              </td>
+            </tr>
+
+            <!-- Fila 3: Carla Inventada -->
+            <tr class="hover:bg-[#f8fafc] transition-colors">
+              <td class="py-3 px-4 font-semibold text-[#0f172a] font-tabular">
+                11:00 – 12:00
+              </td>
+              <td class="py-3 px-4 font-medium text-[#0f172a]">
+                Carla Inventada
+              </td>
+              <td class="py-3 px-4">
+                <div class="inline-flex items-center gap-2 text-[#334155]">
+                  <span class="w-2.5 h-2.5 rounded-full bg-[#f59e0b] shrink-0"></span>
+                  <span>Obturación</span>
+                </div>
+              </td>
+              <td class="py-3 px-4">
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[#dcfce7] text-[#15803d] border border-[#bbf7d0]">
+                  Confirmado
+                </span>
+              </td>
+              <td class="py-3 px-4 text-right pr-6">
+                <div class="inline-flex items-center justify-end gap-1.5">
+                  <button type="button" class="inline-flex items-center gap-1 px-2.5 py-1 border border-[#e2e8f0] rounded-btn text-xs font-medium text-[#334155] bg-white hover:bg-[#f8fafc] transition-colors shadow-2xs">
+                    <svg class="w-3.5 h-3.5 text-[#64748b]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
+                      <line x1="16" y1="2" x2="16" y2="6"></line>
+                      <line x1="8" y1="2" x2="8" y2="6"></line>
+                      <line x1="3" y1="10" x2="21" y2="10"></line>
+                    </svg>
+                    Reprogramar
+                  </button>
+                  <button type="button" class="inline-flex items-center gap-1 px-2.5 py-1 border border-[#fecaca] rounded-btn text-xs font-medium text-[#dc2626] bg-white hover:bg-[#fef2f2] transition-colors shadow-2xs">
+                    <svg class="w-3.5 h-3.5 text-[#dc2626]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <line x1="15" y1="9" x2="9" y2="15"></line>
+                      <line x1="9" y1="9" x2="15" y2="15"></line>
+                    </svg>
+                    Cancelar
+                  </button>
+                  <button type="button" class="inline-flex items-center gap-1 px-2.5 py-1 border border-[#e2e8f0] rounded-btn text-xs font-medium text-[#334155] bg-white hover:bg-[#f8fafc] transition-colors shadow-2xs">
+                    <svg class="w-3.5 h-3.5 text-[#64748b]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                    Historial
+                  </button>
+                </div>
+              </td>
+            </tr>
+
+            <!-- Fila 4: Bruno Ficticio (Cancelado) -->
+            <tr class="hover:bg-[#f8fafc] transition-colors opacity-95">
+              <td class="py-3 px-4 font-semibold text-[#64748b] font-tabular">
+                12:00 – 12:30
+              </td>
+              <td class="py-3 px-4 font-medium text-[#475569]">
+                Bruno Ficticio
+              </td>
+              <td class="py-3 px-4">
+                <div class="inline-flex items-center gap-2 text-[#64748b]">
+                  <span class="w-2.5 h-2.5 rounded-full bg-[#0284c7] shrink-0 opacity-70"></span>
+                  <span>Consulta / control</span>
+                </div>
+              </td>
+              <td class="py-3 px-4">
+                <span class="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-[#fee2e2] text-[#b91c1c] border border-[#fecaca]">
+                  Cancelado por el consultorio
+                </span>
+              </td>
+              <td class="py-3 px-4 text-right pr-6">
+                <!-- En fila cancelada: solo Historial, sin Reprogramar ni Cancelar -->
+                <div class="inline-flex items-center justify-end">
+                  <button type="button" class="inline-flex items-center gap-1 px-2.5 py-1 border border-[#e2e8f0] rounded-btn text-xs font-medium text-[#334155] bg-white hover:bg-[#f8fafc] transition-colors shadow-2xs">
+                    <svg class="w-3.5 h-3.5 text-[#64748b]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                      <circle cx="12" cy="12" r="10"></circle>
+                      <polyline points="12 6 12 12 16 14"></polyline>
+                    </svg>
+                    Historial
+                  </button>
+                </div>
+              </td>
+            </tr>
+
+          </tbody>
+        </table>
+
+        <!-- Pie de tabla / Estado de sincronización -->
+        <div class="bg-[#f8fafc] px-4 py-2.5 border-t border-[#e2e8f0] flex items-center justify-between text-xs text-[#64748b]">
+          <span class="font-tabular font-medium">4 turnos agendados</span>
+          <div class="flex items-center gap-1.5 font-medium text-[#047857]">
+            <span class="w-2 h-2 rounded-full bg-[#10b981] animate-pulse"></span>
+            Agenda sincronizada en tiempo real
+          </div>
+        </div>
+      </div>
+
+    </main>
+
+    <!-- ÁREA DERECHA: PANEL LATERAL «CANCELAR TURNO» (420px de ancho) -->
+    <aside class="w-[420px] bg-white border-l border-[#e2e8f0] flex flex-col justify-between shadow-[-4px_0_16px_rgba(0,0,0,0.03)] z-20 shrink-0" aria-labelledby="drawer-title">
+      
+      <!-- Contenido scrolleable del panel -->
+      <div class="p-6 overflow-y-auto flex-1">
+        
+        <!-- Cabecera del panel -->
+        <div class="flex items-center justify-between pb-4 border-b border-[#f1f5f9]">
+          <div class="flex items-center gap-2">
+            <div class="w-7 h-7 rounded bg-[#fee2e2] text-[#dc2626] flex items-center justify-center">
+              <svg class="w-4 h-4 stroke-[2.5]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="15" y1="9" x2="9" y2="15"></line>
+                <line x1="9" y1="9" x2="15" y2="15"></line>
+              </svg>
+            </div>
+            <h2 id="drawer-title" class="text-base font-bold text-[#0f172a] tracking-tight">Cancelar turno</h2>
+          </div>
+          <button type="button" class="p-1 rounded text-[#94a3b8] hover:text-[#0f172a] hover:bg-[#f1f5f9] transition-colors" title="Cerrar panel" aria-label="Cerrar">
+            <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="18" y1="6" x2="6" y2="18"></line>
+              <line x1="6" y1="6" x2="18" y2="18"></line>
+            </svg>
+          </button>
+        </div>
+
+        <!-- Resumen del turno en contexto -->
+        <div class="mt-4 pb-4 border-b border-[#f1f5f9]">
+          <div class="text-sm font-semibold text-[#334155]">
+            Ana Ejemplo <span class="text-[#94a3b8] font-normal">·</span> Consulta / control
+          </div>
+          <div class="text-xs text-[#64748b] mt-1 font-tabular flex items-center gap-1.5">
+            <span>lunes 2 de noviembre de 2026, 09:00 – 09:30</span>
+            <span class="text-[#cbd5e1]">·</span>
+            <span class="inline-flex items-center px-1.5 py-0.2 rounded text-[11px] font-medium bg-[#e0f2fe] text-[#0369a1]">Reservado</span>
+          </div>
+        </div>
+
+        <!-- Aviso de error operacional (RN-AG-12) -->
+        <div class="mt-5 p-3.5 bg-[#fef2f2] border border-[#fecaca] rounded-card text-xs text-[#b91c1c] space-y-1">
+          <div class="flex items-start gap-2">
+            <svg class="w-4 h-4 text-[#dc2626] shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="10"></circle>
+              <line x1="12" y1="8" x2="12" y2="12"></line>
+              <line x1="12" y1="16" x2="12.01" y2="16"></line>
+            </svg>
+            <div class="font-semibold text-[#991b1b] leading-tight">
+              Este turno ya no se puede cancelar por su estado (RN-AG-12).
+            </div>
+          </div>
+          <div class="pl-6 text-[#b91c1c]">
+            El turno no cambió.
+          </div>
+        </div>
+
+        <!-- Formulario de Cancelación -->
+        <form class="mt-6 space-y-4">
+          <fieldset>
+            <legend class="block text-xs font-bold text-[#334155] uppercase tracking-wider mb-2">
+              ¿Quién pidió la cancelación?
+            </legend>
+            
+            <div class="space-y-2 mt-2">
+              <!-- Opción 1: El paciente (marcada) -->
+              <label class="flex items-start gap-3 p-3 border border-[#0284c7] bg-[#f0f9ff] rounded-btn cursor-pointer transition-colors">
+                <input type="radio" name="motivo_cancelacion" value="paciente" checked class="mt-0.5 text-[#0284c7] focus:ring-[#0284c7] h-4 w-4 border-[#cbd5e1]">
+                <div class="text-xs">
+                  <span class="font-semibold text-[#0f172a] block">El paciente</span>
+                  <span class="text-[#64748b] text-[11px] block mt-0.5">Cancelación solicitada por el usuario o vía recepción.</span>
+                </div>
+              </label>
+
+              <!-- Opción 2: El consultorio -->
+              <label class="flex items-start gap-3 p-3 border border-[#e2e8f0] bg-white hover:bg-[#f8fafc] rounded-btn cursor-pointer transition-colors">
+                <input type="radio" name="motivo_cancelacion" value="consultorio" class="mt-0.5 text-[#0284c7] focus:ring-[#0284c7] h-4 w-4 border-[#cbd5e1]">
+                <div class="text-xs">
+                  <span class="font-semibold text-[#0f172a] block">El consultorio</span>
+                  <span class="text-[#64748b] text-[11px] block mt-0.5">Por fuerza mayor clínica o indisponibilidad del odontólogo.</span>
+                </div>
+              </label>
+            </div>
+
+            <!-- Ayuda gris regulatoria / operativa -->
+            <p class="text-xs text-[#64748b] mt-3 flex items-center gap-1.5">
+              <svg class="w-3.5 h-3.5 text-[#94a3b8] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <line x1="12" y1="16" x2="12" y2="12"></line>
+                <line x1="12" y1="8" x2="12.01" y2="8"></line>
+              </svg>
+              <span>El horario queda libre para otro turno.</span>
+            </p>
+          </fieldset>
+        </form>
+
+      </div>
+
+      <!-- Pie fijo de acciones del panel lateral -->
+      <div class="p-4 bg-[#f8fafc] border-t border-[#e2e8f0] flex items-center justify-end gap-3">
+        <button type="button" class="px-4 py-2 border border-[#cbd5e1] rounded-btn text-xs font-semibold text-[#334155] bg-white hover:bg-[#f1f5f9] transition-colors shadow-2xs">
+          Volver
+        </button>
+        <button type="button" class="px-4 py-2 rounded-btn text-xs font-semibold text-white bg-[#dc2626] hover:bg-[#b91c1c] transition-colors shadow-sm flex items-center gap-1.5">
+          <svg class="w-3.5 h-3.5 stroke-[2.5]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+          Cancelar turno
+        </button>
+      </div>
+
+    </aside>
+
+  </div>
+
+  <!-- PIE DE PÁGINA INSTITUCIONAL -->
+  <footer class="bg-white border-t border-[#e2e8f0] py-2.5 px-6 text-center text-xs text-[#94a3b8]">
+    Turnos Odontológicos AR · Módulo de Agenda y Turnos del Día · Sede Central
+  </footer>
+
+</body>
+</html>
