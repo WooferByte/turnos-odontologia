@@ -1077,6 +1077,35 @@ El cliente de la API (`apiAgenda.test.ts`, 6 tests), la hora del consultorio (`s
 
 Límites conocidos de la pantalla: el paciente se elige **por su número** hasta C-20, que trae la búsqueda; la demo tiene los pacientes 1 a 3 y un número que no existe vuelve como `RN-GL-04`. No hay selector de profesional ni de sillón (Fase 2): la API usa el único activo, y con más de un sillón activo responde `RN-GL-04` («hay más de uno activo»). La agenda **no se refresca sola**: otro usuario puede dar un turno en el mismo horario y el `409` de la API lo avisa. «Nuevo turno» se ve con cualquier rol, también para el dueño, que recibe `RN-AU-05` (D312). Los turnos no tienen acciones todavía (cancelar, confirmar, reprogramar: C-15 a C-19). Debajo de 720 px el selector de fecha se oculta (se cambia de día con las flechas y «Hoy»).
 
+### Historial del turno
+
+Desde C-15 cada fila de la agenda tiene, en la columna «Acciones», un botón **Historial** que abre al costado el panel «Historial del turno» (solo lectura). Usa `GET /api/turnos/{id}/historial` de C-03 (los tres roles lo leen); no cambia la API. El resumen del panel (paciente, prestación, día y horario) sale de la fila de la agenda, y se pide una sola vez el historial al abrir.
+
+Recorrido con la demo sin Docker (las dos terminales de «Probar el panel», con la demo recién arrancada y la agenda de los pasos 3 y 4 de «Pantalla de agenda»):
+
+1. Ingresar con `recepcion@consultorio-demo.test`, ir a «Agenda» (`02/11/2026`), dar un turno al paciente `1` («Consulta / control», `09:00`) y pulsar «Historial» en su fila: se ve el panel «Historial del turno» con «Ana Ejemplo · Consulta / control», «lunes 2 de noviembre de 2026, 09:00 – 09:30», la nota «Solo lectura: el historial no se puede editar.» y una entrada «Turno creado» con la fecha y hora del consultorio de cuando se creó, «Por: Usuario n.º 2» y «Estado inicial: Reservado · 09:00 – 09:30». En la pestaña de red hay un solo `GET /api/turnos/{id}/historial`, y el panel no ofrece ningún campo ni acción de edición: solo «Cerrar».
+2. «Cerrar» (la X o el botón del pie): el panel desaparece, no se hace ningún pedido nuevo y el foco vuelve al botón «Historial» de la fila.
+3. Con el historial abierto, «Nuevo turno» cierra el historial (y al revés: hay un solo panel lateral a la vez); «Historial» en otra fila muestra el de ese turno; «Día siguiente» lo cierra.
+4. Repetir el paso 1 con `odontologa@consultorio-demo.test` y con un usuario creado en «Usuarios» solo con el rol `dueno`: los tres ven lo mismo.
+5. En `/docs` (Swagger), `GET /turnos/{id}/historial` con el mismo `id` devuelve el mismo evento `creado` (`actor_id` `"2"` si lo creó la recepcionista).
+
+Con la API detenida el panel muestra «No se pudo conectar con el servidor. Probá de nuevo en unos minutos.» con «Reintentar»; un usuario sin roles ve «Tu usuario no tiene permiso para ver el historial (RN-AU-05).»; un turno que ya no existe, «El turno ya no existe (RN-GL-04).»; si la sesión termina, vuelve a `/ingresar`. El `detail` de la API no se muestra.
+
+Escenario → test (`src/features/historial/`, API reemplazada por el servidor falso). Los 6 escenarios de `openspec/changes/panel-historial-de-turno/specs/pantalla-de-historial/spec.md` están en `PanelHistorial.test.tsx`, con 19 tests (cada causa de un escenario con varias es un test propio):
+
+| Escenario | Test titular |
+|---|---|
+| HIS-2a (la recepcionista, la odontóloga y el dueño ven el `creado`; foco al abrir) | «HIS-2a: la recepcionista ve el evento creado del turno», «HIS-2a: la odontóloga ve el historial», «HIS-2a: el dueño ve el historial», «HIS-2a: al abrir, el foco va al título del panel» |
+| HIS-2b (tres eventos en orden, con actor y fecha; solo contra el servidor falso) | «HIS-2b: tres eventos en el orden de la respuesta con su actor y su fecha» |
+| HIS-2c (sin eventos, «Cerrar», respuesta tardía) | «HIS-2c: un turno sin eventos», «HIS-2c: Cerrar no hace ninguna petición nueva y devuelve el foco al botón de la fila», «HIS-2c: una respuesta que llega después de Cerrar no reabre el panel» |
+| HIS-2d (turno inexistente y sin permiso; solo contra el servidor falso) | «HIS-2d: el turno ya no existe», «HIS-2d: sin permiso se ve el 403 del historial» |
+| HIS-2e (carga, sin conexión, `500`, refresh y sesión terminada; solo contra el servidor falso) | los cinco «HIS-2e: …» |
+| HIS-2f (otro turno, otro día, un solo panel; solo contra el servidor falso) | «HIS-2f: abrir Historial cierra Nuevo turno y al revés», «HIS-2f: cambiar de día cierra el historial», «HIS-2f: cambiar de turno muestra solo el último pedido», «HIS-2f: una respuesta que llega después de cambiar de día no reabre el panel» |
+
+El cliente (`apiHistorial.test.ts`, 4 tests) y los textos (`mensajes.test.ts`, 9) se prueban aparte, con los casos defensivos que la API de hoy no produce (`G4`, `G5`, `G8`). La disposición (botón con borde y reloj, fila seleccionada, panel de 420 px con la línea de tiempo y, debajo de 720 px, panel a todo el ancho) sigue las pantallas de Stitch `projects/14200813501064679723/screens/2955e5e29bba4982a0b515329e0ff4e1` y `…/c80d02b8dbac4e48be68ca11ff787857` (capturas y HTML en `docs/skills-mcp/evidencias/sesion-nueva/stitch-historial-pantalla/`), traducidas a `panel.css` sin dependencias.
+
+Límites conocidos: el actor se ve **por su número** («Usuario n.º 2»), porque la API no trae el email y la recepcionista no puede leer usuarios (D328); la API no filtra el historial por consultorio, sin efecto con un solo consultorio (D331); el panel no se refresca solo: hay que cerrarlo y abrirlo para ver cambios de otro usuario. Hoy el único tipo de evento es `creado`; uno nuevo de C-16 en adelante se ve como «Cambio registrado ({tipo})» hasta que ese change le ponga su texto.
+
 ### Versiones fijadas del frontend
 
 Las versiones exactas viven en `frontend/package.json`; `frontend/package-lock.json` se generó con `npm install --before=2026-10-12` (ningún paquete publicado desde esa fecha) y se instala siempre con `npm ci`.
@@ -1109,7 +1138,7 @@ La API se reemplaza en los tests por un servidor falso escrito a mano (`frontend
 
 Hay además tests de la renovación compartida, del `403`, del cierre de sesión y de que ninguna URL contenga un token, y cinco guards (`src/test/guards.test.ts`) que fallan si aparece `any`, `vi.mock`, `localStorage`, `dangerouslySetInnerHTML`, un archivo `index.ts` de reexportación o un recurso de otro origen (STI-1).
 
-Resultado actual de las dos suites: frontend «Tests 306 passed (306)»; backend «937 passed, 58 deselected, 1 warning».
+Resultado actual de las dos suites: frontend «Tests 338 passed (338)»; backend «937 passed, 58 deselected, 1 warning».
 
 ## Levantar la API con PostgreSQL
 
