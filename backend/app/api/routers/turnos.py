@@ -9,6 +9,7 @@ from app.api.esquemas import (
     CrearTurnoEntrada,
     EventoTurnoSalida,
     FechaDelDia,
+    ReprogramarTurnoEntrada,
     TurnoDeLaAgendaSalida,
     TurnoSalida,
 )
@@ -18,6 +19,7 @@ from app.application.crear_turno import CrearTurnoComando, crear_turno
 from app.application.consultar_turnos import agenda_del_dia, turno_de_la_agenda
 from app.application.historial import consultar_historial
 from app.application.puertos import UnidadDeTrabajo
+from app.application.reprogramar_turno import ReprogramarTurnoComando, reprogramar_turno
 from app.domain.acceso.roles import Permiso, UsuarioDelPanel
 from app.domain.tiempo import Reloj
 from app.domain.turnos.eventos import Actor, ActorTipo
@@ -37,6 +39,12 @@ RESPUESTAS_DE_UN_TURNO = {
     **RESPUESTAS_DE_ACCESO,
     404: _respuesta_de_error("El turno no existe o es de otro consultorio (RN-GL-04)"),
     422: _respuesta_de_error("El identificador del turno no es un número entero"),
+}
+RESPUESTAS_DE_REPROGRAMAR = {
+    **RESPUESTAS_DE_ACCESO,
+    404: _respuesta_de_error("El turno no existe o es de otro consultorio (RN-GL-04)"),
+    409: _respuesta_de_error("Solapamiento con un turno activo (RN-AG-05, RN-AG-08) o turno no reprogramable (RN-AG-18)"),
+    422: _respuesta_de_error("Entrada inválida (RN-GL-01, RN-AG-01), intervalo inválido, fuera de horario o sobre un bloqueo"),
 }
 RESPUESTAS_DEL_HISTORIAL = {
     **RESPUESTAS_DE_ACCESO,
@@ -62,6 +70,20 @@ def post_turnos(
     return TurnoSalida.desde_turno(
         crear_turno(comando, uow, reloj, actor=actor, creado_por=usuario.id)
     )
+
+
+@router.patch("/{turno_id}", response_model=TurnoSalida, responses=RESPUESTAS_DE_REPROGRAMAR)
+def patch_turno(
+    turno_id: int,
+    entrada: ReprogramarTurnoEntrada,
+    uow: Annotated[UnidadDeTrabajo, Depends(get_uow)],
+    reloj: Annotated[Reloj, Depends(get_reloj)],
+    usuario: Annotated[UsuarioDelPanel, Depends(requiere(Permiso.TURNOS_REPROGRAMAR))],
+) -> TurnoSalida:
+    """Mueve el turno o le cambia la duración (US-012); un campo omitido conserva su valor."""
+    comando = ReprogramarTurnoComando(turno_id, entrada.inicio, entrada.duracion_minutos)
+    actor = Actor(ActorTipo.USUARIO, str(usuario.id))  # el id va como texto decimal (D209)
+    return TurnoSalida.desde_turno(reprogramar_turno(comando, usuario.id, uow, reloj, actor=actor))
 
 
 @router.get("", response_model=AgendaDelDiaSalida, responses=RESPUESTAS_DE_LA_AGENDA)

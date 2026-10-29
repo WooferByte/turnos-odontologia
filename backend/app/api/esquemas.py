@@ -212,6 +212,21 @@ class EntradaDeEdicion(BaseModel):
         return valor
 
 
+class ReprogramarTurnoEntrada(EntradaDeEdicion):
+    """Cuerpo de ``PATCH /turnos/{id}``: los dos campos opcionales; un ``null`` explícito es de formato (M2).
+
+    No valida la zona de ``inicio`` ni la duración: eso es del caso de uso (RN-GL-01, RN-AG-01, D135).
+    """
+
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={"examples": [{"inicio": "2026-11-02T17:00:00Z", "duracion_minutos": 45}]},
+    )
+
+    inicio: datetime | None = None
+    duracion_minutos: int | None = None
+
+
 class CrearPrestacionEntrada(BaseModel):
     """Cuerpo de ``POST /prestaciones``. La duración la valida el dominio (RN-AG-01), no Pydantic."""
 

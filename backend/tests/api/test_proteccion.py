@@ -339,7 +339,7 @@ def test_openapi_declara_bearer_401_y_403_en_las_rutas_protegidas(engine) -> Non
             for estado in ("401", "403"):
                 contenido = operacion["responses"][estado]["content"]
                 assert "application/problem+json" in contenido, (metodo, ruta, estado)
-    assert protegidas == 22  # + GET y GET /{id} /turnos (C-14) + GET /auth/yo (C-50) + POST /auth/cambiar-contrasena (C-10) + POST /usuarios/{id}/restablecer-contrasena (C-10) + GET, POST y PATCH /usuarios (C-09) + GET /profesionales y GET y PUT /profesionales/{id}/horario (C-12) + GET, POST y DELETE /bloqueos (C-13)
+    assert protegidas == 23  # + PATCH /turnos/{id} (C-16) + GET y GET /{id} /turnos (C-14) + GET /auth/yo (C-50) + POST /auth/cambiar-contrasena (C-10) + POST /usuarios/{id}/restablecer-contrasena (C-10) + GET, POST y PATCH /usuarios (C-09) + GET /profesionales y GET y PUT /profesionales/{id}/horario (C-12) + GET, POST y DELETE /bloqueos (C-13)
 
 
 # --- E9 y US-092 CA-2 (borde): el turno guarda quién lo creó -----------------------------------
