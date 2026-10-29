@@ -10,13 +10,14 @@ import { fechaLocal } from '../../shared/horaDelConsultorio'
 import { IconoFlecha } from '../../shared/iconos/IconoFlecha'
 import { IconoMas } from '../../shared/iconos/IconoMas'
 import type { Prestacion } from '../prestaciones/apiPrestaciones'
-import { crearApiAgenda, type NuevoTurno, type TurnoDeLaAgenda } from './apiAgenda'
+import { crearApiAgenda, type NuevoTurno, type ReprogramacionDeTurno, type TurnoDeLaAgenda } from './apiAgenda'
 import {
   MENSAJE_CARGANDO,
   MENSAJE_SIN_CONEXION,
   MENSAJE_SIN_PERMISO_PARA_VER,
   MENSAJE_SIN_TURNOS,
   MENSAJE_TURNO_CREADO,
+  MENSAJE_TURNO_REPROGRAMADO,
   diaCompacto,
   mensajeDeCreacion,
   nombreDelDia,
@@ -27,12 +28,17 @@ import {
 } from './mensajes'
 import { PanelHistorial } from '../historial/PanelHistorial'
 import { PanelNuevoTurno } from './PanelNuevoTurno'
+import { PanelReprogramar } from './PanelReprogramar'
 import { TablaDeTurnos } from './TablaDeTurnos'
 
 type Carga = { tipo: 'cargando' } | { tipo: 'sin-conexion' } | { tipo: 'sin-permiso' } | { tipo: 'dia' }
 
 /** Un solo panel lateral a la vez (design G2). */
-type Panel = { tipo: 'ninguno' } | { tipo: 'nuevo-turno' } | { tipo: 'historial'; turno: TurnoDeLaAgenda }
+type Panel =
+  | { tipo: 'ninguno' }
+  | { tipo: 'nuevo-turno' }
+  | { tipo: 'historial'; turno: TurnoDeLaAgenda }
+  | { tipo: 'reprogramar'; turno: TurnoDeLaAgenda }
 
 const SIN_PANEL: Panel = { tipo: 'ninguno' }
 
@@ -59,12 +65,13 @@ export function PaginaAgenda() {
   const [prestaciones, setPrestaciones] = useState<readonly Prestacion[] | null>(null)
   const [enviando, setEnviando] = useState(false)
   const [errorDelPanel, setErrorDelPanel] = useState<string | null>(null)
-  const [turnoCreado, setTurnoCreado] = useState(false)
+  /** El aviso de éxito de la última acción («Turno creado.», «Turno reprogramado.»); `null` si no hay. */
+  const [exito, setExito] = useState<string | null>(null)
   const enCurso = useRef(false)
   const pedidoDePrestaciones = useRef(0)
   const zonaDeTabla = useRef<HTMLDivElement>(null)
-  /** El turno cuyo botón «Historial» recupera el foco cuando se cierra su panel (design G9). */
-  const focoAlCerrar = useRef<number | null>(null)
+  /** El botón de la fila que recupera el foco cuando se cierra su panel (design G9, M12). */
+  const focoAlCerrar = useRef<string | null>(null)
 
   useEffect(() => {
     let vigente = true
@@ -87,7 +94,7 @@ export function PaginaAgenda() {
 
   useEffect(() => {
     if (panel.tipo !== 'ninguno' || focoAlCerrar.current === null) return
-    const boton = zonaDeTabla.current?.querySelector<HTMLElement>(`[data-turno-id="${focoAlCerrar.current}"]`)
+    const boton = zonaDeTabla.current?.querySelector<HTMLElement>(focoAlCerrar.current)
     focoAlCerrar.current = null
     boton?.focus()
   }, [panel])
@@ -97,11 +104,11 @@ export function PaginaAgenda() {
     setPedido((anterior) => ({ fecha, numero: anterior.numero + 1 }))
   }
 
-  /** Cambio de día pedido por la persona: el aviso del turno creado ya no corresponde. */
+  /** Cambio de día pedido por la persona: el aviso de éxito ya no corresponde. */
   function ir(fecha: string | undefined): void {
-    setTurnoCreado(false)
-    // El turno del historial ya no está a la vista: se cierra sin pedirlo de nuevo.
-    setPanel((actual) => (actual.tipo === 'historial' ? SIN_PANEL : actual))
+    setExito(null)
+    // El turno del historial o de la reprogramación ya no está a la vista: se cierra sin pedir nada.
+    setPanel((actual) => (actual.tipo === 'historial' || actual.tipo === 'reprogramar' ? SIN_PANEL : actual))
     pedirDia(fecha)
   }
 
@@ -132,7 +139,17 @@ export function PaginaAgenda() {
   }
 
   function cerrarHistorial(turno: TurnoDeLaAgenda): void {
-    focoAlCerrar.current = turno.id
+    focoAlCerrar.current = `[data-turno-id="${turno.id}"]`
+    setPanel(SIN_PANEL)
+  }
+
+  function abrirReprogramar(turno: TurnoDeLaAgenda): void {
+    pedidoDePrestaciones.current += 1
+    setPanel({ tipo: 'reprogramar', turno })
+  }
+
+  function cerrarReprogramar(turno: TurnoDeLaAgenda): void {
+    focoAlCerrar.current = `[data-reprogramar-id="${turno.id}"]`
     setPanel(SIN_PANEL)
   }
 
@@ -149,12 +166,27 @@ export function PaginaAgenda() {
     try {
       const creado = await api.crearTurno(nuevo)
       cerrarPanel()
-      setTurnoCreado(true)
+      setExito(MENSAJE_TURNO_CREADO)
       pedirDia(fechaLocal(creado.inicio, zona))
     } catch (error: unknown) {
       if (error instanceof SesionTerminada) return
       setErrorDelPanel(mensajeDeCreacion(error))
       if (error instanceof EntradaRechazada && error.codigos.includes('RN-GL-04')) pedirPrestaciones()
+    } finally {
+      enCurso.current = false
+      setEnviando(false)
+    }
+  }
+
+  async function reprogramar(turno: TurnoDeLaAgenda, cambio: ReprogramacionDeTurno, zona: string): Promise<void> {
+    if (enCurso.current) return
+    enCurso.current = true
+    setEnviando(true)
+    try {
+      const movido = await api.reprogramarTurno(turno.id, cambio)
+      cerrarPanel()
+      setExito(MENSAJE_TURNO_REPROGRAMADO)
+      pedirDia(fechaLocal(movido.inicio, zona))
     } finally {
       enCurso.current = false
       setEnviando(false)
@@ -207,7 +239,7 @@ export function PaginaAgenda() {
               </button>
             </div>
           )}
-          {turnoCreado ? <AvisoDeExito mensaje={MENSAJE_TURNO_CREADO} /> : null}
+          {exito === null ? null : <AvisoDeExito mensaje={exito} />}
           {carga.tipo === 'cargando' ? <p>{MENSAJE_CARGANDO}</p> : null}
           {carga.tipo === 'sin-conexion' ? (
             <Aviso mensaje={MENSAJE_SIN_CONEXION} titulo={tituloDelAviso(MENSAJE_SIN_CONEXION)}>
@@ -231,7 +263,8 @@ export function PaginaAgenda() {
                 <TablaDeTurnos
                   turnos={dia.turnos}
                   zonaHoraria={dia.zona}
-                  turnoSeleccionadoId={panel.tipo === 'historial' ? panel.turno.id : null}
+                  turnoSeleccionadoId={panel.tipo === 'historial' || panel.tipo === 'reprogramar' ? panel.turno.id : null}
+                  onReprogramar={abrirReprogramar}
                   onVerHistorial={verHistorial}
                 />
               )}
@@ -247,6 +280,16 @@ export function PaginaAgenda() {
             error={errorDelPanel}
             onCrear={(nuevo) => void crear(nuevo, dia?.zona ?? '')}
             onCancelar={cerrarPanel}
+          />
+        ) : null}
+        {panel.tipo === 'reprogramar' ? (
+          <PanelReprogramar
+            key={panel.turno.id}
+            turno={panel.turno}
+            zonaHoraria={dia?.zona ?? ''}
+            enviando={enviando}
+            onReprogramar={(cambio) => void reprogramar(panel.turno, cambio, dia?.zona ?? '')}
+            onCancelar={() => cerrarReprogramar(panel.turno)}
           />
         ) : null}
         {panel.tipo === 'historial' ? (
