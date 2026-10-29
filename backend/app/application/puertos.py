@@ -89,6 +89,17 @@ class RepositorioAgenda(Protocol):
         """Guarda el turno y lo devuelve con su id."""
         ...
 
+    def turno_para_reprogramar(self, turno_id: int) -> Turno | None:
+        """Lee el turno y bloquea su fila hasta el fin de la transacción (FOR NO KEY UPDATE; DD-04, D337).
+
+        Va antes de bloquear los recursos: dos reprogramaciones del mismo turno se serializan acá.
+        """
+        ...
+
+    def reprogramar(self, turno_id: int, inicio: datetime, fin: datetime, duracion_minutos: int) -> Turno:
+        """Actualiza el horario del turno sin confirmar; traduce 23P01 y 40P01 a ``SolapamientoEnLaBase``."""
+        ...
+
     def existe_turno(self, turno_id: int) -> bool: ...
 
     def turnos_del_dia(

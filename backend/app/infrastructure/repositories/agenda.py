@@ -157,6 +157,21 @@ class RepositorioAgendaSqlAlchemy:
             del_sillon=[ocupado(m) for m in modelos if m.sillon_id == sillon_id],
         )
 
+    def _volcar_traduciendo_choques(self) -> None:
+        try:
+            self._sesion.flush()
+        except DBAPIError as error:
+            # getattr: en SQLite no hay ``diag`` ni ``sqlstate`` y el error sube tal cual (design I7).
+            if getattr(error.orig, "sqlstate", None) == SQLSTATE_INTERBLOQUEO:
+                # Dos escrituras simultáneas se esperan al comprobar la exclusión y PostgreSQL
+                # aborta una: es la misma carrera que 23P01, sin restricción que nombrar.
+                raise SolapamientoEnLaBase() from error
+            restriccion = getattr(getattr(error.orig, "diag", None), "constraint_name", None)
+            recurso = RECURSO_POR_RESTRICCION.get(restriccion)
+            if recurso is None:
+                raise
+            raise SolapamientoEnLaBase(recurso) from error
+
     def agregar(self, turno: Turno) -> Turno:
         modelo = TurnoModelo(
             consultorio_id=turno.consultorio_id,
@@ -172,20 +187,21 @@ class RepositorioAgendaSqlAlchemy:
             creado_por=turno.creado_por,
         )
         self._sesion.add(modelo)
-        try:
-            self._sesion.flush()  # asigna el id sin confirmar; el commit es de la unidad de trabajo
-        except DBAPIError as error:
-            # getattr: en SQLite no hay ``diag`` ni ``sqlstate`` y el error sube tal cual (design I7).
-            if getattr(error.orig, "sqlstate", None) == SQLSTATE_INTERBLOQUEO:
-                # Dos inserciones simultáneas se esperan al comprobar la exclusión y PostgreSQL
-                # aborta una: es la misma carrera que 23P01, sin restricción que nombrar.
-                raise SolapamientoEnLaBase() from error
-            restriccion = getattr(getattr(error.orig, "diag", None), "constraint_name", None)
-            recurso = RECURSO_POR_RESTRICCION.get(restriccion)
-            if recurso is None:
-                raise
-            raise SolapamientoEnLaBase(recurso) from error
+        self._volcar_traduciendo_choques()  # asigna el id sin confirmar; el commit es de la unidad de trabajo
         return replace(turno, id=modelo.id)
+
+    def turno_para_reprogramar(self, turno_id: int) -> Turno | None:
+        consulta = select(TurnoModelo).where(TurnoModelo.id == turno_id).with_for_update(key_share=True)
+        modelo = self._sesion.scalars(consulta).first()
+        return None if modelo is None else _turno_a_dominio(modelo)
+
+    def reprogramar(self, turno_id: int, inicio: datetime, fin: datetime, duracion_minutos: int) -> Turno:
+        modelo = self._sesion.get_one(TurnoModelo, turno_id)
+        modelo.inicio = inicio
+        modelo.fin = fin
+        modelo.duracion_minutos = duracion_minutos
+        self._volcar_traduciendo_choques()
+        return _turno_a_dominio(modelo)
 
     def existe_turno(self, turno_id: int) -> bool:
         return self._sesion.get(TurnoModelo, turno_id) is not None

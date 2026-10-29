@@ -113,31 +113,59 @@ def _validar_entrada(
     return profesional, prestacion, sillon
 
 
+def evaluar_horario_de_un_turno(
+    uow: UnidadDeTrabajo,
+    *,
+    consultorio_id: int,
+    profesional_id: int,
+    sillon_id: int,
+    inicio: datetime,
+    duracion_minutos: int,
+    excluir_turno_id: int | None = None,
+) -> Intervalo:
+    """Las reglas del horario de un turno, en su orden: RN-AG-10d, RN-AG-04, RN-AG-04b y el solapamiento.
+
+    Las comparten el alta y la reprogramación (design M5). ``excluir_turno_id`` es el turno que se
+    mueve: no choca consigo mismo (RN-AG-10b). Devuelve el intervalo ya validado y con los bloqueos
+    de fila del profesional y del sillón tomados.
+    """
+    zona = uow.agenda.zona_horaria(consultorio_id)
+    intervalo = Intervalo.para_turno(inicio, duracion_minutos, zona)
+    # RN-AG-04, después de RN-AG-10d y antes del solapamiento (07 Flujo 1); sin tomar bloqueos de fila.
+    exigir_dentro_del_horario(intervalo, uow.horario.franjas_de(profesional_id), zona)
+    # RN-AG-04b, después del horario y antes del solapamiento (D280); tampoco toma bloqueos de fila (B10).
+    bloqueos = uow.bloqueos.que_intersecan(consultorio_id, profesional_id, sillon_id, intervalo)
+    exigir_sin_bloqueos(intervalo, profesional_id, sillon_id, consultorio_id, bloqueos)
+    # Serializa por recurso: la escritura que llega segunda espera acá y, al seguir, lee el
+    # turno que la primera ya confirmó (E11, design I8).
+    uow.agenda.bloquear_recursos(profesional_id, sillon_id)
+    ocupados = uow.agenda.ocupados_en_el_intervalo(profesional_id, sillon_id, intervalo)
+    conflictos = detectar_conflictos(
+        intervalo,
+        profesional_id,
+        ocupados.del_profesional,
+        sillon_id,
+        ocupados.del_sillon,
+        excluir_turno_id=excluir_turno_id,
+    )
+    if conflictos:
+        raise ErrorDeSolapamiento(conflictos)
+    return intervalo
+
+
 def _intentar_crear_turno(
     comando: CrearTurnoComando, uow: UnidadDeTrabajo, reloj: Reloj, actor: Actor, creado_por: int
 ) -> Turno:
     with uow:
         profesional, prestacion, sillon = _validar_entrada(comando, uow)
-        zona = uow.agenda.zona_horaria(profesional.consultorio_id)
-        intervalo = Intervalo.para_turno(comando.inicio, prestacion.duracion_minutos, zona)
-        # RN-AG-04, después de RN-AG-10d y antes del solapamiento (07 Flujo 1); sin tomar bloqueos de fila.
-        exigir_dentro_del_horario(intervalo, uow.horario.franjas_de(profesional.id), zona)
-        # RN-AG-04b, después del horario y antes del solapamiento (D280); tampoco toma bloqueos de fila (B10).
-        bloqueos = uow.bloqueos.que_intersecan(profesional.consultorio_id, profesional.id, sillon.id, intervalo)
-        exigir_sin_bloqueos(intervalo, profesional.id, sillon.id, profesional.consultorio_id, bloqueos)
-        # Serializa por recurso: la reserva que llega segunda espera acá y, al seguir, lee el
-        # turno que la primera ya confirmó (E11, design I8).
-        uow.agenda.bloquear_recursos(profesional.id, sillon.id)
-        ocupados = uow.agenda.ocupados_en_el_intervalo(profesional.id, sillon.id, intervalo)
-        conflictos = detectar_conflictos(
-            intervalo,
-            profesional.id,
-            ocupados.del_profesional,
-            sillon.id,
-            ocupados.del_sillon,
+        intervalo = evaluar_horario_de_un_turno(
+            uow,
+            consultorio_id=profesional.consultorio_id,
+            profesional_id=profesional.id,
+            sillon_id=sillon.id,
+            inicio=comando.inicio,
+            duracion_minutos=prestacion.duracion_minutos,
         )
-        if conflictos:
-            raise ErrorDeSolapamiento(conflictos)
         turno = uow.agenda.agregar(
             Turno(
                 consultorio_id=profesional.consultorio_id,
