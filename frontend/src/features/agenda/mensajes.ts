@@ -20,7 +20,7 @@ export const ETIQUETAS_DE_ESTADO: Readonly<Record<EstadoDelTurno, string>> = {
   reservado: 'Reservado',
   confirmado: 'Confirmado',
   cancelado_paciente: 'Cancelado por el paciente',
-  cancelado_consultorio: 'Cancelado por el consultorio',
+  cancelado_profesional: 'Cancelado por el consultorio',
   vencido: 'Vencido',
   atendido: 'Atendido',
   ausente: 'Ausente',
@@ -35,7 +35,7 @@ export const TONOS_DE_ESTADO: Readonly<Record<EstadoDelTurno, TonoDeEstado>> = {
   reservado: 'celeste',
   confirmado: 'verde',
   cancelado_paciente: 'rojo',
-  cancelado_consultorio: 'rojo',
+  cancelado_profesional: 'rojo',
   vencido: 'rojo',
   atendido: 'verde',
   ausente: 'rojo',
@@ -202,5 +202,25 @@ export function mensajeDeReprogramacion(error: unknown): string {
   if (error instanceof EntradaRechazada) {
     return error.codigos.includes('RN-AG-01') ? MENSAJE_RN_AG_01 : mensajeDeEntradaRechazada(error)
   }
+  return MENSAJE_SIN_CONEXION
+}
+
+export const MENSAJE_TURNO_CANCELADO = 'Turno cancelado.'
+export const MENSAJE_ELEGI_QUIEN_PIDIO = 'Elegí quién pidió la cancelación.'
+export const PREGUNTA_DE_CANCELACION = '¿Quién pidió la cancelación?'
+export const OPCION_EL_PACIENTE = 'El paciente'
+export const OPCION_EL_CONSULTORIO = 'El consultorio'
+export const AYUDA_DE_CANCELACION = 'El horario queda libre para otro turno.'
+const MENSAJE_RN_AG_12 = 'Este turno ya no se puede cancelar por su estado (RN-AG-12).'
+const MENSAJE_SIN_PERMISO_PARA_CANCELAR = 'Tu usuario no tiene permiso para cancelar turnos (RN-AU-05).'
+
+/**
+ * Mensaje del panel para un rechazo de `POST /turnos/{id}/cancelar`: por el tipo y el código, nunca por el texto de
+ * la API. Un `422` o un `5xx` no pueden salir de esta pantalla y se ven como el aviso de conexión (design X9).
+ */
+export function mensajeDeCancelacion(error: unknown): string {
+  if (error instanceof PermisoInsuficiente) return MENSAJE_SIN_PERMISO_PARA_CANCELAR
+  if (error instanceof RecursoInexistente) return MENSAJE_TURNO_INEXISTENTE
+  if (error instanceof ReglaRechazada && error.codigos.includes('RN-AG-12')) return MENSAJE_RN_AG_12
   return MENSAJE_SIN_CONEXION
 }

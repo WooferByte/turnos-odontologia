@@ -276,6 +276,10 @@ export interface ServidorFalso {
   responderAlCrear(estado: number, codigos: readonly string[]): void
   /** El próximo `PATCH /api/turnos/{id}` responde ese rechazo (con esos códigos) en lugar de evaluarse; vale una sola vez. */
   responderAlReprogramar(estado: number, codigos: readonly string[]): void
+  /** El próximo `POST /api/turnos/{id}/cancelar` responde ese rechazo (con esos códigos) en lugar de evaluarse; vale una sola vez. */
+  responderAlCancelar(estado: number, codigos: readonly string[]): void
+  /** Cambia el estado de un turno del falso sin pasar por la API (la «otra sesión» que lo cancela o lo atiende). */
+  cambiarEstado(id: number, estado: string): void
   /** Deshace `fallarRuta` para esa ruta: vuelve a responder (por ejemplo, la conexión de vuelta tras una recarga caída). */
   repararRuta(ruta: string): void
   /** Esa prestación pasa a inactiva justo después de la próxima respuesta de `GET /api/prestaciones`. */
@@ -610,6 +614,7 @@ export function crearServidorFalso(opciones: OpcionesDelServidorFalso = {}): Ser
   const hoy = opciones.hoy ?? HOY_DEL_FALSO
   let rechazoAlCrear: { estado: number; codigos: readonly string[] } | null = null
   let rechazoAlReprogramar: { estado: number; codigos: readonly string[] } | null = null
+  let rechazoAlCancelar: { estado: number; codigos: readonly string[] } | null = null
   let prestacionADesactivar: number | null = null
   // Versión del token de cada usuario: desactivar la sube y los tokens anteriores dejan de servir (RN-AU-03).
   const versiones = new Map<number, number>()
@@ -1120,6 +1125,41 @@ export function crearServidorFalso(opciones: OpcionesDelServidorFalso = {}): Ser
     })
   }
 
+  /**
+   * `POST /api/turnos/{id}/cancelar` con tres comportamientos mínimos (X12): `404` `RN-GL-04` si el turno no está,
+   * `409` `RN-AG-12` si no está en un estado activo y, si no, `200` con el turno en el estado pedido, que se guarda.
+   * Los demás rechazos salen de `responderAlCancelar`.
+   */
+  function cancelarTurno(id: number, init: RequestInit | undefined): Response {
+    const { rechazo, actor } = autorizar(init, ['odontologo', 'recepcionista'])
+    if (rechazo !== null || actor === null) return rechazo ?? sesionInvalida()
+    if (rechazoAlCancelar !== null) {
+      const { estado, codigos } = rechazoAlCancelar
+      rechazoAlCancelar = null
+      return problema(estado, '/errores/regla', 'Regla rechazada', 'Rechazado.', [...codigos])
+    }
+    const turno = turnos.find((t) => t.id === id)
+    if (turno === undefined) return recursoInexistente('turno', id)
+    if (!ESTADOS_ACTIVOS.has(turno.estado)) {
+      return problema(409, '/errores/transicion-invalida', 'Transición inválida', 'El turno no está activo.', ['RN-AG-12'])
+    }
+    const cuerpo = leerCuerpo(init)
+    turno.estado = String(cuerpo?.estado)
+    return json(200, {
+      id: turno.id,
+      consultorio_id: 1,
+      paciente_id: turno.paciente_id,
+      profesional_id: turno.profesional_id,
+      sillon_id: turno.sillon_id,
+      prestacion_id: turno.prestacion_id ?? 1,
+      inicio: turno.inicio,
+      fin: turno.fin,
+      duracion_minutos: (Date.parse(turno.fin) - Date.parse(turno.inicio)) / 60000,
+      estado: turno.estado,
+      creado_en: '2026-11-02T12:00:00Z',
+    })
+  }
+
   function subirVersion(id: number): void {
     versiones.set(id, (versiones.get(id) ?? 0) + 1)
   }
@@ -1275,6 +1315,8 @@ export function crearServidorFalso(opciones: OpcionesDelServidorFalso = {}): Ser
     }
     const delHistorial = /^\/api\/turnos\/(\d+)\/historial$/.exec(entrada)
     if (delHistorial !== null && metodo === 'GET') return Promise.resolve(leerHistorial(Number(delHistorial[1]), init))
+    const delCancelar = /^\/api\/turnos\/(\d+)\/cancelar$/.exec(entrada)
+    if (delCancelar !== null && metodo === 'POST') return Promise.resolve(cancelarTurno(Number(delCancelar[1]), init))
     const delTurno = /^\/api\/turnos\/(\d+)$/.exec(entrada)
     if (delTurno !== null && metodo === 'PATCH') return Promise.resolve(reprogramarTurno(Number(delTurno[1]), init))
     const delDia = /^\/api\/turnos(?:\?fecha=(\d{4}-\d{2}-\d{2}))?$/.exec(entrada)
@@ -1326,6 +1368,13 @@ export function crearServidorFalso(opciones: OpcionesDelServidorFalso = {}): Ser
     },
     responderAlReprogramar: (estado, codigos) => {
       rechazoAlReprogramar = { estado, codigos }
+    },
+    responderAlCancelar: (estado, codigos) => {
+      rechazoAlCancelar = { estado, codigos }
+    },
+    cambiarEstado: (id, estado) => {
+      const turno = turnos.find((t) => t.id === id)
+      if (turno !== undefined) turno.estado = estado
     },
     repararRuta: (ruta) => {
       fallas.delete(ruta)

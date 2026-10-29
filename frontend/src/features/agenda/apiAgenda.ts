@@ -12,7 +12,7 @@ export const ESTADOS_DEL_TURNO = [
   'reservado',
   'confirmado',
   'cancelado_paciente',
-  'cancelado_consultorio',
+  'cancelado_profesional',
   'vencido',
   'atendido',
   'ausente',
@@ -27,6 +27,9 @@ export const ESTADOS_ACTIVOS_DEL_TURNO: readonly EstadoDelTurno[] = [
   'reservado',
   'confirmado',
 ]
+
+/** Los dos estados a los que se cancela un turno: quién pidió la cancelación (D342). */
+export type EstadoDeCancelacion = 'cancelado_paciente' | 'cancelado_profesional'
 
 export interface TurnoDeLaAgenda {
   id: number
@@ -148,6 +151,7 @@ export interface ApiAgenda {
   obtenerAgenda(fecha?: string): Promise<AgendaDelDia>
   crearTurno(nuevo: NuevoTurno): Promise<TurnoCreado>
   reprogramarTurno(id: number, cambio: ReprogramacionDeTurno): Promise<TurnoReprogramado>
+  cancelarTurno(id: number, estado: EstadoDeCancelacion): Promise<TurnoReprogramado>
   obtenerPrestacionesActivas(): Promise<Prestacion[]>
 }
 
@@ -177,6 +181,16 @@ export function crearApiAgenda(pedidoDelPanel: PedidoDelPanel): ApiAgenda {
         body: JSON.stringify(cambio),
       }
       const cuerpo = await leerJson(await pedidoDelPanel(`${RUTA}/${id}`, init))
+      if (!esTurnoReprogramado(cuerpo)) throw new SinConexion(MENSAJE_SIN_CONEXION, null)
+      return cuerpo
+    },
+    async cancelarTurno(id, estado) {
+      const init: RequestInit = {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ estado }),
+      }
+      const cuerpo = await leerJson(await pedidoDelPanel(`${RUTA}/${id}/cancelar`, init))
       if (!esTurnoReprogramado(cuerpo)) throw new SinConexion(MENSAJE_SIN_CONEXION, null)
       return cuerpo
     },

@@ -141,4 +141,41 @@ describe('apiAgenda', () => {
 
     expect(rechazo).toBeInstanceOf(RecursoInexistente)
   })
+
+  it('CAN-4a: cancelarTurno manda el estado y devuelve el turno', async () => {
+    const servidor = crearServidorFalso({ prestaciones: PRESTACIONES_DE_PARTIDA, turnos: TURNOS_DE_LA_AGENDA })
+    const api = apiConSesion(servidor)
+
+    const cancelado = await api.cancelarTurno(11, 'cancelado_paciente')
+
+    expect(servidor.cuerpos('POST', '/api/turnos/11/cancelar')).toEqual([{ estado: 'cancelado_paciente' }])
+    expect(cancelado).toMatchObject({ id: 11, estado: 'cancelado_paciente' })
+    expect(servidor.turnosActuales().find((t) => t.id === 11)?.estado).toBe('cancelado_paciente')
+  })
+
+  it('CAN-4b: una agenda con cancelado_profesional se lee', async () => {
+    const servidor = crearServidorFalso({ prestaciones: PRESTACIONES_DE_PARTIDA, turnos: TURNOS_DE_LA_AGENDA })
+    const api = apiConSesion(servidor)
+    await api.cancelarTurno(13, 'cancelado_profesional')
+
+    const agenda = await api.obtenerAgenda()
+
+    expect(agenda.turnos.map((t) => [t.id, t.estado])).toEqual([
+      [11, 'reservado'],
+      [12, 'reservado'],
+      [13, 'cancelado_profesional'],
+    ])
+  })
+
+  it('CAN-5a: un 409 de RN-AG-12 es una regla rechazada con su código', async () => {
+    const servidor = crearServidorFalso({ prestaciones: PRESTACIONES_DE_PARTIDA, turnos: TURNOS_DE_LA_AGENDA })
+    servidor.cambiarEstado(11, 'atendido')
+    const api = apiConSesion(servidor)
+
+    const rechazo = await api.cancelarTurno(11, 'cancelado_paciente').catch((e: unknown) => e)
+
+    expect(rechazo).toBeInstanceOf(ReglaRechazada)
+    expect((rechazo as ReglaRechazada).codigo).toBe('RN-AG-12')
+    expect(servidor.turnosActuales().find((t) => t.id === 11)?.estado).toBe('atendido')
+  })
 })

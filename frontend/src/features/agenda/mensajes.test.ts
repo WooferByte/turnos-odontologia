@@ -5,6 +5,7 @@ import {
   ETIQUETAS_DE_ESTADO,
   TONOS_DE_ESTADO,
   diaCompacto,
+  mensajeDeCancelacion,
   mensajeDeReprogramacion,
   nombreDelDia,
   sumarDias,
@@ -87,5 +88,24 @@ describe('mensajes de la agenda', () => {
     [new SinConexion('x', null), 'No se pudo conectar con el servidor. Probá de nuevo en unos minutos.'],
   ])('REP-7b: RN-AG-01, RN-AG-18, el 404 y el 403 con su texto (%#)', (error, texto) => {
     expect(mensajeDeReprogramacion(error)).toBe(texto)
+  })
+
+  it('CAN-5a: el texto de RN-AG-12', () => {
+    expect(mensajeDeCancelacion(new ReglaRechazada('x', 'RN-AG-12'))).toBe(
+      'Este turno ya no se puede cancelar por su estado (RN-AG-12).',
+    )
+  })
+
+  it.each([
+    [new RecursoInexistente('x', 'RN-GL-04'), 'El turno ya no existe (RN-GL-04).'],
+    [new PermisoInsuficiente('x', 'RN-AU-05'), 'Tu usuario no tiene permiso para cancelar turnos (RN-AU-05).'],
+    [new SinConexion('x', null), 'No se pudo conectar con el servidor. Probá de nuevo en unos minutos.'],
+  ])('CAN-5b: el 404, el 403 y la conexión con su texto (%#)', (error, texto) => {
+    expect(mensajeDeCancelacion(error)).toBe(texto)
+  })
+
+  it('CAN-4b: cancelado_profesional se ve como Cancelado por el consultorio', () => {
+    expect(ETIQUETAS_DE_ESTADO.cancelado_profesional).toBe('Cancelado por el consultorio')
+    expect(TONOS_DE_ESTADO.cancelado_profesional).toBe('rojo')
   })
 })

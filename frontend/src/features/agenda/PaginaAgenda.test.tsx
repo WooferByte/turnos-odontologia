@@ -150,7 +150,7 @@ describe('PaginaAgenda: el día', () => {
       ['reservado', 'Reservado'],
       ['confirmado', 'Confirmado'],
       ['cancelado_paciente', 'Cancelado por el paciente'],
-      ['cancelado_consultorio', 'Cancelado por el consultorio'],
+      ['cancelado_profesional', 'Cancelado por el consultorio'],
       ['vencido', 'Vencido'],
       ['atendido', 'Atendido'],
       ['ausente', 'Ausente'],
