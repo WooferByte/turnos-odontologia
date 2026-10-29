@@ -1,6 +1,15 @@
 import { describe, expect, it } from 'vitest'
+import { EntradaRechazada, PermisoInsuficiente, RecursoInexistente, ReglaRechazada, SinConexion } from '../../shared/api/errores'
 import { ESTADOS_DEL_TURNO } from './apiAgenda'
-import { ETIQUETAS_DE_ESTADO, TONOS_DE_ESTADO, diaCompacto, nombreDelDia, sumarDias, textoDelContador } from './mensajes'
+import {
+  ETIQUETAS_DE_ESTADO,
+  TONOS_DE_ESTADO,
+  diaCompacto,
+  mensajeDeReprogramacion,
+  nombreDelDia,
+  sumarDias,
+  textoDelContador,
+} from './mensajes'
 
 describe('mensajes de la agenda', () => {
   it.each([
@@ -58,5 +67,25 @@ describe('mensajes de la agenda', () => {
 
   it('AGE-4a: el contador usa el singular con un solo turno', () => {
     expect([0, 1, 3].map(textoDelContador)).toEqual(['0 turnos', '1 turno', '3 turnos'])
+  })
+
+  it('REP-7a: el texto de REP-1', () => {
+    expect(mensajeDeReprogramacion(new ReglaRechazada('x', 'RN-AG-05', ['RN-AG-05', 'RN-AG-08']))).toBe(
+      'El profesional y el sillón ya tienen un turno activo en ese horario (RN-AG-05, RN-AG-08).',
+    )
+    expect(mensajeDeReprogramacion(new ReglaRechazada('x', 'RN-AG-08'))).toBe(
+      'El sillón ya tiene un turno activo en ese horario (RN-AG-08).',
+    )
+  })
+
+  it.each([
+    [new EntradaRechazada('x', 'RN-AG-01', ['RN-AG-01']), 'La duración debe ser mayor que 0 y múltiplo de 5 minutos (RN-AG-01).'],
+    [new ReglaRechazada('x', 'RN-AG-18'), 'Este turno ya no se puede reprogramar por su estado (RN-AG-18).'],
+    [new RecursoInexistente('x', 'RN-GL-04'), 'El turno ya no existe (RN-GL-04).'],
+    [new PermisoInsuficiente('x', 'RN-AU-05'), 'Tu usuario no tiene permiso para reprogramar turnos (RN-AU-05).'],
+    [new EntradaRechazada('x', 'RN-AG-04', ['RN-AG-04']), 'El turno no cae dentro del horario de atención del profesional (RN-AG-04).'],
+    [new SinConexion('x', null), 'No se pudo conectar con el servidor. Probá de nuevo en unos minutos.'],
+  ])('REP-7b: RN-AG-01, RN-AG-18, el 404 y el 403 con su texto (%#)', (error, texto) => {
+    expect(mensajeDeReprogramacion(error)).toBe(texto)
   })
 })

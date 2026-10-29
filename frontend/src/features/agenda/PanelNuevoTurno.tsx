@@ -4,9 +4,10 @@ import { useId, useState, type SyntheticEvent } from 'react'
 import { Aviso } from '../../shared/componentes/Aviso'
 import { IconoCerrar } from '../../shared/iconos/IconoCerrar'
 import { IconoMas } from '../../shared/iconos/IconoMas'
-import { aUtc, horaLocal } from '../../shared/horaDelConsultorio'
+import { aUtc } from '../../shared/horaDelConsultorio'
 import type { Prestacion } from '../prestaciones/apiPrestaciones'
 import type { NuevoTurno } from './apiAgenda'
+import { FECHA, HORA, horaDeFin } from './horaDeFin'
 import { MENSAJE_FORMULARIO_INCOMPLETO, textoDeFin, tituloDelAviso } from './mensajes'
 
 interface Propiedades {
@@ -23,15 +24,6 @@ interface Propiedades {
 }
 
 const NUMERO_DE_PACIENTE = /^\d+$/
-const FECHA = /^\d{4}-\d{2}-\d{2}$/
-const HORA = /^\d{2}:\d{2}$/
-
-/** `hh:mm` en que termina un turno que empieza en `fecha` y `hora` del consultorio, o `null` si falta algo. */
-function horaDeFin(fecha: string, hora: string, duracionMinutos: number, zona: string): string | null {
-  if (!FECHA.test(fecha) || !HORA.test(hora)) return null
-  const fin = new Date(Date.parse(aUtc(`${fecha}T${hora}`, zona)) + duracionMinutos * 60000)
-  return horaLocal(fin.toISOString(), zona)
-}
 
 export function PanelNuevoTurno({
   prestaciones,

@@ -1,6 +1,12 @@
 // Textos fijos de la agenda y el único lugar que decide qué texto corresponde a cada estado (design A12, A15).
 // No se muestra el `detail` ni el `mensaje` de la API: la pantalla decide por el tipo de error y por el código.
-import { EntradaRechazada, PermisoInsuficiente, ReglaRechazada, type ReferenciaRechazada } from '../../shared/api/errores'
+import {
+  EntradaRechazada,
+  PermisoInsuficiente,
+  RecursoInexistente,
+  ReglaRechazada,
+  type ReferenciaRechazada,
+} from '../../shared/api/errores'
 import type { EstadoDelTurno } from './apiAgenda'
 
 export const MENSAJE_CARGANDO = 'Cargando agenda…'
@@ -172,4 +178,29 @@ export function mensajeDeCreacion(error: unknown): string {
 
 export function textoDeFin(hora: string): string {
   return `Termina a las ${hora}.`
+}
+
+export const MENSAJE_TURNO_REPROGRAMADO = 'Turno reprogramado.'
+export const MENSAJE_EL_TURNO_NO_CAMBIO = 'El turno no cambió.'
+export const MENSAJE_REPROGRAMACION_INCOMPLETA = 'Completá fecha, hora y duración.'
+export const MENSAJE_SIN_CAMBIOS = 'No cambiaste la fecha, la hora ni la duración.'
+const MENSAJE_RN_AG_01 = 'La duración debe ser mayor que 0 y múltiplo de 5 minutos (RN-AG-01).'
+const MENSAJE_RN_AG_18 = 'Este turno ya no se puede reprogramar por su estado (RN-AG-18).'
+const MENSAJE_TURNO_INEXISTENTE = 'El turno ya no existe (RN-GL-04).'
+const MENSAJE_SIN_PERMISO_PARA_REPROGRAMAR = 'Tu usuario no tiene permiso para reprogramar turnos (RN-AU-05).'
+
+/**
+ * Mensaje del panel para un rechazo de `PATCH /turnos/{id}`: por el tipo y el código, nunca por el texto de la API.
+ * Reusa los textos de los códigos que comparte con el alta; el panel le suma «El turno no cambió.».
+ */
+export function mensajeDeReprogramacion(error: unknown): string {
+  if (error instanceof PermisoInsuficiente) return MENSAJE_SIN_PERMISO_PARA_REPROGRAMAR
+  if (error instanceof RecursoInexistente) return MENSAJE_TURNO_INEXISTENTE
+  if (error instanceof ReglaRechazada) {
+    return error.codigos.includes('RN-AG-18') ? MENSAJE_RN_AG_18 : mensajeDeReglaRechazada(error)
+  }
+  if (error instanceof EntradaRechazada) {
+    return error.codigos.includes('RN-AG-01') ? MENSAJE_RN_AG_01 : mensajeDeEntradaRechazada(error)
+  }
+  return MENSAJE_SIN_CONEXION
 }

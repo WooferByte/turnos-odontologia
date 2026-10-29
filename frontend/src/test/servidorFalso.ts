@@ -274,6 +274,10 @@ export interface ServidorFalso {
   quitarTurno(id: number): void
   /** El próximo `POST /api/turnos` responde ese rechazo (con esos códigos) en lugar de evaluarse; vale una sola vez. */
   responderAlCrear(estado: number, codigos: readonly string[]): void
+  /** El próximo `PATCH /api/turnos/{id}` responde ese rechazo (con esos códigos) en lugar de evaluarse; vale una sola vez. */
+  responderAlReprogramar(estado: number, codigos: readonly string[]): void
+  /** Deshace `fallarRuta` para esa ruta: vuelve a responder (por ejemplo, la conexión de vuelta tras una recarga caída). */
+  repararRuta(ruta: string): void
   /** Esa prestación pasa a inactiva justo después de la próxima respuesta de `GET /api/prestaciones`. */
   desactivarTrasListar(prestacionId: number): void
   /** A partir de ahora toda petición falla como una red caída (fetch rechaza). */
@@ -605,6 +609,7 @@ export function crearServidorFalso(opciones: OpcionesDelServidorFalso = {}): Ser
   const pacientes: PacienteFalso[] = (opciones.pacientes ?? PACIENTES_DE_PARTIDA).map((p) => ({ ...p }))
   const hoy = opciones.hoy ?? HOY_DEL_FALSO
   let rechazoAlCrear: { estado: number; codigos: readonly string[] } | null = null
+  let rechazoAlReprogramar: { estado: number; codigos: readonly string[] } | null = null
   let prestacionADesactivar: number | null = null
   // Versión del token de cada usuario: desactivar la sube y los tokens anteriores dejan de servir (RN-AU-03).
   const versiones = new Map<number, number>()
@@ -1072,6 +1077,49 @@ export function crearServidorFalso(opciones: OpcionesDelServidorFalso = {}): Ser
     })
   }
 
+  /**
+   * `PATCH /api/turnos/{id}` con tres comportamientos mínimos (M13): `404` `RN-GL-04` si el turno no está, `409`
+   * `RN-AG-05` y `RN-AG-08` si el horario nuevo choca con otro turno activo (el turno no se choca consigo mismo) y,
+   * si no, `200` con el turno movido, que se guarda. Los demás rechazos salen de `responderAlReprogramar`.
+   */
+  function reprogramarTurno(id: number, init: RequestInit | undefined): Response {
+    const { rechazo, actor } = autorizar(init, ['odontologo', 'recepcionista'])
+    if (rechazo !== null || actor === null) return rechazo ?? sesionInvalida()
+    if (rechazoAlReprogramar !== null) {
+      const { estado, codigos } = rechazoAlReprogramar
+      rechazoAlReprogramar = null
+      return problema(estado, '/errores/regla', 'Regla rechazada', 'Rechazado.', [...codigos])
+    }
+    const turno = turnos.find((t) => t.id === id)
+    if (turno === undefined) return recursoInexistente('turno', id)
+    const cuerpo = leerCuerpo(init)
+    const duracionActual = (Date.parse(turno.fin) - Date.parse(turno.inicio)) / 60000
+    const desde = typeof cuerpo?.inicio === 'string' ? Date.parse(cuerpo.inicio) : Date.parse(turno.inicio)
+    const duracion = typeof cuerpo?.duracion_minutos === 'number' ? cuerpo.duracion_minutos : duracionActual
+    const hasta = desde + duracion * 60000
+    const ocupado = turnos.some(
+      (t) => t.id !== id && ESTADOS_ACTIVOS.has(t.estado) && Date.parse(t.inicio) < hasta && desde < Date.parse(t.fin),
+    )
+    if (ocupado) {
+      return problema(409, '/errores/solapamiento-turno', 'Turno solapado', 'Solapamiento.', ['RN-AG-05', 'RN-AG-08'])
+    }
+    turno.inicio = new Date(desde).toISOString().replace('.000Z', 'Z')
+    turno.fin = new Date(hasta).toISOString().replace('.000Z', 'Z')
+    return json(200, {
+      id: turno.id,
+      consultorio_id: 1,
+      paciente_id: turno.paciente_id,
+      profesional_id: turno.profesional_id,
+      sillon_id: turno.sillon_id,
+      prestacion_id: turno.prestacion_id ?? 1,
+      inicio: turno.inicio,
+      fin: turno.fin,
+      duracion_minutos: duracion,
+      estado: turno.estado,
+      creado_en: '2026-11-02T12:00:00Z',
+    })
+  }
+
   function subirVersion(id: number): void {
     versiones.set(id, (versiones.get(id) ?? 0) + 1)
   }
@@ -1227,6 +1275,8 @@ export function crearServidorFalso(opciones: OpcionesDelServidorFalso = {}): Ser
     }
     const delHistorial = /^\/api\/turnos\/(\d+)\/historial$/.exec(entrada)
     if (delHistorial !== null && metodo === 'GET') return Promise.resolve(leerHistorial(Number(delHistorial[1]), init))
+    const delTurno = /^\/api\/turnos\/(\d+)$/.exec(entrada)
+    if (delTurno !== null && metodo === 'PATCH') return Promise.resolve(reprogramarTurno(Number(delTurno[1]), init))
     const delDia = /^\/api\/turnos(?:\?fecha=(\d{4}-\d{2}-\d{2}))?$/.exec(entrada)
     if (delDia !== null && metodo === 'GET') return Promise.resolve(listarTurnos(delDia[1], init))
     if (entrada === '/api/turnos' && metodo === 'POST') return Promise.resolve(crearTurno(init))
@@ -1273,6 +1323,12 @@ export function crearServidorFalso(opciones: OpcionesDelServidorFalso = {}): Ser
     },
     responderAlCrear: (estado, codigos) => {
       rechazoAlCrear = { estado, codigos }
+    },
+    responderAlReprogramar: (estado, codigos) => {
+      rechazoAlReprogramar = { estado, codigos }
+    },
+    repararRuta: (ruta) => {
+      fallas.delete(ruta)
     },
     desactivarTrasListar: (prestacionId) => {
       prestacionADesactivar = prestacionId

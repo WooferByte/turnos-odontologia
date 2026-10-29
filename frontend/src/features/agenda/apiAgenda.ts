@@ -20,6 +20,14 @@ export const ESTADOS_DEL_TURNO = [
 
 export type EstadoDelTurno = (typeof ESTADOS_DEL_TURNO)[number]
 
+/** Los estados activos de RN-AG-10: los únicos turnos que se reprograman (design M11). */
+export const ESTADOS_ACTIVOS_DEL_TURNO: readonly EstadoDelTurno[] = [
+  'pendiente_aprobacion',
+  'pendiente_sena',
+  'reservado',
+  'confirmado',
+]
+
 export interface TurnoDeLaAgenda {
   id: number
   /** ISO en UTC con `Z`. */
@@ -54,6 +62,17 @@ export interface TurnoCreado {
   inicio: string
   fin: string
   estado: string
+}
+
+/** Cuerpo de la reprogramación: el inicio nuevo en UTC y la duración (design M2). */
+export interface ReprogramacionDeTurno {
+  inicio: string
+  duracion_minutos: number
+}
+
+/** El turno reprogramado: la forma de `TurnoSalida`. */
+export interface TurnoReprogramado extends TurnoCreado {
+  duracion_minutos: number
 }
 
 const RUTA = '/api/turnos'
@@ -111,6 +130,10 @@ function esTurnoCreado(valor: unknown): valor is TurnoCreado {
   )
 }
 
+function esTurnoReprogramado(valor: unknown): valor is TurnoReprogramado {
+  return esTurnoCreado(valor) && typeof (valor as { duracion_minutos?: unknown }).duracion_minutos === 'number'
+}
+
 async function leerJson(respuesta: Response): Promise<unknown> {
   if (!respuesta.ok) throw await traducirRechazo(respuesta)
   try {
@@ -124,6 +147,7 @@ export interface ApiAgenda {
   /** Sin `fecha`, la API devuelve el día de hoy del consultorio. */
   obtenerAgenda(fecha?: string): Promise<AgendaDelDia>
   crearTurno(nuevo: NuevoTurno): Promise<TurnoCreado>
+  reprogramarTurno(id: number, cambio: ReprogramacionDeTurno): Promise<TurnoReprogramado>
   obtenerPrestacionesActivas(): Promise<Prestacion[]>
 }
 
@@ -144,6 +168,16 @@ export function crearApiAgenda(pedidoDelPanel: PedidoDelPanel): ApiAgenda {
       }
       const cuerpo = await leerJson(await pedidoDelPanel(RUTA, init))
       if (!esTurnoCreado(cuerpo)) throw new SinConexion(MENSAJE_SIN_CONEXION, null)
+      return cuerpo
+    },
+    async reprogramarTurno(id, cambio) {
+      const init: RequestInit = {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(cambio),
+      }
+      const cuerpo = await leerJson(await pedidoDelPanel(`${RUTA}/${id}`, init))
+      if (!esTurnoReprogramado(cuerpo)) throw new SinConexion(MENSAJE_SIN_CONEXION, null)
       return cuerpo
     },
     async obtenerPrestacionesActivas() {
