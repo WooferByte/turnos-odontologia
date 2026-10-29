@@ -1,24 +1,34 @@
 // Panel lateral «Reprogramar turno» (design M10, M11, M12): pide fecha, hora y duración del consultorio, cargadas
 // con los valores actuales del turno. No evalúa reglas de agenda: las decide la API.
 import { useId, useState, type SyntheticEvent } from 'react'
+import { Aviso } from '../../shared/componentes/Aviso'
 import { aUtc, fechaLocal, horaLocal } from '../../shared/horaDelConsultorio'
 import { IconoCalendario } from '../../shared/iconos/IconoCalendario'
 import { IconoCerrar } from '../../shared/iconos/IconoCerrar'
 import type { ReprogramacionDeTurno, TurnoDeLaAgenda } from './apiAgenda'
-import { horaDeFin } from './horaDeFin'
-import { nombreDelDia, textoDeFin } from './mensajes'
+import { FECHA, HORA, horaDeFin } from './horaDeFin'
+import {
+  MENSAJE_EL_TURNO_NO_CAMBIO,
+  MENSAJE_REPROGRAMACION_INCOMPLETA,
+  MENSAJE_SIN_CAMBIOS,
+  nombreDelDia,
+  textoDeFin,
+  tituloDelAviso,
+} from './mensajes'
 
 interface Propiedades {
   turno: TurnoDeLaAgenda
   zonaHoraria: string
   enviando: boolean
+  /** Rechazo de la API ya traducido a su texto fijo; `null` si no hay. */
+  error: string | null
   onReprogramar(cambio: ReprogramacionDeTurno): void
   onCancelar(): void
 }
 
 const NUMERO_ENTERO = /^\d+$/
 
-export function PanelReprogramar({ turno, zonaHoraria, enviando, onReprogramar, onCancelar }: Propiedades) {
+export function PanelReprogramar({ turno, zonaHoraria, enviando, error, onReprogramar, onCancelar }: Propiedades) {
   const idTitulo = useId()
   const idFecha = useId()
   const idHora = useId()
@@ -29,13 +39,30 @@ export function PanelReprogramar({ turno, zonaHoraria, enviando, onReprogramar, 
   const [fecha, setFecha] = useState(fechaActual)
   const [hora, setHora] = useState(horaActual)
   const [duracion, setDuracion] = useState(String(turno.duracion_minutos))
+  /** Lo que la pantalla frena sin pedir nada a la API (design M10); cualquier cambio de un campo lo quita. */
+  const [frenado, setFrenado] = useState<string | null>(null)
 
   const fin = NUMERO_ENTERO.test(duracion.trim()) ? horaDeFin(fecha, hora, Number(duracion.trim()), zonaHoraria) : null
+
+  function cambiar(cambio: () => void): void {
+    cambio()
+    setFrenado(null)
+  }
 
   function reprogramar(evento: SyntheticEvent<HTMLFormElement>): void {
     evento.preventDefault()
     if (enviando) return
-    onReprogramar({ inicio: aUtc(`${fecha}T${hora}`, zonaHoraria), duracion_minutos: Number(duracion.trim()) })
+    if (!FECHA.test(fecha) || !HORA.test(hora) || !NUMERO_ENTERO.test(duracion.trim())) {
+      setFrenado(MENSAJE_REPROGRAMACION_INCOMPLETA)
+      return
+    }
+    const inicio = aUtc(`${fecha}T${hora}`, zonaHoraria)
+    const duracionMinutos = Number(duracion.trim())
+    if (Date.parse(inicio) === Date.parse(turno.inicio) && duracionMinutos === turno.duracion_minutos) {
+      setFrenado(MENSAJE_SIN_CAMBIOS)
+      return
+    }
+    onReprogramar({ inicio, duracion_minutos: duracionMinutos })
   }
 
   return (
@@ -58,6 +85,12 @@ export function PanelReprogramar({ turno, zonaHoraria, enviando, onReprogramar, 
         </button>
       </header>
       <div className="panel-cuerpo">
+        {frenado === null ? null : <Aviso mensaje={frenado} titulo={tituloDelAviso(frenado)} />}
+        {frenado !== null || error === null ? null : (
+          <Aviso mensaje={error} titulo={tituloDelAviso(error)}>
+            <p className="aviso-segunda-linea">{MENSAJE_EL_TURNO_NO_CAMBIO}</p>
+          </Aviso>
+        )}
         <p className="nota-del-panel">Fecha y hora del consultorio.</p>
         <form onSubmit={reprogramar} noValidate>
           <div className="campos-en-fila">
@@ -67,7 +100,7 @@ export function PanelReprogramar({ turno, zonaHoraria, enviando, onReprogramar, 
                   Fecha
                 </label>
               </div>
-              <input id={idFecha} type="date" autoFocus value={fecha} onChange={(e) => setFecha(e.target.value)} />
+              <input id={idFecha} type="date" autoFocus value={fecha} onChange={(e) => cambiar(() => setFecha(e.target.value))} />
             </div>
             <div className="campo">
               <div className="campo-etiqueta">
@@ -75,7 +108,7 @@ export function PanelReprogramar({ turno, zonaHoraria, enviando, onReprogramar, 
                   Hora
                 </label>
               </div>
-              <input id={idHora} type="time" value={hora} onChange={(e) => setHora(e.target.value)} />
+              <input id={idHora} type="time" value={hora} onChange={(e) => cambiar(() => setHora(e.target.value))} />
             </div>
           </div>
           <div className="campo">
@@ -90,7 +123,7 @@ export function PanelReprogramar({ turno, zonaHoraria, enviando, onReprogramar, 
               inputMode="numeric"
               autoComplete="off"
               value={duracion}
-              onChange={(e) => setDuracion(e.target.value)}
+              onChange={(e) => cambiar(() => setDuracion(e.target.value))}
               aria-describedby={fin === null ? undefined : idFin}
             />
           </div>

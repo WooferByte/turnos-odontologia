@@ -1,14 +1,17 @@
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { MemoryRouter } from 'react-router'
+import { MemoryRouter, useLocation } from 'react-router'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { App } from '../../App'
 import { CLAVE_DE_SESION } from '../../shared/api/sesion'
 import {
   EMAIL_ACTIVA as EMAIL_ODONTOLOGA,
+  EMAIL_DUENO,
   EMAIL_RECEPCIONISTA,
   PRESTACIONES_DE_PARTIDA,
   TURNOS_DE_LA_AGENDA,
+  USUARIOS_DE_PARTIDA,
+  USUARIO_DUENO,
   crearServidorFalso,
   type TurnoFalso,
   type OpcionesDelServidorFalso,
@@ -16,6 +19,11 @@ import {
 } from '../../test/servidorFalso'
 
 type Usuario = ReturnType<typeof userEvent.setup>
+
+function LugarActual() {
+  const ubicacion = useLocation()
+  return <p data-testid="lugar">{ubicacion.pathname}</p>
+}
 
 /** El falso con las prestaciones de la demo y los tres turnos del 2 de noviembre. */
 function falso(opciones: OpcionesDelServidorFalso = {}): ServidorFalso {
@@ -27,6 +35,7 @@ async function abrirAgenda(servidor: ServidorFalso, email = EMAIL_RECEPCIONISTA)
   sessionStorage.setItem(CLAVE_DE_SESION, JSON.stringify({ refresh: servidor.emitirSesion(email).refresh }))
   render(
     <MemoryRouter initialEntries={['/panel/agenda']}>
+      <LugarActual />
       <App fetch={servidor.fetch} />
     </MemoryRouter>,
   )
@@ -263,5 +272,189 @@ describe('PanelReprogramar: bordes', () => {
     expect(servidor.llamadas('PATCH', '/api/turnos/11')).toBe(1)
     expect(servidor.peticiones('/api/turnos?fecha=2026-11-02')).toBe(2)
     expect(filasDeLaAgenda().at(-1)).toEqual(['12:30 – 13:00', 'Ana Ejemplo', 'Consulta / control', 'Reservado'])
+  })
+})
+
+/** Lo cargado en el panel después de un rechazo: sigue abierto, sin «Turno reprogramado.» y con el turno como estaba. */
+function comprobarQueNoCambio(servidor: ServidorFalso, hora: string, duracion: string): void {
+  expect(screen.getByRole('complementary', { name: 'Reprogramar turno' })).toBeDefined()
+  expect((screen.getByLabelText('Hora') as HTMLInputElement).value).toBe(hora)
+  expect((screen.getByLabelText('Duración (minutos)') as HTMLInputElement).value).toBe(duracion)
+  expect(screen.queryByText('Turno reprogramado.')).toBeNull()
+  expect(servidor.llamadas('PATCH', '/api/turnos/11')).toBe(1)
+  expect(servidor.turnosActuales().find((t) => t.id === 11)?.inicio).toBe('2026-11-02T12:00:00Z')
+}
+
+describe('PanelReprogramar: los rechazos', () => {
+  it('REP-7a: sobre otro turno activo muestra los dos códigos y el turno no cambia', async () => {
+    const servidor = falso()
+    const usuario = await abrirAgenda(servidor)
+    await abrirReprogramar(usuario)
+    cambiarCampo('Hora', '10:15')
+
+    await usuario.click(botonReprogramar())
+
+    const aviso = await screen.findByRole('alert')
+    expect(aviso.textContent).toContain('El profesional y el sillón ya tienen un turno activo en ese horario (RN-AG-05, RN-AG-08).')
+    expect(aviso.textContent).toContain('El turno no cambió.')
+    expect(servidor.cuerpos('PATCH', '/api/turnos/11')).toEqual([{ inicio: '2026-11-02T13:15:00Z', duracion_minutos: 30 }])
+    comprobarQueNoCambio(servidor, '10:15', '30')
+    expect(filasDeLaAgenda()[0]).toEqual(['09:00 – 09:30', 'Ana Ejemplo', 'Consulta / control', 'Reservado'])
+  })
+
+  it.each([
+    [422, ['RN-AG-01'], '42', 'La duración debe ser mayor que 0 y múltiplo de 5 minutos (RN-AG-01).'],
+    [422, ['RN-AG-04'], '30', 'El turno no cae dentro del horario de atención del profesional (RN-AG-04).'],
+    [422, ['RN-AG-04b'], '30', 'Ese horario está bloqueado (RN-AG-04b).'],
+    [422, ['RN-AG-10d'], '30', 'El turno no puede pasar de la medianoche del consultorio (RN-AG-10d).'],
+    [409, ['RN-AG-18'], '30', 'Este turno ya no se puede reprogramar por su estado (RN-AG-18).'],
+    [404, ['RN-GL-04'], '30', 'El turno ya no existe (RN-GL-04).'],
+    [403, ['RN-AU-05'], '30', 'Tu usuario no tiene permiso para reprogramar turnos (RN-AU-05).'],
+  ])('REP-7b: el %i con %j se ve como «%s» (duración %s)', async (estado, codigos, duracion, texto) => {
+    const servidor = falso()
+    const usuario = await abrirAgenda(servidor)
+    await abrirReprogramar(usuario)
+    cambiarCampo('Hora', '12:30')
+    cambiarCampo('Duración (minutos)', duracion)
+    servidor.responderAlReprogramar(estado, codigos)
+    const refrescosAntes = servidor.llamadas('POST', '/api/auth/refresh')
+
+    await usuario.click(botonReprogramar())
+
+    const aviso = await screen.findByRole('alert')
+    expect(aviso.textContent).toContain(texto)
+    expect(aviso.textContent).toContain('El turno no cambió.')
+    expect(servidor.llamadas('POST', '/api/auth/refresh')).toBe(refrescosAntes)
+    expect(screen.getByTestId('lugar').textContent).toBe('/panel/agenda')
+    comprobarQueNoCambio(servidor, '12:30', duracion)
+  })
+
+  it('REP-7c: un campo vacío no manda nada', async () => {
+    const servidor = falso()
+    const usuario = await abrirAgenda(servidor)
+    await abrirReprogramar(usuario)
+    cambiarCampo('Hora', '')
+
+    await usuario.click(botonReprogramar())
+
+    expect((await screen.findByRole('alert')).textContent).toContain('Completá fecha, hora y duración.')
+    expect(servidor.llamadas('PATCH', '/api/turnos/11')).toBe(0)
+  })
+
+  it('REP-7c: una duración no numérica no manda nada', async () => {
+    const servidor = falso()
+    const usuario = await abrirAgenda(servidor)
+    await abrirReprogramar(usuario)
+    cambiarCampo('Duración (minutos)', 'media')
+
+    await usuario.click(botonReprogramar())
+
+    expect((await screen.findByRole('alert')).textContent).toContain('Completá fecha, hora y duración.')
+    expect(screen.queryByText(/Termina a las/)).toBeNull()
+    expect(servidor.llamadas('PATCH', '/api/turnos/11')).toBe(0)
+  })
+
+  it('REP-7c: sin cambios no manda nada', async () => {
+    const servidor = falso()
+    const usuario = await abrirAgenda(servidor)
+    await abrirReprogramar(usuario)
+
+    await usuario.click(botonReprogramar())
+
+    expect((await screen.findByRole('alert')).textContent).toContain('No cambiaste la fecha, la hora ni la duración.')
+    expect(servidor.llamadas('PATCH', '/api/turnos/11')).toBe(0)
+    expect(screen.queryByText('Turno reprogramado.')).toBeNull()
+  })
+
+  it('REP-7c: Cancelar no manda nada', async () => {
+    const servidor = falso()
+    const usuario = await abrirAgenda(servidor)
+    await abrirReprogramar(usuario)
+    cambiarCampo('Hora', '12:30')
+
+    await usuario.click(screen.getByRole('button', { name: 'Cancelar' }))
+
+    expect(screen.queryByRole('complementary', { name: 'Reprogramar turno' })).toBeNull()
+    expect(servidor.llamadas('PATCH', '/api/turnos/11')).toBe(0)
+  })
+
+  it('REP-7c: el doble clic manda un solo PATCH', async () => {
+    const servidor = falso()
+    const usuario = await abrirAgenda(servidor)
+    await abrirReprogramar(usuario)
+    cambiarCampo('Hora', '12:30')
+    const liberar = servidor.retener('/api/turnos/11')
+
+    await usuario.click(botonReprogramar())
+    await usuario.click(botonReprogramar())
+
+    expect(botonReprogramar().disabled).toBe(true)
+    liberar()
+    expect(await screen.findByText('Turno reprogramado.')).toBeDefined()
+    expect(servidor.llamadas('PATCH', '/api/turnos/11')).toBe(1)
+  })
+
+  it('REP-7c: sin conexión se conserva lo cargado', async () => {
+    const servidor = falso()
+    const usuario = await abrirAgenda(servidor)
+    await abrirReprogramar(usuario)
+    cambiarCampo('Hora', '12:30')
+    servidor.caerse()
+
+    await usuario.click(botonReprogramar())
+
+    const aviso = await screen.findByRole('alert')
+    expect(aviso.textContent).toContain(MENSAJE_DE_CONEXION)
+    expect(aviso.textContent).toContain('El turno no cambió.')
+    expect(botonReprogramar().disabled).toBe(false)
+    expect(screen.queryByText('Turno reprogramado.')).toBeNull()
+    expect((screen.getByLabelText('Hora') as HTMLInputElement).value).toBe('12:30')
+  })
+
+  it('REP-7c: con el refresh vigente se renueva sin aviso', async () => {
+    const servidor = falso()
+    const usuario = await abrirAgenda(servidor)
+    await abrirReprogramar(usuario)
+    cambiarCampo('Hora', '12:30')
+    const refrescosAntes = servidor.llamadas('POST', '/api/auth/refresh')
+    servidor.vencerAccess()
+
+    await usuario.click(botonReprogramar())
+
+    expect(await screen.findByText('Turno reprogramado.')).toBeDefined()
+    expect(servidor.llamadas('POST', '/api/auth/refresh')).toBe(refrescosAntes + 1)
+    expect(servidor.llamadas('PATCH', '/api/turnos/11')).toBe(2)
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
+
+  it('REP-7c: una sesión irrenovable vuelve al inicio de sesión', async () => {
+    const servidor = falso()
+    const usuario = await abrirAgenda(servidor)
+    await abrirReprogramar(usuario)
+    cambiarCampo('Hora', '12:30')
+    servidor.vencerAccess()
+    servidor.invalidarRefresh()
+
+    await usuario.click(botonReprogramar())
+
+    expect((await screen.findByRole('status')).textContent).toBe('Tu sesión terminó. Iniciá sesión de nuevo.')
+    expect(screen.getByTestId('lugar').textContent).toBe('/ingresar')
+    expect(screen.queryByText(MENSAJE_DE_CONEXION)).toBeNull()
+    expect(servidor.turnosActuales().find((t) => t.id === 11)?.inicio).toBe('2026-11-02T12:00:00Z')
+  })
+
+  it('REP-7d: el dueño ve la acción y recibe el 403', async () => {
+    const servidor = falso({ usuarios: [...USUARIOS_DE_PARTIDA, USUARIO_DUENO] })
+    const usuario = await abrirAgenda(servidor, EMAIL_DUENO)
+    expect(screen.getAllByRole('button', { name: /^Reprogramar el turno/ })).toHaveLength(3)
+    await abrirReprogramar(usuario)
+    cambiarCampo('Hora', '12:30')
+
+    await usuario.click(botonReprogramar())
+
+    const aviso = await screen.findByRole('alert')
+    expect(aviso.textContent).toContain('Tu usuario no tiene permiso para reprogramar turnos (RN-AU-05).')
+    expect(aviso.textContent).toContain('El turno no cambió.')
+    comprobarQueNoCambio(servidor, '12:30', '30')
   })
 })

@@ -20,6 +20,7 @@ import {
   MENSAJE_TURNO_REPROGRAMADO,
   diaCompacto,
   mensajeDeCreacion,
+  mensajeDeReprogramacion,
   nombreDelDia,
   subtituloDeAgenda,
   sumarDias,
@@ -145,6 +146,7 @@ export function PaginaAgenda() {
 
   function abrirReprogramar(turno: TurnoDeLaAgenda): void {
     pedidoDePrestaciones.current += 1
+    setErrorDelPanel(null)
     setPanel({ tipo: 'reprogramar', turno })
   }
 
@@ -182,11 +184,15 @@ export function PaginaAgenda() {
     if (enCurso.current) return
     enCurso.current = true
     setEnviando(true)
+    setErrorDelPanel(null)
     try {
       const movido = await api.reprogramarTurno(turno.id, cambio)
       cerrarPanel()
       setExito(MENSAJE_TURNO_REPROGRAMADO)
       pedirDia(fechaLocal(movido.inicio, zona))
+    } catch (error: unknown) {
+      if (error instanceof SesionTerminada) return
+      setErrorDelPanel(mensajeDeReprogramacion(error))
     } finally {
       enCurso.current = false
       setEnviando(false)
@@ -288,6 +294,7 @@ export function PaginaAgenda() {
             turno={panel.turno}
             zonaHoraria={dia?.zona ?? ''}
             enviando={enviando}
+            error={errorDelPanel}
             onReprogramar={(cambio) => void reprogramar(panel.turno, cambio, dia?.zona ?? '')}
             onCancelar={() => cerrarReprogramar(panel.turno)}
           />
