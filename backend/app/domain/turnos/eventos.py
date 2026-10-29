@@ -10,6 +10,7 @@ from app.domain.turnos.turno import Turno
 class TipoEvento(StrEnum):
     CREADO = "creado"
     REPROGRAMADO = "reprogramado"
+    CANCELADO = "cancelado"
 
 
 class ActorTipo(StrEnum):
@@ -80,5 +81,21 @@ def evento_reprogramado(antes: Turno, despues: Turno, actor: Actor, ocurrido_en:
         ocurrido_en=ocurrido_en,
         antes=_horario_del_turno(antes),
         despues=_horario_del_turno(despues),
+        motivo=None,
+    )
+
+
+def evento_cancelado(antes: Turno, despues: Turno, actor: Actor, ocurrido_en: datetime) -> EventoTurno:
+    """El evento ``cancelado``: el estado antes y después, lo único que cambia (D349)."""
+    if antes.id is None or despues.id is None:
+        raise ValueError("El evento cancelado cuelga de un turno guardado: el turno no tiene id.")
+    return EventoTurno(
+        turno_id=despues.id,
+        tipo=TipoEvento.CANCELADO,
+        actor_tipo=actor.tipo,
+        actor_id=actor.id,
+        ocurrido_en=ocurrido_en,
+        antes={"estado": antes.estado.value},
+        despues={"estado": despues.estado.value},
         motivo=None,
     )

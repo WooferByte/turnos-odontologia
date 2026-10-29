@@ -221,6 +221,15 @@ class TurnoNoReprogramable(ErrorDeDominio):
         super().__init__("El turno no se puede reprogramar en su estado.")
 
 
+class TransicionInvalida(ErrorDeDominio):
+    """El estado del turno no admite el cambio pedido: hoy, cancelar uno terminal (RN-AG-12, D345)."""
+
+    codigo = "RN-AG-12"
+
+    def __init__(self) -> None:
+        super().__init__("El turno no se puede cambiar de estado desde el que tiene.")
+
+
 class IntervaloInvalido(ErrorDeDominio):
     codigo = "RN-AG-10d"
 
