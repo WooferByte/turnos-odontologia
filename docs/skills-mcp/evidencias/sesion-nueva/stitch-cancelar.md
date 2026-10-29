@@ -78,4 +78,35 @@ Una columna de unos 390 px con la barra en tres filas y debajo el panel a todo e
 
 ## 4. Comparación con la implementación
 
-Pendiente: se completa en la prueba en el navegador del Apply (tarea 12.1 de `cancelar-turno`).
+Hecha el 2026-10-29 en la tarea 12.1 con la demo (`crear_app_demo` y `npm run dev`, con la recepcionista y una usuaria solo `dueno` creada para la prueba) y después con Compose, en el navegador integrado de la app. Capturas en `stitch-cancelar-pantalla/`: `implementacion-cancelar-escritorio.jpg` (1280 px, el panel con el error «Elegí quién pidió la cancelación.») e `implementacion-cancelar-angosta.jpg` (390 px, el panel debajo de la agenda). Para que el panel entrara completo a 390 px, la captura se tomó con la ventana emulada de ese ancho y la página desplazada hasta el panel.
+
+### Recorrido y resultado (fecha 02/11/2026)
+
+| Paso | Resultado |
+|---|---|
+| V4: turno de Ana (09:00) cancelado por la recepcionista, historial | «Turno creado» y «Turno cancelado», los dos con «Por: Usuario n.º 2»; el segundo con «Estado: Reservado → Cancelado por el paciente»; por la API, `actor_id` `"2"` en `creado` y en `cancelado` |
+| Dos turnos (Ana 09:00, Bruno 10:00); «Cancelar» de Ana | Panel «Cancelar turno» con «Ana Ejemplo · Consulta / control», «lunes 2 de noviembre de 2026, 09:00 – 09:30 · Reservado», el foco en el primer radio, la fila resaltada y los tres botones por fila |
+| CAN-5b: «Cancelar turno» sin elegir | «Elegí quién pidió la cancelación.»; ningún pedido; el aviso desaparece al elegir una opción |
+| CAN-4a: «El paciente» y «Cancelar turno» | «Turno cancelado.», panel cerrado, fila «Cancelado por el paciente» solo con «Historial» |
+| Otro turno en el mismo hueco (Carla, 09:00) | `201`: el hueco quedó libre |
+| CAN-4b: Carla, «El consultorio» | Fila «Cancelado por el consultorio» (la API recibe `cancelado_profesional`) |
+| CAN-5a: Bruno con el panel abierto y «El paciente» marcado; el turno se cancela por la API desde otra sesión; «Cancelar turno» | «Este turno ya no se puede cancelar por su estado (RN-AG-12).» y «El turno no cambió.»; el panel sigue abierto con la opción marcada; no se ve «Turno cancelado.» |
+| Un solo panel a la vez | Con el panel de Bruno abierto, «Historial» de Ana lo cierra y abre el historial |
+| Usuaria solo `dueno` (D312) | Ve «Cancelar» en las filas activas y recibe «Tu usuario no tiene permiso para cancelar turnos (RN-AU-05).» con «El turno no cambió.» |
+| API (`fetch` con los tokens de la demo; el mismo recorrido que en `/docs`) | dueña: `403` `["RN-AU-05"]`; `{"estado": "confirmado"}`: `422` sin códigos; turno 999: `404` `["RN-GL-04"]`; recepcionista: `200` con `cancelado_profesional`; repetido: `409` `["RN-AG-12"]`; `/openapi.json` tiene `/turnos/{turno_id}/cancelar` |
+| 390 px (demo) | Sin desplazamiento horizontal (`scrollWidth` 390) con tres botones en la tarjeta («Reprogramar» y «Cancelar» en una fila, «Historial» debajo); radios de 44 px de alto |
+| Compose (`http://127.0.0.1:5173`), turno del 07/12/2026 | Cancelado como del paciente con un solo `POST`; consola sin mensajes (ninguna violación de la CSP); a 390 px sin desplazamiento horizontal; ningún token, contraseña ni dato de paciente en la URL |
+
+### Diferencias con Stitch y su motivo
+
+- **Sin chip de estado en el resumen del panel**: el resumen es texto plano («… 09:00 – 09:30 · Reservado»), como pide la spec (CAN-4 y X10); Stitch dibuja un chip «Reservado».
+- **Las opciones no llevan línea de descripción**: Stitch agregó por su cuenta «Cancelación solicitada por el usuario…» y «Por fuerza mayor clínica…»; no están en las recomendaciones aceptadas (D350) y se descartaron en el design.
+- **El panel va dentro de la página, al costado de la agenda** (con el pie dentro de la tarjeta), como «Nuevo turno», «Historial» y «Reprogramar», y no como columna de alto completo; a 390 px va **debajo** de la agenda y no la reemplaza, como los otros tres paneles.
+- Sin los pies «Agenda sincronizada en tiempo real», «4 turnos agendados» ni el pie institucional; el total va en el chip del título, como en C-14.
+- **El aviso va con el código entre paréntesis** y sin chip ni borde en los campos, como en C-16.
+- A 1280 px, con un panel abierto, la tabla se angosta y en las filas activas «Historial» pasa a una segunda línea bajo «Reprogramar» y «Cancelar» (con el panel cerrado entran los tres en una línea). Se acepta: no hay desbordamiento y los tres botones se ven.
+
+### Hallazgos fuera del alcance de C-17
+
+- Un mensaje de éxito anterior («Turno creado.», «Turno reprogramado.») puede quedar visible junto a un rechazo posterior de «Cancelar», de «Reprogramar» o de «Nuevo turno» (por ejemplo, «Turno creado.» encima del panel con «Elegí quién pidió la cancelación.»). Lo introdujo C-14; queda para un change posterior.
+- Tras el rechazo `RN-AG-12` de `CAN-5a` la fila sigue mostrando «Reservado» hasta recargar el día: es lo que dice la spec (el turno no cambió para esta sesión); «Día anterior» y «Día siguiente» recargan.
