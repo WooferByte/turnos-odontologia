@@ -47,6 +47,8 @@ C = crear, R = leer, U = actualizar, D = eliminar/anular. "Propio" = solo sus tu
 > `GET /profesionales` (lista de profesionales para elegir su horario, solo lectura; D260) lo leen los tres roles (C-12).
 >
 > `GET /turnos?fecha` y `GET /turnos/{id}` (la agenda del día y un turno, solo lectura; permiso `turnos.leer`, fila Turnos, «R» para los tres roles) los leen los tres roles; un usuario sin roles recibe `403` `RN-AU-05`, y un turno de otro consultorio no se lista y su id responde `404` `RN-GL-04` como uno inexistente (D321, C-14).
+>
+> `PATCH /turnos/{id}` (reprogramar un turno o cambiarle la duración desde el panel; permiso `turnos.reprogramar`, fila Turnos, «U» para el odontólogo y la recepcionista) lo pueden el odontólogo y la recepcionista; el dueño (fila Turnos: «R») y un usuario sin roles reciben `403` `RN-AU-05`, y un turno de otro consultorio responde `404` `RN-GL-04` como uno inexistente (D336, C-16).
 
 **Decisión del autor (2026-10-02, P-09 / SU-04):** la recepcionista ve los datos **administrativos** del paciente (identificación, contacto, turnos, pagos) pero **no** los datos **clínicos** (anamnesis, evolución, odontograma), por minimización de datos de salud (Ley 25.326). Ver RN-FC-02.
 

@@ -123,7 +123,8 @@ Los criterios de US-010 usan IDs estables `E1..E12` (compartidos con `07_flujos_
 - [ ] CA-4: desde el panel se puede **modificar la duración** del turno (RN-AG-02): `fin` se recalcula y el turno se valida como en CA-1. La duración nueva debe ser > 0 y **múltiplo de la granularidad** (5 minutos como constante hasta US-005); si no, se rechaza con el error de dominio `RN-AG-01` y el turno no cambia. Fuera del primer change: `CrearTurnoComando` no lleva duración (decisión del autor 2026-10-05, D98).
 **Orden**: 4
 **Depende de**: US-010, US-015, US-092
-**Reglas**: RN-AG-01, RN-AG-02, RN-AG-10b, RN-AG-11, RN-TD-04
+**Reglas**: RN-AG-01, RN-AG-02, RN-AG-10b, RN-AG-11, RN-AG-18, RN-TD-04
+**Desde el panel (C-16; decisiones del autor 2026-10-29, D333 a D340):** se reprograman solo los turnos activos (`RN-AG-18`, `409`) y en cualquier momento (D65); la duración nueva va de 5 a 1440 minutos en múltiplos de 5 (`RN-AG-01`); una petición sin cambios responde `200` sin registrar evento; el evento `reprogramado` guarda `inicio`, `fin` y `duracion_minutos` de antes y de después, y el historial lo muestra con su duración («Antes: lunes 2 de noviembre de 2026, 09:00 – 09:30 (30 min)»).
 
 ### US-013 — Cancelar turno (panel) y liberar horario
 **Como** recepcionista **quiero** cancelar un turno **para** liberar el horario y ofrecerlo a la lista de espera.
