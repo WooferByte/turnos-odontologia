@@ -108,7 +108,7 @@ python -m pytest
 
 Los tests corren con **SQLite en memoria**: no necesitan Docker, PostgreSQL ni Redis, ni ningún archivo de base de datos.
 
-La corrida termina con **«1067 passed, 61 deselected, 1 warning»**. Los 61 «deselected» son los del perfil opcional con PostgreSQL (más abajo), que la corrida por defecto excluye a propósito. El warning es un aviso de deprecación interno de Starlette (`starlette/testclient.py`, sobre `anyio.abc.BlockingPortal`): viene de una dependencia con versión fijada, no del código del proyecto, y no indica ningún problema.
+La corrida termina con **«1165 passed, 63 deselected, 1 warning»**. Los 63 «deselected» son los del perfil opcional con PostgreSQL (más abajo), que la corrida por defecto excluye a propósito. El warning es un aviso de deprecación interno de Starlette (`starlette/testclient.py`, sobre `anyio.abc.BlockingPortal`): viene de una dependencia con versión fijada, no del código del proyecto, y no indica ningún problema.
 
 ### Escenario → test
 
@@ -257,7 +257,7 @@ Una parte de los tests (la que prueba lo que solo PostgreSQL garantiza) está fu
 
    Se usa `127.0.0.1` y no `localhost`: en Windows `localhost` resuelve primero a IPv6 y la conexión espera varios segundos antes de caer a IPv4.
 
-Con la base levantada, la corrida termina con **«61 passed, 1067 deselected, 1 warning»**. **Si PostgreSQL no está disponible** (Docker apagado, `TEST_DATABASE_URL` sin definir o base que no responde), los 61 tests del perfil **se omiten con el motivo en el resumen** (**«61 skipped, 1067 deselected»**) y la corrida termina con código de salida 0. Si la base de `TEST_DATABASE_URL` no termina en `_test`, el perfil falla a propósito para no borrar otra base.
+Con la base levantada, la corrida termina con **«63 passed, 1165 deselected, 1 warning»**. **Si PostgreSQL no está disponible** (Docker apagado, `TEST_DATABASE_URL` sin definir o base que no responde), los 63 tests del perfil **se omiten con el motivo en el resumen** (**«63 skipped, 1165 deselected»**) y la corrida termina con código de salida 0. Si la base de `TEST_DATABASE_URL` no termina en `_test`, el perfil falla a propósito para no borrar otra base.
 
 El esquema de estos tests sale siempre de las migraciones, nunca de `create_all`. Por eso el perfil también comprueba que las migraciones y los modelos coinciden (INF-1): si alguien cambia un modelo sin escribir su migración, ese test se pone en rojo. **La suite por defecto no avisa de esto**: hay que correr el perfil cada vez que se toque el esquema.
 
@@ -294,6 +294,7 @@ Los escenarios están en `openspec/changes/infraestructura-postgresql/specs/pers
 | E11 | Por HTTP, el que pierde recibe `409` | `test_e11_post_turnos_responde_409_al_que_pierde_la_carrera` |
 | E9 | Ocho reservas simultáneas dejan un solo turno y un solo evento `creado` | `test_e9_de_ocho_reservas_simultaneas_queda_un_solo_evento` (`test_reservas_simultaneas.py`) |
 | REP-1e | Dos reprogramaciones al mismo hueco, una reprogramación y un alta al mismo hueco: una sola gana y la que pierde no cambia; dos reprogramaciones del mismo turno se encadenan (el `antes` del segundo evento es el `despues` del primero) | `test_rep1e_dos_reprogramaciones_al_mismo_hueco_una_gana`, `test_rep1e_una_reprogramacion_y_un_alta_al_mismo_hueco_una_gana`, `test_rep1e_dos_reprogramaciones_del_mismo_turno_se_encadenan` (`test_reprogramaciones_simultaneas.py`) |
+| CAN-1d | Dos cancelaciones del mismo turno: una sola gana (`200`) y la otra recibe `409` `RN-AG-12`, con un solo evento `cancelado`; una cancelación y una reprogramación del mismo turno se serializan y nunca queda un `reprogramado` después del `cancelado`. La carrera se fuerza reteniendo la fila del turno desde otra sesión | `test_can1d_dos_cancelaciones_del_mismo_turno_una_gana`, `test_can1d_cancelacion_y_reprogramacion_se_serializan` (`test_cancelaciones_simultaneas.py`) |
 | US-015 CA-1 | La base rechaza `UPDATE`, `DELETE` y `TRUNCATE` sobre un evento | `test_ca1_la_base_rechaza_modificar_o_borrar_un_evento` (parametrizado: `update_del_tipo`, `delete`, `truncate`; `test_historial_inmutable.py`) |
 | US-015 CA-1 | La base acepta un evento nuevo del mismo turno | `test_ca1_la_base_acepta_un_evento_nuevo_del_mismo_turno` (`test_historial_inmutable.py`) |
 | US-004 CA-2 | El alta de un sillón tras el seed no choca con el id fijo: la secuencia de `sillon` queda ajustada y el primer `POST /sillones` recibe un `id` distinto de 1 | `test_ca2_el_alta_de_un_sillon_tras_el_seed_no_choca_con_el_id_fijo` (`test_seed_y_api.py`) |
@@ -671,6 +672,44 @@ Los escenarios están en `openspec/changes/reprogramar-turno/specs/reprogramacio
 | REP-5a | Un turno terminal da `409` `RN-AG-18` y uno activo se mueve sin cambiar su estado; la entrada se valida antes que el estado | `test_rep5a_un_turno_terminal_409_rn_ag_18_y_no_cambia`, `test_rep5a_un_turno_activo_se_mueve_y_conserva_su_estado`, `test_rep5a_la_entrada_se_valida_antes_que_el_estado` (API), `test_rep5a_un_turno_terminal_no_se_reprograma` (`test_reprogramacion.py`) |
 | REP-5b | Un turno terminal con una petición sin cambios responde `200` sin evento; con un cambio, `409` | `test_rep5b_un_terminal_sin_cambios_200_sin_evento`, `test_rep5b_un_terminal_con_un_cambio_409_rn_ag_18` (API) |
 
+### Cancelar un turno
+
+Desde C-17, `POST /turnos/{id}/cancelar` cancela un turno **indicando quién lo pidió**: el cuerpo es `{"estado": "cancelado_paciente"}` (lo pidió el paciente) o `{"estado": "cancelado_profesional"}` (lo pidió el consultorio); cualquier otro valor, un campo de más o la falta de cuerpo es `422` sin códigos. Pide el access token y el permiso `turnos.cancelar`: lo tienen el odontólogo y la recepcionista; el dueño y un usuario sin roles reciben `403` con `RN-AU-05`, antes de validar nada. Responde `200` con el mismo turno (mismo `id`, horario, paciente, prestación, profesional, sillón y `creado_en`) y el estado nuevo, deja el evento `cancelado` en el historial y **libera el horario**: otro turno puede darse o reprogramarse en el mismo hueco. Con la demo **recién arrancada** (los pasos dependen unos de otros), el token de la recepcionista y los horarios en UTC (el consultorio está en UTC−3):
+
+1. `POST /turnos` con `{"paciente_id": 1, "prestacion_id": 1, "inicio": "2026-11-02T13:00:00Z"}` → `201` (id 1, lunes 10:00 del consultorio, `reservado`).
+2. `POST /turnos/1/cancelar` con `{"estado": "cancelado_paciente"}` → `200`, con el mismo `id` 1, el mismo horario de `13:00:00Z` a `13:30:00Z` y `estado` `cancelado_paciente`. `GET /turnos?fecha=2026-11-02` lo sigue listando a las 13:00, con ese estado.
+3. `POST /turnos/1/cancelar` otra vez, con `cancelado_paciente` o con `cancelado_profesional` → `409`, con `codigos` igual a `["RN-AG-12"]` y `type` `/errores/transicion-invalida`. Un turno cancelado no vuelve a cancelarse y no suma eventos.
+4. `POST /turnos` con `{"paciente_id": 2, "prestacion_id": 1, "inicio": "2026-11-02T13:00:00Z"}` (el mismo hueco) → `201` (id 2): el turno cancelado ya no lo ocupa. `POST /turnos/2/cancelar` con `{"estado": "cancelado_profesional"}` → `200`, con `estado` `cancelado_profesional`.
+5. `POST /turnos/2/cancelar` con `{"estado": "vencido"}` → `422`, con `codigos` igual a `[]` y el error en el campo `estado`. `POST /turnos/999/cancelar` con un estado válido → `404`, con `["RN-GL-04"]`; `POST /turnos/abc/cancelar` → `422`, con `codigos` igual a `[]`.
+6. Sin token → `401`, con `["RN-AU-03"]`. Con el token del dueño → `403`, con `["RN-AU-05"]` y el turno sin cambios: para probarlo, con el token de la odontóloga `POST /usuarios` con `{"email": "dueno@consultorio-demo.test", "contrasena": "demo-consultorio-2026", "roles": ["dueno"]}`, iniciar sesión con ese usuario, dar un turno nuevo con la recepcionista (por ejemplo, el de `2026-11-02T14:00:00Z`) y cancelarlo con el dueño.
+7. `GET /turnos/1/historial` → `200`, con dos eventos: el `creado` y uno de `tipo` `cancelado`, con `actor_id` `"2"` (la recepcionista), `antes` igual a `{"estado": "reservado"}`, `despues` igual a `{"estado": "cancelado_paciente"}` y `motivo` vacío. Los rechazos de los pasos 3, 5 y 6 no suman eventos.
+
+Solo se cancelan los turnos **activos** (`pendiente_aprobacion`, `pendiente_sena`, `reservado` y `confirmado`): uno `cancelado_paciente`, `cancelado_profesional`, `vencido`, `atendido` o `ausente` responde `409` con `["RN-AG-12"]`, también si se pide la misma cancelación que ya tiene. El panel puede cancelar en cualquier momento, también un turno ya pasado o que empieza en minutos.
+
+Con `curl`:
+
+```
+curl -i -X POST http://127.0.0.1:8000/turnos/1/cancelar -H "Authorization: Bearer PEGAR_EL_ACCESS_TOKEN" -H "Content-Type: application/json" -d "{\"estado\": \"cancelado_paciente\"}"
+```
+
+Límites conocidos: no hay control de versión (si dos personas cancelan el mismo turno a la vez, la primera gana y la otra recibe `409`, D348); no se distingue la cancelación fuera de plazo (llega con C-22 y C-41, junto con la seña); cancelar no avisa a la lista de espera (C-36) ni al paciente (C-31); y no hay motivo escrito ni forma de deshacer una cancelación.
+
+#### Escenario → test (cancelar un turno, API)
+
+Los escenarios están en `openspec/changes/cancelar-turno/specs/cancelacion-de-turnos/spec.md`. Las reglas puras (`backend/tests/unit/test_cancelacion.py`, 14 tests, sin base de datos, más 4 del permiso en `test_roles.py`), el caso de uso sobre la base en memoria (`backend/tests/integration/test_cancelar_turno.py`, 30) y la API (`backend/tests/api/test_cancelar.py`, 46). `CAN-1d` corre en el perfil `postgres`.
+
+| Escenario | Qué verifica | Test titular |
+|---|---|---|
+| CAN-1a | La recepcionista cancela por el paciente y la odontóloga por el consultorio; cambia solo el estado | `test_can1a_la_recepcionista_cancela_por_el_paciente`, `test_can1a_la_odontologa_cancela_por_el_consultorio` (API), `test_can1a_cancelar_cambia_solo_el_estado`, `test_can1a_se_cancela_con_los_dos_valores` (integración) |
+| CAN-1b | El horario queda libre para un alta y para una reprogramación; se cancela desde cada estado activo y en cualquier momento | `test_can1b_el_hueco_cancelado_admite_un_post_turnos`, `test_can1b_el_hueco_cancelado_admite_un_patch`, `test_can1b_se_cancela_desde_cada_estado_activo` (API), `test_can1b_el_hueco_queda_libre_para_crear`, `test_can1b_el_hueco_queda_libre_para_reprogramar`, `test_can1b_se_cancela_en_cualquier_momento` (integración) |
+| CAN-1c | Un turno terminal da `409` `RN-AG-12` y no cambia; la misma cancelación repetida deja un solo evento | `test_can1c_un_terminal_409_rn_ag_12_y_no_cambia`, `test_can1c_la_misma_cancelacion_repetida_409_y_un_solo_evento` (API), `test_can1c_un_terminal_se_rechaza_sin_cambios_ni_eventos`, `test_can1c_un_turno_de_otro_consultorio_es_inexistente` (integración), `test_can1c_un_turno_terminal_no_se_cancela` (`test_cancelacion.py`) |
+| CAN-1d | Dos cancelaciones del mismo turno, o una cancelación y una reprogramación, se serializan (perfil `postgres`) | `test_can1d_dos_cancelaciones_del_mismo_turno_una_gana`, `test_can1d_cancelacion_y_reprogramacion_se_serializan` (`test_cancelaciones_simultaneas.py`) |
+| CAN-2a | El historial guarda el estado de antes y el de después con el actor y el reloj | `test_can2a_el_historial_muestra_el_cancelado` (API), `test_can2a_cancelar_registra_el_evento` (integración), `test_can2a_el_evento_cancelado_lleva_el_estado_de_antes_y_de_despues` (`test_cancelacion.py`) |
+| CAN-2b | Un rechazo no registra eventos | `test_can2b_un_rechazo_no_registra_eventos`, `test_can2b_el_409_de_un_atendido_no_registra_eventos` (API), `test_can2b_un_rechazo_no_registra_eventos` (integración) |
+| CAN-2c | Un evento que falla no deja el turno cancelado | `test_can2c_si_el_evento_falla_el_turno_no_se_cancela` (integración) |
+| CAN-3a | Sin sesión `401`; el dueño y el usuario sin roles `403` antes de validar | `test_can3a_sin_sesion_401`, `test_can3a_el_dueno_y_sin_roles_403_antes_de_validar` (API), `test_can3a_turnos_cancelar_para_odontologo_y_recepcionista`, `test_can3a_el_dueno_y_sin_roles_no_cancelan` (`test_roles.py`) |
+| CAN-3b | Turno inexistente o de otro consultorio `404`; petición mal formada o id no entero `422` sin códigos; el formato va antes que el `404` | `test_can3b_inexistente_y_de_otro_consultorio_404_sin_distinguir`, `test_can3b_peticion_mal_formada_422_sin_codigos` (parametrizado), `test_can3b_sin_cuerpo_422`, `test_can3b_un_id_que_no_es_entero_422`, `test_can3b_el_formato_va_antes_que_el_404` (API) |
+
 ## Sesión del panel
 
 `POST /auth/login` y `POST /auth/refresh` están en la demo y en la API sobre PostgreSQL. Son las dos únicas rutas del panel que se llaman sin token; todas las demás lo exigen (ver «Protección del panel», abajo).
@@ -750,6 +789,8 @@ Un usuario puede tener varios roles y sus permisos **se suman**. Los roles se le
 | Ruta | `odontologo` | `recepcionista` | `dueno` |
 |---|---|---|---|
 | `POST /turnos` | sí | sí | no |
+| `PATCH /turnos/{id}` (reprogramar) | sí | sí | no |
+| `POST /turnos/{id}/cancelar` | sí | sí | no |
 | `GET /turnos/{id}/historial` | sí | sí | sí |
 | `GET /prestaciones` | sí | sí | sí |
 | `POST /prestaciones`, `PATCH /prestaciones/{id}` | sí | no | no |
@@ -1219,7 +1260,7 @@ La API se reemplaza en los tests por un servidor falso escrito a mano (`frontend
 
 Hay además tests de la renovación compartida, del `403`, del cierre de sesión y de que ninguna URL contenga un token, y cinco guards (`src/test/guards.test.ts`) que fallan si aparece `any`, `vi.mock`, `localStorage`, `dangerouslySetInnerHTML`, un archivo `index.ts` de reexportación o un recurso de otro origen (STI-1).
 
-Resultado actual de las dos suites: frontend «Tests 382 passed (382)»; backend «1067 passed, 61 deselected, 1 warning».
+Resultado actual de las dos suites: frontend «Tests 382 passed (382)»; backend «1165 passed, 63 deselected, 1 warning».
 
 ## Levantar la API con PostgreSQL
 
