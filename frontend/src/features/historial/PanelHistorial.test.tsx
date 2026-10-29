@@ -107,7 +107,7 @@ describe('PanelHistorial: ver el historial desde la agenda', () => {
     expect(within(panel).getByText('Por: Usuario n.º 2')).toBeDefined()
   })
 
-  it('HIS-2b: tres eventos en el orden de la respuesta con su actor y su fecha', async () => {
+  it('HIS-2b: cuatro eventos en el orden de la respuesta con su actor y su fecha', async () => {
     const base = { turno_id: 12, actor_tipo: 'usuario', antes: null, despues: null }
     const servidor = falso({
       historiales: {
@@ -139,6 +139,16 @@ describe('PanelHistorial: ver el historial desde la agenda', () => {
             ocurrido_en: '2026-11-01T02:30:00Z',
             motivo: 'Pedido del paciente',
           },
+          {
+            ...base,
+            id: 24,
+            tipo: 'cancelado',
+            actor_id: '2',
+            ocurrido_en: '2026-11-01T14:20:00Z',
+            motivo: null,
+            antes: { estado: 'confirmado' },
+            despues: { estado: 'cancelado_paciente' },
+          },
         ],
       },
     })
@@ -152,6 +162,7 @@ describe('PanelHistorial: ver el historial desde la agenda', () => {
       'Turno creadomartes 27 de octubre de 2026, 08:40Por: Usuario del panel (sin identificar)Estado inicial: Reservado · 10:00 – 10:45',
       'Turno reprogramadoviernes 30 de octubre de 2026, 16:05Por: Usuario n.º 1Antes: lunes 2 de noviembre de 2026, 10:00 – 10:45 (45 min)Después: lunes 2 de noviembre de 2026, 10:30 – 11:15 (45 min)',
       'Cambio registrado (confirmado)sábado 31 de octubre de 2026, 23:30Por: Usuario n.º 2Motivo: Pedido del paciente',
+      'Turno canceladodomingo 1 de noviembre de 2026, 11:20Por: Usuario n.º 2Estado: Confirmado → Cancelado por el paciente',
     ])
   })
 
@@ -199,7 +210,8 @@ describe('PanelHistorial: ver el historial desde la agenda', () => {
 
     await usuario.click(screen.getByRole('button', { name: 'Cancelar el turno de Bruno Ficticio, 10:00' }))
 
-    await screen.findByRole('complementary', { name: 'Cancelar turno' })
+    const panelDeCancelar = await screen.findByRole('complementary', { name: 'Cancelar turno' })
+    expect(within(panelDeCancelar).getByText('Bruno Ficticio · Limpieza')).toBeDefined()
     expect(screen.queryByRole('complementary', { name: 'Historial del turno' })).toBeNull()
   })
 

@@ -17,9 +17,10 @@ const ACTOR_SIN_IDENTIFICAR = 'Por: Usuario del panel (sin identificar)'
 const TITULOS_DE_EVENTO: Readonly<Record<string, string>> = {
   creado: 'Turno creado',
   reprogramado: 'Turno reprogramado',
+  cancelado: 'Turno cancelado',
 }
 
-/** «Turno creado» o «Turno reprogramado»; un tipo que la pantalla todavía no conoce se ve igual, sin ocultarlo (G5). */
+/** «Turno creado», «Turno reprogramado» o «Turno cancelado»; un tipo que la pantalla todavía no conoce se ve igual, sin ocultarlo (G5). */
 export function tituloDelEvento(tipo: string): string {
   return TITULOS_DE_EVENTO[tipo] ?? `Cambio registrado (${tipo})`
 }
@@ -78,4 +79,18 @@ export function detalleDelReprogramado(
   const horarioDespues = horarioDe(despues)
   if (horarioAntes === null || horarioDespues === null) return []
   return [lineaDelHorario('Antes', horarioAntes, zona), lineaDelHorario('Después', horarioDespues, zona)]
+}
+
+/**
+ * «Estado: Confirmado → Cancelado por el paciente» de un `cancelado` (D352), con las etiquetas de la agenda; `null` si
+ * `antes` o `despues` no traen un estado conocido (RN-AG-11).
+ */
+export function detalleDelCancelado(
+  antes: Record<string, unknown> | null,
+  despues: Record<string, unknown> | null,
+): string | null {
+  const estadoAntes = antes?.estado
+  const estadoDespues = despues?.estado
+  if (!esEstado(estadoAntes) || !esEstado(estadoDespues)) return null
+  return `Estado: ${ETIQUETAS_DE_ESTADO[estadoAntes]} → ${ETIQUETAS_DE_ESTADO[estadoDespues]}`
 }

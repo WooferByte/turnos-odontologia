@@ -1,6 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { EVENTO_CREADO_DEL_TURNO_11 } from '../../test/servidorFalso'
-import { cuandoOcurrio, detalleDelCreado, detalleDelReprogramado, textoDelActor, tituloDelEvento } from './mensajes'
+import {
+  cuandoOcurrio,
+  detalleDelCancelado,
+  detalleDelCreado,
+  detalleDelReprogramado,
+  textoDelActor,
+  tituloDelEvento,
+} from './mensajes'
 
 const ZONA = 'America/Argentina/Buenos_Aires'
 
@@ -31,6 +38,34 @@ describe('mensajes del historial', () => {
 
   it('HIS-2b: el reprogramado se titula Turno reprogramado', () => {
     expect(tituloDelEvento('reprogramado')).toBe('Turno reprogramado')
+  })
+
+  it('HIS-2b: el cancelado se titula Turno cancelado', () => {
+    expect(tituloDelEvento('cancelado')).toBe('Turno cancelado')
+  })
+
+  it('HIS-2b: el cambio de estado con las etiquetas de la agenda', () => {
+    expect(detalleDelCancelado({ estado: 'reservado' }, { estado: 'cancelado_paciente' })).toBe(
+      'Estado: Reservado → Cancelado por el paciente',
+    )
+  })
+
+  it('HIS-2b: un cancelado por el consultorio', () => {
+    expect(detalleDelCancelado({ estado: 'confirmado' }, { estado: 'cancelado_profesional' })).toBe(
+      'Estado: Confirmado → Cancelado por el consultorio',
+    )
+  })
+
+  it('HIS-2b: un cancelado sin estado en despues no tiene la línea Estado', () => {
+    expect(detalleDelCancelado({ estado: 'confirmado' }, {})).toBeNull()
+    expect(detalleDelCancelado({ estado: 'confirmado' }, null)).toBeNull()
+    expect(detalleDelCancelado(null, { estado: 'cancelado_paciente' })).toBeNull()
+    expect(detalleDelCancelado({}, { estado: 'cancelado_paciente' })).toBeNull()
+  })
+
+  it('HIS-2b: un cancelado con un estado desconocido no tiene la línea Estado', () => {
+    expect(detalleDelCancelado({ estado: 'confirmado' }, { estado: 'raro' })).toBeNull()
+    expect(detalleDelCancelado({ estado: 7 }, { estado: 'cancelado_paciente' })).toBeNull()
   })
 
   it('HIS-2b: el antes y el después en hora del consultorio', () => {
