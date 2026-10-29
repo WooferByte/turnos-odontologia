@@ -226,6 +226,8 @@ export function PaginaAgenda() {
     enCurso.current = true
     setEnviando(true)
     setErrorDelPanel(null)
+    // El «Turno cancelado.» de una cancelación anterior no debe quedar junto al rechazo de esta.
+    setExito(null)
     try {
       await api.cancelarTurno(turno.id, estado)
       cerrarPanel()

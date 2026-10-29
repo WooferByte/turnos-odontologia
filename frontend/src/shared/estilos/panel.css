@@ -1934,3 +1934,164 @@ p.pantalla-de-ingreso {
     margin-right: 0;
   }
 }
+
+/* Cancelar un turno (C-17, pantallas de Stitch, D234). Botón destructivo «Cancelar» con borde rojo y círculo con X entre
+   «Reprogramar» e «Historial» (con fondo rosado en la fila del turno abierto) y panel lateral de 420 px con el título
+   con el ícono en rojo, el resumen del turno, «¿Quién pidió la cancelación?» con dos opciones como filas con borde de
+   44 px como mínimo (la elegida con borde celeste), la ayuda con ícono y el pie con «Volver» y el botón rojo. Debajo
+   de 720 px el panel ocupa el ancho, el botón rojo queda arriba y los tres botones de la fila pasan a otra línea si no
+   entran. Las descripciones bajo cada opción que inventó Stitch no se toman (design). Solo tokens; sin Tailwind ni CDN. */
+.boton-de-cancelar {
+  min-height: var(--alto-campo);
+  padding: 0 12px;
+  margin-right: 8px;
+  border-color: var(--chip-rojo-borde);
+  color: var(--error);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.boton-de-cancelar .icono,
+.boton-secundario.boton-de-cancelar .icono {
+  color: var(--error);
+}
+
+.boton-de-cancelar:hover:not(:disabled) {
+  background: var(--fondo-error);
+}
+
+.fila-seleccionada .boton-de-cancelar {
+  background: var(--fondo-error);
+}
+
+.panel-de-cancelar {
+  flex: none;
+  box-sizing: border-box;
+  width: var(--ancho-panel-turno);
+  max-width: 100%;
+}
+
+.panel-de-cancelar .panel-encabezado h2 .icono {
+  color: var(--error);
+}
+
+.panel-de-cancelar .panel-subtitulo:first-of-type {
+  margin-top: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--texto-medio);
+}
+
+.panel-de-cancelar .aviso {
+  margin-bottom: 16px;
+}
+
+.opciones-de-cancelacion {
+  min-width: 0;
+  padding: 0;
+  margin: 0 0 12px;
+  border: 0;
+}
+
+.opciones-de-cancelacion legend {
+  padding: 0;
+  margin-bottom: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--texto-medio);
+}
+
+.opcion-de-cancelacion {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-sizing: border-box;
+  min-height: var(--alto-opcion);
+  padding: 0 12px;
+  margin-bottom: 8px;
+  border: 1px solid var(--borde);
+  border-radius: var(--radio-medio);
+  background: var(--superficie);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--texto);
+  cursor: pointer;
+}
+
+.opcion-de-cancelacion:hover {
+  background: var(--superficie-suave);
+}
+
+.opcion-de-cancelacion:has(input:checked) {
+  border-color: var(--primario);
+  background: var(--primario-suave);
+}
+
+.opcion-de-cancelacion input[type='radio'] {
+  flex: none;
+  width: var(--tamano-icono);
+  height: var(--tamano-icono);
+  margin: 0;
+  accent-color: var(--primario);
+}
+
+.ayuda-con-icono {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.ayuda-con-icono .icono {
+  flex: none;
+  color: var(--texto-claro);
+}
+
+.boton-destructivo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: var(--alto-boton);
+  padding: 0 16px;
+  border: 1px solid var(--error);
+  border-radius: var(--radio-medio);
+  background: var(--error);
+  box-shadow: var(--sombra-tarjeta);
+  color: var(--superficie);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.boton-destructivo:hover:not(:disabled) {
+  background: var(--chip-rojo-texto);
+}
+
+.boton-destructivo:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+@media (max-width: 720px) {
+  .panel-de-cancelar {
+    width: 100%;
+  }
+
+  .panel-de-cancelar .panel-pie {
+    flex-direction: column-reverse;
+  }
+
+  .panel-de-cancelar .panel-pie .boton-secundario,
+  .panel-de-cancelar .panel-pie .boton-destructivo {
+    width: 100%;
+  }
+
+  .fila-de-turno td.acciones-del-turno {
+    flex-wrap: wrap;
+  }
+
+  .fila-de-turno td.acciones-del-turno .boton-secundario {
+    flex: 1 1 auto;
+  }
+}

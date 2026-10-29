@@ -312,6 +312,24 @@ describe('PanelCancelar: los rechazos', () => {
     expect(screen.queryByText('Turno cancelado.')).toBeNull()
   })
 
+  it('CAN-5a: el éxito de una cancelación anterior no queda junto al rechazo de la siguiente', async () => {
+    const servidor = falso()
+    const usuario = await abrirAgenda(servidor)
+    await abrirCancelar(usuario)
+    await usuario.click(opcion('El paciente'))
+    await usuario.click(botonCancelarTurno())
+    await screen.findByText('Turno cancelado.')
+    await abrirCancelar(usuario, BRUNO)
+    servidor.cambiarEstado(12, 'cancelado_profesional')
+
+    await usuario.click(opcion('El paciente'))
+    await usuario.click(botonCancelarTurno())
+
+    const aviso = await screen.findByRole('alert')
+    expect(aviso.textContent).toContain('Este turno ya no se puede cancelar por su estado (RN-AG-12).')
+    expect(screen.queryByText('Turno cancelado.')).toBeNull()
+  })
+
   it('CAN-5b: sin opción no manda nada', async () => {
     const servidor = falso()
     const usuario = await abrirAgenda(servidor)

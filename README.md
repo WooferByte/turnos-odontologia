@@ -859,7 +859,7 @@ npm test
 npm run typecheck
 ```
 
-`npm test` corre **382 tests en 30 archivos** («Tests 382 passed (382)»); no necesita el backend, Docker ni red. `npm run typecheck` (`tsc --noEmit`) termina sin salida. `npm run build` genera `frontend/dist/`.
+`npm test` corre **417 tests en 31 archivos** («Tests 417 passed (417)»); no necesita el backend, Docker ni red. `npm run typecheck` (`tsc --noEmit`) termina sin salida. `npm run build` genera `frontend/dist/`.
 
 ### Probar el panel (demo sin Docker, dos terminales)
 
@@ -1178,18 +1178,18 @@ Recorrido con la demo sin Docker (las dos terminales de «Probar el panel», con
 
 Con la API detenida el panel muestra «No se pudo conectar con el servidor. Probá de nuevo en unos minutos.» con «Reintentar»; un usuario sin roles ve «Tu usuario no tiene permiso para ver el historial (RN-AU-05).»; un turno que ya no existe, «El turno ya no existe (RN-GL-04).»; si la sesión termina, vuelve a `/ingresar`. El `detail` de la API no se muestra.
 
-Escenario → test (`src/features/historial/`, API reemplazada por el servidor falso). Los 6 escenarios de `openspec/changes/panel-historial-de-turno/specs/pantalla-de-historial/spec.md` (`HIS-2b` y `HIS-2f` cambiaron con C-16, `openspec/changes/reprogramar-turno/specs/pantalla-de-historial/spec.md`) están en `PanelHistorial.test.tsx`, con 20 tests (cada causa de un escenario con varias es un test propio):
+Escenario → test (`src/features/historial/`, API reemplazada por el servidor falso). Los 6 escenarios de `openspec/changes/panel-historial-de-turno/specs/pantalla-de-historial/spec.md` (`HIS-2b` y `HIS-2f` cambiaron con C-16, `openspec/changes/reprogramar-turno/specs/pantalla-de-historial/spec.md`) están en `PanelHistorial.test.tsx`, con 21 tests (cada causa de un escenario con varias es un test propio):
 
 | Escenario | Test titular |
 |---|---|
 | HIS-2a (la recepcionista, la odontóloga y el dueño ven el `creado`; foco al abrir) | «HIS-2a: la recepcionista ve el evento creado del turno», «HIS-2a: la odontóloga ve el historial», «HIS-2a: el dueño ve el historial», «HIS-2a: al abrir, el foco va al título del panel» |
-| HIS-2b (tres eventos en orden: `creado`, `reprogramado` con «Antes:» y «Después:» y uno desconocido, con actor y fecha; solo contra el servidor falso) | «HIS-2b: tres eventos en el orden de la respuesta con su actor y su fecha» |
+| HIS-2b (cuatro eventos en orden: `creado`, `reprogramado` con «Antes:» y «Después:», uno desconocido y `cancelado` con «Estado: … → …», con actor y fecha; solo contra el servidor falso) | «HIS-2b: cuatro eventos en el orden de la respuesta con su actor y su fecha» |
 | HIS-2c (sin eventos, «Cerrar», respuesta tardía) | «HIS-2c: un turno sin eventos», «HIS-2c: Cerrar no hace ninguna petición nueva y devuelve el foco al botón de la fila», «HIS-2c: una respuesta que llega después de Cerrar no reabre el panel» |
 | HIS-2d (turno inexistente y sin permiso; solo contra el servidor falso) | «HIS-2d: el turno ya no existe», «HIS-2d: sin permiso se ve el 403 del historial» |
 | HIS-2e (carga, sin conexión, `500`, refresh y sesión terminada; solo contra el servidor falso) | los cinco «HIS-2e: …» |
-| HIS-2f (otro turno, otro día, un solo panel; solo contra el servidor falso) | «HIS-2f: abrir Historial cierra Nuevo turno y al revés», «HIS-2f: Reprogramar e Historial, un solo panel», «HIS-2f: cambiar de día cierra el historial», «HIS-2f: cambiar de turno muestra solo el último pedido», «HIS-2f: una respuesta que llega después de cambiar de día no reabre el panel» |
+| HIS-2f (otro turno, otro día, un solo panel; solo contra el servidor falso) | «HIS-2f: abrir Historial cierra Nuevo turno y al revés», «HIS-2f: Reprogramar e Historial, un solo panel», «HIS-2f: Cancelar e Historial, un solo panel», «HIS-2f: cambiar de día cierra el historial», «HIS-2f: cambiar de turno muestra solo el último pedido», «HIS-2f: una respuesta que llega después de cambiar de día no reabre el panel» |
 
-El cliente (`apiHistorial.test.ts`, 4 tests) y los textos (`mensajes.test.ts`, 14, con los del `reprogramado`) se prueban aparte, con los casos defensivos que la API de hoy no produce (`G4`, `G5`, `G8`). La disposición (botón con borde y reloj, fila seleccionada, panel de 420 px con la línea de tiempo y, debajo de 720 px, panel a todo el ancho) sigue las pantallas de Stitch `projects/14200813501064679723/screens/2955e5e29bba4982a0b515329e0ff4e1` y `…/c80d02b8dbac4e48be68ca11ff787857` (capturas y HTML en `docs/skills-mcp/evidencias/sesion-nueva/stitch-historial-pantalla/`), traducidas a `panel.css` sin dependencias.
+El cliente (`apiHistorial.test.ts`, 4 tests) y los textos (`mensajes.test.ts`, 19, con los del `reprogramado` y los del `cancelado`) se prueban aparte, con los casos defensivos que la API de hoy no produce (`G4`, `G5`, `G8`). La disposición (botón con borde y reloj, fila seleccionada, panel de 420 px con la línea de tiempo y, debajo de 720 px, panel a todo el ancho) sigue las pantallas de Stitch `projects/14200813501064679723/screens/2955e5e29bba4982a0b515329e0ff4e1` y `…/c80d02b8dbac4e48be68ca11ff787857` (capturas y HTML en `docs/skills-mcp/evidencias/sesion-nueva/stitch-historial-pantalla/`), traducidas a `panel.css` sin dependencias.
 
 Límites conocidos: el actor se ve **por su número** («Usuario n.º 2»), porque la API no trae el email y la recepcionista no puede leer usuarios (D328); la API no filtra el historial por consultorio, sin efecto con un solo consultorio (D331); el panel no se refresca solo: hay que cerrarlo y abrirlo para ver cambios de otro usuario. Los tipos con texto propio son `creado` («Turno creado») y `reprogramado` («Turno reprogramado», con «Antes:» y «Después:» y su duración, desde C-16); uno nuevo se ve como «Cambio registrado ({tipo})» hasta que su change le ponga su texto.
 
@@ -1228,6 +1228,37 @@ El cliente (`reprogramarTurno`, en `apiAgenda.test.ts`) y los textos (`mensajeDe
 
 Límites conocidos: no hay control de versión (si dos personas reprograman el mismo turno a la vez, se aplican una después de la otra); el dueño ve la acción y recibe el `403` de la API (D312); la seña llega con C-40 (hoy un turno reprogramado conserva su estado); las **prestaciones** todavía no tienen el tope de 1440 minutos (solo la reprogramación lo tiene, D333); y la agenda no se refresca sola.
 
+### Cancelar un turno desde la agenda
+
+Desde C-17 cada fila de la agenda de un turno **activo** (`pendiente_aprobacion`, `pendiente_sena`, `reservado` y `confirmado`) tiene, en la columna «Acciones» y entre «Reprogramar» e «Historial», un botón rojo **Cancelar** (los turnos terminales no lo tienen). Abre al costado el panel «Cancelar turno» con el resumen del turno, «¿Quién pidió la cancelación?» con «El paciente» y «El consultorio» **sin ninguna marcada** y la ayuda «El horario queda libre para otro turno.», y usa `POST /api/turnos/{id}/cancelar` de «Cancelar un turno» (API). «El paciente» manda `cancelado_paciente` y «El consultorio» manda `cancelado_profesional` (la agenda lo muestra como «Cancelado por el consultorio»). «Volver» (no «Cancelar») cierra el panel. La pantalla no evalúa reglas: cada rechazo de la API se muestra con su código y «El turno no cambió.».
+
+Recorrido con la demo sin Docker (las dos terminales de «Probar el panel», con la demo recién arrancada y los tres turnos de los pasos 3 y 4 de «Pantalla de agenda»: Ana 09:00 a 09:30, Bruno 10:00 a 10:45 y Carla 11:00 a 12:00 el 02/11/2026):
+
+1. Ingresar con `recepcion@consultorio-demo.test` e ir a «Agenda» (`02/11/2026`): las tres filas tienen «Reprogramar», «Cancelar» e «Historial». Pulsar «Cancelar» en la fila de Ana: se ve «Cancelar turno», «Ana Ejemplo · Consulta / control», «lunes 2 de noviembre de 2026, 09:00 – 09:30 · Reservado», «¿Quién pidió la cancelación?» con las dos opciones sin marcar y «El horario queda libre para otro turno.». El foco está en «El paciente», la fila de Ana está resaltada y no se hizo ningún pedido.
+2. **Sin elegir** (`CAN-5b`): «Cancelar turno» sin marcar nada muestra «Elegí quién pidió la cancelación.» y no hace ningún pedido. Marcar «El paciente» y «Cancelar turno» → un solo `POST /api/turnos/{id}/cancelar` con `{"estado": "cancelado_paciente"}`, se ve «Turno cancelado.», el panel se cierra, se pide de nuevo `GET /api/turnos?fecha=2026-11-02` y la fila de Ana queda con «Cancelado por el paciente», con «Historial» y sin «Reprogramar» ni «Cancelar».
+3. **El horario queda libre**: «Nuevo turno» con «N.º de paciente» `1` (Ana Ejemplo), «Consulta / control», `02/11/2026` y `09:00` → «Turno creado.» y una fila nueva de 09:00 a 09:30 junto a la cancelada.
+4. **Por el consultorio** (`CAN-4b`): «Cancelar» en la fila de Carla, «El consultorio» y «Cancelar turno» → el `POST` lleva `{"estado": "cancelado_profesional"}` y la fila de Carla queda con «Cancelado por el consultorio».
+5. **Dos pestañas** (`CAN-5a`): abrir la agenda del 02/11/2026 en dos pestañas con la misma sesión, cancelar el turno de Bruno en la primera y, sin recargar, intentarlo en la segunda: se ve «Este turno ya no se puede cancelar por su estado (RN-AG-12).» y «El turno no cambió.»; el panel sigue abierto con la opción elegida y no se ve ningún «Turno cancelado.» (el de la cancelación anterior se quita al intentar la nueva).
+6. **El dueño**: «Cerrar sesión», crear en «Usuarios» un usuario solo con el rol `dueno` e ingresar con él: ve «Cancelar» en las filas activas (ocultar acciones según el rol queda para un change posterior, D312) y al cancelar recibe `403` con `["RN-AU-05"]`: «Tu usuario no tiene permiso para cancelar turnos (RN-AU-05).» y «El turno no cambió.».
+7. **Historial**: con la recepcionista, «Historial» en la fila de Ana muestra «Turno creado» y «Turno cancelado» con «Por: Usuario n.º 2» y «Estado: Reservado → Cancelado por el paciente». «Cancelar», «Reprogramar», «Historial» y «Nuevo turno» no conviven: hay un solo panel lateral a la vez, y «Día siguiente» cierra el panel abierto.
+
+Si la recarga del día falla después de un `200` (API caída justo después), se ven «Turno cancelado.» y el aviso de conexión con «Reintentar», sin repetir el `POST`. Si la sesión termina, vuelve a `/ingresar`.
+
+Escenario → test (`src/features/agenda/`, API reemplazada por el servidor falso). Los cinco escenarios `CAN-4a` a `CAN-5b` de `openspec/changes/cancelar-turno/specs/pantalla-de-cancelacion/spec.md` están en `PanelCancelar.test.tsx`, con 21 tests (cada corrida de un escenario con varias es un test propio):
+
+| Escenario | Test titular |
+|---|---|
+| CAN-4a (cancelar a pedido del paciente y ver la fila cancelada) | «CAN-4a: la recepcionista cancela un turno a pedido del paciente» |
+| CAN-4b (por el consultorio, otros estados activos, la recarga que falla) | «CAN-4b: por el consultorio manda cancelado_profesional», «CAN-4b: un pendiente_aprobacion se cancela», «CAN-4b: un pendiente_sena se cancela», «CAN-4b: la recarga falla después del 200» |
+| CAN-4c (un solo panel, cambio de día, foco, estados no activos) | «CAN-4c: un solo panel entre Cancelar y Reprogramar», «CAN-4c: cambiar de día cierra el panel sin mandar nada», «CAN-4c: Volver devuelve el foco y no deja opción marcada», «CAN-4c: Cerrar devuelve el foco al botón de la fila», «CAN-4c: los turnos no activos no tienen Reprogramar ni Cancelar» |
+| CAN-5a (`RN-AG-12` y el turno no cambia) | «CAN-5a: un turno que ya no está activo muestra RN-AG-12 y no cambia», «CAN-5a: el éxito de una cancelación anterior no queda junto al rechazo de la siguiente» |
+| CAN-5b (sin opción, `404`, `403` del dueño, doble clic, conexión, `500`, `422`, refresh y sesión) | los nueve «CAN-5b: …» (sin opción, el 404, el dueño y el 403, el doble clic, sin conexión, un 500, un 422, el refresh vigente y la sesión irrenovable) |
+| HIS-2b y HIS-2f (el historial con «Turno cancelado» y «Estado:»; cuatro paneles) | «HIS-2b: cuatro eventos …» y «HIS-2f: Cancelar e Historial, un solo panel» en `PanelHistorial.test.tsx`; «HIS-2b: el cancelado se titula Turno cancelado», «HIS-2b: el cambio de estado con las etiquetas de la agenda», «HIS-2b: un cancelado por el consultorio», «HIS-2b: un cancelado sin estado en despues no tiene la línea Estado» y «HIS-2b: un cancelado con un estado desconocido no tiene la línea Estado» en `src/features/historial/mensajes.test.ts` |
+
+El cliente (`cancelarTurno`, en `apiAgenda.test.ts`: `CAN-4a`, `CAN-4b` y `CAN-5a`) y los textos (`mensajeDeCancelacion` y `cancelado_profesional`, en `mensajes.test.ts`: `CAN-5a`, `CAN-5b` y `CAN-4b`) se prueban aparte. Desde C-17 el estado `cancelado_consultorio` del frontend se llama `cancelado_profesional`, como en la API (D342), con la misma etiqueta «Cancelado por el consultorio». La disposición (botón rojo con borde y círculo con X, panel de 420 px con el resumen, las opciones como filas con borde de 44 px como mínimo, la ayuda con ícono, el pie con «Volver» y el botón rojo y, debajo de 720 px, el panel a todo el ancho y los tres botones al pie de la tarjeta) sigue las pantallas de Stitch `projects/14200813501064679723/screens/e382a7e3a92f4cb18df0f6e7e9d677ca` y `…/fcd2a428cdc44c5689b398cc8bf1936f` (capturas y HTML en `docs/skills-mcp/evidencias/sesion-nueva/stitch-cancelar-pantalla/`), traducidas a `panel.css` sin dependencias y sin las descripciones bajo cada opción que Stitch inventó.
+
+Límites conocidos: el dueño ve la acción y recibe el `403` de la API (D312); la lista de espera llega con C-36 (hoy un horario liberado no avisa a nadie) y la seña con C-41 (hoy cancelar no devuelve ni retiene nada); no se distingue la cancelación fuera de plazo; y la agenda no se refresca sola.
+
 ### Versiones fijadas del frontend
 
 Las versiones exactas viven en `frontend/package.json`; `frontend/package-lock.json` se generó con `npm install --before=2026-10-12` (ningún paquete publicado desde esa fecha) y se instala siempre con `npm ci`.
@@ -1260,7 +1291,7 @@ La API se reemplaza en los tests por un servidor falso escrito a mano (`frontend
 
 Hay además tests de la renovación compartida, del `403`, del cierre de sesión y de que ninguna URL contenga un token, y cinco guards (`src/test/guards.test.ts`) que fallan si aparece `any`, `vi.mock`, `localStorage`, `dangerouslySetInnerHTML`, un archivo `index.ts` de reexportación o un recurso de otro origen (STI-1).
 
-Resultado actual de las dos suites: frontend «Tests 382 passed (382)»; backend «1165 passed, 63 deselected, 1 warning».
+Resultado actual de las dos suites: frontend «Tests 417 passed (417)»; backend «1165 passed, 63 deselected, 1 warning».
 
 ## Levantar la API con PostgreSQL
 
