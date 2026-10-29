@@ -18,5 +18,8 @@ export default defineConfig({
   test: {
     environment: 'jsdom',
     globals: false,
+    // Margen para una máquina cargada (Docker, navegador): con 5 s fallaban tests sanos.
+    testTimeout: 30_000,
+    setupFiles: ['./src/test/configurarTestingLibrary.ts'],
   },
 })
