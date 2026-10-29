@@ -515,7 +515,7 @@ Primer change: `/opsx:propose crear-turno-sin-solapamientos`.
   - `knowledge-base/02_descripcion_general.md` §«API REST (resumen)», fila Turnos
 
 ### [C-17] `cancelar-turno`
-- **Estado**: `[~]` en curso · **Orden**: 4 · **Gobernanza**: MEDIO
+- **Estado**: `[x]` archivado · **Orden**: 4 · **Gobernanza**: MEDIO
 - **Objetivo** (US-013): cancelar un turno desde el panel y liberar su horario.
 - **Alcance — dentro**: `POST /turnos/{id}/cancelar` indicando quién lo pidió (`cancelado_profesional` o `cancelado_paciente`), en cualquier momento; transición según la tabla (RN-AG-12); evento `cancelado`; acción en la agenda; corregir en el frontend el estado `cancelado_consultorio` por `cancelado_profesional` (apiAgenda.ts, mensajes.ts y el test de PaginaAgenda; D342).
 - **Alcance — fuera**: ofrecer el hueco a la lista de espera (US-013 CA-2, el disparo llega en C-36); efecto sobre la seña (CA-3, en C-41); cancelación por el paciente (C-29).
