@@ -21,6 +21,7 @@ import {
   TITULO_DEL_PANEL,
   cuandoOcurrio,
   detalleDelCreado,
+  detalleDelReprogramado,
   textoDelActor,
   tituloDelEvento,
 } from './mensajes'
@@ -120,12 +121,19 @@ export function PanelHistorial({ turno, zonaHoraria, onCerrar }: Propiedades) {
             <ol className="linea-de-tiempo">
               {carga.eventos.map((evento) => {
                 const detalle = evento.tipo === 'creado' ? detalleDelCreado(evento.despues, zonaHoraria) : null
+                const cambios =
+                  evento.tipo === 'reprogramado' ? detalleDelReprogramado(evento.antes, evento.despues, zonaHoraria) : []
                 return (
                   <li key={evento.id} className="evento-del-historial">
                     <h3>{tituloDelEvento(evento.tipo)}</h3>
                     <p className="cifras">{cuandoOcurrio(evento.ocurrido_en, zonaHoraria)}</p>
                     <p>{textoDelActor(evento.actor_tipo, evento.actor_id)}</p>
                     {detalle === null ? null : <p className="evento-detalle">{detalle}</p>}
+                    {cambios.map((linea) => (
+                      <p key={linea} className="evento-detalle">
+                        {linea}
+                      </p>
+                    ))}
                     {evento.motivo === null ? null : <p className="evento-detalle">Motivo: {evento.motivo}</p>}
                   </li>
                 )

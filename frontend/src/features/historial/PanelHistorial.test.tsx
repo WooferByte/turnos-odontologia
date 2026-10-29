@@ -121,11 +121,20 @@ describe('PanelHistorial: ver el historial desde la agenda', () => {
             motivo: null,
             despues: { estado: 'reservado', inicio: '2026-11-02T13:00:00Z', fin: '2026-11-02T13:45:00Z' },
           },
-          { ...base, id: 22, tipo: 'reprogramado', actor_id: '1', ocurrido_en: '2026-10-30T19:05:00Z', motivo: null },
+          {
+            ...base,
+            id: 22,
+            tipo: 'reprogramado',
+            actor_id: '1',
+            ocurrido_en: '2026-10-30T19:05:00Z',
+            motivo: null,
+            antes: { inicio: '2026-11-02T13:00:00Z', fin: '2026-11-02T13:45:00Z', duracion_minutos: 45 },
+            despues: { inicio: '2026-11-02T13:30:00Z', fin: '2026-11-02T14:15:00Z', duracion_minutos: 45 },
+          },
           {
             ...base,
             id: 23,
-            tipo: 'reprogramado',
+            tipo: 'confirmado',
             actor_id: '2',
             ocurrido_en: '2026-11-01T02:30:00Z',
             motivo: 'Pedido del paciente',
@@ -141,8 +150,8 @@ describe('PanelHistorial: ver el historial desde la agenda', () => {
     const entradas = await within(panel).findAllByRole('listitem')
     expect(entradas.map((e) => e.textContent)).toEqual([
       'Turno creadomartes 27 de octubre de 2026, 08:40Por: Usuario del panel (sin identificar)Estado inicial: Reservado · 10:00 – 10:45',
-      'Cambio registrado (reprogramado)viernes 30 de octubre de 2026, 16:05Por: Usuario n.º 1',
-      'Cambio registrado (reprogramado)sábado 31 de octubre de 2026, 23:30Por: Usuario n.º 2Motivo: Pedido del paciente',
+      'Turno reprogramadoviernes 30 de octubre de 2026, 16:05Por: Usuario n.º 1Antes: lunes 2 de noviembre de 2026, 10:00 – 10:45 (45 min)Después: lunes 2 de noviembre de 2026, 10:30 – 11:15 (45 min)',
+      'Cambio registrado (confirmado)sábado 31 de octubre de 2026, 23:30Por: Usuario n.º 2Motivo: Pedido del paciente',
     ])
   })
 

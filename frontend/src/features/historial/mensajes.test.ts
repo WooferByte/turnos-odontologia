@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import { EVENTO_CREADO_DEL_TURNO_11 } from '../../test/servidorFalso'
-import { cuandoOcurrio, detalleDelCreado, textoDelActor, tituloDelEvento } from './mensajes'
+import { cuandoOcurrio, detalleDelCreado, detalleDelReprogramado, textoDelActor, tituloDelEvento } from './mensajes'
 
 const ZONA = 'America/Argentina/Buenos_Aires'
 
@@ -26,7 +26,20 @@ describe('mensajes del historial', () => {
   })
 
   it('HIS-2b: un tipo desconocido es Cambio registrado', () => {
-    expect(tituloDelEvento('reprogramado')).toBe('Cambio registrado (reprogramado)')
+    expect(tituloDelEvento('confirmado')).toBe('Cambio registrado (confirmado)')
+  })
+
+  it('HIS-2b: el reprogramado se titula Turno reprogramado', () => {
+    expect(tituloDelEvento('reprogramado')).toBe('Turno reprogramado')
+  })
+
+  it('HIS-2b: el antes y el después en hora del consultorio', () => {
+    const antes = { inicio: '2026-11-02T12:00:00Z', fin: '2026-11-02T12:45:00Z', duracion_minutos: 45 }
+    const despues = { inicio: '2026-11-02T13:00:00Z', fin: '2026-11-02T13:45:00Z', duracion_minutos: 45 }
+    expect(detalleDelReprogramado(antes, despues, ZONA)).toEqual([
+      'Antes: lunes 2 de noviembre de 2026, 09:00 – 09:45 (45 min)',
+      'Después: lunes 2 de noviembre de 2026, 10:00 – 10:45 (45 min)',
+    ])
   })
 
   it('HIS-2b: la fecha es la del consultorio y no la de UTC', () => {
@@ -41,5 +54,28 @@ describe('mensajes del historial', () => {
     expect(detalleDelCreado({ estado: 'reservado', inicio: '2026-11-02T12:00:00Z' }, ZONA)).toBeNull()
     expect(detalleDelCreado({ estado: 'raro', inicio: '2026-11-02T12:00:00Z', fin: '2026-11-02T12:30:00Z' }, ZONA)).toBeNull()
     expect(detalleDelCreado(null, ZONA)).toBeNull()
+  })
+
+  it('HIS-2b: un reprogramado sin inicio en despues no tiene Antes ni Después', () => {
+    const antes = { inicio: '2026-11-02T12:00:00Z', fin: '2026-11-02T12:45:00Z', duracion_minutos: 45 }
+    expect(detalleDelReprogramado(antes, { fin: '2026-11-02T13:45:00Z', duracion_minutos: 45 }, ZONA)).toEqual([])
+    expect(detalleDelReprogramado(antes, null, ZONA)).toEqual([])
+  })
+
+  it('HIS-2b: un reprogramado sin duracion_minutos no tiene Antes ni Después', () => {
+    const antes = { inicio: '2026-11-02T12:00:00Z', fin: '2026-11-02T12:45:00Z', duracion_minutos: 45 }
+    const despues = { inicio: '2026-11-02T13:00:00Z', fin: '2026-11-02T13:45:00Z' }
+    expect(detalleDelReprogramado(antes, despues, ZONA)).toEqual([])
+    expect(detalleDelReprogramado(antes, { ...despues, duracion_minutos: '45' }, ZONA)).toEqual([])
+    expect(detalleDelReprogramado({ ...antes, duracion_minutos: 45.5 }, { ...despues, duracion_minutos: 45 }, ZONA)).toEqual([])
+  })
+
+  it('HIS-2b: el antes y el después en otro día del consultorio', () => {
+    const antes = { inicio: '2026-11-02T12:00:00Z', fin: '2026-11-02T12:45:00Z', duracion_minutos: 45 }
+    const despues = { inicio: '2026-11-04T01:00:00Z', fin: '2026-11-04T01:45:00Z', duracion_minutos: 45 }
+    expect(detalleDelReprogramado(antes, despues, ZONA)).toEqual([
+      'Antes: lunes 2 de noviembre de 2026, 09:00 – 09:45 (45 min)',
+      'Después: martes 3 de noviembre de 2026, 22:00 – 22:45 (45 min)',
+    ])
   })
 })
