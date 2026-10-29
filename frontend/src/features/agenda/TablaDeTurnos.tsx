@@ -1,8 +1,9 @@
 // Tabla de la agenda del día (design A9, A14, G2): una fila por turno en el orden de la API, con la columna
-// «Acciones» (botones «Reprogramar», solo en los turnos activos, e «Historial»). Debajo de 720 px cada fila se acomoda como tarjeta (solo CSS). El color de la
+// «Acciones» (botones «Reprogramar» y «Cancelar», solo en los turnos activos, e «Historial»). Debajo de 720 px cada fila se acomoda como tarjeta (solo CSS). El color de la
 // prestación es un dato de la API: va como `style` en línea.
 import type { CSSProperties } from 'react'
 import { horaLocal } from '../../shared/horaDelConsultorio'
+import { IconoCancelar } from '../../shared/iconos/IconoCancelar'
 import { IconoCalendario } from '../../shared/iconos/IconoCalendario'
 import { IconoReloj } from '../../shared/iconos/IconoReloj'
 import { ESTADOS_ACTIVOS_DEL_TURNO, type TurnoDeLaAgenda } from './apiAgenda'
@@ -11,9 +12,10 @@ import { ETIQUETAS_DE_ESTADO, TONOS_DE_ESTADO } from './mensajes'
 interface Propiedades {
   turnos: readonly TurnoDeLaAgenda[]
   zonaHoraria: string
-  /** El turno cuyo panel (historial o reprogramar) está abierto, para marcar su fila; `null` si no hay. */
+  /** El turno cuyo panel (historial, reprogramar o cancelar) está abierto, para marcar su fila; `null` si no hay. */
   turnoSeleccionadoId: number | null
   onReprogramar(turno: TurnoDeLaAgenda): void
+  onCancelar(turno: TurnoDeLaAgenda): void
   onVerHistorial(turno: TurnoDeLaAgenda): void
 }
 
@@ -21,7 +23,7 @@ function estiloDeFila(color: string): CSSProperties {
   return { '--color-de-prestacion': color } as CSSProperties
 }
 
-export function TablaDeTurnos({ turnos, zonaHoraria, turnoSeleccionadoId, onReprogramar, onVerHistorial }: Propiedades) {
+export function TablaDeTurnos({ turnos, zonaHoraria, turnoSeleccionadoId, onReprogramar, onCancelar, onVerHistorial }: Propiedades) {
   return (
     <table className="tabla tabla-de-agenda" aria-label="Turnos del día">
       <thead>
@@ -70,6 +72,18 @@ export function TablaDeTurnos({ turnos, zonaHoraria, turnoSeleccionadoId, onRepr
                 >
                   <IconoCalendario />
                   Reprogramar
+                </button>
+              ) : null}
+              {ESTADOS_ACTIVOS_DEL_TURNO.includes(turno.estado) ? (
+                <button
+                  type="button"
+                  className="boton-secundario boton-de-cancelar"
+                  aria-label={`Cancelar el turno de ${turno.paciente.nombre} ${turno.paciente.apellido}, ${horaLocal(turno.inicio, zonaHoraria)}`}
+                  data-cancelar-id={turno.id}
+                  onClick={() => onCancelar(turno)}
+                >
+                  <IconoCancelar />
+                  Cancelar
                 </button>
               ) : null}
               <button
