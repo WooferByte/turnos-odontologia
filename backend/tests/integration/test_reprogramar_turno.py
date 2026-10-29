@@ -140,7 +140,7 @@ def _de_otro(sesion, datos, inicio, estado="reservado", minutos=45):
 
 def _horario_de(uow, turno_id: int):
     with uow:
-        t = uow.agenda.turno_para_reprogramar(turno_id)
+        t = uow.agenda.turno_para_cambiar(turno_id)
         return t.inicio, t.fin, t.duracion_minutos, t.estado.value
 
 

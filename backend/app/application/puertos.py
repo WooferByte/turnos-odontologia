@@ -15,6 +15,7 @@ from app.domain.agenda.profesionales import DatosProfesional
 from app.domain.agenda.recursos import Paciente, Prestacion, Profesional, Sillon
 from app.domain.agenda.sillones import DatosSillon
 from app.domain.agenda.solapamiento import TurnoOcupado
+from app.domain.turnos.estados import EstadoTurno
 from app.domain.turnos.eventos import EventoTurno
 from app.domain.turnos.turno import Turno
 
@@ -89,7 +90,7 @@ class RepositorioAgenda(Protocol):
         """Guarda el turno y lo devuelve con su id."""
         ...
 
-    def turno_para_reprogramar(self, turno_id: int) -> Turno | None:
+    def turno_para_cambiar(self, turno_id: int) -> Turno | None:
         """Lee el turno y bloquea su fila hasta el fin de la transacción (FOR NO KEY UPDATE; DD-04, D337).
 
         Va antes de bloquear los recursos: dos reprogramaciones del mismo turno se serializan acá.
@@ -98,6 +99,10 @@ class RepositorioAgenda(Protocol):
 
     def reprogramar(self, turno_id: int, inicio: datetime, fin: datetime, duracion_minutos: int) -> Turno:
         """Actualiza el horario del turno sin confirmar; traduce 23P01 y 40P01 a ``SolapamientoEnLaBase``."""
+        ...
+
+    def cambiar_estado(self, turno_id: int, estado: EstadoTurno) -> Turno:
+        """Actualiza solo el estado del turno sin confirmar (C-17); pasar a cancelado solo libera el horario."""
         ...
 
     def existe_turno(self, turno_id: int) -> bool: ...

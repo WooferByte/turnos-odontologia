@@ -190,7 +190,7 @@ class RepositorioAgendaSqlAlchemy:
         self._volcar_traduciendo_choques()  # asigna el id sin confirmar; el commit es de la unidad de trabajo
         return replace(turno, id=modelo.id)
 
-    def turno_para_reprogramar(self, turno_id: int) -> Turno | None:
+    def turno_para_cambiar(self, turno_id: int) -> Turno | None:
         consulta = select(TurnoModelo).where(TurnoModelo.id == turno_id).with_for_update(key_share=True)
         modelo = self._sesion.scalars(consulta).first()
         return None if modelo is None else _turno_a_dominio(modelo)
@@ -201,6 +201,12 @@ class RepositorioAgendaSqlAlchemy:
         modelo.fin = fin
         modelo.duracion_minutos = duracion_minutos
         self._volcar_traduciendo_choques()
+        return _turno_a_dominio(modelo)
+
+    def cambiar_estado(self, turno_id: int, estado: EstadoTurno) -> Turno:
+        modelo = self._sesion.get_one(TurnoModelo, turno_id)
+        modelo.estado = estado.value
+        self._sesion.flush()  # cancelar solo libera el horario: no puede violar la exclusión (X5)
         return _turno_a_dominio(modelo)
 
     def existe_turno(self, turno_id: int) -> bool:

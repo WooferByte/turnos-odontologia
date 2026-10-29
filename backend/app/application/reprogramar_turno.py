@@ -48,7 +48,7 @@ def _intentar_reprogramar(
 ) -> Turno:
     with uow:
         consultorio_id = uow.usuarios.obtener(usuario_id).consultorio_id  # D270
-        turno = uow.agenda.turno_para_reprogramar(comando.turno_id)
+        turno = uow.agenda.turno_para_cambiar(comando.turno_id)
         if turno is None or turno.consultorio_id != consultorio_id:
             raise TurnoNoEncontrado(comando.turno_id)
         _validar_entrada(comando)
