@@ -134,7 +134,8 @@ Los criterios de US-010 usan IDs estables `E1..E12` (compartidos con `07_flujos_
 - [ ] CA-3: si había seña y cancela el odontólogo, la seña se marca para devolución.
 **Orden**: 4
 **Depende de**: US-010, US-015, US-092 (CA-2 se completa con US-040; CA-3 con US-051)
-**Reglas**: RN-AG-10, RN-LE-01, RN-SP-05
+**Reglas**: RN-AG-10, RN-AG-11, RN-AG-12, RN-LE-01, RN-SP-05
+**Desde el panel (C-17; decisiones del autor 2026-10-29, D344 a D352):** `POST /turnos/{id}/cancelar` con `{"estado": "cancelado_paciente" | "cancelado_profesional"}`; se cancelan solo los turnos activos y en cualquier momento (D65); un terminal, también con la misma cancelación repetida, da `409` `RN-AG-12`; el evento `cancelado` guarda el estado de antes y de después, y el historial lo muestra como «Turno cancelado» con «Estado: Reservado → Cancelado por el paciente»; la pantalla dice «El consultorio» y «Cancelado por el consultorio» para `cancelado_profesional`. El «Como recepcionista» se lee con la matriz de `03`: también cancela el odontólogo (D347).
 
 ### US-014 — Marcar atendido / ausente
 **Como** odontólogo o recepcionista **quiero** marcar si el paciente asistió **para** medir el ausentismo.
