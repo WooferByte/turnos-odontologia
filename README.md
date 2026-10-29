@@ -772,7 +772,7 @@ npm test
 npm run typecheck
 ```
 
-`npm test` corre **306 tests en 26 archivos** («Tests 306 passed (306)»); no necesita el backend, Docker ni red. `npm run typecheck` (`tsc --noEmit`) termina sin salida. `npm run build` genera `frontend/dist/`.
+`npm test` corre **338 tests en 29 archivos** («Tests 338 passed (338)»); no necesita el backend, Docker ni red. `npm run typecheck` (`tsc --noEmit`) termina sin salida. `npm run build` genera `frontend/dist/`.
 
 ### Probar el panel (demo sin Docker, dos terminales)
 
