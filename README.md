@@ -108,7 +108,7 @@ python -m pytest
 
 Los tests corren con **SQLite en memoria**: no necesitan Docker, PostgreSQL ni Redis, ni ningún archivo de base de datos.
 
-La corrida termina con **«879 passed, 58 deselected, 1 warning»**. Los 58 «deselected» son los del perfil opcional con PostgreSQL (más abajo), que la corrida por defecto excluye a propósito. El warning es un aviso de deprecación interno de Starlette (`starlette/testclient.py`, sobre `anyio.abc.BlockingPortal`): viene de una dependencia con versión fijada, no del código del proyecto, y no indica ningún problema.
+La corrida termina con **«1067 passed, 61 deselected, 1 warning»**. Los 61 «deselected» son los del perfil opcional con PostgreSQL (más abajo), que la corrida por defecto excluye a propósito. El warning es un aviso de deprecación interno de Starlette (`starlette/testclient.py`, sobre `anyio.abc.BlockingPortal`): viene de una dependencia con versión fijada, no del código del proyecto, y no indica ningún problema.
 
 ### Escenario → test
 
@@ -257,7 +257,7 @@ Una parte de los tests (la que prueba lo que solo PostgreSQL garantiza) está fu
 
    Se usa `127.0.0.1` y no `localhost`: en Windows `localhost` resuelve primero a IPv6 y la conexión espera varios segundos antes de caer a IPv4.
 
-Con la base levantada, la corrida termina con **«58 passed, 879 deselected, 1 warning»**. **Si PostgreSQL no está disponible** (Docker apagado, `TEST_DATABASE_URL` sin definir o base que no responde), los 58 tests del perfil **se omiten con el motivo en el resumen** (**«58 skipped, 879 deselected»**) y la corrida termina con código de salida 0. Si la base de `TEST_DATABASE_URL` no termina en `_test`, el perfil falla a propósito para no borrar otra base.
+Con la base levantada, la corrida termina con **«61 passed, 1067 deselected, 1 warning»**. **Si PostgreSQL no está disponible** (Docker apagado, `TEST_DATABASE_URL` sin definir o base que no responde), los 61 tests del perfil **se omiten con el motivo en el resumen** (**«61 skipped, 1067 deselected»**) y la corrida termina con código de salida 0. Si la base de `TEST_DATABASE_URL` no termina en `_test`, el perfil falla a propósito para no borrar otra base.
 
 El esquema de estos tests sale siempre de las migraciones, nunca de `create_all`. Por eso el perfil también comprueba que las migraciones y los modelos coinciden (INF-1): si alguien cambia un modelo sin escribir su migración, ese test se pone en rojo. **La suite por defecto no avisa de esto**: hay que correr el perfil cada vez que se toque el esquema.
 
@@ -293,6 +293,7 @@ Los escenarios están en `openspec/changes/infraestructura-postgresql/specs/pers
 | E11 | Ocho peticiones a la vez crean un solo turno | `test_e11_de_ocho_peticiones_a_la_vez_se_crea_un_solo_turno` |
 | E11 | Por HTTP, el que pierde recibe `409` | `test_e11_post_turnos_responde_409_al_que_pierde_la_carrera` |
 | E9 | Ocho reservas simultáneas dejan un solo turno y un solo evento `creado` | `test_e9_de_ocho_reservas_simultaneas_queda_un_solo_evento` (`test_reservas_simultaneas.py`) |
+| REP-1e | Dos reprogramaciones al mismo hueco, una reprogramación y un alta al mismo hueco: una sola gana y la que pierde no cambia; dos reprogramaciones del mismo turno se encadenan (el `antes` del segundo evento es el `despues` del primero) | `test_rep1e_dos_reprogramaciones_al_mismo_hueco_una_gana`, `test_rep1e_una_reprogramacion_y_un_alta_al_mismo_hueco_una_gana`, `test_rep1e_dos_reprogramaciones_del_mismo_turno_se_encadenan` (`test_reprogramaciones_simultaneas.py`) |
 | US-015 CA-1 | La base rechaza `UPDATE`, `DELETE` y `TRUNCATE` sobre un evento | `test_ca1_la_base_rechaza_modificar_o_borrar_un_evento` (parametrizado: `update_del_tipo`, `delete`, `truncate`; `test_historial_inmutable.py`) |
 | US-015 CA-1 | La base acepta un evento nuevo del mismo turno | `test_ca1_la_base_acepta_un_evento_nuevo_del_mismo_turno` (`test_historial_inmutable.py`) |
 | US-004 CA-2 | El alta de un sillón tras el seed no choca con el id fijo: la secuencia de `sillon` queda ajustada y el primer `POST /sillones` recibe un `id` distinto de 1 | `test_ca2_el_alta_de_un_sillon_tras_el_seed_no_choca_con_el_id_fijo` (`test_seed_y_api.py`) |
@@ -624,6 +625,51 @@ Los escenarios están en `openspec/changes/agenda-del-dia/specs/consulta-de-turn
 | AGE-3a | Una fecha mal formada o en los extremos del calendario da `422` sin código, nunca `500`; los extremos aceptados dan `200` vacío | `test_age3a_una_fecha_mal_formada_da_422_sin_codigos` (parametrizado), `test_age3a_los_extremos_aceptados_dan_200_vacio`, `test_age3a_los_extremos_aceptados_del_calendario_no_desbordan` (`test_dia.py`) |
 | AGE-3b | Sin sesión `401`; sin roles `403` `RN-AU-05` antes de validar la fecha y al leer un turno | `test_age3b_sin_sesion_401`, `test_age3b_sin_roles_403_antes_de_validar`, `test_age3b_sin_roles_403_al_leer_un_turno`, `test_age3b_un_usuario_sin_roles_no_tiene_turnos_leer` (`test_roles.py`) |
 | AGE-3c | Un turno de otro consultorio no se lista y su id responde `404` como un inexistente | `test_age3c_la_lista_no_trae_turnos_de_otro_consultorio`, `test_age3c_un_turno_de_otro_consultorio_da_el_mismo_404` (API) y dos en integración |
+
+### Reprogramar un turno
+
+Desde C-16, `PATCH /turnos/{id}` mueve un turno a otro horario o le cambia la duración. Pide el access token y el permiso `turnos.reprogramar`: lo tienen el odontólogo y la recepcionista; el dueño y un usuario sin roles reciben `403` con `RN-AU-05`. El turno sigue siendo **el mismo** (mismo `id`, paciente, prestación, profesional, sillón, estado y `creado_en`); el cuerpo lleva `inicio` (UTC, con `Z`) y/o `duracion_minutos`, y un campo omitido conserva su valor. El horario nuevo se valida como el de un turno nuevo, **sin chocar consigo mismo**, y la reprogramación deja el evento `reprogramado` en el historial. Con la demo **recién arrancada** (los pasos dependen unos de otros), el token de la recepcionista y los horarios en UTC (el consultorio está en UTC−3):
+
+1. `POST /turnos` con `{"paciente_id": 1, "prestacion_id": 1, "inicio": "2026-11-02T13:00:00Z"}` → `201` (id 1, lunes 10:00 del consultorio) y otro con `{"paciente_id": 2, "prestacion_id": 2, "inicio": "2026-11-02T12:00:00Z"}` → `201` (id 2, lunes 09:00 a 09:45).
+2. `PATCH /turnos/1` con `{"inicio": "2026-11-02T18:00:00Z"}` → `200`, con el mismo `id`, `inicio` `2026-11-02T18:00:00Z`, `fin` `2026-11-02T18:30:00Z`, `duracion_minutos` 30 y `estado` `reservado` (lunes 15:00).
+3. `PATCH /turnos/1` con `{"duracion_minutos": 60}` → `200`, de `18:00:00Z` a `19:00:00Z`. La duración del turno cambia; la de la prestación «Consulta / control» sigue en 30.
+4. `PATCH /turnos/1` con `{"inicio": "2026-11-02T12:15:00Z"}` (sobre el turno 2) → `409`, con `codigos` igual a `["RN-AG-05", "RN-AG-08"]` y los dos `conflictos` con el `turno_id` 2. El turno 1 no cambia (`GET /turnos/1`) y no suma eventos.
+5. `PATCH /turnos/1` con `{"duracion_minutos": 42}` → `422`, con `codigos` igual a `["RN-AG-01"]` y el error en el campo `duracion_minutos`; con `1445` → `422` con el mismo código. La duración es mayor que 0, múltiplo de 5 y de **1440 minutos como máximo**; una duración desmedida nunca da `500`.
+6. `PATCH /turnos/1` con `{"inicio": "2026-11-02T10:30:00Z"}` (las 07:30 del consultorio, antes del horario) → `422`, con `["RN-AG-04"]`. Con `{}` → `200` con el turno tal como está, sin evento.
+7. Sin token → `401`, con `["RN-AU-03"]`. Con el token del dueño → `403`, con `["RN-AU-05"]`: para probarlo, con el token de la odontóloga `POST /usuarios` con `{"email": "dueno@consultorio-demo.test", "contrasena": "demo-consultorio-2026", "roles": ["dueno"]}` e iniciar sesión con ese usuario. `PATCH /turnos/999` → `404`, con `["RN-GL-04"]`; `PATCH /turnos/abc` → `422`, con `codigos` igual a `[]`.
+8. `GET /turnos/1/historial` → `200`, con tres eventos: el `creado` y dos `reprogramado` con `actor_id` `"2"` (la recepcionista), cada uno con su `antes` y su `despues` (`inicio`, `fin` y `duracion_minutos`) y `motivo` vacío. Los rechazos de los pasos 4 a 7 no suman eventos.
+
+Solo se reprograman los turnos **activos** (`pendiente_aprobacion`, `pendiente_sena`, `reservado` y `confirmado`): uno `cancelado_paciente`, `cancelado_profesional`, `vencido`, `atendido` o `ausente` responde `409` con `["RN-AG-18"]` (salvo una petición que no cambia nada, que responde `200`). El panel puede reprogramar en cualquier momento, también un turno ya pasado.
+
+Con `curl`:
+
+```
+curl -i -X PATCH http://127.0.0.1:8000/turnos/1 -H "Authorization: Bearer PEGAR_EL_ACCESS_TOKEN" -H "Content-Type: application/json" -d "{\"inicio\": \"2026-11-02T18:00:00Z\", \"duracion_minutos\": 60}"
+```
+
+Límites conocidos: no hay control de versión (si dos personas reprograman el mismo turno a la vez, se aplican una después de la otra y el historial guarda las dos con su `antes` real); la duración de las **prestaciones** todavía no tiene el tope de 1440 minutos (solo el de la reprogramación, D333); y un `inicio` del 31 de diciembre de 9999 desborda, como en el alta.
+
+#### Escenario → test (reprogramar un turno, API)
+
+Los escenarios están en `openspec/changes/reprogramar-turno/specs/reprogramacion-de-turnos/spec.md`. Las reglas puras (`backend/tests/unit/test_reprogramacion.py`, 25 tests, sin base de datos, más 5 de `excluir_turno_id` en `test_detectar_conflictos.py` y 4 del permiso en `test_roles.py`), el caso de uso sobre la base en memoria (`backend/tests/integration/test_reprogramar_turno.py`, 42) y la API (`backend/tests/api/test_reprogramar.py`, 50). `REP-1e` corre en el perfil `postgres`.
+
+| Escenario | Qué verifica | Test titular |
+|---|---|---|
+| REP-1a | La recepcionista (y la odontóloga) mueve el mismo turno a otro horario libre | `test_rep1a_la_recepcionista_mueve_un_turno`, `test_rep1a_la_odontologa_tambien_reprograma` (API), `test_rep1a_reprogramar_mueve_el_mismo_turno` (integración) |
+| REP-1b | El turno no choca consigo mismo y los bordes semiabiertos se respetan | `test_rep1b_el_turno_no_choca_consigo_mismo` (`test_detectar_conflictos.py`), `test_rep1b_sobre_su_propio_horario_y_pegado_al_siguiente` (integración) |
+| REP-1c | Sobre otro turno activo: `409` con los dos códigos y el turno no cambia; un turno cancelado libera el horario | `test_rep1c_sobre_otro_turno_activo_409_con_los_dos_conflictos_y_no_cambia`, `test_rep1c_un_turno_cancelado_libera_el_horario` (API) |
+| REP-1d | Las reglas de un turno nuevo, de a una: `RN-AG-10d`, `RN-AG-04` (dos casos), `RN-AG-04b`; horario y solapamiento a la vez informa solo el horario | `test_rep1d_las_reglas_de_un_turno_nuevo_dan_422_de_a_una` (parametrizado), `test_rep1d_horario_y_solapamiento_a_la_vez_solo_informa_el_horario` (API) |
+| REP-1e | Dos reprogramaciones al mismo hueco, una reprogramación y un alta, y dos del mismo turno: una gana o se encadenan (perfil `postgres`) | `test_rep1e_dos_reprogramaciones_al_mismo_hueco_una_gana`, `test_rep1e_una_reprogramacion_y_un_alta_al_mismo_hueco_una_gana`, `test_rep1e_dos_reprogramaciones_del_mismo_turno_se_encadenan` (`test_reprogramaciones_simultaneas.py`) |
+| REP-2a | El historial guarda el `antes` y el `despues` (inicio, fin y duración) con el actor y el reloj | `test_rep2a_el_historial_muestra_el_reprogramado` (API), `test_rep2a_el_evento_reprogramado_lleva_antes_y_despues` (`test_reprogramacion.py`), `test_rep2a_reprogramar_registra_el_evento` (integración) |
+| REP-2b | Un rechazo no registra eventos y un evento que falla no deja el turno movido | `test_rep2b_un_rechazo_no_registra_eventos`, `test_rep2b_si_el_evento_falla_el_turno_no_se_mueve` (integración) |
+| REP-3a | Alargar un turno sin moverlo; contra el turno siguiente, `409` | `test_rep3a_alargar_sin_mover`, `test_rep3a_alargar_contra_el_turno_siguiente_409` (API) |
+| REP-3b | `42`, `0` y `-5` dan `RN-AG-01`; con `inicio` sin zona, los dos códigos juntos; `5` es válida | `test_rep3b_una_duracion_invalida_da_422_rn_ag_01_con_el_error_del_campo` (parametrizado), `test_rep3b_inicio_sin_zona_y_duracion_invalida_dan_un_unico_422_con_los_dos_codigos`, `test_rep3b_cinco_minutos_es_valida` (API) |
+| REP-3c | Una duración por encima de 1440 da `RN-AG-01` y nunca `500`; `1440` da `RN-AG-10d` | `test_rep3c_una_duracion_desmedida_422_nunca_500` (parametrizado), `test_rep3c_1440_da_rn_ag_10d_y_no_rn_ag_01` (API), `test_rep3c_la_duracion_del_turno_tiene_tope` (`test_reprogramacion.py`) |
+| REP-4a | Sin sesión `401`; el dueño y el usuario sin roles `403` antes de validar | `test_rep4a_sin_sesion_401`, `test_rep4a_el_dueno_y_sin_roles_403_antes_de_validar` (API), `test_rep4a_turnos_reprogramar_para_odontologo_y_recepcionista`, `test_rep4a_el_dueno_y_sin_roles_no_reprograman` (`test_roles.py`) |
+| REP-4b | Turno inexistente o de otro consultorio `404`; cuerpo mal formado o id no entero `422` sin códigos; el `404` va antes que la duración | `test_rep4b_inexistente_y_de_otro_consultorio_404_sin_distinguir`, `test_rep4b_un_cuerpo_mal_formado_422_sin_codigos` (parametrizado), `test_rep4b_un_id_que_no_es_entero_422_sin_codigos`, `test_rep4b_el_404_va_antes_que_la_duracion` (API) |
+| REP-4c | Una petición sin cambios (`{}` o los mismos valores) responde `200` sin reglas y sin evento | `test_rep4c_una_peticion_sin_cambios_200_y_el_historial_no_suma` (API), `test_rep4c_sin_cambios_no_evalua_reglas_ni_registra_evento` (integración) |
+| REP-5a | Un turno terminal da `409` `RN-AG-18` y uno activo se mueve sin cambiar su estado; la entrada se valida antes que el estado | `test_rep5a_un_turno_terminal_409_rn_ag_18_y_no_cambia`, `test_rep5a_un_turno_activo_se_mueve_y_conserva_su_estado`, `test_rep5a_la_entrada_se_valida_antes_que_el_estado` (API), `test_rep5a_un_turno_terminal_no_se_reprograma` (`test_reprogramacion.py`) |
+| REP-5b | Un turno terminal con una petición sin cambios responde `200` sin evento; con un cambio, `409` | `test_rep5b_un_terminal_sin_cambios_200_sin_evento`, `test_rep5b_un_terminal_con_un_cambio_409_rn_ag_18` (API) |
 
 ## Sesión del panel
 
@@ -1138,7 +1184,7 @@ La API se reemplaza en los tests por un servidor falso escrito a mano (`frontend
 
 Hay además tests de la renovación compartida, del `403`, del cierre de sesión y de que ninguna URL contenga un token, y cinco guards (`src/test/guards.test.ts`) que fallan si aparece `any`, `vi.mock`, `localStorage`, `dangerouslySetInnerHTML`, un archivo `index.ts` de reexportación o un recurso de otro origen (STI-1).
 
-Resultado actual de las dos suites: frontend «Tests 338 passed (338)»; backend «937 passed, 58 deselected, 1 warning».
+Resultado actual de las dos suites: frontend «Tests 338 passed (338)»; backend «1067 passed, 61 deselected, 1 warning».
 
 ## Levantar la API con PostgreSQL
 

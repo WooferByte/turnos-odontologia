@@ -48,7 +48,7 @@ Reglas de trabajo para todos los grupos (no son tareas):
 
 ## 6. API en el README
 
-- [ ] 6.1 Completar el `README.md` de la raíz (design M15): `PATCH /turnos/{id}` en «Probar desde Swagger» (con la recepcionista de la demo: crear un turno el lunes 2 de noviembre de 2026, moverlo, cambiarle la duración, REP-1 contra otro turno, `duracion_minutos` 42 y 1445, las 07:30, el dueño con `403` y el historial con el `reprogramado`), la prueba nueva en la lista del perfil `postgres` y la tabla escenario → test de `reprogramacion-de-turnos` (`REP-1a` a `REP-5b`) con la cantidad real de tests. Verificación: cada paso nuevo se ejecutó tal cual con la demo (`crear_app_demo`) en `/docs` y dio lo que dice.
+- [x] 6.1 Completar el `README.md` de la raíz (design M15): `PATCH /turnos/{id}` en «Probar desde Swagger» (con la recepcionista de la demo: crear un turno el lunes 2 de noviembre de 2026, moverlo, cambiarle la duración, REP-1 contra otro turno, `duracion_minutos` 42 y 1445, las 07:30, el dueño con `403` y el historial con el `reprogramado`), la prueba nueva en la lista del perfil `postgres` y la tabla escenario → test de `reprogramacion-de-turnos` (`REP-1a` a `REP-5b`) con la cantidad real de tests. Verificación: cada paso nuevo se ejecutó tal cual con la demo (`crear_app_demo`) en `/docs` y dio lo que dice.
 
 ## 7. Servidor falso y cliente
 
