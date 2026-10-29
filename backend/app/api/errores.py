@@ -25,6 +25,7 @@ from app.domain.errors import (
     RestablecerLaPropia,
     SesionInvalida,
     SobreBloqueo,
+    TransicionInvalida,
     TurnoNoReprogramable,
 )
 
@@ -50,6 +51,7 @@ _CLASES_DE_ERROR: dict[type[ErrorDeDominio], tuple[int, str, str]] = {
     ContrasenaActualIncorrecta: (422, "/errores/contrasena-actual-incorrecta", "Contraseña actual incorrecta"),
     RestablecerLaPropia: (409, "/errores/restablecer-la-propia", "Operación no permitida"),
     TurnoNoReprogramable: (409, "/errores/turno-no-reprogramable", "Turno no reprogramable"),
+    TransicionInvalida: (409, "/errores/transicion-invalida", "Transición inválida"),
 }
 # Los dos 401 llevan RFC 6750 §3 y un texto fijo que no depende de la causa (design J13).
 _CABECERAS_DE_NO_AUTENTICADO = {"WWW-Authenticate": "Bearer"}
@@ -64,6 +66,7 @@ _ERRORES_DE_TEXTO_FIJO = (
     RestablecerLaPropia,
     FueraDeHorario,
     TurnoNoReprogramable,
+    TransicionInvalida,
 )
 
 

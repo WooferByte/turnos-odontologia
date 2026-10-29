@@ -1,7 +1,7 @@
 """Esquemas HTTP de ``/turnos`` (D4), ``/prestaciones`` (C-04), ``/sillones`` (C-05) y ``/bloqueos`` (C-13). Es la única capa que conoce Pydantic."""
 import re
 from datetime import date, datetime, time
-from typing import Annotated, Any
+from typing import Annotated, Any, Literal
 
 from pydantic import (
     AfterValidator,
@@ -225,6 +225,17 @@ class ReprogramarTurnoEntrada(EntradaDeEdicion):
 
     inicio: datetime | None = None
     duracion_minutos: int | None = None
+
+
+class CancelarTurnoEntrada(BaseModel):
+    """Cuerpo de ``POST /turnos/{id}/cancelar``: quién pidió la cancelación; todo es formato (X2, D344)."""
+
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={"examples": [{"estado": "cancelado_paciente"}]},
+    )
+
+    estado: Literal["cancelado_paciente", "cancelado_profesional"]
 
 
 class CrearPrestacionEntrada(BaseModel):
