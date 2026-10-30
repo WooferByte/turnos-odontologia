@@ -12,12 +12,14 @@ import { IconoMas } from '../../shared/iconos/IconoMas'
 import type { Prestacion } from '../prestaciones/apiPrestaciones'
 import {
   crearApiAgenda,
+  type EstadoDeAsistencia,
   type EstadoDeCancelacion,
   type NuevoTurno,
   type ReprogramacionDeTurno,
   type TurnoDeLaAgenda,
 } from './apiAgenda'
 import {
+  MENSAJE_ASISTENCIA_REGISTRADA,
   MENSAJE_CARGANDO,
   MENSAJE_SIN_CONEXION,
   MENSAJE_SIN_PERMISO_PARA_VER,
@@ -36,6 +38,7 @@ import {
   tituloDelAviso,
 } from './mensajes'
 import { PanelHistorial } from '../historial/PanelHistorial'
+import { PanelAsistencia } from './PanelAsistencia'
 import { PanelCancelar } from './PanelCancelar'
 import { PanelNuevoTurno } from './PanelNuevoTurno'
 import { PanelReprogramar } from './PanelReprogramar'
@@ -50,6 +53,7 @@ type Panel =
   | { tipo: 'historial'; turno: TurnoDeLaAgenda }
   | { tipo: 'reprogramar'; turno: TurnoDeLaAgenda }
   | { tipo: 'cancelar'; turno: TurnoDeLaAgenda }
+  | { tipo: 'asistencia'; turno: TurnoDeLaAgenda }
 
 const SIN_PANEL: Panel = { tipo: 'ninguno' }
 
@@ -176,6 +180,17 @@ export function PaginaAgenda() {
     setPanel(SIN_PANEL)
   }
 
+  function abrirAsistencia(turno: TurnoDeLaAgenda): void {
+    pedidoDePrestaciones.current += 1
+    setErrorDelPanel(null)
+    setPanel({ tipo: 'asistencia', turno })
+  }
+
+  function cerrarAsistencia(turno: TurnoDeLaAgenda): void {
+    focoAlCerrar.current = `[data-asistencia-id="${turno.id}"]`
+    setPanel(SIN_PANEL)
+  }
+
   function cerrarPanel(): void {
     pedidoDePrestaciones.current += 1
     setPanel(SIN_PANEL)
@@ -236,6 +251,24 @@ export function PaginaAgenda() {
     } catch (error: unknown) {
       if (error instanceof SesionTerminada) return
       setErrorDelPanel(mensajeDeCancelacion(error))
+    } finally {
+      enCurso.current = false
+      setEnviando(false)
+    }
+  }
+
+  /** Como la cancelación, el turno no se mueve: la recarga es del mismo día a la vista (design W12). */
+  async function registrarAsistencia(turno: TurnoDeLaAgenda, estado: EstadoDeAsistencia): Promise<void> {
+    if (enCurso.current) return
+    enCurso.current = true
+    setEnviando(true)
+    setErrorDelPanel(null)
+    setExito(null)
+    try {
+      await api.marcarAsistencia(turno.id, estado)
+      cerrarPanel()
+      setExito(MENSAJE_ASISTENCIA_REGISTRADA)
+      pedirDia(dia?.fecha)
     } finally {
       enCurso.current = false
       setEnviando(false)
@@ -312,9 +345,8 @@ export function PaginaAgenda() {
                 <TablaDeTurnos
                   turnos={dia.turnos}
                   zonaHoraria={dia.zona}
-                  turnoSeleccionadoId={panel.tipo === 'historial' || panel.tipo === 'reprogramar' || panel.tipo === 'cancelar'
-                      ? panel.turno.id
-                      : null}
+                  turnoSeleccionadoId={panel.tipo === 'nuevo-turno' || panel.tipo === 'ninguno' ? null : panel.turno.id}
+                  onRegistrarAsistencia={abrirAsistencia}
                   onReprogramar={abrirReprogramar}
                   onCancelar={abrirCancelar}
                   onVerHistorial={verHistorial}
@@ -354,6 +386,16 @@ export function PaginaAgenda() {
             error={errorDelPanel}
             onCancelarTurno={(estado) => void cancelarElTurno(panel.turno, estado)}
             onVolver={() => cerrarCancelar(panel.turno)}
+          />
+        ) : null}
+        {panel.tipo === 'asistencia' ? (
+          <PanelAsistencia
+            key={panel.turno.id}
+            turno={panel.turno}
+            zonaHoraria={dia?.zona ?? ''}
+            enviando={enviando}
+            onRegistrar={(estado) => void registrarAsistencia(panel.turno, estado)}
+            onVolver={() => cerrarAsistencia(panel.turno)}
           />
         ) : null}
         {panel.tipo === 'historial' ? (

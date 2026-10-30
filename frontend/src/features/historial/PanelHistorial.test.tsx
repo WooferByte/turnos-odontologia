@@ -215,6 +215,23 @@ describe('PanelHistorial: ver el historial desde la agenda', () => {
     expect(screen.queryByRole('complementary', { name: 'Historial del turno' })).toBeNull()
   })
 
+  it('HIS-2f: Registrar asistencia e Historial, un solo panel', async () => {
+    const usuario = await abrirAgenda(falso())
+    await usuario.click(screen.getByRole('button', { name: 'Registrar la asistencia del turno de Ana Ejemplo, 09:00' }))
+    await screen.findByRole('complementary', { name: 'Registrar asistencia' })
+
+    await usuario.click(botonDeHistorial(ANA))
+
+    await screen.findByRole('complementary', { name: 'Historial del turno' })
+    expect(screen.queryByRole('complementary', { name: 'Registrar asistencia' })).toBeNull()
+
+    await usuario.click(screen.getByRole('button', { name: 'Registrar la asistencia del turno de Bruno Ficticio, 10:00' }))
+
+    const panelDeAsistencia = await screen.findByRole('complementary', { name: 'Registrar asistencia' })
+    expect(within(panelDeAsistencia).getByText('Bruno Ficticio · Limpieza')).toBeDefined()
+    expect(screen.queryByRole('complementary', { name: 'Historial del turno' })).toBeNull()
+  })
+
   it('HIS-2f: cambiar de día cierra el historial', async () => {
     const servidor = falso()
     const usuario = await abrirAgenda(servidor)

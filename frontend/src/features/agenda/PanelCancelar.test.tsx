@@ -262,7 +262,7 @@ describe('PanelCancelar: bordes', () => {
     expect(servidor.llamadas('POST', '/api/turnos/11/cancelar')).toBe(0)
   })
 
-  it('CAN-4c: los turnos no activos no tienen Reprogramar ni Cancelar', async () => {
+  it('CAN-4c: los turnos no activos no tienen Asistencia, Reprogramar ni Cancelar', async () => {
     const servidor = falso({
       turnos: [
         ...TURNOS_DE_LA_AGENDA,
@@ -280,9 +280,9 @@ describe('PanelCancelar: bordes', () => {
     expect(filas).toHaveLength(8)
     const nombresDeBotones = filas.map((fila) => within(fila).getAllByRole('button').map((b) => b.textContent))
     expect(nombresDeBotones).toEqual([
-      ['Reprogramar', 'Cancelar', 'Historial'],
-      ['Reprogramar', 'Cancelar', 'Historial'],
-      ['Reprogramar', 'Cancelar', 'Historial'],
+      ['Asistencia', 'Reprogramar', 'Cancelar', 'Historial'],
+      ['Asistencia', 'Reprogramar', 'Cancelar', 'Historial'],
+      ['Asistencia', 'Reprogramar', 'Cancelar', 'Historial'],
       ['Historial'],
       ['Historial'],
       ['Historial'],
