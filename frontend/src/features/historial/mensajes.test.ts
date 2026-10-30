@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { EVENTO_CREADO_DEL_TURNO_11 } from '../../test/servidorFalso'
 import {
   cuandoOcurrio,
-  detalleDelCancelado,
+  detalleDelCambioDeEstado,
   detalleDelCreado,
   detalleDelReprogramado,
   textoDelActor,
@@ -44,28 +44,46 @@ describe('mensajes del historial', () => {
     expect(tituloDelEvento('cancelado')).toBe('Turno cancelado')
   })
 
+  it('HIS-2b: el estado_cambiado se titula Cambio de estado', () => {
+    expect(tituloDelEvento('estado_cambiado')).toBe('Cambio de estado')
+  })
+
+  it('HIS-2b: el cambio de estado del marcado con las etiquetas de la agenda', () => {
+    expect(detalleDelCambioDeEstado({ estado: 'reservado' }, { estado: 'atendido' })).toBe('Estado: Reservado → Atendido')
+  })
+
+  it('HIS-2b: un estado_cambiado de confirmado a ausente', () => {
+    expect(detalleDelCambioDeEstado({ estado: 'confirmado' }, { estado: 'ausente' })).toBe('Estado: Confirmado → Ausente')
+  })
+
+  it('HIS-2b: un estado_cambiado sin estado en despues no tiene la línea Estado', () => {
+    expect(detalleDelCambioDeEstado({ estado: 'reservado' }, {})).toBeNull()
+    expect(detalleDelCambioDeEstado({ estado: 'reservado' }, null)).toBeNull()
+    expect(detalleDelCambioDeEstado({ estado: 'reservado' }, { estado: 'raro' })).toBeNull()
+  })
+
   it('HIS-2b: el cambio de estado con las etiquetas de la agenda', () => {
-    expect(detalleDelCancelado({ estado: 'reservado' }, { estado: 'cancelado_paciente' })).toBe(
+    expect(detalleDelCambioDeEstado({ estado: 'reservado' }, { estado: 'cancelado_paciente' })).toBe(
       'Estado: Reservado → Cancelado por el paciente',
     )
   })
 
   it('HIS-2b: un cancelado por el consultorio', () => {
-    expect(detalleDelCancelado({ estado: 'confirmado' }, { estado: 'cancelado_profesional' })).toBe(
+    expect(detalleDelCambioDeEstado({ estado: 'confirmado' }, { estado: 'cancelado_profesional' })).toBe(
       'Estado: Confirmado → Cancelado por el consultorio',
     )
   })
 
   it('HIS-2b: un cancelado sin estado en despues no tiene la línea Estado', () => {
-    expect(detalleDelCancelado({ estado: 'confirmado' }, {})).toBeNull()
-    expect(detalleDelCancelado({ estado: 'confirmado' }, null)).toBeNull()
-    expect(detalleDelCancelado(null, { estado: 'cancelado_paciente' })).toBeNull()
-    expect(detalleDelCancelado({}, { estado: 'cancelado_paciente' })).toBeNull()
+    expect(detalleDelCambioDeEstado({ estado: 'confirmado' }, {})).toBeNull()
+    expect(detalleDelCambioDeEstado({ estado: 'confirmado' }, null)).toBeNull()
+    expect(detalleDelCambioDeEstado(null, { estado: 'cancelado_paciente' })).toBeNull()
+    expect(detalleDelCambioDeEstado({}, { estado: 'cancelado_paciente' })).toBeNull()
   })
 
   it('HIS-2b: un cancelado con un estado desconocido no tiene la línea Estado', () => {
-    expect(detalleDelCancelado({ estado: 'confirmado' }, { estado: 'raro' })).toBeNull()
-    expect(detalleDelCancelado({ estado: 7 }, { estado: 'cancelado_paciente' })).toBeNull()
+    expect(detalleDelCambioDeEstado({ estado: 'confirmado' }, { estado: 'raro' })).toBeNull()
+    expect(detalleDelCambioDeEstado({ estado: 7 }, { estado: 'cancelado_paciente' })).toBeNull()
   })
 
   it('HIS-2b: el antes y el después en hora del consultorio', () => {

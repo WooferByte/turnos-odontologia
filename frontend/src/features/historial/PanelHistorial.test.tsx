@@ -166,6 +166,95 @@ describe('PanelHistorial: ver el historial desde la agenda', () => {
     ])
   })
 
+  it('HIS-2b: un estado_cambiado de atendido', async () => {
+    const servidor = falso({
+      historiales: {
+        11: [
+          EVENTO_CREADO_DEL_TURNO_11,
+          {
+            id: 31,
+            turno_id: 11,
+            tipo: 'estado_cambiado',
+            actor_tipo: 'usuario',
+            actor_id: '2',
+            ocurrido_en: '2026-11-02T13:10:00Z',
+            motivo: null,
+            antes: { estado: 'reservado' },
+            despues: { estado: 'atendido' },
+          },
+        ],
+      },
+    })
+    const usuario = await abrirAgenda(servidor, EMAIL_ACTIVA)
+
+    await usuario.click(botonDeHistorial(ANA))
+
+    const panel = await screen.findByRole('complementary', { name: 'Historial del turno' })
+    const entradas = await within(panel).findAllByRole('listitem')
+    expect(entradas.map((e) => e.textContent)).toEqual([
+      'Turno creadolunes 26 de octubre de 2026, 10:15Por: Usuario n.º 2Estado inicial: Reservado · 09:00 – 09:30',
+      'Cambio de estadolunes 2 de noviembre de 2026, 10:10Por: Usuario n.º 2Estado: Reservado → Atendido',
+    ])
+  })
+
+  it('HIS-2b: un estado_cambiado de confirmado a ausente', async () => {
+    const servidor = falso({
+      historiales: {
+        13: [
+          {
+            id: 41,
+            turno_id: 13,
+            tipo: 'estado_cambiado',
+            actor_tipo: 'usuario',
+            actor_id: '1',
+            ocurrido_en: '2026-11-02T15:30:00Z',
+            motivo: null,
+            antes: { estado: 'confirmado' },
+            despues: { estado: 'ausente' },
+          },
+        ],
+      },
+    })
+    const usuario = await abrirAgenda(servidor, EMAIL_ACTIVA)
+
+    await usuario.click(botonDeHistorial('Historial del turno de Carla Inventada, 11:00'))
+
+    const panel = await screen.findByRole('complementary', { name: 'Historial del turno' })
+    const entradas = await within(panel).findAllByRole('listitem')
+    expect(entradas.map((e) => e.textContent)).toEqual([
+      'Cambio de estadolunes 2 de noviembre de 2026, 12:30Por: Usuario n.º 1Estado: Confirmado → Ausente',
+    ])
+  })
+
+  it('HIS-2b: un estado_cambiado sin estado en despues no tiene la línea Estado', async () => {
+    const servidor = falso({
+      historiales: {
+        12: [
+          {
+            id: 42,
+            turno_id: 12,
+            tipo: 'estado_cambiado',
+            actor_tipo: 'usuario',
+            actor_id: '2',
+            ocurrido_en: '2026-11-02T14:00:00Z',
+            motivo: null,
+            antes: { estado: 'reservado' },
+            despues: {},
+          },
+        ],
+      },
+    })
+    const usuario = await abrirAgenda(servidor, EMAIL_ACTIVA)
+
+    await usuario.click(botonDeHistorial(BRUNO))
+
+    const panel = await screen.findByRole('complementary', { name: 'Historial del turno' })
+    const entradas = await within(panel).findAllByRole('listitem')
+    expect(entradas.map((e) => e.textContent)).toEqual([
+      'Cambio de estadolunes 2 de noviembre de 2026, 11:00Por: Usuario n.º 2',
+    ])
+  })
+
   it('HIS-2f: abrir Historial cierra Nuevo turno y al revés', async () => {
     const usuario = await abrirAgenda(falso())
     await usuario.click(screen.getByRole('button', { name: 'Nuevo turno' }))

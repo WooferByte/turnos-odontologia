@@ -20,7 +20,7 @@ import {
   MENSAJE_TURNO_INEXISTENTE,
   TITULO_DEL_PANEL,
   cuandoOcurrio,
-  detalleDelCancelado,
+  detalleDelCambioDeEstado,
   detalleDelCreado,
   detalleDelReprogramado,
   textoDelActor,
@@ -124,8 +124,8 @@ export function PanelHistorial({ turno, zonaHoraria, onCerrar }: Propiedades) {
                 const detalle =
                   evento.tipo === 'creado'
                     ? detalleDelCreado(evento.despues, zonaHoraria)
-                    : evento.tipo === 'cancelado'
-                      ? detalleDelCancelado(evento.antes, evento.despues)
+                    : evento.tipo === 'cancelado' || evento.tipo === 'estado_cambiado'
+                      ? detalleDelCambioDeEstado(evento.antes, evento.despues)
                       : null
                 const cambios =
                   evento.tipo === 'reprogramado' ? detalleDelReprogramado(evento.antes, evento.despues, zonaHoraria) : []

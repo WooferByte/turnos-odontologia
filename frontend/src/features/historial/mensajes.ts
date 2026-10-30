@@ -18,9 +18,10 @@ const TITULOS_DE_EVENTO: Readonly<Record<string, string>> = {
   creado: 'Turno creado',
   reprogramado: 'Turno reprogramado',
   cancelado: 'Turno cancelado',
+  estado_cambiado: 'Cambio de estado',
 }
 
-/** «Turno creado», «Turno reprogramado» o «Turno cancelado»; un tipo que la pantalla todavía no conoce se ve igual, sin ocultarlo (G5). */
+/** «Turno creado», «Turno reprogramado», «Turno cancelado» o «Cambio de estado»; un tipo que la pantalla todavía no conoce se ve igual, sin ocultarlo (G5). */
 export function tituloDelEvento(tipo: string): string {
   return TITULOS_DE_EVENTO[tipo] ?? `Cambio registrado (${tipo})`
 }
@@ -82,10 +83,11 @@ export function detalleDelReprogramado(
 }
 
 /**
- * «Estado: Confirmado → Cancelado por el paciente» de un `cancelado` (D352), con las etiquetas de la agenda; `null` si
- * `antes` o `despues` no traen un estado conocido (RN-AG-11).
+ * «Estado: Confirmado → Cancelado por el paciente» de un `cancelado` (D352) o «Estado: Reservado → Atendido» de un
+ * `estado_cambiado` (D364), con las etiquetas de la agenda; `null` si `antes` o `despues` no traen un estado conocido
+ * (RN-AG-11).
  */
-export function detalleDelCancelado(
+export function detalleDelCambioDeEstado(
   antes: Record<string, unknown> | null,
   despues: Record<string, unknown> | null,
 ): string | null {
