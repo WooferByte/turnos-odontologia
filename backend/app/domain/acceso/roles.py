@@ -35,6 +35,7 @@ class Permiso(StrEnum):
     TURNOS_LEER = "turnos.leer"
     TURNOS_REPROGRAMAR = "turnos.reprogramar"
     TURNOS_CANCELAR = "turnos.cancelar"
+    TURNOS_MARCAR = "turnos.marcar"
 
 
 _TODOS = frozenset({Rol.ODONTOLOGO, Rol.RECEPCIONISTA, Rol.DUENO})
@@ -61,6 +62,7 @@ MATRIZ: Mapping[Permiso, frozenset[Rol]] = {
     Permiso.TURNOS_LEER: _TODOS,
     Permiso.TURNOS_REPROGRAMAR: _ODONTOLOGO_Y_RECEPCION,
     Permiso.TURNOS_CANCELAR: _ODONTOLOGO_Y_RECEPCION,
+    Permiso.TURNOS_MARCAR: _ODONTOLOGO_Y_RECEPCION,
 }
 
 

@@ -11,6 +11,7 @@ class TipoEvento(StrEnum):
     CREADO = "creado"
     REPROGRAMADO = "reprogramado"
     CANCELADO = "cancelado"
+    ESTADO_CAMBIADO = "estado_cambiado"
 
 
 class ActorTipo(StrEnum):
@@ -92,6 +93,22 @@ def evento_cancelado(antes: Turno, despues: Turno, actor: Actor, ocurrido_en: da
     return EventoTurno(
         turno_id=despues.id,
         tipo=TipoEvento.CANCELADO,
+        actor_tipo=actor.tipo,
+        actor_id=actor.id,
+        ocurrido_en=ocurrido_en,
+        antes={"estado": antes.estado.value},
+        despues={"estado": despues.estado.value},
+        motivo=None,
+    )
+
+
+def evento_estado_cambiado(antes: Turno, despues: Turno, actor: Actor, ocurrido_en: datetime) -> EventoTurno:
+    """El evento ``estado_cambiado``: el estado antes y después, lo único que cambia (W7, D360)."""
+    if antes.id is None or despues.id is None:
+        raise ValueError("El evento estado_cambiado cuelga de un turno guardado: el turno no tiene id.")
+    return EventoTurno(
+        turno_id=despues.id,
+        tipo=TipoEvento.ESTADO_CAMBIADO,
         actor_tipo=actor.tipo,
         actor_id=actor.id,
         ocurrido_en=ocurrido_en,

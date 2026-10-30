@@ -230,6 +230,15 @@ class TransicionInvalida(ErrorDeDominio):
         super().__init__("El turno no se puede cambiar de estado desde el que tiene.")
 
 
+class MarcadoAntesDelInicio(ErrorDeDominio):
+    """No se marca la asistencia de un turno que todavía no empezó (RN-AG-13, D357)."""
+
+    codigo = "RN-AG-13"
+
+    def __init__(self) -> None:
+        super().__init__("El turno todavía no empezó: no se puede marcar su asistencia.")
+
+
 class IntervaloInvalido(ErrorDeDominio):
     codigo = "RN-AG-10d"
 
