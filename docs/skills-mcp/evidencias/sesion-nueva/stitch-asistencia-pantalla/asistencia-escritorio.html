@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agenda del día - Registrar asistencia con error - Turnos Odontológicos AR</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" />
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+          },
+          colors: {
+            primary: '#0284C7',
+            'primary-hover': '#0369A1',
+            destructive: '#DC2626',
+            'destructive-hover': '#B91C1C',
+            success: '#16A34A',
+            border: '#CBD5E1',
+            page: '#F8FAFC',
+            foreground: '#0F172A',
+          },
+          borderRadius: {
+            DEFAULT: '4px',
+            'sm': '4px',
+            'md': '4px',
+            'lg': '4px',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    body {
+      font-family: 'Inter', sans-serif;
+      color: #0F172A;
+      background-color: #F8FAFC;
+    }
+    .font-tabular {
+      font-variant-numeric: tabular-nums;
+    }
+    .material-symbols-outlined {
+      font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+      vertical-align: middle;
+    }
+    .material-symbols-outlined.fill {
+      font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 20;
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-[#F8FAFC] flex flex-col antialiased text-[#0F172A]">
+
+  <!-- Barra superior -->
+  <header class="h-14 bg-white border-b border-[#CBD5E1] px-6 flex items-center justify-between shrink-0">
+    <div class="flex items-center gap-6">
+      <!-- Marca -->
+      <div class="flex items-center gap-2">
+        <span class="material-symbols-outlined text-[#0284C7] text-2xl">dentistry</span>
+        <span class="font-bold text-base tracking-tight text-[#0F172A]">Turnos Odontológicos AR</span>
+      </div>
+
+      <!-- Enlaces de navegación -->
+      <nav class="flex items-center gap-1 text-sm font-medium">
+        <a href="#" class="px-3 py-1.5 rounded-[4px] bg-[#E0F2FE] text-[#0284C7] font-semibold flex items-center gap-1.5">
+          <span class="material-symbols-outlined text-[18px]">calendar_today</span>
+          Agenda
+        </a>
+        <a href="#" class="px-3 py-1.5 rounded-[4px] text-[#475569] hover:text-[#0F172A] hover:bg-[#F1F5F9] transition-colors">
+          Prestaciones
+        </a>
+        <a href="#" class="px-3 py-1.5 rounded-[4px] text-[#475569] hover:text-[#0F172A] hover:bg-[#F1F5F9] transition-colors">
+          Usuarios
+        </a>
+        <a href="#" class="px-3 py-1.5 rounded-[4px] text-[#475569] hover:text-[#0F172A] hover:bg-[#F1F5F9] transition-colors">
+          Horario
+        </a>
+        <a href="#" class="px-3 py-1.5 rounded-[4px] text-[#475569] hover:text-[#0F172A] hover:bg-[#F1F5F9] transition-colors">
+          Bloqueos
+        </a>
+        <a href="#" class="px-3 py-1.5 rounded-[4px] text-[#475569] hover:text-[#0F172A] hover:bg-[#F1F5F9] transition-colors">
+          Mi contraseña
+        </a>
+      </nav>
+    </div>
+
+    <!-- Perfil y acciones derecha -->
+    <div class="flex items-center gap-4">
+      <div class="text-right text-xs">
+        <p class="font-medium text-[#0F172A]">recepcion@consultorio-demo.test</p>
+        <p class="text-[#64748B]">Recepcionista</p>
+      </div>
+      <button type="button" class="inline-flex items-center gap-1.5 px-3 py-1.5 border border-[#CBD5E1] rounded-[4px] text-xs font-medium text-[#334155] bg-white hover:bg-[#F8FAFC] transition-colors">
+        <span class="material-symbols-outlined text-[16px]">logout</span>
+        Cerrar sesión
+      </button>
+    </div>
+  </header>
+
+  <!-- Contenedor principal con división horizontal para agenda y panel lateral -->
+  <div class="flex flex-1 overflow-hidden">
+    
+    <!-- Sección izquierda: Agenda del día -->
+    <main class="flex-1 p-6 overflow-y-auto">
+      <div class="max-w-[1200px] mx-auto space-y-5">
+        
+        <!-- Encabezado de sección con título y botón de acción -->
+        <div class="flex items-center justify-between">
+          <div>
+            <h1 class="text-2xl font-bold tracking-tight text-[#0F172A]">Agenda del día</h1>
+            <p class="text-xs text-[#64748B] mt-0.5 font-tabular">Horas del consultorio (America/Argentina/Buenos_Aires).</p>
+          </div>
+          <button type="button" class="inline-flex items-center gap-1.5 px-4 py-2 bg-[#0284C7] hover:bg-[#0369A1] text-white text-sm font-semibold rounded-[4px] shadow-sm transition-colors">
+            <span class="material-symbols-outlined text-[18px]">add</span>
+            Nuevo turno
+          </button>
+        </div>
+
+        <!-- Barra de navegación de fecha -->
+        <div class="flex items-center gap-2 text-sm">
+          <button type="button" class="inline-flex items-center gap-1 px-3 py-1.5 border border-[#CBD5E1] rounded-[4px] bg-white text-[#334155] hover:bg-[#F8FAFC] transition-colors font-medium">
+            <span class="material-symbols-outlined text-[16px]">chevron_left</span>
+            Día anterior
+          </button>
+          
+          <div class="px-3 py-1.5 border border-[#CBD5E1] rounded-[4px] bg-white text-[#0F172A] font-semibold font-tabular">
+            30/10/2026
+          </div>
+
+          <span class="text-sm font-medium text-[#475569] px-1">
+            viernes 30 de octubre de 2026
+          </span>
+
+          <button type="button" class="inline-flex items-center gap-1 px-3 py-1.5 border border-[#CBD5E1] rounded-[4px] bg-white text-[#334155] hover:bg-[#F8FAFC] transition-colors font-medium">
+            Día siguiente
+            <span class="material-symbols-outlined text-[16px]">chevron_right</span>
+          </button>
+
+          <button type="button" class="px-3 py-1.5 border border-[#CBD5E1] rounded-[4px] bg-white text-[#334155] hover:bg-[#F8FAFC] transition-colors font-medium">
+            Hoy
+          </button>
+        </div>
+
+        <!-- Tabla densa de turnos -->
+        <div class="bg-white border border-[#CBD5E1] rounded-[4px] overflow-hidden shadow-sm">
+          <table class="w-full text-left border-collapse">
+            <thead>
+              <tr class="bg-[#F8FAFC] border-b border-[#CBD5E1] text-[11px] font-semibold text-[#475569] uppercase tracking-wider">
+                <th class="py-2.5 px-4 w-32 font-tabular">Hora</th>
+                <th class="py-2.5 px-4">Paciente</th>
+                <th class="py-2.5 px-4">Prestación</th>
+                <th class="py-2.5 px-4 w-28">Estado</th>
+                <th class="py-2.5 px-4 text-right">Acciones</th>
+              </tr>
+            </thead>
+            <tbody class="divide-y divide-[#CBD5E1] text-xs">
+              
+              <!-- Fila 1: 09:00 - 09:30 Ana Ejemplo (Atendido) -->
+              <tr class="hover:bg-[#F8FAFC] transition-colors">
+                <td class="py-3 px-4 font-semibold text-[#0F172A] font-tabular whitespace-nowrap">
+                  09:00 – 09:30
+                </td>
+                <td class="py-3 px-4 font-medium text-[#0F172A]">
+                  Ana Ejemplo
+                </td>
+                <td class="py-3 px-4 text-[#334155]">
+                  <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-[#0284C7] shrink-0"></span>
+                    <span>Consulta / control</span>
+                  </div>
+                </td>
+                <td class="py-3 px-4 whitespace-nowrap">
+                  <span class="inline-flex items-center px-2 py-0.5 rounded-[4px] text-[11px] font-medium bg-[#DCFCE7] text-[#15803D]">
+                    Atendido
+                  </span>
+                </td>
+                <td class="py-3 px-4 text-right whitespace-nowrap">
+                  <button type="button" class="inline-flex items-center gap-1 px-2.5 py-1 border border-[#CBD5E1] rounded-[4px] text-xs font-medium text-[#334155] bg-white hover:bg-[#F8FAFC] transition-colors">
+                    <span class="material-symbols-outlined text-[14px]">schedule</span>
+                    Historial
+                  </button>
+                </td>
+              </tr>
+
+              <!-- Fila 2: 10:00 - 10:45 Bruno Ficticio (Confirmado) -->
+              <tr class="hover:bg-[#F8FAFC] transition-colors">
+                <td class="py-3 px-4 font-semibold text-[#0F172A] font-tabular whitespace-nowrap">
+                  10:00 – 10:45
+                </td>
+                <td class="py-3 px-4 font-medium text-[#0F172A]">
+                  Bruno Ficticio
+                </td>
+                <td class="py-3 px-4 text-[#334155]">
+                  <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-[#16A34A] shrink-0"></span>
+                    <span>Limpieza</span>
+                  </div>
+                </td>
+                <td class="py-3 px-4 whitespace-nowrap">
+                  <span class="inline-flex items-center px-2 py-0.5 rounded-[4px] text-[11px] font-medium bg-[#DCFCE7] text-[#16A34A]">
+                    Confirmado
+                  </span>
+                </td>
+                <td class="py-3 px-4 text-right whitespace-nowrap">
+                  <div class="inline-flex items-center gap-1.5">
+                    <button type="button" class="inline-flex items-center gap-1 px-2.5 py-1 border border-[#CBD5E1] rounded-[4px] text-xs font-medium text-[#334155] bg-white hover:bg-[#F8FAFC] transition-colors">
+                      <span class="material-symbols-outlined text-[14px]">check_circle</span>
+                      Asistencia
+                    </button>
+                    <button type="button" class="inline-flex items-center gap-1 px-2.5 py-1 border border-[#CBD5E1] rounded-[4px] text-xs font-medium text-[#334155] bg-white hover:bg-[#F8FAFC] transition-colors">
+                      <span class="material-symbols-outlined text-[14px]">calendar_today</span>
+                      Reprogramar
+                    </button>
+                    <button type="button" class="inline-flex items-center gap-1 px-2.5 py-1 border border-[#CBD5E1] rounded-[4px] text-xs font-medium text-[#DC2626] bg-white hover:bg-[#FEF2F2] transition-colors">
+                      <span class="material-symbols-outlined text-[14px]">cancel</span>
+                      Cancelar
+                    </button>
+                    <button type="button" class="inline-flex items-center gap-1 px-2.5 py-1 border border-[#CBD5E1] rounded-[4px] text-xs font-medium text-[#334155] bg-white hover:bg-[#F8FAFC] transition-colors">
+                      <span class="material-symbols-outlined text-[14px]">schedule</span>
+                      Historial
+                    </button>
+                  </div>
+                </td>
+              </tr>
+
+              <!-- Fila 3: 16:00 - 17:00 Carla Inventada (Reservado) - SELECCIONADA -->
+              <tr class="bg-[#F0F9FF] border-l-4 border-l-[#0284C7]">
+                <td class="py-3 px-4 font-bold text-[#0284C7] font-tabular whitespace-nowrap">
+                  16:00 – 17:00
+                </td>
+                <td class="py-3 px-4 font-semibold text-[#0F172A]">
+                  Carla Inventada
+                </td>
+                <td class="py-3 px-4 text-[#334155]">
+                  <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-[#F59E0B] shrink-0"></span>
+                    <span>Obturación</span>
+                  </div>
+                </td>
+                <td class="py-3 px-4 whitespace-nowrap">
+                  <span class="inline-flex items-center px-2 py-0.5 rounded-[4px] text-[11px] font-medium bg-[#E0F2FE] text-[#0284C7]">
+                    Reservado
+                  </span>
+                </td>
+                <td class="py-3 px-4 text-right whitespace-nowrap">
+                  <div class="inline-flex items-center gap-1.5">
+                    <button type="button" class="inline-flex items-center gap-1 px-2.5 py-1 border border-[#0284C7] rounded-[4px] text-xs font-semibold text-[#0284C7] bg-[#E0F2FE] shadow-xs">
+                      <span class="material-symbols-outlined text-[14px]">check_circle</span>
+                      Asistencia
+                    </button>
+                    <button type="button" class="inline-flex items-center gap-1 px-2.5 py-1 border border-[#CBD5E1] rounded-[4px] text-xs font-medium text-[#334155] bg-white hover:bg-[#F8FAFC] transition-colors">
+                      <span class="material-symbols-outlined text-[14px]">calendar_today</span>
+                      Reprogramar
+                    </button>
+                    <button type="button" class="inline-flex items-center gap-1 px-2.5 py-1 border border-[#CBD5E1] rounded-[4px] text-xs font-medium text-[#DC2626] bg-white hover:bg-[#FEF2F2] transition-colors">
+                      <span class="material-symbols-outlined text-[14px]">cancel</span>
+                      Cancelar
+                    </button>
+                    <button type="button" class="inline-flex items-center gap-1 px-2.5 py-1 border border-[#CBD5E1] rounded-[4px] text-xs font-medium text-[#334155] bg-white hover:bg-[#F8FAFC] transition-colors">
+                      <span class="material-symbols-outlined text-[14px]">schedule</span>
+                      Historial
+                    </button>
+                  </div>
+                </td>
+              </tr>
+
+              <!-- Fila 4: 17:30 - 18:00 Bruno Ficticio (Ausente) -->
+              <tr class="hover:bg-[#F8FAFC] transition-colors">
+                <td class="py-3 px-4 font-semibold text-[#0F172A] font-tabular whitespace-nowrap">
+                  17:30 – 18:00
+                </td>
+                <td class="py-3 px-4 font-medium text-[#0F172A]">
+                  Bruno Ficticio
+                </td>
+                <td class="py-3 px-4 text-[#334155]">
+                  <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-[#0284C7] shrink-0"></span>
+                    <span>Consulta / control</span>
+                  </div>
+                </td>
+                <td class="py-3 px-4 whitespace-nowrap">
+                  <span class="inline-flex items-center px-2 py-0.5 rounded-[4px] text-[11px] font-medium bg-[#FEE2E2] text-[#DC2626]">
+                    Ausente
+                  </span>
+                </td>
+                <td class="py-3 px-4 text-right whitespace-nowrap">
+                  <button type="button" class="inline-flex items-center gap-1 px-2.5 py-1 border border-[#CBD5E1] rounded-[4px] text-xs font-medium text-[#334155] bg-white hover:bg-[#F8FAFC] transition-colors">
+                    <span class="material-symbols-outlined text-[14px]">schedule</span>
+                    Historial
+                  </button>
+                </td>
+              </tr>
+
+            </tbody>
+          </table>
+        </div>
+
+      </div>
+    </main>
+
+    <!-- Panel lateral derecho: Registrar asistencia (unos 420px, sin oscurecer la agenda) -->
+    <aside class="w-[420px] bg-white border-l border-[#CBD5E1] flex flex-col shrink-0 z-10 shadow-sm">
+      
+      <!-- Encabezado del panel -->
+      <div class="h-14 px-5 border-b border-[#CBD5E1] flex items-center justify-between shrink-0">
+        <div class="flex items-center gap-2">
+          <span class="material-symbols-outlined text-[#0284C7] text-xl">check_circle</span>
+          <h2 class="font-bold text-base text-[#0F172A]">Registrar asistencia</h2>
+        </div>
+        <button type="button" aria-label="Cerrar" class="text-[#64748B] hover:text-[#0F172A] p-1 rounded-[4px] hover:bg-[#F1F5F9] transition-colors">
+          <span class="material-symbols-outlined text-[20px]">close</span>
+        </button>
+      </div>
+
+      <!-- Contenido scrolleable del panel -->
+      <div class="flex-1 overflow-y-auto p-5 space-y-5">
+        
+        <!-- Resumen del turno en caja gris suave -->
+        <div class="p-3.5 bg-[#F8FAFC] border border-[#E2E8F0] rounded-[4px] space-y-1">
+          <p class="text-sm font-semibold text-[#0F172A]">
+            Carla Inventada <span class="font-normal text-[#64748B]">· Obturación</span>
+          </p>
+          <div class="flex items-center justify-between text-xs text-[#64748B] pt-0.5">
+            <span class="font-tabular">viernes 30 de octubre de 2026, 16:00 – 17:00</span>
+            <span class="inline-flex items-center px-2 py-0.5 rounded-[4px] text-[11px] font-medium bg-[#E0F2FE] text-[#0284C7]">
+              Reservado
+            </span>
+          </div>
+        </div>
+
+        <!-- Aviso de error regulatorio / validación (rojo suave) -->
+        <div class="p-3.5 bg-[#FEF2F2] border border-[#FECACA] rounded-[4px] flex items-start gap-2.5 text-[#DC2626]">
+          <span class="material-symbols-outlined text-[#DC2626] text-[18px] shrink-0 mt-0.5">error</span>
+          <div class="text-xs leading-relaxed">
+            <p class="font-semibold">El turno todavía no empezó: la asistencia se registra desde su hora de inicio (RN-AG-13).</p>
+            <p class="text-[#B91C1C] mt-0.5">El turno no cambió.</p>
+          </div>
+        </div>
+
+        <!-- Formulario: Opciones de estado de asistencia -->
+        <div class="space-y-3">
+          <label class="block text-xs font-semibold text-[#0F172A]">
+            ¿Cómo terminó el turno?
+          </label>
+
+          <div class="space-y-2">
+            <!-- Opción 1: Atendido (seleccionado) -->
+            <label class="flex items-center gap-3 p-3 border-2 border-[#0284C7] bg-[#F0F9FF] rounded-[4px] cursor-pointer transition-colors">
+              <input type="radio" name="asistencia_estado" value="atendido" checked class="w-4 h-4 text-[#0284C7] focus:ring-[#0284C7] border-[#CBD5E1]">
+              <span class="text-sm font-medium text-[#0F172A]">Atendido</span>
+            </label>
+
+            <!-- Opción 2: Ausente -->
+            <label class="flex items-center gap-3 p-3 border border-[#CBD5E1] bg-white hover:bg-[#F8FAFC] rounded-[4px] cursor-pointer transition-colors">
+              <input type="radio" name="asistencia_estado" value="ausente" class="w-4 h-4 text-[#0284C7] focus:ring-[#0284C7] border-[#CBD5E1]">
+              <span class="text-sm font-medium text-[#0F172A]">Ausente</span>
+            </label>
+          </div>
+
+          <!-- Mensaje de ayuda contextual con ícono de info -->
+          <div class="flex items-start gap-1.5 text-xs text-[#64748B] pt-1">
+            <span class="material-symbols-outlined text-[16px] text-[#64748B] shrink-0 mt-0.5">info</span>
+            <span>El horario queda libre para otro turno.</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Pie del panel lateral -->
+      <div class="p-4 border-t border-[#CBD5E1] bg-white flex items-center justify-end gap-2.5 shrink-0">
+        <button type="button" class="px-4 py-2 border border-[#CBD5E1] rounded-[4px] text-sm font-medium text-[#334155] bg-white hover:bg-[#F8FAFC] transition-colors">
+          Volver
+        </button>
+        <button type="button" class="px-4 py-2 bg-[#0284C7] hover:bg-[#0369A1] text-white text-sm font-semibold rounded-[4px] shadow-sm transition-colors">
+          Registrar asistencia
+        </button>
+      </div>
+
+    </aside>
+
+  </div>
+
+</body>
+</html>

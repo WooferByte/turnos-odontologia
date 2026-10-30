@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="es-AR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Agenda del día - Registrar asistencia móvil - Turnos Odontológicos AR</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Inter', system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background-color: #f8fafc;
+      color: #0f172a;
+      -webkit-font-smoothing: antialiased;
+      font-feature-settings: "tnum" on, "lnum" on;
+    }
+    .tabular-nums {
+      font-variant-numeric: tabular-nums;
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-[#f8fafc] flex justify-center py-6 px-3 sm:px-4">
+
+  <!-- Mobile Container ~390px -->
+  <main class="w-full max-w-[390px] bg-white rounded border border-[#cbd5e1] shadow-sm flex flex-col overflow-hidden">
+
+    <!-- Header multi-filas -->
+    <header class="p-4 border-b border-[#cbd5e1] bg-white">
+      <!-- Marca -->
+      <div class="flex items-center gap-2 mb-3">
+        <svg class="w-6 h-6 text-[#0284c7]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M12 2C8.5 2 6 4.5 6 8c0 3.5 1.5 6.5 2 11 0.3 2.5 2 3 4 3s3.7-0.5 4-3c0.5-4.5 2-7.5 2-11 0-3.5-2.5-6-6-6z" />
+          <path d="M10 9c0.8-1 1.4-1.5 2-1.5s1.2 0.5 2 1.5" />
+        </svg>
+        <span class="text-[17px] font-bold tracking-tight text-[#0f172a]">Turnos Odontológicos AR</span>
+      </div>
+
+      <!-- Enlaces de navegación -->
+      <nav class="flex flex-wrap items-center gap-x-3 gap-y-2 mb-3.5 text-xs" aria-label="Navegación principal">
+        <a href="#" class="px-2.5 py-1 rounded bg-[#e0f2fe] text-[#0284c7] font-semibold">Agenda</a>
+        <a href="#" class="text-[#64748b] hover:text-[#0f172a] font-medium transition-colors">Prestaciones</a>
+        <a href="#" class="text-[#64748b] hover:text-[#0f172a] font-medium transition-colors">Usuarios</a>
+        <a href="#" class="text-[#64748b] hover:text-[#0f172a] font-medium transition-colors">Horario</a>
+        <a href="#" class="text-[#64748b] hover:text-[#0f172a] font-medium transition-colors">Bloqueos</a>
+        <a href="#" class="text-[#64748b] hover:text-[#0f172a] font-medium transition-colors">Mi contraseña</a>
+      </nav>
+
+      <!-- Usuario y Cerrar sesión -->
+      <div class="flex items-center justify-between pt-3 border-t border-[#f1f5f9] text-xs">
+        <div>
+          <p class="font-medium text-[#0f172a] truncate max-w-[210px]">odontologa@consultorio-demo.test</p>
+          <p class="text-[11px] text-[#64748b]">Odontólogo · Dueño</p>
+        </div>
+        <button type="button" class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded border border-[#cbd5e1] text-xs font-medium text-[#0f172a] hover:bg-[#f8fafc] transition-colors">
+          <svg class="w-3.5 h-3.5 text-[#64748b]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path>
+            <polyline points="16 17 21 12 16 7"></polyline>
+            <line x1="21" y1="12" x2="9" y2="12"></line>
+          </svg>
+          <span>Cerrar sesión</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- Panel Registrar asistencia (a todo el ancho) -->
+    <section class="p-4 flex flex-col bg-white">
+      <!-- Encabezado del panel -->
+      <div class="flex items-center justify-between pb-3 mb-3 border-b border-[#cbd5e1]">
+        <div class="flex items-center gap-2">
+          <!-- Ícono de tilde en círculo -->
+          <svg class="w-5 h-5 text-[#0284c7]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"></circle>
+            <polyline points="9 12 11 14 15 10"></polyline>
+          </svg>
+          <h1 class="text-base font-bold text-[#0f172a]">Registrar asistencia</h1>
+        </div>
+        <button type="button" aria-label="Cerrar" class="p-1 rounded text-[#64748b] hover:text-[#0f172a] hover:bg-[#f1f5f9] transition-colors">
+          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="18" y1="6" x2="6" y2="18"></line>
+            <line x1="6" y1="6" x2="18" y2="18"></line>
+          </svg>
+        </button>
+      </div>
+
+      <!-- Resumen del turno (caja gris) -->
+      <div class="p-3 bg-[#f8fafc] rounded border border-[#e2e8f0] mb-3">
+        <div class="text-[13px] font-medium text-[#0f172a]">
+          <span class="font-semibold">Bruno Ficticio</span> · Limpieza
+        </div>
+        <div class="mt-1 flex flex-wrap items-center justify-between gap-1.5 text-xs text-[#64748b]">
+          <span class="tabular-nums">viernes 30 de octubre de 2026, 10:00 – 10:45</span>
+          <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-[#dcfce7] text-[#15803d]">
+            Confirmado
+          </span>
+        </div>
+      </div>
+
+      <!-- Aviso ámbar suave con ícono -->
+      <div class="p-3 rounded bg-[#fffbeb] border border-[#fef3c7] text-[#b45309] text-xs flex items-start gap-2 mb-4 leading-relaxed">
+        <svg class="w-4 h-4 text-[#d97706] shrink-0 mt-0.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"></path>
+          <line x1="12" y1="9" x2="12" y2="13"></line>
+          <line x1="12" y1="17" x2="12.01" y2="17"></line>
+        </svg>
+        <span>Elegí si el paciente fue atendido o estuvo ausente.</span>
+      </div>
+
+      <!-- Grupo de opciones (Radios en filas altas con borde) -->
+      <div class="space-y-2 mb-2">
+        <label class="block text-xs font-normal text-[#0f172a]">¿Cómo terminó el turno?</label>
+        
+        <!-- Opción Atendido -->
+        <label class="flex items-center gap-3 p-3.5 rounded border border-[#cbd5e1] hover:border-[#94a3b8] hover:bg-[#f8fafc] cursor-pointer transition-all">
+          <input type="radio" name="estado_asistencia" value="atendido" class="w-4 h-4 text-[#0284c7] border-[#cbd5e1] focus:ring-[#0284c7] cursor-pointer">
+          <span class="text-sm font-medium text-[#0f172a]">Atendido</span>
+        </label>
+
+        <!-- Opción Ausente -->
+        <label class="flex items-center gap-3 p-3.5 rounded border border-[#cbd5e1] hover:border-[#94a3b8] hover:bg-[#f8fafc] cursor-pointer transition-all">
+          <input type="radio" name="estado_asistencia" value="ausente" class="w-4 h-4 text-[#0284c7] border-[#cbd5e1] focus:ring-[#0284c7] cursor-pointer">
+          <span class="text-sm font-medium text-[#0f172a]">Ausente</span>
+        </label>
+      </div>
+
+      <!-- Ayuda gris con ícono de información -->
+      <div class="flex items-center gap-1.5 text-[11px] text-[#64748b] mb-5">
+        <svg class="w-3.5 h-3.5 text-[#64748b] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="12" y1="16" x2="12" y2="12"></line>
+          <line x1="12" y1="8" x2="12.01" y2="8"></line>
+        </svg>
+        <span>El horario queda libre para otro turno.</span>
+      </div>
+
+      <!-- Botones de acción -->
+      <div class="space-y-2">
+        <button type="button" class="w-full py-2.5 px-4 rounded bg-[#0284c7] hover:bg-[#0369a1] text-white text-sm font-semibold shadow-sm transition-colors text-center">
+          Registrar asistencia
+        </button>
+        <button type="button" class="w-full py-2.5 px-4 rounded border border-[#cbd5e1] bg-white hover:bg-[#f8fafc] text-[#0f172a] text-sm font-semibold transition-colors text-center">
+          Volver
+        </button>
+      </div>
+
+      <!-- Separador y Bloque "Después de registrar" -->
+      <div class="mt-6 pt-5 border-t border-dashed border-[#cbd5e1]">
+        <div class="flex items-center justify-center mb-3">
+          <span class="text-[11px] uppercase tracking-wider font-semibold text-[#64748b] bg-white px-2">
+            Después de registrar
+          </span>
+        </div>
+
+        <!-- Aviso verde suave -->
+        <div class="p-2.5 rounded bg-[#f0fdf4] border border-[#bbf7d0] text-[#15803d] text-xs flex items-center gap-2 mb-3">
+          <svg class="w-4 h-4 text-[#16a34a] shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="20 6 9 17 4 12"></polyline>
+          </svg>
+          <span class="font-medium">Asistencia registrada.</span>
+        </div>
+
+        <!-- Tarjeta de turno posterior -->
+        <div class="p-3 rounded border border-[#cbd5e1] bg-white border-l-4 border-l-[#16a34a] shadow-xs">
+          <div class="flex items-start justify-between gap-2 mb-2">
+            <div>
+              <div class="text-xs font-bold text-[#0f172a] tabular-nums">
+                10:00 – 10:45
+              </div>
+              <div class="text-xs text-[#475569] mt-0.5">
+                <span class="font-medium text-[#0f172a]">Bruno Ficticio</span> · Limpieza
+              </div>
+            </div>
+            <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold bg-[#dcfce7] text-[#15803d]">
+              Atendido
+            </span>
+          </div>
+
+          <!-- Solo botón Historial con ícono de reloj -->
+          <div class="flex justify-end pt-2 border-t border-[#f1f5f9]">
+            <button type="button" class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded border border-[#cbd5e1] text-xs font-medium text-[#0f172a] hover:bg-[#f8fafc] transition-colors">
+              <svg class="w-3.5 h-3.5 text-[#64748b]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="12" cy="12" r="10"></circle>
+                <polyline points="12 6 12 12 16 14"></polyline>
+              </svg>
+              <span>Historial</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+</body>
+</html>

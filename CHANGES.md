@@ -528,7 +528,7 @@ Primer change: `/opsx:propose crear-turno-sin-solapamientos`.
   - `knowledge-base/02_descripcion_general.md` §«API REST (resumen)», fila Turnos
 
 ### [C-18] `marcar-atendido-o-ausente`
-- **Estado**: `[ ]` pendiente · **Orden**: 4 · **Gobernanza**: MEDIO
+- **Estado**: `[~]` en curso · **Orden**: 4 · **Gobernanza**: MEDIO
 - **Objetivo** (US-014): registrar si el paciente asistió, para medir el ausentismo (parte de marcado).
 - **Alcance — dentro**: `POST /turnos/{id}/estado`; solo desde `reservado` o `confirmado` (si no, RN-AG-12) y con `ahora >= inicio` (si no, RN-AG-13); evento en el historial; columna `Paciente.es_nuevo`, que pasa a `false` con el primer `atendido`; acción en la agenda para odontólogo y recepcionista.
 - **Alcance — fuera**: corregir el marcado (C-19); retener la seña al quedar ausente (US-014 CA-5, en C-41).
@@ -536,7 +536,7 @@ Primer change: `/opsx:propose crear-turno-sin-solapamientos`.
 - **Escenarios mínimos**: US-014: CA-1, CA-2, CA-3, CA-4, CA-6, CA-11
 - **Leer antes**:
   - `knowledge-base/06_funcionalidades.md` §US-014
-  - `knowledge-base/05_reglas_de_negocio.md` RN-AG-10, RN-AG-11, RN-AG-12, RN-AG-13, RN-TD-05
+  - `knowledge-base/05_reglas_de_negocio.md` RN-AG-10, RN-AG-11, RN-AG-12, RN-AG-13, RN-GL-02, RN-TD-05 · `knowledge-base/10_preguntas_abiertas.md` D52, D99, D312, D323, D345, D354 a D365
   - `knowledge-base/04_modelo_de_datos.md` §«Máquina de estados del turno» y §Paciente (`es_nuevo`) · `knowledge-base/09_decisiones_y_supuestos.md` DD-16
   - `knowledge-base/07_flujos_principales.md` Flujo 7 · `knowledge-base/02_descripcion_general.md` §«API REST (resumen)», fila Turnos
 
