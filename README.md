@@ -26,6 +26,7 @@ Sistema de gestión de turnos y agenda para odontólogos independientes y consul
 - `horario-recurrente` (C-12, la API): `GET /profesionales`, `GET /profesionales/{id}/horario` y `PUT /profesionales/{id}/horario`. La odontóloga carga el horario semanal de un profesional (franjas por día, en hora del consultorio); la recepcionista y el dueño lo leen. Franjas superpuestas o invertidas son `422` con `RN-AG-16`. Y `POST /turnos` ahora exige que el turno caiga completo dentro de una franja: si no, `422` con `RN-AG-04`. La migración `0008` crea la tabla `franja_horaria` y la demo trae el horario de ejemplo (lunes a viernes, 09:00-13:00 y 15:00-19:00). La pantalla del horario llega en los grupos siguientes del change.
 
 - `contrasenas-de-usuarios` (C-10, la API): `POST /usuarios/{id}/restablecer-contrasena` (solo la odontóloga, sobre **otro** usuario: `204`; la propia es `409` con `RN-AU-10`) y `POST /auth/cambiar-contrasena` (los tres roles, con la contraseña actual: `200` con tokens nuevos; la actual incorrecta es `422` con `RN-AU-09`, no `401`). La contraseña nueva tiene de 10 caracteres a 72 bytes (`RN-AU-07`). Las dos incrementan la `token_version` del usuario: sus tokens anteriores dejan de servir (`RN-AU-03`). Sin migración ni dependencias nuevas.
+- `marcar-atendido-o-ausente` (C-18, la API): `POST /turnos/{id}/estado` marca un turno `reservado` o `confirmado` como `atendido` o `ausente` (cuerpo `{"estado": "atendido"}`). Solo se marca un turno que **ya empezó** (`409` con `RN-AG-13` si todavía no); uno que no está `reservado` ni `confirmado`, o ya marcado, da `409` con `RN-AG-12`. Lo hacen el odontólogo y la recepcionista (`turnos.marcar`; el dueño recibe `403`). Deja el evento `estado_cambiado` en el historial y, con `atendido`, el paciente deja de ser nuevo (`paciente.es_nuevo`, migración `0010`; todavía no se ve en la API). La pantalla llega en los grupos siguientes del change.
 
 La API se puede probar sin instalar nada más que Python (base SQLite en memoria) o sobre PostgreSQL con Docker; el panel necesita además Node 24 (ver «Panel (interfaz)»).
 
@@ -108,7 +109,7 @@ python -m pytest
 
 Los tests corren con **SQLite en memoria**: no necesitan Docker, PostgreSQL ni Redis, ni ningún archivo de base de datos.
 
-La corrida termina con **«1165 passed, 63 deselected, 1 warning»**. Los 63 «deselected» son los del perfil opcional con PostgreSQL (más abajo), que la corrida por defecto excluye a propósito. El warning es un aviso de deprecación interno de Starlette (`starlette/testclient.py`, sobre `anyio.abc.BlockingPortal`): viene de una dependencia con versión fijada, no del código del proyecto, y no indica ningún problema.
+La corrida termina con **«1281 passed, 67 deselected, 1 warning»**. Los 67 «deselected» son los del perfil opcional con PostgreSQL (más abajo), que la corrida por defecto excluye a propósito. El warning es un aviso de deprecación interno de Starlette (`starlette/testclient.py`, sobre `anyio.abc.BlockingPortal`): viene de una dependencia con versión fijada, no del código del proyecto, y no indica ningún problema.
 
 ### Escenario → test
 
@@ -257,7 +258,7 @@ Una parte de los tests (la que prueba lo que solo PostgreSQL garantiza) está fu
 
    Se usa `127.0.0.1` y no `localhost`: en Windows `localhost` resuelve primero a IPv6 y la conexión espera varios segundos antes de caer a IPv4.
 
-Con la base levantada, la corrida termina con **«63 passed, 1165 deselected, 1 warning»**. **Si PostgreSQL no está disponible** (Docker apagado, `TEST_DATABASE_URL` sin definir o base que no responde), los 63 tests del perfil **se omiten con el motivo en el resumen** (**«63 skipped, 1165 deselected»**) y la corrida termina con código de salida 0. Si la base de `TEST_DATABASE_URL` no termina en `_test`, el perfil falla a propósito para no borrar otra base.
+Con la base levantada, la corrida termina con **«67 passed, 1281 deselected, 1 warning»**. **Si PostgreSQL no está disponible** (Docker apagado, `TEST_DATABASE_URL` sin definir o base que no responde), los 67 tests del perfil **se omiten con el motivo en el resumen** (**«67 skipped, 1281 deselected»**) y la corrida termina con código de salida 0. Si la base de `TEST_DATABASE_URL` no termina en `_test`, el perfil falla a propósito para no borrar otra base.
 
 El esquema de estos tests sale siempre de las migraciones, nunca de `create_all`. Por eso el perfil también comprueba que las migraciones y los modelos coinciden (INF-1): si alguien cambia un modelo sin escribir su migración, ese test se pone en rojo. **La suite por defecto no avisa de esto**: hay que correr el perfil cada vez que se toque el esquema.
 
@@ -278,6 +279,8 @@ Los escenarios están en `openspec/changes/infraestructura-postgresql/specs/pers
 | INF-1 | La migración `0008` crea `franja_horaria`; deshacer solo esa migración deja el esquema de los roles con los profesionales intactos | `test_inf1_deshacer_solo_la_migracion_del_horario_deja_el_esquema_de_los_roles` (`test_migraciones.py`) |
 | INF-1 | La base rechaza una franja con las horas invertidas, un día fuera de 0 a 6 o una vigencia invertida (`CHECK`); acepta una vigencia de un día o con una sola fecha | `test_inf1_la_base_rechaza_una_franja_invalida` (`test_migraciones.py`) |
 | INF-1 | La migración `0009` crea `bloqueo` (once tablas desde C-13); deshacer solo esa migración deja el esquema del horario con los profesionales y los turnos intactos | `test_inf1_deshacer_solo_la_migracion_de_los_bloqueos_deja_el_esquema_del_horario` (`test_migraciones.py`) |
+| INF-1 | La migración `0010` agrega `paciente.es_nuevo` (no nula, con `server_default` verdadero) y la rellena: solo el paciente con un turno `atendido` queda en `false`, y un `INSERT` sin la columna queda en `true` (D361) | `test_inf1_la_migracion_0010_rellena_es_nuevo` (`test_migraciones.py`) |
+| INF-1 | Deshacer solo la migración `0010` deja el esquema de los bloqueos con los pacientes y los turnos intactos; volver a aplicarla rellena | `test_inf1_deshacer_solo_la_migracion_de_es_nuevo_deja_el_esquema_de_los_bloqueos` (`test_migraciones.py`) |
 | INF-1 | La base rechaza un bloqueo con `fin` igual o anterior a `inicio` y un bloqueo con profesional y sillón a la vez (`CHECK`, D272) | `test_inf1_la_base_rechaza_un_bloqueo_invertido`, `test_inf1_la_base_rechaza_un_bloqueo_con_profesional_y_sillon` (`test_migraciones.py`) |
 | US-002 CA-1 | Volver a cargar el seed no duplica el horario de la demo; un volumen anterior a C-12 lo recibe | `test_us002_ca1_volver_a_cargar_la_demo_no_duplica_el_horario`, `test_us002_ca1_volumen_sembrado_antes_de_c12_recibe_el_horario` (`test_seed_y_api.py`) |
 | US-091 CA-1 | La base rechaza un rol fuera de la lista (`CHECK`) | `test_us091_ca1_la_base_rechaza_un_rol_invalido` (`test_migraciones.py`) |
@@ -295,6 +298,7 @@ Los escenarios están en `openspec/changes/infraestructura-postgresql/specs/pers
 | E9 | Ocho reservas simultáneas dejan un solo turno y un solo evento `creado` | `test_e9_de_ocho_reservas_simultaneas_queda_un_solo_evento` (`test_reservas_simultaneas.py`) |
 | REP-1e | Dos reprogramaciones al mismo hueco, una reprogramación y un alta al mismo hueco: una sola gana y la que pierde no cambia; dos reprogramaciones del mismo turno se encadenan (el `antes` del segundo evento es el `despues` del primero) | `test_rep1e_dos_reprogramaciones_al_mismo_hueco_una_gana`, `test_rep1e_una_reprogramacion_y_un_alta_al_mismo_hueco_una_gana`, `test_rep1e_dos_reprogramaciones_del_mismo_turno_se_encadenan` (`test_reprogramaciones_simultaneas.py`) |
 | CAN-1d | Dos cancelaciones del mismo turno: una sola gana (`200`) y la otra recibe `409` `RN-AG-12`, con un solo evento `cancelado`; una cancelación y una reprogramación del mismo turno se serializan y nunca queda un `reprogramado` después del `cancelado`. La carrera se fuerza reteniendo la fila del turno desde otra sesión | `test_can1d_dos_cancelaciones_del_mismo_turno_una_gana`, `test_can1d_cancelacion_y_reprogramacion_se_serializan` (`test_cancelaciones_simultaneas.py`) |
+| ASI-1e | Dos marcados del mismo turno: uno gana (`200`) y el otro recibe `409` `RN-AG-12`, con un solo evento `estado_cambiado`; un marcado y una cancelación del mismo turno se serializan (un `200`, un `409` `RN-AG-12`, un solo evento además del `creado`). La carrera se fuerza reteniendo la fila del turno desde otra sesión | `test_asi1e_dos_marcados_del_mismo_turno_uno_gana`, `test_asi1e_marcado_y_cancelacion_se_serializan` (`test_marcados_simultaneos.py`) |
 | US-015 CA-1 | La base rechaza `UPDATE`, `DELETE` y `TRUNCATE` sobre un evento | `test_ca1_la_base_rechaza_modificar_o_borrar_un_evento` (parametrizado: `update_del_tipo`, `delete`, `truncate`; `test_historial_inmutable.py`) |
 | US-015 CA-1 | La base acepta un evento nuevo del mismo turno | `test_ca1_la_base_acepta_un_evento_nuevo_del_mismo_turno` (`test_historial_inmutable.py`) |
 | US-004 CA-2 | El alta de un sillón tras el seed no choca con el id fijo: la secuencia de `sillon` queda ajustada y el primer `POST /sillones` recibe un `id` distinto de 1 | `test_ca2_el_alta_de_un_sillon_tras_el_seed_no_choca_con_el_id_fijo` (`test_seed_y_api.py`) |
@@ -710,6 +714,54 @@ Los escenarios están en `openspec/changes/cancelar-turno/specs/cancelacion-de-t
 | CAN-3a | Sin sesión `401`; el dueño y el usuario sin roles `403` antes de validar | `test_can3a_sin_sesion_401`, `test_can3a_el_dueno_y_sin_roles_403_antes_de_validar` (API), `test_can3a_turnos_cancelar_para_odontologo_y_recepcionista`, `test_can3a_el_dueno_y_sin_roles_no_cancelan` (`test_roles.py`) |
 | CAN-3b | Turno inexistente o de otro consultorio `404`; petición mal formada o id no entero `422` sin códigos; el formato va antes que el `404` | `test_can3b_inexistente_y_de_otro_consultorio_404_sin_distinguir`, `test_can3b_peticion_mal_formada_422_sin_codigos` (parametrizado), `test_can3b_sin_cuerpo_422`, `test_can3b_un_id_que_no_es_entero_422`, `test_can3b_el_formato_va_antes_que_el_404` (API) |
 
+### Marcar la asistencia de un turno
+
+Desde C-18, `POST /turnos/{id}/estado` marca un turno como **atendido** o **ausente**: el cuerpo es `{"estado": "atendido"}` o `{"estado": "ausente"}`; cualquier otro valor (`reservado`, `cancelado_paciente`, `Atendido`), `null`, un campo de más o la falta de cuerpo es `422` sin códigos. Pide el access token y el permiso `turnos.marcar`: lo tienen el odontólogo y la recepcionista; el dueño y un usuario sin roles reciben `403` con `RN-AU-05`, antes de validar nada. Responde `200` con el mismo turno (mismo `id`, horario, paciente, prestación, profesional, sillón y `creado_en`) y el estado nuevo, deja el evento `estado_cambiado` en el historial y **libera el horario** (como cancelar: otro turno puede darse en el mismo hueco). Si el estado es `atendido`, el paciente deja de ser nuevo (`es_nuevo` pasa a `false`, RN-TD-05); con `ausente`, no.
+
+Solo se marca un turno `reservado` o `confirmado` **que ya empezó**: `ahora >= inicio` (el instante exacto del inicio se admite, y no hay plazo máximo: se marca un turno de hace días). Las reglas se evalúan de a una, en este orden: el estado (`409` `RN-AG-12`: cualquier otro estado, incluidos `atendido` y `ausente`, también el mismo marcado repetido y el contrario) y después el momento (`409` `RN-AG-13`, `type` `/errores/marcado-antes-del-inicio`, si el turno todavía no empezó). Un turno cuyo profesional, sillón o prestación se desactivó después de crearlo se marca igual.
+
+**Cómo probarlo, según la hora a la que lo hagas.** La demo usa el reloj real y el horario del profesional 1 es lunes a viernes de 09:00 a 13:00 y de 15:00 a 19:00 (hora del consultorio, UTC−3), así que el turno que "ya empezó" depende del momento. Con la demo **recién arrancada** (los pasos dependen unos de otros), el token de la recepcionista y `HOY` igual al día de hoy con formato `aaaa-mm-dd`:
+
+- **Si hoy es un día hábil y ya pasó el comienzo de alguna franja** (por ejemplo, son las 10:30 y la franja de las 09:00 ya empezó): usá `HOY` y como `inicio` del turno ya empezado una hora de la franja que ya pasó, en UTC (09:00 del consultorio es `12:00:00Z`); como `inicio` del turno futuro, una hora de hoy que todavía no llegó (18:00 del consultorio es `21:00:00Z`).
+- **Plan B, si hoy es fin de semana, todavía no son las 09:00 o ya pasaron las 19:00:** usá como `HOY` el **último día hábil anterior** (por ejemplo, el viernes), con el turno ya empezado a las 09:00 del consultorio (`12:00:00Z`); el turno futuro lo das en el próximo día hábil. Marcar un turno de un día anterior es válido: no hay plazo máximo.
+
+1. `POST /turnos` con `{"paciente_id": 1, "prestacion_id": 1, "inicio": "HOYT12:00:00Z"}` (el turno que ya empezó) → `201` (id 1, `reservado`).
+2. `POST /turnos/1/estado` con `{"estado": "atendido"}` → `200`, con el mismo `id` 1, el mismo horario y `estado` `atendido`. `GET /turnos?fecha=HOY` lo sigue listando, con ese estado.
+3. `POST /turnos/1/estado` otra vez, con `atendido` o con `ausente` → `409`, con `codigos` igual a `["RN-AG-12"]` y `type` `/errores/transicion-invalida`. Un turno ya marcado no se vuelve a marcar (corregirlo llega con C-19) y no suma eventos.
+4. `POST /turnos` con `{"paciente_id": 2, "prestacion_id": 1, "inicio": "HOYT12:00:00Z"}` (el mismo hueco) → `201` (id 2): el turno marcado ya no lo ocupa. `POST /turnos/2/estado` con `{"estado": "ausente"}` → `200`, con `estado` `ausente`.
+5. `POST /turnos` con `{"paciente_id": 3, "prestacion_id": 1, "inicio": "HOYT21:00:00Z"}` (un turno que **todavía no empezó**; en el plan B, el del próximo día hábil) → `201` (id 3). `POST /turnos/3/estado` con `{"estado": "atendido"}` → `409`, con `codigos` igual a `["RN-AG-13"]` y `type` `/errores/marcado-antes-del-inicio`. El turno sigue `reservado`.
+6. `POST /turnos/3/estado` con `{"estado": "reservado"}` → `422`, con `codigos` igual a `[]` y el error en el campo `estado`. `POST /turnos/999/estado` con un estado válido → `404`, con `["RN-GL-04"]`; `POST /turnos/abc/estado` → `422`, con `codigos` igual a `[]`.
+7. Sin token → `401`, con `["RN-AU-03"]`. Con el token de un usuario con solo el rol `dueno` → `403`, con `["RN-AU-05"]` y el turno sin cambios: se crea como en el paso 6 de «Cancelar un turno» (`POST /usuarios` con la odontóloga, `{"email": "dueno@consultorio-demo.test", "contrasena": "demo-consultorio-2026", "roles": ["dueno"]}`, e iniciar sesión con ese usuario).
+8. `GET /turnos/1/historial` → `200`, con dos eventos: el `creado` y uno de `tipo` `estado_cambiado`, con `actor_id` `"2"` (la recepcionista), `antes` igual a `{"estado": "reservado"}`, `despues` igual a `{"estado": "atendido"}` y `motivo` vacío. Los rechazos de los pasos 3, 5, 6 y 7 no suman eventos.
+
+Con `curl`:
+
+```
+curl -i -X POST http://127.0.0.1:8000/turnos/1/estado -H "Authorization: Bearer PEGAR_EL_ACCESS_TOKEN" -H "Content-Type: application/json" -d "{\"estado\": \"atendido\"}"
+```
+
+Límites conocidos: no hay control de versión (si dos personas marcan el mismo turno a la vez, la primera gana y la otra recibe `409` con `RN-AG-12`); no se puede **corregir** un marcado (un `atendido` no pasa a `ausente` ni al revés: llega con C-19); marcar no cobra ni libera una seña (C-41); `paciente.es_nuevo` todavía no se ve en ninguna respuesta de la API (lo muestran C-20 y C-27); y el dueño recibe `403` aunque la pantalla le ofrezca la acción (D312).
+
+#### Escenario → test (marcar la asistencia, API)
+
+Los escenarios están en `openspec/changes/marcar-atendido-o-ausente/specs/marcado-de-asistencia/spec.md`. Las reglas puras (`backend/tests/unit/test_asistencia.py`, 21 tests, sin base de datos, más 4 del permiso en `test_roles.py`), el caso de uso sobre la base en memoria (`backend/tests/integration/test_marcar_asistencia.py`, 37), el repositorio (`es_nuevo`, 2 tests en `test_repositorio_agenda.py`) y la API (`backend/tests/api/test_marcar_asistencia.py`, 48). `ASI-1e` y los `INF-1` de la migración `0010` corren en el perfil `postgres`.
+
+| Escenario | Qué verifica | Test titular |
+|---|---|---|
+| ASI-1a | La recepcionista marca `atendido` y la odontóloga `ausente`; cambia solo el estado | `test_asi1a_la_recepcionista_marca_atendido`, `test_asi1a_la_odontologa_marca_ausente` (API), `test_asi1a_marcar_cambia_solo_el_estado`, `test_asi1a_se_marca_con_los_dos_valores` (integración) |
+| ASI-1b | El hueco queda libre para un alta; se marca desde `reservado` y `confirmado`, con `ahora` igual al inicio y un turno de días atrás | `test_asi1b_el_hueco_marcado_admite_un_post_turnos` (API), `test_asi1b_el_hueco_queda_libre_para_crear`, `test_asi1b_se_marca_desde_reservado_y_desde_confirmado`, `test_asi1b_ahora_igual_a_inicio`, `test_asi1b_un_turno_de_dias_atras_se_marca` (integración), `test_asi1b_ahora_igual_a_inicio_se_admite` (`test_asistencia.py`) |
+| ASI-1c | Un estado que no se marca (los siete) o un turno ya marcado da `409` `RN-AG-12` y no cambia; un turno de otro consultorio es inexistente | `test_asi1c_un_estado_que_no_se_marca_409_rn_ag_12_y_no_cambia`, `test_asi1c_el_marcado_repetido_y_el_contrario_409_y_un_solo_evento` (API), `test_asi1c_un_estado_que_no_se_marca_se_rechaza_sin_cambios_ni_eventos`, `test_asi1c_el_mismo_marcado_repetido_y_el_contrario_dan_rn_ag_12_y_dejan_un_solo_evento`, `test_asi1c_un_turno_de_otro_consultorio_es_inexistente` (integración), `test_asi1c_un_turno_cancelado_no_se_marca` (`test_asistencia.py`) |
+| ASI-1d | Antes del inicio `409` `RN-AG-13` (un segundo antes); el estado se evalúa antes que el momento | `test_asi1d_antes_del_inicio_409_rn_ag_13`, `test_asi1d_en_el_segundo_exacto_del_inicio_200`, `test_asi1d_un_cancelado_futuro_409_rn_ag_12_y_no_rn_ag_13` (API), `test_asi1d_antes_del_inicio_da_rn_ag_13`, `test_asi1d_un_cancelado_futuro_da_rn_ag_12_y_no_rn_ag_13` (integración), `test_asi1d_el_estado_se_evalua_antes_que_el_momento` (`test_asistencia.py`) |
+| ASI-1e | Dos marcados del mismo turno, o un marcado y una cancelación, se serializan (perfil `postgres`) | `test_asi1e_dos_marcados_del_mismo_turno_uno_gana`, `test_asi1e_marcado_y_cancelacion_se_serializan` (`test_marcados_simultaneos.py`) |
+| ASI-1f | Un turno con profesional, sillón o prestación desactivados después de crearlo se marca igual | `test_asi1f_recursos_desactivados_despues_200` (API), `test_asi1f_un_turno_con_recursos_desactivados_despues_se_marca` (integración) |
+| ASI-2a | El historial guarda el estado de antes y el de después con el actor y el reloj | `test_asi2a_el_historial_muestra_el_estado_cambiado` (API), `test_asi2a_marcar_registra_el_evento` (integración), `test_asi2a_el_evento_estado_cambiado_lleva_el_estado_de_antes_y_de_despues` (`test_asistencia.py`) |
+| ASI-2b | Un rechazo no registra eventos ni cambia `es_nuevo` | `test_asi2b_un_rechazo_no_registra_eventos`, `test_asi2b_el_409_de_rn_ag_13_no_registra_eventos`, `test_asi2b_el_409_de_rn_ag_12_no_registra_eventos` (API), `test_asi2b_un_rechazo_no_registra_eventos_ni_cambia_es_nuevo` (integración) |
+| ASI-2c | Un evento que falla no deja el turno marcado ni cambia `es_nuevo` | `test_asi2c_si_el_evento_falla_ni_el_turno_ni_es_nuevo_cambian` (integración) |
+| ASI-3a | El primer `atendido` deja de ser nuevo al paciente; un paciente nace con `es_nuevo` | `test_asi3a_el_primer_atendido_deja_de_ser_nuevo`, `test_asi3a_un_paciente_nuevo_nace_con_es_nuevo` (`test_repositorio_agenda.py`), `test_asi3a_atendido_deja_de_ser_nuevo` (`test_asistencia.py`) |
+| ASI-3b | `ausente` no cambia `es_nuevo`; el segundo `atendido` y un paciente que ya no era nuevo la dejan en `false` | `test_asi3b_ausente_no_cambia_es_nuevo_y_el_segundo_atendido_la_deja_en_false`, `test_asi3b_un_paciente_que_ya_no_era_nuevo_sigue_igual` (integración), `test_asi3b_ausente_no_deja_de_ser_nuevo` (`test_asistencia.py`) |
+| ASI-4a | Sin sesión `401`; el dueño y el usuario sin roles `403` antes de validar | `test_asi4a_sin_sesion_401`, `test_asi4a_el_dueno_y_sin_roles_403_antes_de_validar` (API), `test_asi4a_turnos_marcar_para_odontologo_y_recepcionista`, `test_asi4a_el_dueno_y_sin_roles_no_marcan` (`test_roles.py`) |
+| ASI-4b | Turno inexistente o de otro consultorio `404`; petición mal formada o id no entero `422` sin códigos; el formato va antes que el `404` | `test_asi4b_inexistente_y_de_otro_consultorio_404_sin_distinguir`, `test_asi4b_peticion_mal_formada_422_sin_codigos` (parametrizado), `test_asi4b_sin_cuerpo_422`, `test_asi4b_un_id_que_no_es_entero_422`, `test_asi4b_el_formato_va_antes_que_el_404` (API) |
+
 ## Sesión del panel
 
 `POST /auth/login` y `POST /auth/refresh` están en la demo y en la API sobre PostgreSQL. Son las dos únicas rutas del panel que se llaman sin token; todas las demás lo exigen (ver «Protección del panel», abajo).
@@ -791,6 +843,7 @@ Un usuario puede tener varios roles y sus permisos **se suman**. Los roles se le
 | `POST /turnos` | sí | sí | no |
 | `PATCH /turnos/{id}` (reprogramar) | sí | sí | no |
 | `POST /turnos/{id}/cancelar` | sí | sí | no |
+| `POST /turnos/{id}/estado` (marcar atendido o ausente) | sí | sí | no |
 | `GET /turnos/{id}/historial` | sí | sí | sí |
 | `GET /prestaciones` | sí | sí | sí |
 | `POST /prestaciones`, `PATCH /prestaciones/{id}` | sí | no | no |
@@ -1291,7 +1344,7 @@ La API se reemplaza en los tests por un servidor falso escrito a mano (`frontend
 
 Hay además tests de la renovación compartida, del `403`, del cierre de sesión y de que ninguna URL contenga un token, y cinco guards (`src/test/guards.test.ts`) que fallan si aparece `any`, `vi.mock`, `localStorage`, `dangerouslySetInnerHTML`, un archivo `index.ts` de reexportación o un recurso de otro origen (STI-1).
 
-Resultado actual de las dos suites: frontend «Tests 417 passed (417)»; backend «1165 passed, 63 deselected, 1 warning».
+Resultado actual de las dos suites: frontend «Tests 417 passed (417)»; backend «1281 passed, 67 deselected, 1 warning».
 
 ## Levantar la API con PostgreSQL
 
@@ -1341,7 +1394,7 @@ python -m uvicorn app.main:crear_app_desde_entorno --factory
 
 ### Migraciones
 
-El esquema de PostgreSQL sale solo de migraciones (`backend/app/infrastructure/db/migraciones/versions/`: `0001` crea las seis tablas, `0002` agrega las restricciones de exclusión, `0003` crea la tabla `evento_turno` del historial y `0004` agrega los disparadores que hacen que la base rechace `UPDATE`, `DELETE` y `TRUNCATE` sobre esa tabla, `0005` agrega `color` y `reservable_online` a `prestacion`: completa las filas que ya existían con gris `#9E9E9E` y `false`, y después quita esos valores por defecto porque la API exige el color, `0006` crea la tabla `usuario` del panel: email único en minúsculas, hash bcrypt, `activo` y `token_version`, y `0007` crea `usuario_rol` —clave compuesta, con un `CHECK` que solo admite `odontologo`, `recepcionista` y `dueno`— y las columnas nulas `profesional.usuario_id` (único), `profesional.matricula` y `turno.creado_por`; no escribe datos: los roles los pone el seed). Son solo para PostgreSQL; la suite por defecto crea el esquema con `create_all` sobre SQLite. Desde `backend/`, con `DATABASE_URL` definida como arriba:
+El esquema de PostgreSQL sale solo de migraciones (`backend/app/infrastructure/db/migraciones/versions/`: `0001` crea las seis tablas, `0002` agrega las restricciones de exclusión, `0003` crea la tabla `evento_turno` del historial y `0004` agrega los disparadores que hacen que la base rechace `UPDATE`, `DELETE` y `TRUNCATE` sobre esa tabla, `0005` agrega `color` y `reservable_online` a `prestacion`: completa las filas que ya existían con gris `#9E9E9E` y `false`, y después quita esos valores por defecto porque la API exige el color, `0006` crea la tabla `usuario` del panel: email único en minúsculas, hash bcrypt, `activo` y `token_version`, y `0007` crea `usuario_rol` —clave compuesta, con un `CHECK` que solo admite `odontologo`, `recepcionista` y `dueno`— y las columnas nulas `profesional.usuario_id` (único), `profesional.matricula` y `turno.creado_por`; no escribe datos: los roles los pone el seed; `0010` agrega `paciente.es_nuevo` —no nula, con `server_default` verdadero— y la rellena: los pacientes con algún turno `atendido` quedan en `false`). Son solo para PostgreSQL; la suite por defecto crea el esquema con `create_all` sobre SQLite. Desde `backend/`, con `DATABASE_URL` definida como arriba:
 
 ```
 python -m alembic current
@@ -1362,6 +1415,7 @@ La migración autogenerada **se revisa a mano** antes de usarla, y cada change q
 - Los eventos `creado` anteriores a C-07 tienen `actor_tipo` `usuario` y **`actor_id` vacío para siempre** (D159): completarlo después sería modificar el historial. Los turnos anteriores a C-07 tampoco tienen `creado_por` (queda vacío). Los eventos y turnos nuevos sí llevan al usuario del token.
 - **`/docs` y `/openapi.json` son públicos** (D214): se pueden leer sin token (las rutas que documentan, no). Es aceptable porque la API se publica solo en `127.0.0.1` y hay solo datos ficticios.
 - **Un cuerpo con JSON roto responde `422` antes que `401`** (design R12): FastAPI lee el cuerpo antes de evaluar el token. Un cuerpo bien formado sin token sí responde `401`, antes de cualquier validación.
+- **Deshacer la migración `0010` pierde `paciente.es_nuevo`** (`alembic downgrade 0009` borra la columna); se recalcula al volver a aplicarla, porque la migración rellena `false` para los pacientes con un turno `atendido`.
 - **Deshacer la migración `0007` pierde los roles** (`alembic downgrade 0006` borra `usuario_rol`), el vínculo profesional-usuario y `creado_por`; los usuarios, los turnos y los eventos quedan.
 - **El rol se lee en cada petición, pero el token no se revoca de a uno**: tras quitarle **un** rol a un usuario, su access token sigue sirviendo hasta 15 minutos para lo que sus **otros** roles permiten (y deja de servir para lo que solo daba el rol quitado). Desactivar al usuario o subir su `token_version` lo corta en la petición siguiente. Desde C-09 se dan y quitan roles y se desactiva con `PATCH /usuarios/{id}` (ver «Usuarios»).
 - **`profesional.matricula` existe pero nadie la escribe ni la lee todavía** (D215).
