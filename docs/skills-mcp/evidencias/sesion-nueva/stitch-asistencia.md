@@ -78,4 +78,37 @@ Una columna de unos 390 px con la barra en filas y debajo el panel a todo el anc
 
 ## 4. Comparación con la implementación
 
-Pendiente: la completa la prueba del agente en el navegador del Apply (tarea 12.1).
+Hecha el 2026-10-30 en la tarea 13.1 (a las 11:07 de la hora del consultorio, un viernes: dentro del horario de la demo, sin plan B), con la demo (`crear_app_demo` y `npm run dev`, con la recepcionista y una usuaria solo `dueno` creada para la prueba) y después con Compose, en el navegador integrado de la app. Capturas en `stitch-asistencia-pantalla/`: `implementacion-escritorio-panel-abierto.jpg` (1280 px, panel abierto, cuatro botones en dos líneas), `implementacion-escritorio-rn-ag-13.jpg` (1280 px, el rechazo `RN-AG-13`) e `implementacion-angosta-panel-abierto.jpg` (390 px, panel debajo de la agenda), para comparar con `asistencia-escritorio.png` y `asistencia-angosta.png`.
+
+### Recorrido y resultado (viernes 30/10/2026)
+
+| Paso | Resultado |
+|---|---|
+| V4: el formulario «Nuevo turno» de la agenda acepta un inicio ya pasado de hoy | Ana a las 09:00 y Carla a las 09:30 (con las 11:07 ya pasadas): «Turno creado.» las dos veces; el historial muestra «Por: Usuario n.º 2» |
+| Tres turnos (Ana 09:00, Carla 09:30, Bruno 18:00) | Cada fila `reservado` con «Asistencia», «Reprogramar», «Cancelar» e «Historial», en ese orden |
+| ASI-6c: «Registrar asistencia» sin elegir | «Elegí si el paciente fue atendido o estuvo ausente.»; ningún pedido; el aviso desaparece al marcar una opción |
+| ASI-5a: Ana, «Atendido» | Un solo `POST /api/turnos/1/estado` con `{"estado":"atendido"}`, «Asistencia registrada.», panel cerrado, un `GET /api/turnos?fecha=…` y la fila solo con «Historial» |
+| Otro turno en el mismo horario (Bruno, 09:00) | «Turno creado.»: el horario del marcado quedó libre |
+| ASI-5b: Carla, «Ausente» | El `POST` lleva `{"estado":"ausente"}` y la fila queda «Ausente» |
+| ASI-6b: Bruno 18:00 (todavía no empezó) | `409` `RN-AG-13`: «El turno todavía no empezó: la asistencia se registra desde su hora de inicio (RN-AG-13).» y «El turno no cambió.»; el panel sigue abierto con «Atendido» marcado y el turno sigue «Reservado» |
+| ASI-6a: dos pestañas con su propia sesión de la misma usuaria; la segunda marca a Bruno 09:00 y la primera (sin recargar) lo intenta | «Este turno ya no admite registrar la asistencia por su estado (RN-AG-12).» y «El turno no cambió.»; el panel sigue abierto con la opción marcada y sin «Asistencia registrada.» |
+| Historial de Ana | «Turno creado» (con «Estado inicial: Reservado · 09:00 – 09:30») y **«Cambio de estado»** con «Por: Usuario n.º 2» y «Estado: Reservado → Atendido» |
+| Un solo panel a la vez entre cinco | «Nuevo turno», «Asistencia», «Reprogramar», «Cancelar» e «Historial» en secuencia: en cada paso hay un solo título de panel |
+| Usuaria solo `dueno` (D312) | Ve «Asistencia» en el turno `reservado` y al registrar recibe «Tu usuario no tiene permiso para registrar la asistencia (RN-AU-05).» con «El turno no cambió.» |
+| API (`curl`, el mismo recorrido que en `/docs`, que responde `200`) | `409` `["RN-AG-13"]` (turno futuro), `422` sin códigos con el cuerpo vacío, `409` `["RN-AG-12"]` sobre un turno ya marcado; `/openapi.json` tiene `/turnos/{turno_id}/estado`; la agenda y el turno no traen `es_nuevo` |
+| 1280 px (demo), panel abierto | Los cuatro botones pasan a dos líneas dentro de la celda («Asistencia» y «Reprogramar» arriba; «Cancelar» e «Historial» abajo); sin desplazamiento horizontal (`scrollWidth` 1280) |
+| 390 px (demo), panel abierto | Sin desplazamiento horizontal (`scrollWidth` 390); los botones en dos filas de dos dentro de la tarjeta; el panel va debajo de la agenda, con las opciones de 44 px y «Registrar asistencia» y «Volver» a todo el ancho |
+| Compose (`http://127.0.0.1:5173`), turnos del 30/10/2026 | La API aplicó `0010` al arrancar (`alembic_version` `0010`); un turno ya empezado marcado «Atendido» con un solo `POST`; el futuro, `RN-AG-13`; consola sin mensajes de la CSP; a 1280 y a 390 px sin desplazamiento horizontal con el panel abierto; ningún token, contraseña ni dato de paciente en la URL |
+
+### Diferencias con Stitch y su motivo
+
+- **El panel va dentro de la página, al costado de la agenda** (con el pie dentro de la tarjeta), como los otros tres paneles, y no como columna de alto completo con el pie fijo abajo; a 390 px va debajo de la agenda y no la reemplaza.
+- **La tabla de Stitch recorta la columna «Acciones»** (se ve «AC» y «H»); no se toma: en la implementación los cuatro botones pasan a otra línea dentro de la celda y se ven completos a 1280 px.
+- **Sin el aviso verde ni la muestra «Después de registrar»** de la captura angosta (decisión del design): el éxito se ve como «Asistencia registrada.» sobre la tabla.
+- **La opción marcada de la captura de escritorio** se dibuja con borde celeste y círculo relleno, como en la implementación; Stitch la pone un poco más gruesa. Diferencia menor, aceptada.
+- El aviso lleva el código entre paréntesis y «El turno no cambió.» en la misma caja, como en C-16 y C-17; el aviso ámbar de «Elegí si…» de la captura angosta es el mismo componente de aviso del panel.
+- Sin el pie institucional ni textos de relleno.
+
+### Hallazgos fuera del alcance de C-18
+
+- **1024 px con un panel abierto**: la tarjeta de la tabla (`overflow: hidden`) recorta unos 20 px del borde derecho de los botones («Asistencia» y «Historial» a 1024 px; la tabla mide 557 px en una tarjeta de 548). No hay desplazamiento horizontal de la página. Los anchos pedidos por la tarea (1280 y 390 px) están bien. No se comprobó contra C-17 (sin «Asistencia»); el ancho mínimo de la celda lo marca «Reprogramar». Queda como mejora para un change de pulido de la agenda.
