@@ -87,6 +87,22 @@ El sistema SHALL crear y modificar el esquema de PostgreSQL únicamente con migr
 - **THEN** la base lo rechaza por su restricción `CHECK` y no se guarda (D272)
 - **AND** un bloqueo solo con `profesional_id` y otro solo con `sillon_id` se guardan
 
+#### Scenario: INF-1 Borde - la migración de es_nuevo agrega la columna y rellena los pacientes ya atendidos
+
+- **GIVEN** una base PostgreSQL migrada hasta la versión que dejó el change de bloqueos (`0009`), con tres pacientes: Ana Ejemplo con un turno `atendido`, Bruno Ficticio con un turno `ausente` y Carla Inventada con un turno `reservado`
+- **WHEN** se aplica la migración de `es_nuevo` (`0010`)
+- **THEN** `paciente` tiene la columna `es_nuevo`, booleana, no nula y con valor por defecto `true`
+- **AND** Ana Ejemplo queda con `es_nuevo` `false` y Bruno Ficticio y Carla Inventada con `es_nuevo` `true` (RN-TD-05, D52: solo un turno `atendido` deja de considerar nuevo al paciente)
+- **AND** un paciente guardado directamente después, sin indicar `es_nuevo`, queda con `es_nuevo` `true`
+
+#### Scenario: INF-1 Borde - deshacer solo la migración de es_nuevo deja el esquema del change de bloqueos
+
+- **GIVEN** una base PostgreSQL migrada hasta la última versión, con un paciente con `es_nuevo` `false`, un turno `atendido` suyo y su evento
+- **WHEN** se deshace solo la migración de `es_nuevo`, hasta la versión que dejó el change de bloqueos
+- **THEN** `paciente` no tiene `es_nuevo` y el resto del esquema es el del change de bloqueos
+- **AND** el paciente, el turno y su evento siguen en la base
+- **AND** volver a aplicar la migración de `es_nuevo` termina sin errores y el paciente queda con `es_nuevo` `false` por el relleno
+
 ### Requirement: La base rechaza turnos activos solapados
 
 En PostgreSQL, la base SHALL rechazar por sí misma el alta de un turno activo cuyo intervalo `[inicio, fin)` se solapa (RN-AG-09) con el de otro turno activo (RN-AG-10) del mismo profesional (RN-AG-05) o del mismo sillón (RN-AG-08), aunque la aplicación no lo haya validado (DD-04, RN-AG-10c). El rechazo SHALL identificar qué recurso chocó. El sistema MUST NOT guardar el turno rechazado.
