@@ -1964,7 +1964,7 @@ p.pantalla-de-ingreso {
   background: var(--fondo-error);
 }
 
-.panel-de-cancelar {
+.panel-de-decision {
   flex: none;
   box-sizing: border-box;
   width: var(--ancho-panel-turno);
@@ -1975,25 +1975,29 @@ p.pantalla-de-ingreso {
   color: var(--error);
 }
 
-.panel-de-cancelar .panel-subtitulo:first-of-type {
+.panel-de-decision .panel-subtitulo:first-of-type {
   margin-top: 12px;
   font-size: 14px;
   font-weight: 600;
   color: var(--texto-medio);
 }
 
-.panel-de-cancelar .aviso {
+.panel-de-asistencia .panel-encabezado h2 .icono {
+  color: var(--primario);
+}
+
+.panel-de-decision .aviso {
   margin-bottom: 16px;
 }
 
-.opciones-de-cancelacion {
+.opciones-de-decision {
   min-width: 0;
   padding: 0;
   margin: 0 0 12px;
   border: 0;
 }
 
-.opciones-de-cancelacion legend {
+.opciones-de-decision legend {
   padding: 0;
   margin-bottom: 8px;
   font-size: 13px;
@@ -2001,7 +2005,7 @@ p.pantalla-de-ingreso {
   color: var(--texto-medio);
 }
 
-.opcion-de-cancelacion {
+.opcion-de-decision {
   display: flex;
   align-items: center;
   gap: 12px;
@@ -2018,16 +2022,16 @@ p.pantalla-de-ingreso {
   cursor: pointer;
 }
 
-.opcion-de-cancelacion:hover {
+.opcion-de-decision:hover {
   background: var(--superficie-suave);
 }
 
-.opcion-de-cancelacion:has(input:checked) {
+.opcion-de-decision:has(input:checked) {
   border-color: var(--primario);
   background: var(--primario-suave);
 }
 
-.opcion-de-cancelacion input[type='radio'] {
+.opcion-de-decision input[type='radio'] {
   flex: none;
   width: var(--tamano-icono);
   height: var(--tamano-icono);
@@ -2074,16 +2078,17 @@ p.pantalla-de-ingreso {
 }
 
 @media (max-width: 720px) {
-  .panel-de-cancelar {
+  .panel-de-decision {
     width: 100%;
   }
 
-  .panel-de-cancelar .panel-pie {
+  .panel-de-decision .panel-pie {
     flex-direction: column-reverse;
   }
 
-  .panel-de-cancelar .panel-pie .boton-secundario,
-  .panel-de-cancelar .panel-pie .boton-destructivo {
+  .panel-de-decision .panel-pie .boton-secundario,
+  .panel-de-decision .panel-pie .boton-primario,
+  .panel-de-decision .panel-pie .boton-destructivo {
     width: 100%;
   }
 
@@ -2094,4 +2099,33 @@ p.pantalla-de-ingreso {
   .fila-de-turno td.acciones-del-turno .boton-secundario {
     flex: 1 1 auto;
   }
+}
+
+/* Registrar la asistencia de un turno (C-18, pantallas de Stitch, D234). Botón «Asistencia» con borde y tilde en un
+   círculo como primero de la columna «Acciones» (con borde celeste en la fila del turno abierto) y panel lateral de
+   420 px que comparte la estructura de «Cancelar turno» (`.panel-de-decision`): el título con el ícono celeste, el
+   resumen del turno, «¿Cómo terminó el turno?» con dos opciones como filas con borde, la ayuda con ícono y el pie con
+   «Volver» y el botón primario. Con el panel abierto a 1280 px cuatro botones por fila no entran (hallazgo de Stitch,
+   design W13): los botones de la columna pasan a otra línea dentro de la celda, sin desplazar la tabla. El aviso
+   verde y la muestra «Después de registrar» de la captura angosta no se toman (design). Solo tokens; sin Tailwind ni CDN. */
+.boton-de-asistencia {
+  min-height: var(--alto-campo);
+  padding: 0 12px;
+  margin-right: 8px;
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+.fila-seleccionada .boton-de-asistencia {
+  border-color: var(--primario);
+  color: var(--primario-oscuro);
+}
+
+.tabla-de-agenda td.acciones-del-turno .boton-secundario {
+  margin-block: 2px;
+  vertical-align: middle;
+}
+
+.tabla-de-agenda td.acciones-del-turno .boton-de-historial {
+  margin-right: 0;
 }
