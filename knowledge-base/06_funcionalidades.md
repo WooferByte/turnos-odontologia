@@ -154,6 +154,7 @@ Los criterios de US-010 usan IDs estables `E1..E12` (compartidos con `07_flujos_
 **Orden**: 4
 **Depende de**: US-010, US-015, US-092
 **Reglas**: RN-AG-10, RN-AG-11, RN-AG-12, RN-AG-13, RN-SP-04, RN-SP-10, RN-TD-05
+**Desde el panel (C-18, parte de marcado; decisiones del autor 2026-10-30, D354 a D365):** `POST /turnos/{id}/estado` con `{"estado": "atendido" | "ausente"}`; solo `reservado` o `confirmado` y desde su inicio (`ahora >= inicio`, sin plazo máximo); cualquier otro estado, también el mismo marcado repetido o el contrario, da `409` `RN-AG-12`, y antes del inicio, `409` `RN-AG-13`; el evento `estado_cambiado` guarda el estado de antes y de después, y el historial lo muestra como «Cambio de estado» con «Estado: Reservado → Atendido»; `es_nuevo` nace con la migración `0010` y pasa a `false` con el primer `atendido`. En la agenda, «Asistencia» es el primer botón de las filas `reservado` y `confirmado` (también en un turno futuro: la API decide el momento, D323) y abre el panel «Registrar asistencia» con «Atendido» y «Ausente» sin opción marcada. El «Como odontólogo o recepcionista» coincide con la matriz de `03` (permiso `turnos.marcar`, D359). CA-7 a CA-9 llegan con C-19; CA-5 y CA-10, con C-41 y C-42.
 
 ### US-015 — Historial de cambios
 **Como** dueño **quiero** ver quién cambió qué y cuándo en cada turno **para** tener trazabilidad.

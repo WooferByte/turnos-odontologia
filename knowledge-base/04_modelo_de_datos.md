@@ -196,7 +196,7 @@ Los plazos de seña y de oferta son **valores de diseño del autor, no de mercad
 | `telefono_whatsapp` | texto | NN | E.164 (formato validado en la API †); obligatorio |
 | `email` | texto | null | Opcional |
 | `fecha_nacimiento` | fecha | null | — |
-| `es_nuevo` | bool | NN | Default `true`; se usa para la aprobación manual (RN-TD-05). Pasa a `false` cuando el paciente tiene su **primer turno `atendido`**; una corrección posterior `atendido` → `ausente` **no lo revierte** (RN-TD-05; decisión del autor 2026-10-05, D52) |
+| `es_nuevo` | bool | NN | Default `true`; se usa para la aprobación manual (RN-TD-05). Pasa a `false` cuando el paciente tiene su **primer turno `atendido`**; una corrección posterior `atendido` → `ausente` **no lo revierte** (RN-TD-05; decisión del autor 2026-10-05, D52). **Desde C-18** (D361): `boolean NOT NULL DEFAULT true` agregada por la migración **`0010`**, que **rellena** con `false` a los pacientes que ya tengan un turno `atendido` y **conserva** el `server_default` (un `INSERT` sin la columna sigue valiendo); el marcado `atendido` la pasa a `false` en la misma transacción que el estado y el evento; `ausente` y un rechazo no la tocan. No viaja por la API hasta C-20 y C-27 |
 | `acepta_contacto` | bool | NN | Default `true`. Con `false` no se prepara ningún mensaje ni se le ofrecen huecos de la lista de espera; la tarea periódica lo verifica justo antes de cada mensaje, incluidos los ya programados. Lo cambia el odontólogo o la recepcionista desde el panel. No afecta la ficha clínica, los turnos ni el link de gestión (RN-PR-07; decisión del autor 2026-10-05, D81) |
 | `creado_en` | fecha-hora | NN | — |
 
@@ -302,7 +302,7 @@ Los estados terminales no tienen transiciones de salida, **salvo la corrección 
 |---|---|---|---|
 | `id` | entero | NN | PK |
 | `turno_id` | entero | NN | FK → Turno, `ON DELETE RESTRICT`: un turno con historial no se borra (D164) |
-| `tipo` | texto | NN | Valores: `creado`, `reprogramado`, `confirmado`, `cancelado`, `estado_cambiado`, `sena_acreditada`, `sena_retenida`, `sena_devuelta`, `nota` |
+| `tipo` | texto | NN | Valores: `creado`, `reprogramado`, `confirmado`, `cancelado`, `estado_cambiado`, `sena_acreditada`, `sena_retenida`, `sena_devuelta`, `nota`. **`estado_cambiado`** (C-18, D360) lo registra el marcado `atendido` o `ausente` (y lo reusa la corrección de C-19): `antes` `{"estado": <anterior>}`, `despues` `{"estado": <nuevo>}`, `motivo` vacío y el usuario del token como actor, en la misma transacción que el estado; el cambio de `es_nuevo` no genera un `EventoPaciente` |
 | `actor_tipo` | texto | NN | Valores: `usuario`, `paciente`, `sistema`, `webhook_mp`. `webhook_wa` se agrega en Fase 2 |
 | `actor_id` | texto | null | Id del usuario o del token, según `actor_tipo`. **Desde C-07** el evento `creado` lleva el id del usuario del token, escrito como texto decimal sin prefijo (D209). Los eventos `creado` anteriores a C-07 llevan `actor_tipo = usuario` y `actor_id` nulo para siempre (D159) |
 | `ocurrido_en` | fecha-hora | NN | — |

@@ -51,6 +51,8 @@ C = crear, R = leer, U = actualizar, D = eliminar/anular. "Propio" = solo sus tu
 > `PATCH /turnos/{id}` (reprogramar un turno o cambiarle la duración desde el panel; permiso `turnos.reprogramar`, fila Turnos, «U» para el odontólogo y la recepcionista) lo pueden el odontólogo y la recepcionista; el dueño (fila Turnos: «R») y un usuario sin roles reciben `403` `RN-AU-05`, y un turno de otro consultorio responde `404` `RN-GL-04` como uno inexistente (D336, C-16).
 >
 > `POST /turnos/{id}/cancelar` (cancelar un turno activo desde el panel indicando quién lo pidió; permiso `turnos.cancelar`, fila Turnos, «D» del odontólogo y «cancelar» de la recepcionista) lo pueden el odontólogo y la recepcionista; el dueño (fila Turnos: «R») y un usuario sin roles reciben `403` `RN-AU-05` antes de cualquier validación (D208), y un turno de otro consultorio responde `404` `RN-GL-04` como uno inexistente (D347, C-17).
+>
+> `POST /turnos/{id}/estado` (marcar un turno `atendido` o `ausente` desde el panel; permiso `turnos.marcar`, fila «Marcar turno atendido / ausente (RN-AG-13)», «U» del odontólogo y de la recepcionista) lo pueden el odontólogo y la recepcionista; el dueño («—») y un usuario sin roles reciben `403` `RN-AU-05` antes de cualquier validación (D208), y un turno de otro consultorio responde `404` `RN-GL-04` como uno inexistente (D359, C-18). La corrección del marcado (solo el odontólogo) usa la misma ruta con su propio permiso, en C-19.
 
 **Decisión del autor (2026-10-02, P-09 / SU-04):** la recepcionista ve los datos **administrativos** del paciente (identificación, contacto, turnos, pagos) pero **no** los datos **clínicos** (anamnesis, evolución, odontograma), por minimización de datos de salud (Ley 25.326). Ver RN-FC-02.
 
