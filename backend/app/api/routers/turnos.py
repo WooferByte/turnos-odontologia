@@ -10,6 +10,7 @@ from app.api.esquemas import (
     CrearTurnoEntrada,
     EventoTurnoSalida,
     FechaDelDia,
+    MarcarAsistenciaEntrada,
     ReprogramarTurnoEntrada,
     TurnoDeLaAgendaSalida,
     TurnoSalida,
@@ -20,6 +21,7 @@ from app.application.cancelar_turno import CancelarTurnoComando, cancelar_turno
 from app.application.crear_turno import CrearTurnoComando, crear_turno
 from app.application.consultar_turnos import agenda_del_dia, turno_de_la_agenda
 from app.application.historial import consultar_historial
+from app.application.marcar_asistencia import MarcarAsistenciaComando, marcar_asistencia
 from app.application.puertos import UnidadDeTrabajo
 from app.application.reprogramar_turno import ReprogramarTurnoComando, reprogramar_turno
 from app.domain.acceso.roles import Permiso, UsuarioDelPanel
@@ -54,6 +56,12 @@ RESPUESTAS_DE_CANCELAR = {
     404: _respuesta_de_error("El turno no existe o es de otro consultorio (RN-GL-04)"),
     409: _respuesta_de_error("El turno no está activo y no se puede cancelar (RN-AG-12)"),
     422: _respuesta_de_error("El estado no es cancelado_paciente ni cancelado_profesional o el identificador no es entero"),
+}
+RESPUESTAS_DE_MARCAR = {
+    **RESPUESTAS_DE_ACCESO,
+    404: _respuesta_de_error("El turno no existe o es de otro consultorio (RN-GL-04)"),
+    409: _respuesta_de_error("El turno no admite el marcado en su estado (RN-AG-12) o todavía no empezó (RN-AG-13)"),
+    422: _respuesta_de_error("El estado no es atendido ni ausente o el identificador no es entero"),
 }
 RESPUESTAS_DEL_HISTORIAL = {
     **RESPUESTAS_DE_ACCESO,
@@ -107,6 +115,20 @@ def post_cancelar_turno(
     comando = CancelarTurnoComando(turno_id, EstadoTurno(entrada.estado))
     actor = Actor(ActorTipo.USUARIO, str(usuario.id))  # el id va como texto decimal (D209)
     return TurnoSalida.desde_turno(cancelar_turno(comando, usuario.id, uow, reloj, actor=actor))
+
+
+@router.post("/{turno_id}/estado", response_model=TurnoSalida, responses=RESPUESTAS_DE_MARCAR)
+def post_estado_del_turno(
+    turno_id: int,
+    entrada: MarcarAsistenciaEntrada,
+    uow: Annotated[UnidadDeTrabajo, Depends(get_uow)],
+    reloj: Annotated[Reloj, Depends(get_reloj)],
+    usuario: Annotated[UsuarioDelPanel, Depends(requiere(Permiso.TURNOS_MARCAR))],
+) -> TurnoSalida:
+    """Marca un turno ya empezado como atendido o ausente (US-014)."""
+    comando = MarcarAsistenciaComando(turno_id, EstadoTurno(entrada.estado))
+    actor = Actor(ActorTipo.USUARIO, str(usuario.id))  # el id va como texto decimal (D209)
+    return TurnoSalida.desde_turno(marcar_asistencia(comando, usuario.id, uow, reloj, actor=actor))
 
 
 @router.get("", response_model=AgendaDelDiaSalida, responses=RESPUESTAS_DE_LA_AGENDA)

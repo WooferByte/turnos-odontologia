@@ -19,6 +19,7 @@ from app.domain.errors import (
     FranjaInvalida,
     FueraDeHorario,
     IntervaloInvalido,
+    MarcadoAntesDelInicio,
     NombreDePrestacionRepetido,
     PermisoInsuficiente,
     RecursoDeLaUrlNoEncontrado,
@@ -52,6 +53,7 @@ _CLASES_DE_ERROR: dict[type[ErrorDeDominio], tuple[int, str, str]] = {
     RestablecerLaPropia: (409, "/errores/restablecer-la-propia", "Operación no permitida"),
     TurnoNoReprogramable: (409, "/errores/turno-no-reprogramable", "Turno no reprogramable"),
     TransicionInvalida: (409, "/errores/transicion-invalida", "Transición inválida"),
+    MarcadoAntesDelInicio: (409, "/errores/marcado-antes-del-inicio", "Marcado antes del inicio"),
 }
 # Los dos 401 llevan RFC 6750 §3 y un texto fijo que no depende de la causa (design J13).
 _CABECERAS_DE_NO_AUTENTICADO = {"WWW-Authenticate": "Bearer"}
@@ -67,6 +69,7 @@ _ERRORES_DE_TEXTO_FIJO = (
     FueraDeHorario,
     TurnoNoReprogramable,
     TransicionInvalida,
+    MarcadoAntesDelInicio,
 )
 
 

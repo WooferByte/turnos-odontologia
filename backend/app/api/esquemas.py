@@ -238,6 +238,17 @@ class CancelarTurnoEntrada(BaseModel):
     estado: Literal["cancelado_paciente", "cancelado_profesional"]
 
 
+class MarcarAsistenciaEntrada(BaseModel):
+    """Cuerpo de ``POST /turnos/{id}/estado``: el estado destino; todo es formato (W2, D355)."""
+
+    model_config = ConfigDict(
+        extra="forbid",
+        json_schema_extra={"examples": [{"estado": "atendido"}]},
+    )
+
+    estado: Literal["atendido", "ausente"]
+
+
 class CrearPrestacionEntrada(BaseModel):
     """Cuerpo de ``POST /prestaciones``. La duración la valida el dominio (RN-AG-01), no Pydantic."""
 
