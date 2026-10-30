@@ -31,6 +31,12 @@ export const ESTADOS_ACTIVOS_DEL_TURNO: readonly EstadoDelTurno[] = [
 /** Los dos estados a los que se cancela un turno: quién pidió la cancelación (D342). */
 export type EstadoDeCancelacion = 'cancelado_paciente' | 'cancelado_profesional'
 
+/** Los estados desde los que se registra la asistencia: solo `reservado` y `confirmado` (design W12). */
+export const ESTADOS_QUE_SE_MARCAN_DEL_TURNO: readonly EstadoDelTurno[] = ['reservado', 'confirmado']
+
+/** Los dos estados a los que se marca un turno: cómo terminó. */
+export type EstadoDeAsistencia = 'atendido' | 'ausente'
+
 export interface TurnoDeLaAgenda {
   id: number
   /** ISO en UTC con `Z`. */
@@ -152,6 +158,7 @@ export interface ApiAgenda {
   crearTurno(nuevo: NuevoTurno): Promise<TurnoCreado>
   reprogramarTurno(id: number, cambio: ReprogramacionDeTurno): Promise<TurnoReprogramado>
   cancelarTurno(id: number, estado: EstadoDeCancelacion): Promise<TurnoReprogramado>
+  marcarAsistencia(id: number, estado: EstadoDeAsistencia): Promise<TurnoReprogramado>
   obtenerPrestacionesActivas(): Promise<Prestacion[]>
 }
 
@@ -191,6 +198,16 @@ export function crearApiAgenda(pedidoDelPanel: PedidoDelPanel): ApiAgenda {
         body: JSON.stringify({ estado }),
       }
       const cuerpo = await leerJson(await pedidoDelPanel(`${RUTA}/${id}/cancelar`, init))
+      if (!esTurnoReprogramado(cuerpo)) throw new SinConexion(MENSAJE_SIN_CONEXION, null)
+      return cuerpo
+    },
+    async marcarAsistencia(id, estado) {
+      const init: RequestInit = {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ estado }),
+      }
+      const cuerpo = await leerJson(await pedidoDelPanel(`${RUTA}/${id}/estado`, init))
       if (!esTurnoReprogramado(cuerpo)) throw new SinConexion(MENSAJE_SIN_CONEXION, null)
       return cuerpo
     },

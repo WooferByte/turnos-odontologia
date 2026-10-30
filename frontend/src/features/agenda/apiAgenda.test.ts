@@ -178,4 +178,48 @@ describe('apiAgenda', () => {
     expect((rechazo as ReglaRechazada).codigo).toBe('RN-AG-12')
     expect(servidor.turnosActuales().find((t) => t.id === 11)?.estado).toBe('atendido')
   })
+  it('ASI-5a: marcarAsistencia manda el estado y devuelve el turno', async () => {
+    const servidor = crearServidorFalso({ prestaciones: PRESTACIONES_DE_PARTIDA, turnos: TURNOS_DE_LA_AGENDA })
+    const api = apiConSesion(servidor)
+
+    const marcado = await api.marcarAsistencia(11, 'atendido')
+
+    expect(servidor.cuerpos('POST', '/api/turnos/11/estado')).toEqual([{ estado: 'atendido' }])
+    expect(marcado).toMatchObject({ id: 11, estado: 'atendido' })
+    expect(servidor.turnosActuales().find((t) => t.id === 11)?.estado).toBe('atendido')
+  })
+
+  it('ASI-5a: ausente en un confirmado manda el otro estado', async () => {
+    const servidor = crearServidorFalso({ prestaciones: PRESTACIONES_DE_PARTIDA, turnos: TURNOS_DE_LA_AGENDA })
+    const api = apiConSesion(servidor)
+
+    await api.marcarAsistencia(13, 'ausente')
+
+    expect(servidor.cuerpos('POST', '/api/turnos/13/estado')).toEqual([{ estado: 'ausente' }])
+    expect(servidor.turnosActuales().find((t) => t.id === 13)?.estado).toBe('ausente')
+  })
+
+  it('ASI-6a: un 409 de RN-AG-12 es una regla rechazada con su código', async () => {
+    const servidor = crearServidorFalso({ prestaciones: PRESTACIONES_DE_PARTIDA, turnos: TURNOS_DE_LA_AGENDA })
+    servidor.cambiarEstado(11, 'atendido')
+    const api = apiConSesion(servidor)
+
+    const rechazo = await api.marcarAsistencia(11, 'ausente').catch((e: unknown) => e)
+
+    expect(rechazo).toBeInstanceOf(ReglaRechazada)
+    expect((rechazo as ReglaRechazada).codigo).toBe('RN-AG-12')
+    expect(servidor.turnosActuales().find((t) => t.id === 11)?.estado).toBe('atendido')
+  })
+
+  it('ASI-6b: un 409 de RN-AG-13 es una regla rechazada con su código', async () => {
+    const servidor = crearServidorFalso({ prestaciones: PRESTACIONES_DE_PARTIDA, turnos: TURNOS_DE_LA_AGENDA })
+    servidor.responderAlMarcar(409, ['RN-AG-13'])
+    const api = apiConSesion(servidor)
+
+    const rechazo = await api.marcarAsistencia(13, 'atendido').catch((e: unknown) => e)
+
+    expect(rechazo).toBeInstanceOf(ReglaRechazada)
+    expect((rechazo as ReglaRechazada).codigo).toBe('RN-AG-13')
+    expect(servidor.turnosActuales().find((t) => t.id === 13)?.estado).toBe('confirmado')
+  })
 })

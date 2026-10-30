@@ -5,6 +5,7 @@ import {
   ETIQUETAS_DE_ESTADO,
   TONOS_DE_ESTADO,
   diaCompacto,
+  mensajeDeAsistencia,
   mensajeDeCancelacion,
   mensajeDeReprogramacion,
   nombreDelDia,
@@ -107,5 +108,25 @@ describe('mensajes de la agenda', () => {
   it('CAN-4b: cancelado_profesional se ve como Cancelado por el consultorio', () => {
     expect(ETIQUETAS_DE_ESTADO.cancelado_profesional).toBe('Cancelado por el consultorio')
     expect(TONOS_DE_ESTADO.cancelado_profesional).toBe('rojo')
+  })
+  it('ASI-6a: el texto de RN-AG-12 al registrar', () => {
+    expect(mensajeDeAsistencia(new ReglaRechazada('x', 'RN-AG-12'))).toBe(
+      'Este turno ya no admite registrar la asistencia por su estado (RN-AG-12).',
+    )
+  })
+
+  it('ASI-6b: el texto de RN-AG-13', () => {
+    expect(mensajeDeAsistencia(new ReglaRechazada('x', 'RN-AG-13'))).toBe(
+      'El turno todavía no empezó: la asistencia se registra desde su hora de inicio (RN-AG-13).',
+    )
+  })
+
+  it.each([
+    [new RecursoInexistente('x', 'RN-GL-04'), 'El turno ya no existe (RN-GL-04).'],
+    [new PermisoInsuficiente('x', 'RN-AU-05'), 'Tu usuario no tiene permiso para registrar la asistencia (RN-AU-05).'],
+    [new SinConexion('x', null), 'No se pudo conectar con el servidor. Probá de nuevo en unos minutos.'],
+    [new EntradaRechazada('x', null, []), 'No se pudo conectar con el servidor. Probá de nuevo en unos minutos.'],
+  ])('ASI-6c: el 404, el 403, la conexión y el 422 con su texto (%#)', (error, texto) => {
+    expect(mensajeDeAsistencia(error)).toBe(texto)
   })
 })

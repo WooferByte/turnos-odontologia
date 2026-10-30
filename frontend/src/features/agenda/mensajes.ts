@@ -224,3 +224,27 @@ export function mensajeDeCancelacion(error: unknown): string {
   if (error instanceof ReglaRechazada && error.codigos.includes('RN-AG-12')) return MENSAJE_RN_AG_12
   return MENSAJE_SIN_CONEXION
 }
+
+export const MENSAJE_ASISTENCIA_REGISTRADA = 'Asistencia registrada.'
+export const MENSAJE_ELEGI_COMO_TERMINO = 'Elegí si el paciente fue atendido o estuvo ausente.'
+export const PREGUNTA_DE_ASISTENCIA = '¿Cómo terminó el turno?'
+export const OPCION_ATENDIDO = 'Atendido'
+export const OPCION_AUSENTE = 'Ausente'
+export const ACCION_REGISTRAR_ASISTENCIA = 'Registrar asistencia'
+const MENSAJE_RN_AG_12_ASISTENCIA = 'Este turno ya no admite registrar la asistencia por su estado (RN-AG-12).'
+const MENSAJE_RN_AG_13 = 'El turno todavía no empezó: la asistencia se registra desde su hora de inicio (RN-AG-13).'
+const MENSAJE_SIN_PERMISO_PARA_REGISTRAR = 'Tu usuario no tiene permiso para registrar la asistencia (RN-AU-05).'
+
+/**
+ * Mensaje del panel para un rechazo de `POST /turnos/{id}/estado`: por el tipo y el código, nunca por el texto de la
+ * API. Un `422` o un `5xx` no pueden salir de esta pantalla y se ven como el aviso de conexión (design W11).
+ */
+export function mensajeDeAsistencia(error: unknown): string {
+  if (error instanceof PermisoInsuficiente) return MENSAJE_SIN_PERMISO_PARA_REGISTRAR
+  if (error instanceof RecursoInexistente) return MENSAJE_TURNO_INEXISTENTE
+  if (error instanceof ReglaRechazada) {
+    if (error.codigos.includes('RN-AG-12')) return MENSAJE_RN_AG_12_ASISTENCIA
+    if (error.codigos.includes('RN-AG-13')) return MENSAJE_RN_AG_13
+  }
+  return MENSAJE_SIN_CONEXION
+}
