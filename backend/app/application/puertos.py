@@ -105,6 +105,10 @@ class RepositorioAgenda(Protocol):
         """Actualiza solo el estado del turno sin confirmar (C-17); pasar a cancelado solo libera el horario."""
         ...
 
+    def marcar_paciente_no_nuevo(self, paciente_id: int) -> None:
+        """Deja ``es_nuevo`` en falso sin confirmar; idempotente (C-18, RN-TD-05)."""
+        ...
+
     def existe_turno(self, turno_id: int) -> bool: ...
 
     def turnos_del_dia(

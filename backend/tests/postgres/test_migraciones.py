@@ -394,3 +394,74 @@ def test_inf1_la_base_rechaza_un_bloqueo_con_profesional_y_sillon(sesion: Sessio
     _insertar_bloqueo(sesion, consultorio.id, usuario.id, sillon_id=sillon.id)
     sesion.commit()
     assert sesion.execute(text("SELECT count(*) FROM bloqueo")).scalar_one() == 2
+
+
+def _columnas_de_paciente(conexion) -> dict:
+    return {c["name"]: c for c in inspect(conexion).get_columns("paciente")}
+
+
+def _insertar_pacientes_con_turnos(sesion: Session) -> dict:
+    """Ana con un atendido, Bruno con un ausente y Carla con un reservado (todos ficticios)."""
+    consultorio = un_consultorio(sesion)
+    profesional = un_profesional(sesion, consultorio)
+    sillon = un_sillon(sesion, consultorio)
+    prestacion = una_prestacion(sesion, consultorio)
+    pacientes = {}
+    for hora, (nombre, estado) in enumerate((("Ana", "atendido"), ("Bruno", "ausente"), ("Carla", "reservado"))):
+        pacientes[nombre] = un_paciente(sesion, consultorio, nombre=nombre)
+        un_turno(
+            sesion,
+            paciente=pacientes[nombre],
+            profesional=profesional,
+            sillon=sillon,
+            prestacion=prestacion,
+            inicio=a_las(9 + hora),
+            estado=estado,
+        )
+    return {nombre: paciente.id for nombre, paciente in pacientes.items()}
+
+
+def test_inf1_la_migracion_0010_rellena_es_nuevo(engine: Engine, config_alembic: Config, sesion: Session) -> None:
+    ids = _insertar_pacientes_con_turnos(sesion)
+    sesion.close()
+    command.downgrade(config_alembic, "0009")
+    with engine.connect() as conexion:
+        assert "es_nuevo" not in _columnas_de_paciente(conexion)
+
+    command.upgrade(config_alembic, "head")
+
+    with engine.begin() as conexion:
+        columnas = _columnas_de_paciente(conexion)
+        assert columnas["es_nuevo"]["nullable"] is False
+        assert columnas["es_nuevo"]["default"] is not None  # el server_default se conserva (W8)
+        nuevos = dict(conexion.execute(text("SELECT nombre, es_nuevo FROM paciente")).all())
+        assert nuevos == {"Ana": False, "Bruno": True, "Carla": True}
+        conexion.execute(
+            text(
+                "INSERT INTO paciente (consultorio_id, nombre, apellido, telefono_whatsapp) "
+                "SELECT consultorio_id, 'Diego', 'Inventado', '+5491155550101' FROM paciente WHERE id = :id"
+            ),
+            {"id": ids["Ana"]},
+        )
+        assert conexion.execute(text("SELECT es_nuevo FROM paciente WHERE nombre = 'Diego'")).scalar_one() is True
+
+
+def test_inf1_deshacer_solo_la_migracion_de_es_nuevo_deja_el_esquema_de_los_bloqueos(
+    engine: Engine, config_alembic: Config, sesion: Session
+) -> None:
+    _insertar_pacientes_con_turnos(sesion)
+    sesion.close()
+
+    command.downgrade(config_alembic, "0009")
+
+    with engine.connect() as conexion:
+        assert set(inspect(conexion).get_table_names()) == TABLAS_DEL_MODELO | {"alembic_version"}
+        assert "es_nuevo" not in _columnas_de_paciente(conexion)
+        assert conexion.execute(text("SELECT count(*) FROM paciente")).scalar_one() == 3
+        assert conexion.execute(text("SELECT count(*) FROM turno")).scalar_one() == 3
+
+    command.upgrade(config_alembic, "head")
+
+    with engine.connect() as conexion:
+        assert "es_nuevo" in _columnas_de_paciente(conexion)
+        assert conexion.execute(text("SELECT count(*) FROM paciente WHERE NOT es_nuevo")).scalar_one() == 1

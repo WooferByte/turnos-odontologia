@@ -1,7 +1,7 @@
 """Modelos ORM del subconjunto del primer change (D130). Estilo SQLAlchemy 2.x."""
 from datetime import date, datetime, time
 
-from sqlalchemy import JSON, CheckConstraint, ForeignKey, Index, MetaData, SmallInteger, String, UniqueConstraint
+from sqlalchemy import JSON, CheckConstraint, ForeignKey, Index, MetaData, SmallInteger, String, UniqueConstraint, true
 from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
 
 from app.domain.acceso.roles import Rol
@@ -134,6 +134,8 @@ class PacienteModelo(Base):
     nombre: Mapped[str]
     apellido: Mapped[str]
     telefono_whatsapp: Mapped[str]
+    # Nuevo hasta su primer turno atendido (RN-TD-05, D52); el server_default sirve a los INSERT sin la columna (W8).
+    es_nuevo: Mapped[bool] = mapped_column(default=True, server_default=true())
 
 
 class TurnoModelo(Base):

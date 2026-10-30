@@ -21,6 +21,7 @@ class Profesional:
 class Paciente:
     id: int
     consultorio_id: int
+    es_nuevo: bool = True  # RN-TD-05: nuevo hasta su primer turno atendido
 
 
 @dataclass(frozen=True)

@@ -194,3 +194,16 @@ def test_us092_ca2_turno_guarda_creado_por(sesion: Session, fabrica_sesiones, mu
     assert guardado_con.creado_por == creador.id
     assert sin_creador.creado_por is None
     assert guardado_sin.creado_por is None
+
+
+def test_asi3a_un_paciente_nuevo_nace_con_es_nuevo(sesion: Session, mundo: dict):
+    repositorio = RepositorioAgendaSqlAlchemy(sesion)
+
+    assert repositorio.paciente(mundo["paciente"].id).es_nuevo is True
+
+
+def test_asi3a_un_paciente_cargado_como_no_nuevo_se_lee_como_no_nuevo(sesion: Session, mundo: dict):
+    consultorio = sesion.get(ConsultorioModelo, mundo["paciente"].consultorio_id)
+    antiguo = un_paciente(sesion, consultorio, es_nuevo=False)
+
+    assert RepositorioAgendaSqlAlchemy(sesion).paciente(antiguo.id).es_nuevo is False

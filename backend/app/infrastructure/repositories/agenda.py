@@ -4,7 +4,7 @@ from datetime import datetime
 from dataclasses import replace
 from typing import Literal
 
-from sqlalchemy import or_, select
+from sqlalchemy import or_, select, update
 from sqlalchemy.exc import DBAPIError
 from sqlalchemy.orm import Session
 
@@ -83,7 +83,7 @@ class RepositorioAgendaSqlAlchemy:
         modelo = self._sesion.get(PacienteModelo, paciente_id)
         if modelo is None:
             return None
-        return Paciente(modelo.id, modelo.consultorio_id)
+        return Paciente(modelo.id, modelo.consultorio_id, modelo.es_nuevo)
 
     def sillon(self, sillon_id: int) -> Sillon | None:
         modelo = self._sesion.get(SillonModelo, sillon_id)
@@ -208,6 +208,16 @@ class RepositorioAgendaSqlAlchemy:
         modelo.estado = estado.value
         self._sesion.flush()  # cancelar solo libera el horario: no puede violar la exclusión (X5)
         return _turno_a_dominio(modelo)
+
+    def marcar_paciente_no_nuevo(self, paciente_id: int) -> None:
+        """``UPDATE paciente SET es_nuevo = false WHERE id = :id AND es_nuevo``: idempotente, sin leer antes (W6)."""
+        self._sesion.execute(
+            update(PacienteModelo)
+            .where(PacienteModelo.id == paciente_id, PacienteModelo.es_nuevo)
+            .values(es_nuevo=False)
+            .execution_options(synchronize_session="fetch")
+        )
+        self._sesion.flush()
 
     def existe_turno(self, turno_id: int) -> bool:
         return self._sesion.get(TurnoModelo, turno_id) is not None
