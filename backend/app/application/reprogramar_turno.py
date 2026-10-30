@@ -4,12 +4,12 @@ from datetime import datetime
 
 from app.application.crear_turno import INTENTOS_ANTE_CARRERA, evaluar_horario_de_un_turno
 from app.application.puertos import SolapamientoEnLaBase, UnidadDeTrabajo
+from app.application.turno_propio import turno_propio_para_cambiar
 from app.domain.errors import (
     DuracionInvalida,
     EntradaInvalida,
     ErrorDeDominio,
     FechaNoUTC,
-    TurnoNoEncontrado,
 )
 from app.domain.tiempo import Reloj, exigir_utc, utc_now
 from app.domain.turnos.eventos import Actor, evento_reprogramado
@@ -47,10 +47,7 @@ def _intentar_reprogramar(
     comando: ReprogramarTurnoComando, usuario_id: int, uow: UnidadDeTrabajo, reloj: Reloj, actor: Actor
 ) -> Turno:
     with uow:
-        consultorio_id = uow.usuarios.obtener(usuario_id).consultorio_id  # D270
-        turno = uow.agenda.turno_para_cambiar(comando.turno_id)
-        if turno is None or turno.consultorio_id != consultorio_id:
-            raise TurnoNoEncontrado(comando.turno_id)
+        turno = turno_propio_para_cambiar(uow, usuario_id, comando.turno_id)
         _validar_entrada(comando)
         inicio = turno.inicio if comando.inicio is None else comando.inicio
         duracion = turno.duracion_minutos if comando.duracion_minutos is None else comando.duracion_minutos

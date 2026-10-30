@@ -2,7 +2,7 @@
 from dataclasses import dataclass
 
 from app.application.puertos import UnidadDeTrabajo
-from app.domain.errors import TurnoNoEncontrado
+from app.application.turno_propio import turno_propio_para_cambiar
 from app.domain.tiempo import Reloj, utc_now
 from app.domain.turnos.cancelacion import exigir_cancelable
 from app.domain.turnos.estados import EstadoTurno
@@ -28,10 +28,7 @@ def cancelar_turno(
 ) -> Turno:
     """Pasa un turno activo a ``cancelado_*`` y registra el evento, todo en la misma transacción (X5, X7)."""
     with uow:
-        consultorio_id = uow.usuarios.obtener(usuario_id).consultorio_id  # D270
-        turno = uow.agenda.turno_para_cambiar(comando.turno_id)
-        if turno is None or turno.consultorio_id != consultorio_id:
-            raise TurnoNoEncontrado(comando.turno_id)
+        turno = turno_propio_para_cambiar(uow, usuario_id, comando.turno_id)
         exigir_cancelable(turno.estado)
         guardado = uow.agenda.cambiar_estado(turno.id, comando.estado)
         uow.historial.registrar(evento_cancelado(turno, guardado, actor, reloj()))
