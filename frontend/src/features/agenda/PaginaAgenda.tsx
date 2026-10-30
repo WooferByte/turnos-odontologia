@@ -28,6 +28,7 @@ import {
   MENSAJE_TURNO_CREADO,
   MENSAJE_TURNO_REPROGRAMADO,
   diaCompacto,
+  mensajeDeAsistencia,
   mensajeDeCancelacion,
   mensajeDeCreacion,
   mensajeDeReprogramacion,
@@ -269,6 +270,9 @@ export function PaginaAgenda() {
       cerrarPanel()
       setExito(MENSAJE_ASISTENCIA_REGISTRADA)
       pedirDia(dia?.fecha)
+    } catch (error: unknown) {
+      if (error instanceof SesionTerminada) return
+      setErrorDelPanel(mensajeDeAsistencia(error))
     } finally {
       enCurso.current = false
       setEnviando(false)
@@ -394,6 +398,7 @@ export function PaginaAgenda() {
             turno={panel.turno}
             zonaHoraria={dia?.zona ?? ''}
             enviando={enviando}
+            error={errorDelPanel}
             onRegistrar={(estado) => void registrarAsistencia(panel.turno, estado)}
             onVolver={() => cerrarAsistencia(panel.turno)}
           />

@@ -6,9 +6,12 @@ import { App } from '../../App'
 import { CLAVE_DE_SESION } from '../../shared/api/sesion'
 import {
   EMAIL_ACTIVA as EMAIL_ODONTOLOGA,
+  EMAIL_DUENO,
   EMAIL_RECEPCIONISTA,
   PRESTACIONES_DE_PARTIDA,
   TURNOS_DE_LA_AGENDA,
+  USUARIOS_DE_PARTIDA,
+  USUARIO_DUENO,
   crearServidorFalso,
   type OpcionesDelServidorFalso,
   type ServidorFalso,
@@ -265,5 +268,210 @@ describe('PanelAsistencia: bordes', () => {
       ['Reprogramar', 'Cancelar', 'Historial'],
       ['Historial'],
     ])
+  })
+})
+
+describe('PanelAsistencia: los rechazos', () => {
+  it('ASI-6a: un turno que ya no está reservado ni confirmado muestra RN-AG-12 y no cambia', async () => {
+    const servidor = falso()
+    const usuario = await abrirAgenda(servidor)
+    await abrirAsistencia(usuario)
+    servidor.cambiarEstado(11, 'atendido')
+
+    await usuario.click(opcion('Ausente'))
+    await usuario.click(botonRegistrar())
+
+    const aviso = await screen.findByRole('alert')
+    expect(aviso.textContent).toContain('Este turno ya no admite registrar la asistencia por su estado (RN-AG-12).')
+    expect(aviso.textContent).toContain('El turno no cambió.')
+    expect(servidor.llamadas('POST', '/api/turnos/11/estado')).toBe(1)
+    expect(screen.getByRole('complementary', { name: 'Registrar asistencia' })).toBeDefined()
+    expect(opcion('Ausente').checked).toBe(true)
+    expect(screen.queryByText('Asistencia registrada.')).toBeNull()
+  })
+  it('ASI-6a: el éxito de un registro anterior no queda junto al rechazo del siguiente', async () => {
+    const servidor = falso()
+    const usuario = await abrirAgenda(servidor)
+    await abrirAsistencia(usuario)
+    await usuario.click(opcion('Atendido'))
+    await usuario.click(botonRegistrar())
+    await screen.findByText('Asistencia registrada.')
+    await abrirAsistencia(usuario, BRUNO)
+    servidor.cambiarEstado(12, 'ausente')
+
+    await usuario.click(opcion('Atendido'))
+    await usuario.click(botonRegistrar())
+
+    const aviso = await screen.findByRole('alert')
+    expect(aviso.textContent).toContain('Este turno ya no admite registrar la asistencia por su estado (RN-AG-12).')
+    expect(screen.queryByText('Asistencia registrada.')).toBeNull()
+  })
+
+  it('ASI-6b: un turno que todavía no empezó muestra RN-AG-13', async () => {
+    const servidor = falso()
+    const usuario = await abrirAgenda(servidor)
+    await abrirAsistencia(usuario, CARLA)
+    servidor.responderAlMarcar(409, ['RN-AG-13'])
+
+    await usuario.click(opcion('Atendido'))
+    await usuario.click(botonRegistrar())
+
+    const aviso = await screen.findByRole('alert')
+    expect(aviso.textContent).toContain(
+      'El turno todavía no empezó: la asistencia se registra desde su hora de inicio (RN-AG-13).',
+    )
+    expect(aviso.textContent).toContain('El turno no cambió.')
+    expect(servidor.llamadas('POST', '/api/turnos/13/estado')).toBe(1)
+    expect(screen.getByRole('complementary', { name: 'Registrar asistencia' })).toBeDefined()
+    expect(opcion('Atendido').checked).toBe(true)
+    expect(screen.queryByText('Asistencia registrada.')).toBeNull()
+  })
+
+  it('ASI-6c: sin opción no manda nada', async () => {
+    const servidor = falso()
+    const usuario = await abrirAgenda(servidor)
+    await abrirAsistencia(usuario)
+    const antes = totalDePeticiones(servidor)
+
+    await usuario.click(botonRegistrar())
+
+    expect((await screen.findByRole('alert')).textContent).toContain(
+      'Elegí si el paciente fue atendido o estuvo ausente.',
+    )
+    expect(totalDePeticiones(servidor)).toBe(antes)
+    expect(servidor.llamadas('POST', '/api/turnos/11/estado')).toBe(0)
+    await usuario.click(opcion('Atendido'))
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
+
+  it('ASI-6c: el 404 con su texto', async () => {
+    const servidor = falso()
+    const usuario = await abrirAgenda(servidor)
+    await abrirAsistencia(usuario)
+    servidor.quitarTurno(11)
+
+    await usuario.click(opcion('Ausente'))
+    await usuario.click(botonRegistrar())
+
+    const aviso = await screen.findByRole('alert')
+    expect(aviso.textContent).toContain('El turno ya no existe (RN-GL-04).')
+    expect(aviso.textContent).toContain('El turno no cambió.')
+    expect(opcion('Ausente').checked).toBe(true)
+    expect(screen.queryByText('Asistencia registrada.')).toBeNull()
+  })
+
+  it('ASI-6c: el dueño ve la acción y recibe el 403', async () => {
+    const servidor = falso({ usuarios: [...USUARIOS_DE_PARTIDA, USUARIO_DUENO] })
+    const usuario = await abrirAgenda(servidor, EMAIL_DUENO)
+    expect(screen.getAllByRole('button', { name: /^Registrar la asistencia del turno/ })).toHaveLength(3)
+    await abrirAsistencia(usuario)
+    const refrescosAntes = servidor.llamadas('POST', '/api/auth/refresh')
+
+    await usuario.click(opcion('Atendido'))
+    await usuario.click(botonRegistrar())
+
+    const aviso = await screen.findByRole('alert')
+    expect(aviso.textContent).toContain('Tu usuario no tiene permiso para registrar la asistencia (RN-AU-05).')
+    expect(aviso.textContent).toContain('El turno no cambió.')
+    expect(opcion('Atendido').checked).toBe(true)
+    expect(servidor.llamadas('POST', '/api/auth/refresh')).toBe(refrescosAntes)
+    expect(servidor.turnosActuales().find((t) => t.id === 11)?.estado).toBe('reservado')
+  })
+
+  it('ASI-6c: el doble clic manda un solo POST', async () => {
+    const servidor = falso()
+    const usuario = await abrirAgenda(servidor)
+    await abrirAsistencia(usuario)
+    await usuario.click(opcion('Atendido'))
+    const liberar = servidor.retener('/api/turnos/11/estado')
+
+    await usuario.click(botonRegistrar())
+    expect(botonRegistrar().disabled).toBe(true)
+    await usuario.click(botonRegistrar())
+    liberar()
+
+    await screen.findByText('Asistencia registrada.')
+    expect(servidor.llamadas('POST', '/api/turnos/11/estado')).toBe(1)
+  })
+
+  it('ASI-6c: sin conexión se conserva la opción', async () => {
+    const servidor = falso()
+    const usuario = await abrirAgenda(servidor)
+    await abrirAsistencia(usuario)
+    await usuario.click(opcion('Ausente'))
+    servidor.caerse()
+
+    await usuario.click(botonRegistrar())
+
+    const aviso = await screen.findByRole('alert')
+    expect(aviso.textContent).toContain(MENSAJE_DE_CONEXION)
+    expect(aviso.textContent).toContain('El turno no cambió.')
+    expect(botonRegistrar().disabled).toBe(false)
+    expect(opcion('Ausente').checked).toBe(true)
+    expect(screen.queryByText('Asistencia registrada.')).toBeNull()
+  })
+
+  it('ASI-6c: un 500 muestra el aviso de conexión', async () => {
+    const servidor = falso()
+    const usuario = await abrirAgenda(servidor)
+    await abrirAsistencia(usuario)
+    await usuario.click(opcion('Atendido'))
+    servidor.responderAlMarcar(500, [])
+
+    await usuario.click(botonRegistrar())
+
+    const aviso = await screen.findByRole('alert')
+    expect(aviso.textContent).toContain(MENSAJE_DE_CONEXION)
+    expect(aviso.textContent).toContain('El turno no cambió.')
+    expect(opcion('Atendido').checked).toBe(true)
+    expect(screen.queryByText('Asistencia registrada.')).toBeNull()
+  })
+
+  it('ASI-6c: un 422 muestra el aviso de conexión', async () => {
+    const servidor = falso()
+    const usuario = await abrirAgenda(servidor)
+    await abrirAsistencia(usuario)
+    await usuario.click(opcion('Ausente'))
+    servidor.responderAlMarcar(422, [])
+
+    await usuario.click(botonRegistrar())
+
+    const aviso = await screen.findByRole('alert')
+    expect(aviso.textContent).toContain(MENSAJE_DE_CONEXION)
+    expect(aviso.textContent).toContain('El turno no cambió.')
+    expect(opcion('Ausente').checked).toBe(true)
+    expect(screen.queryByText('Asistencia registrada.')).toBeNull()
+  })
+
+  it('ASI-6c: con el refresh vigente se renueva sin aviso', async () => {
+    const servidor = falso()
+    const usuario = await abrirAgenda(servidor)
+    await abrirAsistencia(usuario)
+    await usuario.click(opcion('Atendido'))
+    const refrescosAntes = servidor.llamadas('POST', '/api/auth/refresh')
+    servidor.vencerAccess()
+
+    await usuario.click(botonRegistrar())
+
+    expect(await screen.findByText('Asistencia registrada.')).toBeDefined()
+    expect(servidor.llamadas('POST', '/api/auth/refresh')).toBe(refrescosAntes + 1)
+    expect(servidor.llamadas('POST', '/api/turnos/11/estado')).toBe(2)
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
+
+  it('ASI-6c: una sesión irrenovable vuelve al inicio de sesión', async () => {
+    const servidor = falso()
+    const usuario = await abrirAgenda(servidor)
+    await abrirAsistencia(usuario)
+    await usuario.click(opcion('Atendido'))
+    servidor.vencerAccess()
+    servidor.invalidarRefresh()
+
+    await usuario.click(botonRegistrar())
+
+    expect((await screen.findByRole('status')).textContent).toBe('Tu sesión terminó. Iniciá sesión de nuevo.')
+    expect(screen.getByTestId('lugar').textContent).toBe('/ingresar')
+    expect(screen.queryByText(MENSAJE_DE_CONEXION)).toBeNull()
+    expect(servidor.turnosActuales().find((t) => t.id === 11)?.estado).toBe('reservado')
   })
 })
